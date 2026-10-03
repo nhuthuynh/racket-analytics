@@ -1,0 +1,15 @@
+# gitleaks config (NFR-056). Extends the default ruleset; allowlists only files whose
+# "secrets" are documented dev-only placeholders or synthetic test data.
+title = "racket-analytics gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dev-only placeholders and test-only throwaway values"
+paths = [
+  '''^infra/env\.example$''',
+]
+regexes = [
+  '''dev-only-[a-z0-9-]+''',
+]

@@ -1,0 +1,13 @@
+# Ruff config for code outside backend/ (hooks, CI scripts, infra tests). backend/ has its own
+# [tool.ruff] in backend/pyproject.toml, which takes precedence there. Same rule set.
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "C4", "SIM", "RUF", "PT", "TID"]
+
+[lint.per-file-ignores]
+# Tests and CI tooling run fixed local commands in subprocesses by design.
+"infra/tests/**" = ["S101", "S105", "S106", "S108", "S603", "S607"]
+".claude/hooks/**" = ["S603", "S607"]
+"scripts/ci/**" = ["S603", "S607"]

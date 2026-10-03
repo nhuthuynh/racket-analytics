@@ -189,3 +189,19 @@ Note: the GitHub REST API was not reachable from this session, so star counts fo
 - SPIKE-09 numbers are appended as a dated note.
 
 ## Notes
+
+- **2026-10-03 (senior-qa-engineer, ST-004):** The backend scaffold uses the import package `racket` (`backend/src/racket/...`), not `racket_analytics` as in the code-layout sketch above. The Sprint 0 task brief named `racket` for every lane. The distribution name stays `racket-analytics` in `backend/pyproject.toml`. The context sub-packages follow the layout above (`platform`, `players`, `video_ingest`, `analysis_jobs`, `matches`, `scoring`, `sports/pickleball`, `analytics`, `coaching`, `worker`), plus `dataset` for the proposed dataset context in sprint-00 §5 (ManifestCheck). Only the top-level name changes, so this is a dated note and not a superseding ADR (judgment). The principal-engineer may promote it to an ADR. Evidence: `cd backend && uv run mypy` → `Success: no issues found in 16 source files`.
+- **2026-10-03 (senior-qa-engineer, IT-00-16):** Part C parity, locally without Docker. `scripts/dev-objectstore.sh start` (SeaweedFS 3.97, sha256-pinned by the SRE) followed by `cd backend && uv run pytest tests/integration/test_it_00_16_object_store_parity.py -v` → `4 passed`: multipart upload round trip (5 MiB + 1 KiB parts, sha256 equal), presigned GET works and then returns 403 after expiry (2 s TTL, checked at 3.5 s), a tampered presigned URL returns 403, and delete leaves HEAD at 404. No MinIO or moto fallback was needed. The Compose run in CI still has to confirm this (ST-001).
+
+- **2026-10-03 (sre-devops-engineer, ST-001): part C confirmed. SeaweedFS 3.97 passes the parity checks; no superseding ADR needed.**
+  - **Scope:** `infra/tests/test_object_store_parity.py` (IT-00-16) ran against two real SeaweedFS 3.97 servers, with no mocks:
+    - the local binary launched by `scripts/dev-objectstore.sh`: release `linux_amd64.tar.gz`, sha256 `a5b73384efb1b3848e8ba464420475b2e0c12c17c32d7939546cd496728849a7`;
+    - the Compose service `chrislusf/seaweedfs:3.97`.
+  - **Results:** 7 passed on each, covering multipart upload (3 parts, sha256 round-trip), multipart abort, presigned GET that works and then returns 403 after expiry, a tampered presigned URL refused with 403, delete then 404, and a wrong secret refused with 403.
+  - **Commands:**
+    - `cd infra && uv run pytest -q tests/test_dev_postgres.py tests/test_object_store_parity.py` → `14 passed in 36.49s`;
+    - `S3_ENDPOINT_URL=http://127.0.0.1:58333 ... uv run pytest -q tests/test_object_store_parity.py` → `7 passed in 5.09s`.
+  - **Fallback not needed:** the brief's moto fallback was not needed, because the SeaweedFS binary downloaded from GitHub releases and its image pulled via `mirror.gcr.io` (Docker Hub answered 429).
+  - **Caveat:** server-side encryption, object lock and lifecycle rules were not tested. They are not used in Sprint 0.
+
+- **2026-10-03 (principal-engineer):** The open "Resumable upload server" row is decided by ADR 0011: a tus 1.0.0 core inside the FastAPI app, not a tusd sidecar. The reasons are that tusd has no blocking hook on HEAD/PATCH for per-request BOLA, its `post-finish` enqueue is non-blocking, and its S3 locking is per-process. The evidence is the tusd docs fetched and hashed in ADR 0011. tusd is not adopted, so its MIT licence entry stays informational.

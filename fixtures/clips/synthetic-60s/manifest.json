@@ -1,0 +1,42 @@
+{
+  "id": "synthetic-60s",
+  "version": 1,
+  "created": "2026-10-03",
+  "description": "Synthetic 60 s 1080p60 fixture clip for the walking skeleton and the probe stage (ST-009, ST-011). FFmpeg testsrc pattern plus 1 kHz tone bursts each second. No people.",
+  "licence": "CC0-1.0",
+  "licence_note": "Generated entirely by scripts/fixtures/generate_synthetic_60s.sh from FFmpeg lavfi test sources; no third-party content.",
+  "consent_status": "synthetic",
+  "split": "fixture",
+  "rules_version": null,
+  "metric_dict_version": null,
+  "labellers": [],
+  "generator": {
+    "script": "scripts/fixtures/generate_synthetic_60s.sh",
+    "ffmpeg": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers"
+  },
+  "expected_media_facts": {
+    "container": "mp4",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "duration_ms": 60000,
+    "fps": 60,
+    "vfr": false,
+    "width": 1920,
+    "height": 1080,
+    "has_audio": true,
+    "frame_count": 3600,
+    "display": "Duration 1:00 · 60 fps · 1920×1080"
+  },
+  "files": [
+    {
+      "path": "clip.mp4",
+      "sha256": "2a064901bbf07b5b80777ad267766f918e335feca09504361208749553b0b2ab",
+      "bytes": 1724207
+    },
+    {
+      "path": "ffprobe.json",
+      "sha256": "95a4c75a7c3754eac3e105b44eba4c83254551bcb95be695c1b3326bb92cf906",
+      "bytes": 4271
+    }
+  ]
+}

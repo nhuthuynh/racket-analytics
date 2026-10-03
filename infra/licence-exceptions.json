@@ -1,0 +1,4 @@
+{
+  "_comment": "ADR-backed exceptions to the NFR-062 licence gate (scripts/ci/check_licences.py). Each entry needs a name and a reason that cites an ADR. Empty by design.",
+  "exceptions": []
+}

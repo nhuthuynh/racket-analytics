@@ -112,5 +112,10 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0008 | [Stack confirmation for Sprint 0](0008-stack-confirmation-for-sprint-0.md) | Accepted (Sprint 0) | 2026-10-03 |
 | 0009 | [Rules-engine readiness split](0009-rules-engine-readiness-split.md) | Proposed | 2026-10-03 |
 | 0010 | [Estimation and capacity model](0010-estimation-and-capacity-model.md) | Accepted | 2026-10-03 |
+| 0011 | [tus server: tus 1.0.0 core inside FastAPI, not a tusd sidecar](0011-tus-server-fastapi-core.md) | Accepted (Sprint 0) | 2026-10-03 |
+| 0012 | [Red-first tests reach production code through one QA-owned seam contract](0012-red-first-test-seam-contract.md) | Proposed | 2026-10-03 |
+| 0013 | [Agent hooks: deterministic gates that never wedge a session](0013-agent-hooks-design.md) | Proposed | 2026-10-03 |
+| 0014 | [CI merge gates: fail closed, one required check, pinned actions, SBOM-based licence gate](0014-ci-merge-gates-fail-closed.md) | Proposed | 2026-10-03 |
+| 0015 | [CV licence posture: MIT/Apache code by default, pretrained weights judged by their training data, no AGPL](0015-cv-licence-posture.md) | Proposed (PO decides OQ-12) | 2026-10-03 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md).

@@ -1,0 +1,58 @@
+# --- secrets (NFR-056); variable names live in infra/env.example
+.env
+.env.*
+*.pem
+*.key
+infra/secrets/
+
+# --- local dev state (scripts/dev-*.sh), agent hook logs
+/.local/
+.claude/logs/
+.claude/settings.local.json
+
+# --- Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# --- Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+*.tsbuildinfo
+.pnpm-store/
+
+# --- CI artefacts produced locally
+/reports/
+sbom*.json
+
+# --- editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# --- local service data / logs
+*.log
+pgdata/
+.pgdata/
+data/postgres/
+data/minio/
+minio-data/
+redis-data/
+*.sqlite
+*.db

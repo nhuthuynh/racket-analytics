@@ -1,0 +1,17 @@
+**/.git
+**/.venv
+**/node_modules
+**/.next
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+infra/secrets
+.local
+.claude
+fixtures
+docs

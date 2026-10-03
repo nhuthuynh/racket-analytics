@@ -251,21 +251,29 @@ Test-level key: U unit · I integration · S scenario (Gherkin) · E2E Playwrigh
 
 ## 6. Stories for Sprints 0-2 (engineering-manager, 2026-10-03)
 
-Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature files are planned paths under `backend/tests/features/` (or `web/e2e/` for browser journeys); "—" means the story is verified by unit, integration or CI checks only.
+Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature files live at the repository root under `tests/features/` (`backend/pyproject.toml`: `bdd_features_base_dir = "../tests/features"`); their step modules are in `backend/tests/features/`, and browser journeys are in `web/e2e/`. "—" means the story is verified by unit, integration or CI checks only.
+
+**Update, business-analyst, 2026-10-03:**
+
+- Paths corrected to `tests/features/`.
+- Feature files that **exist** in the repo are marked ✔. These seven exist: `dev_environment`, `errors_and_tracing`, `gold_set_integrity`, `job_resilience`, `object_level_authorisation`, `upload_resume_core`, `walking_skeleton`.
+- New Sprint 1 feature files come from sprint-01 §14.3.
+- The ADR 0009 (b) parts are added as backlog rows ST-020b and ST-021b.
+- The design and domain artefacts that Sprint 1 stories depend on are listed in §7.
 
 | Story | Sprint | FR | NFR | Feature file(s) | Other test levels |
 |---|---|---|---|---|---|
-| ST-001 | S0 | — | NFR-080, 081 | `dev_environment.feature` | I (IT-00-16) |
+| ST-001 | S0 | — | NFR-080, 081 | `dev_environment.feature` ✔ | I (IT-00-16) |
 | ST-002 | S0 | — | NFR-015, 024, 027, 056, 062, 071, 073, 074, 077 | — | CI |
 | ST-003 | S0 | — | NFR-078 | — | CI, hooks |
 | ST-004 | S0 | — | NFR-073, 075 | — | U (builders) |
-| ST-005 | S0 | — | NFR-058, 061, 069, 076, 081 | `errors_and_tracing.feature` | U, I (IT-00-11..15) |
-| ST-006 | S0 | FR-002 | NFR-051, 052, 057, 064 | `object_level_authorisation.feature` | U, I (IT-00-01, 02) |
-| ST-007 | S0 | FR-080 | NFR-046, 047, 076 | `job_resilience.feature` | U, I (IT-00-03..05) |
-| ST-008 | S0 | FR-022 | NFR-026, 053, 060 | `upload_resume_core.feature`, `walking_skeleton.feature` | U, I (IT-00-06..08) |
-| ST-009 | S0 | FR-081, FR-025 | NFR-025, 054 | `walking_skeleton.feature` | U, I (IT-00-09, 10) |
-| ST-010 | S0 | — | NFR-015, 027, 029, 061, 067 | `walking_skeleton.feature` | E2E-00-01, A11y |
-| ST-011 | S0 | FR-151 | NFR-078 | `gold_set_integrity.feature` | U, CI |
+| ST-005 | S0 | — | NFR-058, 061, 069, 076, 081 | `errors_and_tracing.feature` ✔ | U, I (IT-00-11..15) |
+| ST-006 | S0 | FR-002 | NFR-051, 052, 057, 064 | `object_level_authorisation.feature` ✔ | U, I (IT-00-01, 02) |
+| ST-007 | S0 | FR-080 | NFR-046, 047, 076 | `job_resilience.feature` ✔ | U, I (IT-00-03..05) |
+| ST-008 | S0 | FR-022 | NFR-026, 053, 060 | `upload_resume_core.feature` ✔, `walking_skeleton.feature` ✔ | U, I (IT-00-06..08) |
+| ST-009 | S0 | FR-081, FR-025 | NFR-025, 054 | `walking_skeleton.feature` ✔ | U, I (IT-00-09, 10) |
+| ST-010 | S0 | — | NFR-015, 027, 029, 061, 067 | `walking_skeleton.feature` ✔ | E2E-00-01, A11y |
+| ST-011 | S0 | FR-151 | NFR-078 | `gold_set_integrity.feature` ✔ | U, CI |
 | ST-012 | S0 | (suites for FR-002, FR-022, FR-080) | testing-strategy §5 suites | all S0 features | I |
 | ST-013 | S1 | FR-001 | NFR-032, 055, 057 | `sign_in.feature` | U, I (IT-01-01..03), E2E |
 | ST-014 | S1 | FR-011 | NFR-067 | `sign_out.feature` | I (IT-01-04), E2E |
@@ -276,10 +284,12 @@ Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature fil
 | ST-019 (stretch) | S1 | FR-025 | — | `footage_quality_report.feature` | E2E |
 | ST-020 | S1 | FR-040, 041, 044 (part a) | NFR-079 | `scoring_engine_mechanics.feature` | U, CI (IT-01-12, 13) |
 | ST-021 | S1 | FR-045 (part a) | — | `match_structure.feature` | U |
-| ST-022 | S1 | — | NFR-002, 072 | — | U (property), nightly oracle, mutation |
+| ST-022 | S1 | — | NFR-002, 072 | `property_and_oracle.feature` (sprint-01 §14.3.7) | U (property), nightly oracle, mutation |
 | ST-023 | S1 | FR-041, FR-044 (provisional rows); FR-045 (M-01..M-08, part a) | NFR-001 | `side_out_doubles_provisional.feature`, `faults_provisional.feature` (`@needs-verification`); `match_structure.feature` (M rows) | U |
-| ST-024 | S1 | — | NFR-002, 041, 042, 072 | — | OPS, CI |
-| ST-025 | S1 | FR-023 (caps) | NFR-025 | — | I (fixtures) |
+| ST-024 | S1 | — | NFR-002, 041, 042, 072 | `nightly_quality.feature` (sprint-01 §14.3.8) | OPS, CI |
+| ST-025 | S1 | FR-023 (caps) | NFR-025 | `phone_fixtures.feature` (sprint-01 §14.3.9) | I (fixtures) |
+| ST-020b (backlog) | after OQ-01 | FR-040, 041, 044 (part b: preset values) | NFR-001, NFR-003 | rows of `side_out_doubles_provisional.feature`, `faults_provisional.feature` gain `@rule-<n>` | U, S. Status `needs-verification` (ADR 0009) |
+| ST-021b (backlog) | after OQ-01 | FR-045 (part b: rulebook defaults, if any) | — | `match_structure.feature` | U. Status `needs-verification` |
 | ST-026 | S2 | FR-049 | NFR-075 | `score_sheet.feature` | U, I (IT-02-01) |
 | ST-027 | S2 | FR-050 | NFR-012, 028, 030 | `quick_tag.feature` | U, I (IT-02-04), E2E, A11y |
 | ST-028 | S2 | FR-051 | NFR-034 | `keyboard_tagging.feature` | E2E-02-02 |
@@ -296,4 +306,15 @@ Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature fil
 | ST-039 | S2 | (journey over FR-022, FR-050, FR-049) | NFR-010, 012, 013, 017 | — | E2E-02-01, P (Locust) |
 | ST-040 | S2 | FR-151 | — | — | CI (manifest) |
 | ST-041 | S2 | FR-042, 046, 053 (provisional rows) | NFR-001 | rows inside the ST-034, ST-035 and ST-032 features | U |
+
+## 7. Design and domain artefacts for Sprint 1 (business-analyst, 2026-10-03)
+
+| Artefact | Owner | Status | Stories | Requirements |
+|---|---|---|---|---|
+| `docs/design/tokens.json`, `tokens.md` (contrast proof 55/55 pass) | principal-designer | draft v0.1 | ST-010, ST-013..ST-019 | NFR-028, NFR-029, NFR-031, NFR-034 |
+| `docs/design/component-accessibility-checklist.md` | principal-designer | draft v0.1 | all UI stories | NFR-027..NFR-035, NFR-037 |
+| `docs/design/flows-sprint-01.md` | principal-designer | draft v0.1, review pending | ST-013..ST-019 | FR-001, 004, 005, 011, 020..023, 025, 043, 055 |
+| `docs/domain/capture-guide-wording.md` | pickleball-domain-coach | draft | ST-015 | FR-020, NFR-033, NFR-035 |
+| `docs/domain/rules-verified.md` | pickleball-domain-coach | empty: nothing verified (OQ-01) | ST-020b, ST-021b, ST-023, all `@needs-verification` rows | FR-040..FR-048, NFR-001, NFR-003 |
+| `docs/domain/metric-dictionary.md` AN-01..AN-07 | pickleball-domain-coach | draft | Sprint 3 stats stories | FR-100..FR-103, NFR-004, NFR-038 |
 

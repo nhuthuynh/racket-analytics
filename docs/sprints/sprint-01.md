@@ -569,3 +569,579 @@ Story and sprint levels as in `docs/process/definition-of-done.md`. Sprint 1 add
 - **Date:** 2026-10-30. **File:** `docs/retros/2026-10-30-sprint-01.md` from [`docs/retros/TEMPLATE.md`](../retros/TEMPLATE.md).
 - **Format:** 5 Whys on the largest miss. **Focus:** estimation accuracy (planned vs completed units, ADR 0010) and how well the QA-writes-tests-first split worked.
 - Review retro 0 action items first [EP/ENG-15].
+
+## 14. Story specifications and Definition of Ready (business-analyst, 2026-10-03)
+
+This section adds what `docs/process/definition-of-ready.md` asks for beyond §3, §3.1 and §7:
+
+- a value statement, priority and milestone;
+- the bounded context and aggregates;
+- files and interfaces;
+- out of scope;
+- the end-to-end verification step [DPA/AI-08];
+- the measurable NFRs;
+- the Gherkin missing from §7 (§14.3);
+- the ADR 0009 (a)/(b) split for the rules stories (§14.2);
+- the DoR check (§14.5).
+
+§3 to §13 are unchanged. Where a story here and §3.1 disagree, §3.1 wins, and the BA raises the difference with the EM.
+
+- **Feature files:** the `.feature` files live at `tests/features/` (repository root; `backend/pyproject.toml` sets `bdd_features_base_dir = "../tests/features"`). Their step modules are in `backend/tests/features/`, and browser journeys are in `web/e2e/`. The traceability matrix §6 is updated to these paths.
+- **Priority:** from the FR's MoSCoW priority in `functional-requirements.md`. The product-manager confirms it at Sprint 1 planning (DoR "PM-assigned priority").
+- **Milestone:** M0 for every story unless noted (spec §7).
+- **Design:** `docs/design/flows-sprint-01.md` (screen IDs A-, F-, G-, M-, Q-, U-), `docs/design/tokens.md` and `docs/design/component-accessibility-checklist.md`.
+
+### 14.1 Story cards
+
+#### ST-013 Passwordless sign-in with an email magic link
+- **Value:** As a player, I want to sign in with a link sent to my email, so that I never have to remember a password courtside.
+- **Priority / milestone:** Must (FR-001) / M0.
+- **FR / NFR:**
+  - FR-001;
+  - NFR-032: 0 cognitive-function tests (E2E + review);
+  - NFR-055: no token left in the URL after exchange (I);
+  - NFR-057: auth success and failure logged with UTC time, request ID and pseudonymous user ID, and 0 plain-text email addresses (I, IT-01-03);
+  - NFR-023 partial: link requests rate-limited, 429 with a retry time (IT-01-02).
+- **Context / aggregates:** Identity & Players (`players`), aggregate `Account`; value object `MagicLinkToken` (§5).
+- **Files / interfaces:**
+  - `backend/src/racket/players/` (domain: `MagicLinkToken`, `Account`; application: request-link and exchange-link commands; adapter: mailer to Mailpit in dev);
+  - `POST /auth/links` → 202 always (D-4);
+  - `POST /auth/exchange` → sets the session cookie;
+  - `POST /auth/sign-out`;
+  - `web/app/(auth)/` screens A-01..A-04;
+  - `tests/features/sign_in.feature`.
+- **Out of scope:** passkeys (backlog); the production email provider (Sprint 4 ADR); the age gate (Sprint 4); account deletion (Sprint 3).
+- **E2E verification:** E2E-01-01, first step. Request a link, open it from Mailpit, and check that the address bar has no token and the page shows "Record your first match".
+- **Gherkin:** §7.1 and §14.3.1.
+
+#### ST-014 Sign-out clears local data
+- **Value:** As a player who uses a shared tablet, I want signing out to leave nothing of mine on the device, so that the next person cannot see my matches.
+- **Priority / milestone:** Must (FR-011) / M0.
+- **FR / NFR:**
+  - FR-011;
+  - NFR-067: 0 authenticated responses or media in client storage or service-worker caches after sign-out; `Cache-Control: no-store` on 100% of authenticated JSON (IT-01-04, E2E).
+- **Context:** Identity & Players (session) and the web client.
+- **Files / interfaces:** `web/` service worker and sign-out handler; `POST /auth/sign-out`; screen A-05 and the "upload will stop" confirmation; `tests/features/sign_out.feature`.
+- **Out of scope:** remote sign-out of other devices (backlog, judgment).
+- **E2E verification:** demo step 8. Sign out, go offline, reopen, and check that nothing of Ivy's is visible.
+- **Gherkin:** §7.1 and §14.3.2.
+
+#### ST-015 First-run promise and capture guide
+- **Value:** As a new player, I want to know what the app can and cannot do and how to film, so that my first video is usable and my expectations are right.
+- **Priority / milestone:** FR-004 Should, FR-020 Must / M0.
+- **FR / NFR:**
+  - FR-004, FR-020;
+  - NFR-033: 100% of guide media captioned, with a text alternative (content checklist);
+  - NFR-035: 100% of informative illustrations have purpose alt text (A11y + review).
+- **Context:** none on the server; this is static client content.
+- **Files / interfaces:**
+  - `web/app/(onboarding)/` screens F-01 and G-01;
+  - wording from `docs/domain/capture-guide-wording.md`;
+  - captions file `.vtt` alongside the guide video;
+  - `tests/features/first_run_and_capture_guide.feature`.
+- **Out of scope:**
+  - the framing check from a still frame (R2, FR-UX-13);
+  - device-specific 60 fps steps until checked on the ST-025 phones;
+  - the consent courtesy line (OQ-06, D-8).
+- **Dependencies:**
+  - coach sign-off of the wording (Sprint 1 D3);
+  - the PM decision on the F-01 copy, which corrects FR-004's example for R1 (flows D-1);
+  - a guide video recorded with an empty court or consenting team members only.
+- **E2E verification:** E2E-01-01, steps "first run → capture guide", with axe on both pages.
+- **Gherkin:** §7.2 and §14.3.3.
+
+#### ST-016 Match setup flow with participants by nickname
+- **Value:** As a player, I want to set up a match one simple question at a time, so that I can do it quickly on my phone and fix mistakes easily.
+- **Priority / milestone:** Must (FR-021, FR-005) / M0.
+- **FR / NFR:**
+  - FR-021, FR-005; FR-043 (rally scoring shown but disabled);
+  - NFR-028: 0 targets below 24×24 CSS px; primary ≥ 48 px;
+  - NFR-031: 0 focused elements fully obscured at 360×640;
+  - NFR-034: keyboard-only completion; reflow at 320/360/768/1280;
+  - NFR-037: 100% of validation errors use the error-summary pattern.
+- **Context / aggregates:** Match & Scoring (`matches`), aggregate `Match` with `MatchParticipant` children; value object `Participants` (§5).
+- **Files / interfaces:**
+  - `backend/src/racket/matches/` (domain `Participants`; `POST /matches` extended with format, scoring system, participants, me and date);
+  - BOLA matrix entries for any new ID routes (IT-01-11);
+  - `web/app/matches/new/` pages Q-01..Q-07;
+  - `tests/features/match_setup.feature`.
+- **Out of scope:**
+  - selectable rally scoring (R2, FR-043);
+  - opponent profiles (M6);
+  - match title editing (judgment, flows D-2: the match is auto-named "{Format} · {date}");
+  - mid-game start (Sprint 2, ST-034).
+- **E2E verification:** E2E-01-03 keyboard-only setup, and the viewport matrix.
+- **Gherkin:** §7.3 and §14.3.4.
+
+#### ST-017 Resumable upload: checksum and expiration extensions, resume on return
+- **Value:** As a player uploading a multi-gigabyte video on a phone, I want the upload to survive a dropped connection or a closed tab, so that I never start over.
+- **Priority / milestone:** Must (FR-022) / M0.
+- **FR / NFR:**
+  - FR-022;
+  - NFR-016: client throughput ≥ 90% of the measured uplink; chunks adapt between 5 and 50 MB (P with throttling);
+  - NFR-026: 100% pass on the upload-resume regression suite;
+  - NFR-042: the upload-completion SLI is emitted (OPS).
+- **Context / aggregates:** Capture & Media (`video_ingest`), aggregate `UploadSession`.
+- **Files / interfaces:**
+  - `backend/src/racket/video_ingest/` (tus checksum and expiration extensions, ADR 0011);
+  - the match read model exposes `upload.offset` and `upload.expires_at` (flows D-3, principal-engineer to confirm);
+  - `web/` upload panel U-01..U-04 (tus-js-client);
+  - `tests/features/resumable_upload.feature`.
+- **Out of scope:**
+  - abandoned-upload expiry clean-up (Sprint 2, ST-038);
+  - background upload after tab close (not promised; OQ-18, SPIKE-06);
+  - the push notification (FR-UX-34, later).
+- **E2E verification:** E2E-01-02. Cut the network for 2 minutes at about 40%; the upload resumes, and the final sha256 equals the source (IT-01-08).
+- **Gherkin:** §7.4 and §14.3.5.
+
+#### ST-018 Upload validation by content, size and duration
+- **Value:** As a player, I want a clear reason when my file cannot be used, and as the operator I want only real videos within the caps stored, so that storage and the worker stay safe.
+- **Priority / milestone:** Must (FR-023) / M0.
+- **FR / NFR:**
+  - FR-023;
+  - NFR-053: 0 non-video files stored; size cap enforced from `Upload-Length` before any byte is stored;
+  - NFR-054: a crafted malformed container ends `failed` within its time limit, with no network (IT-01-10);
+  - NFR-060: 0 jobs created for a rejected file.
+- **Context / aggregates:** Capture & Media, `UploadSession` and `MediaAsset`; value object `UploadPolicy` (§5).
+- **Files / interfaces:** `backend/src/racket/video_ingest/` (`UploadPolicy`, magic-byte sniff, probe-based duration check); U-03; `tests/features/upload_validation.feature`.
+- **Out of scope:** transcoding and normalisation (R2); the footage quality report (ST-019, stretch).
+- **Dependencies:**
+  - ST-025 measures the caps (R-05; until then they are provisional 10 GB / 150 min and come from config);
+  - security threat-model notes (Sprint 1 D2).
+- **E2E verification:** demo step 5. A PDF renamed `match.mp4` and a 4-hour file each produce the right message and no stored object.
+- **Gherkin:** §7.5 and §14.3.6.
+
+#### ST-019 (stretch) Footage quality report, R1 facts
+- **Value:** As a player, I want to know whether my video's settings will limit later results, so that I can film better next time without being blocked now.
+- **Priority / milestone:** Should (FR-025) / M0.
+- **FR / NFR:** FR-025. NFR: none beyond the UI DoD.
+- **Context:** Capture & Media (`MediaAsset` facts from ST-009).
+- **Files / interfaces:** `web/` M-02 report panel; `tests/features/footage_quality_report.feature`.
+- **Out of scope:** the court-visibility estimate (S6, R2).
+- **E2E verification:** upload the 30 fps fixture. The report names the consequence, and "Tag this match" is enabled.
+- **Gherkin:** §7.6.
+
+#### ST-020 Scoring engine core (a)
+
+This is part (a) of FR-040/FR-041/FR-044. Part (b) is §14.2.
+
+- **Value:** As a player, I want my score computed by one rules engine that can be checked and replayed, so that my score sheet is consistent and can be corrected once the official rules are confirmed.
+- **Priority / milestone:** Must / M0.
+- **FR / NFR:**
+  - FR-040 (a), FR-041 (a), FR-044 (a);
+  - NFR-079: 0 rule literals outside `RulesConfig` (IT-01-12);
+  - QD-TR-01: 0 I/O imports in `sports/pickleball/rules` (IT-01-13);
+  - domain suite < 10 s (NFR-073).
+- **Context / aggregates:** Sport Plug-in (`sports/pickleball`), pure functions `apply` and `fold`; value objects `RulesConfig`, `GameState`, `RallyOutcome`, `DomainError`.
+- **Files / interfaces:** `backend/src/racket/sports/pickleball/rules/`, with `apply(state, outcome, config) -> GameState | DomainError` and `fold(outcomes, config)`; `tests/features/scoring_engine_mechanics.feature`.
+- **Out of scope:**
+  - the `USAP-2026` preset and any rulebook claim (ST-020b);
+  - singles (ST-035);
+  - the call format (FR-048, ST-029);
+  - rally scoring (FR-043).
+- **E2E verification:** demo step 6 (`pytest -m scoring`). Mechanics scenarios pass and are reported separately from `@needs-verification` rows.
+- **Gherkin:** §7.7, stated only against explicit configuration values (ADR 0009 rule 1).
+
+#### ST-021 Match structure (a)
+- **Value:** As a player, I want a best-of-1 or best-of-3 match to know when it is over, so that I cannot accidentally add rallies after the result.
+- **Priority / milestone:** Must (FR-045 (a)) / M0.
+- **FR / NFR:** FR-045 (a). NFR: none beyond the domain suite budget.
+- **Context / aggregates:** Match & Scoring, `Match` (root) owning `Game` entities; value object `MatchState`.
+- **Files / interfaces:** `backend/src/racket/matches/` (`MatchState`); `tests/features/match_structure.feature`.
+- **Out of scope:** any rulebook claim about who serves first or about end switches. Both are explicit inputs (ST-021b).
+- **E2E verification:** `pytest -m "story(id='ST-021')"`; M-01..M-08 pass.
+- **Gherkin:** §7.10.
+
+#### ST-022 Property suite P1-P8, nightly differential oracle P9, mutation baseline
+- **Value:** As the team, we want invariants and an independent engine to check the scoring engine, so that a scoring bug is caught before a player sees a wrong score.
+- **Priority / milestone:** Must (NFR-002 is an R1 gate) / M0.
+- **FR / NFR:**
+  - NFR-002a: ≥ 1,000 random sequences per scoring system per CI run, 0 failures;
+  - NFR-002b: 100,000 sequences nightly, 0 disagreements;
+  - NFR-072: mutation baseline recorded; ≥ 85% is gated from Sprint 2.
+- **Context:** Sport Plug-in (tests only).
+- **Files / interfaces:** `backend/tests/unit/` property tests (Hypothesis profile `ci`); `backend/tests/oracle/` (written without reading the production engine [DPA/AI-08]); `tests/features/property_and_oracle.feature` (§14.3.7).
+- **Out of scope:** the mutation gate itself (Sprint 2).
+- **E2E verification:** demo step 7. The nightly oracle result reads 100,000 sequences and 0 disagreements.
+- **Gherkin:** §14.3.7, new.
+
+#### ST-023 Golden scoring tables as executable scenarios
+- **Value:** As the domain coach and QA, we want the provisional scoring tables to be executable, so that when the rulebook arrives only rows and tags change.
+- **Priority / milestone:** Must (NFR-001, R1 gate) / M0.
+- **FR / NFR:** FR-041 and FR-044 provisional rows (`@needs-verification`); FR-045 M rows (part a); NFR-001 (19 provisional rows this sprint, reported separately; QD-QG-P5).
+- **Context:** Sport Plug-in (tests only).
+- **Files / interfaces:** `tests/features/side_out_doubles_provisional.feature`, `tests/features/faults_provisional.feature`, and the M rows in `tests/features/match_structure.feature`.
+- **Out of scope:** SOD-13..15 (Sprint 2); SOS and C rows (Sprint 2); the RS rows (blocked, FR-043).
+- **E2E verification:** the test report lists the 19 rows under `@needs-verification` (ADR 0009 Confirmation).
+- **Gherkin:** §7.8, §7.9, §7.10.
+
+#### ST-024 Nightly quality jobs and upload SLIs
+- **Value:** As the team, we want nightly oracle and mutation runs and live upload and availability SLIs, so that regressions and reliability problems are visible before the release.
+- **Priority / milestone:** Must (NFR-002 nightly job, NFR-042) / M0.
+- **FR / NFR:**
+  - NFR-002 (nightly job);
+  - NFR-041: availability SLI = non-5xx / all responses, excluding 429;
+  - NFR-042: upload-completion SLI = uploads reaching full length / uploads started and resumed by a live client;
+  - NFR-072 (nightly mutation job).
+- **Context:** platform and operations.
+- **Files / interfaces:** `.github/workflows/nightly*.yml`; `docs/sprints/01/status.json` (results); OpenTelemetry metric names agreed with the BE [AQS/OPS-07].
+- **Out of scope:** SLO alerts and burn-rate paging (Sprint 5).
+- **E2E verification:** one nightly run is visible with its results written to `status.json`.
+- **Gherkin:** §14.3.8, new.
+
+#### ST-025 Phone-file fixture set and upload-cap measurement (R-05)
+- **Value:** As the team, we want real phone recordings with known properties, so that the upload caps and the probe are tested against what players actually upload.
+- **Priority / milestone:** Must (NFR-025, FR-023 caps) / M0.
+- **FR / NFR:**
+  - NFR-025: 100% of MP4/MOV H.264/HEVC files from ≥ 5 phone models probe and play, including ≥ 1 VFR file;
+  - FR-023 caps confirmed or changed by a dated note (conflict K12).
+- **Context:** dataset and fixtures (QA/ML).
+- **Files / interfaces:**
+  - `fixtures/clips/phones-v1/` (or Git LFS / object store if larger than the repo limit; SRE to decide);
+  - `manifest.json` per QD §8 (sha256, licence, consent);
+  - a note on FR-023 K12;
+  - `tests/features/phone_fixtures.feature` (§14.3.9).
+- **Out of scope:** footage with non-consenting people (OQ-06); normalisation (R2).
+- **E2E verification:** `racket-manifest-check` passes on the new set; IT-01-09 uses the fixtures.
+- **Gherkin:** §14.3.9, new.
+
+#### SPIKE-06 Upload behaviour on phone browsers
+This is a spike. The DoR does not apply in full. Its output is an ADR with data informing OQ-18 and possibly U-01's copy (flows D-7).
+
+### 14.2 Rules stories split per ADR 0009
+
+ADR 0009 is Proposed and must be ratified at the Sprint 0 review (2026-10-16). If it is not ratified, every row below is blocked, and the §2 precondition applies.
+
+| Story | Part (a): Ready, criteria against explicit `RulesConfig` values, no rulebook claim | Part (b): `needs-verification`, blocked on OQ-01 | Status of (b) |
+|---|---|---|---|
+| ST-020 (FR-040, FR-041, FR-044) | **ST-020a = ST-020 in §3.** `RulesConfig` validation, `apply`, `fold`, game end at target and margin, replay identity, typed errors, purity. §7.7 only | **ST-020b, "USAP-2026 preset values"**: target score, win-by, first-service exception, side-out rotation and fault outcomes, each with `@rule-<n>`. The preset may be named after the federation only when every row is verified (NFR-003; ADR 0009 rule 4) | Backlog. Pulled into the sprint in which the coach fills `docs/domain/rules-verified.md` §3. Size: S (config plus row tags) if no row changes (judgment) |
+| ST-021 (FR-045) | **ST-021a = ST-021 in §3.** Best of N, match over, first server and end switch as explicit inputs. §7.10 | **ST-021b, "Match-format defaults from the rulebook"**: whether formats, end switches or game-2 first server have rulebook defaults the UI may pre-fill | Backlog, `needs-verification` (rules-verified §5 priority 8) |
+| ST-023 (NFR-001) | Not split. It is a test story. Its rows run now tagged `@needs-verification` and are reported separately (QD-QG-P5) | Removing `@needs-verification` is done row by row, by the QA with the coach, once `@rule-<n>` is recorded (QD-TR-07) | — |
+| ST-022 (NFR-002) | Not split. P1-P8 and P9 are stated for **any valid config** and make no rule claim | — | — |
+
+Glossary rule for (a) stories: the criteria say "configured target", "configured margin" and "configured first server". They never say "the rule says". Terms marked "(needs-verification)" in `ddd-guidelines.md` §6 appear only in (b) stories or in `@needs-verification` scenarios.
+
+### 14.3 Additional Gherkin (gaps in §7: negative cases, states and the stories without scenarios)
+
+Declarative, about 3-5 steps, observable `Then` [DPA/PROD-01, DPA/PROD-02]. Copy strings match `docs/design/flows-sprint-01.md`.
+
+#### 14.3.1 Sign-in (append to `tests/features/sign_in.feature`)
+
+```gherkin
+  Rule: Requesting a link never reveals whether an account exists
+
+    Scenario: Link requested for an unknown address
+      Given no account exists for "new@example.com"
+      When a sign-in link is requested for "new@example.com"
+      Then the page says "Check your email"
+      And the response is the same as for an address that has an account
+
+  Rule: Sign-in never asks for a password or a puzzle
+
+    Scenario: The sign-in page asks only for an email address
+      Given Ivy opens the sign-in page
+      Then the only field is "Email address"
+      And pasting into it is allowed
+```
+
+The first rule is pending the security-privacy-engineer's threat-model confirmation (flows D-4). If it is rejected, the scenario is removed through the BA, not by the implementer.
+
+#### 14.3.2 Sign-out (append to `tests/features/sign_out.feature`)
+
+```gherkin
+  Rule: Signing out during an upload is a deliberate choice
+
+    Scenario: Upload in progress
+      Given Ivy's upload of "Sat doubles" is 64% done
+      When she chooses to sign out
+      Then she is told "Your upload will stop"
+      And she can choose to keep uploading
+
+  Rule: Match video is never stored by the app on the device
+
+    Scenario: Video watched, then signed out
+      Given Ivy has watched her match video in the app
+      When she signs out
+      Then no part of the video remains in the app's storage on the device
+```
+
+#### 14.3.3 First run and capture guide (append to `tests/features/first_run_and_capture_guide.feature`)
+
+```gherkin
+  Rule: The first-run screen is honest about Release 1
+
+    Scenario: The app does not claim to score automatically
+      Given Ivy has just created her account
+      When the app opens for the first time
+      Then she is told that she marks who won each rally and the app keeps the score
+      And she is told that scores are unofficial until the rules are verified
+
+  Rule: The guide still works when the video does not
+
+    Scenario: Guide video cannot load
+      Given the guide video cannot be loaded
+      When Ivy opens the capture guide
+      Then she sees "Everything in it is in the checklist above"
+      And all setup instructions are still shown
+```
+
+#### 14.3.4 Match setup (append to `tests/features/match_setup.feature`)
+
+```gherkin
+  Rule: Answers can be changed from the check page
+
+    Scenario: Change one answer
+      Given Ivy is on "Check your answers"
+      When she changes the format from doubles to singles
+      Then she returns to "Check your answers"
+      And she is asked to enter one player per side
+
+  Rule: Contact details are discouraged, not stored silently
+
+    Scenario: A nickname that looks like an email address
+      Given Ivy is entering players
+      When she enters "carlos@example.com" as a nickname
+      Then she sees "This looks like contact details. Use a nickname instead."
+      And she can still continue
+
+  Rule: Dates cannot be in the future
+
+    Scenario: Future match date
+      Given Ivy is on the "date" question
+      When she enters tomorrow's date
+      Then she sees an error summary saying "The date must be today or in the past"
+```
+
+#### 14.3.5 Resumable upload (append to `tests/features/resumable_upload.feature`)
+
+```gherkin
+  Rule: Resuming needs the same video
+
+    Scenario: A different file is chosen to resume
+      Given Ivy's upload of "Sat doubles.mp4" stopped at 64%
+      When she chooses a different video to resume it
+      Then she sees "This is not the same video"
+      And the upload is still at 64%
+
+    Scenario: The unfinished upload has expired
+      Given Ivy's unfinished upload has passed its expiry time
+      When she tries to resume it
+      Then she is told the upload expired and must be started again
+
+  Rule: Nobody else can continue my upload
+
+    Scenario: Carlos tries to send data to Ivy's upload
+      Given Ivy has an unfinished upload
+      When Carlos sends a chunk to it
+      Then Carlos gets the same "not found" result as for an upload that does not exist
+      And Ivy's upload is unchanged
+
+  Rule: The app never promises a background upload
+
+    Scenario: Upload page wording
+      Given Ivy is uploading a video
+      Then the page does not say the upload continues after the tab is closed
+```
+
+#### 14.3.6 Upload validation (append to `tests/features/upload_validation.feature`)
+
+```gherkin
+  Rule: Oversized files are refused before any data is stored
+
+    Scenario: Declared size above the cap
+      Given Ivy starts an upload that declares 12 GB
+      When the server receives the upload request
+      Then the upload is refused with "Videos must be 10 GB or smaller"
+      And no bytes of that file are stored
+
+  Rule: A refused file starts no work
+
+    Scenario: No video check for a refused file
+      Given Ivy's file was refused as "This file is not a video we can read"
+      When she opens the match
+      Then the match shows "No video yet"
+      And no video check was started for that file
+```
+
+#### 14.3.7 Property suite and oracle (new: `tests/features/property_and_oracle.feature`, ST-022)
+
+```gherkin
+@M0 @story-ST-022 @nfr-002
+Feature: The scoring engine keeps its invariants under any valid configuration
+  Invariants P1-P8 come from QD §2.3. They make no rulebook claim (ADR 0009 part a).
+
+  Rule: Invariants hold for random rally sequences
+
+    Scenario Outline: Random sequences under a configuration
+      Given 1,000 random rally sequences
+      And a game configured with target <target> and margin <margin>
+      When every sequence is scored
+      Then no invariant from P1 to P8 is broken
+      Examples:
+        | target | margin |
+        | 11     | 2      |
+        | 15     | 2      |
+        | 21     | 2      |
+        | 11     | 1      |
+
+  Rule: An independent engine agrees with the production engine
+
+    Scenario: Nightly differential check
+      Given 100,000 random rally sequences
+      When both engines score every sequence
+      Then they agree on every sequence
+
+    Scenario: A disagreement is reported usefully
+      Given the two engines disagree on a sequence
+      When the nightly check finishes
+      Then the run is marked failed
+      And the report shows the shortest sequence that disagrees
+```
+
+#### 14.3.8 Nightly jobs and SLIs (new: `tests/features/nightly_quality.feature`, ST-024)
+
+```gherkin
+@M0 @story-ST-024 @nfr-041 @nfr-042
+Feature: Nightly quality jobs and service-level indicators
+
+  Rule: Nightly results are published where the team reads them
+
+    Scenario: Nightly run completes
+      Given the nightly quality run has finished
+      When the team opens the sprint status file
+      Then it shows the oracle result and the mutation score with the run date
+
+  Rule: Upload completion and availability are measured
+
+    Scenario Outline: Upload outcome counted
+      Given an upload that <outcome>
+      When the upload completion indicator is read
+      Then that upload is counted as <counted>
+      Examples:
+        | outcome                                   | counted         |
+        | reached full length                       | completed       |
+        | was resumed by a live client and finished | completed       |
+        | was abandoned by the user                 | not in the base |
+
+    Scenario: Rate-limited requests do not count against availability
+      Given 100 requests of which 2 were rate limited and none failed
+      When the availability indicator is read
+      Then availability is 100%
+```
+
+#### 14.3.9 Phone fixtures (new: `tests/features/phone_fixtures.feature`, ST-025)
+
+```gherkin
+@M0 @story-ST-025 @nfr-025
+Feature: Phone-file fixtures cover what players upload
+
+  Rule: The fixture set is broad enough and documented
+
+    Scenario: Coverage of the set
+      Given the phone fixture set version 1
+      Then it has files from at least 5 phone models
+      And at least one file has a variable frame rate
+      And every file is listed in its manifest with model, frame rate and consent status
+
+  Rule: Footage with people needs recorded consent
+
+    Scenario: File with people and no consent record
+      Given a fixture file shows people
+      And its manifest has no consent record
+      When the integrity check runs
+      Then the check fails and names the file
+
+  Rule: Every phone file is readable by the probe
+
+    Scenario: Probe every fixture
+      Given the phone fixture set version 1
+      When each file is probed
+      Then every file reports container, codec, frame rate and duration
+```
+
+### 14.4 NFR measures for Sprint 1 (testable form)
+
+| NFR | Measure in Sprint 1 | Target | Test level | Story |
+|---|---|---|---|---|
+| NFR-002 | (a) random sequences per CI run; (b) nightly disagreements | (a) ≥ 1,000 per system, 0 failures; (b) 100,000, 0 disagreements | U (Hypothesis), nightly | ST-022, ST-024 |
+| NFR-016 | client throughput vs measured uplink; chunk size | ≥ 90%; 5-50 MB adaptive | P (throttled) | ST-017 |
+| NFR-026 | upload-resume regression suite | 100% pass | I | ST-017 |
+| NFR-028 | targets below 24×24 CSS px on new screens | 0 | E2E custom check | ST-013..ST-018 UI |
+| NFR-029 | token pairs below 4.5:1 text or 3:1 non-text | 0 (55/55 pass on 2026-10-03) | design-token check + axe | all UI |
+| NFR-031 | focused elements fully obscured at 360×640 | 0 | E2E | ST-016, ST-017 |
+| NFR-032 | cognitive-function tests at sign-in | 0 | E2E + R | ST-013 |
+| NFR-033 | guide media without captions or text alternative | 0 | R (content checklist) | ST-015 |
+| NFR-034 | keyboard-only setup journey; reflow at 320 | pass; no 2-direction scroll | E2E-01-03, viewport matrix | ST-016 |
+| NFR-037 | validation errors not using the error-summary pattern | 0 | R + E2E | ST-016, ST-018 |
+| NFR-042 | upload-completion SLI emitted | present on the dashboard | OPS | ST-017, ST-024 |
+| NFR-053 | non-video or oversize files stored | 0 | I (IT-01-09) | ST-018 |
+| NFR-055 | tokens left in the URL after exchange | 0 | I/E2E | ST-013 |
+| NFR-057 | auth log lines missing UTC time, request ID or pseudonymous ID; lines containing an email address | 0; 0 | I (IT-01-03) | ST-013 |
+| NFR-060 | jobs for rejected files | 0 | I (IT-01-09) | ST-018 |
+| NFR-067 | authenticated data left after sign-out | 0 | I (IT-01-04) + E2E | ST-014 |
+| NFR-072 | mutation score recorded | baseline recorded | nightly | ST-022, ST-024 |
+| NFR-079 | rule literals outside `RulesConfig` | 0 | CI static (IT-01-12) | ST-020 |
+
+### 14.5 Definition of Ready check (2026-10-03)
+
+Key:
+
+- ✓ means met, with its evidence in this file or in a linked one;
+- **P** means pending, with an owner and a due date;
+- — means not applicable.
+
+The EM re-checks this table at Sprint 1 planning (2026-10-19).
+
+| DoR item | 013 | 014 | 015 | 016 | 017 | 018 | 019s | 020a | 021a | 022 | 023 | 024 | 025 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ID, value statement | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| PM-assigned priority | P1 | P1 | P1 | P1 | P1 | P1 | P1 | P1 | P1 | P1 | P1 | P1 | P1 |
+| FR/NFR and milestone linked | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Out of scope listed | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Declarative Gherkin, including negative cases | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (new) | ✓ | ✓ (new) | ✓ (new) |
+| NFRs measurable | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ |
+| QA agrees criteria are testable, with levels named | P2 | P2 | P2 | P2 | P2 | P2 | P2 | P2 | P2 | P2 | P2 | P2 | P2 |
+| Domain truth verified, or (a) with no rule claim | — | — | ✓ (filming advice, no rule) | ✓ (Q-02 shows no rule definition) | — | — | — | ✓ (a), ADR 0009 **P3** | ✓ (a), ADR 0009 **P3** | ✓ (any config) | ✓ (`@needs-verification`), ADR 0009 **P3** | — | — |
+| Glossary terms used; new terms added | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Context and aggregates named | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Design doc or ADR for a new component, contract or cross-context change | ✓ (auth contract in §14.1; security review via P8) | — | — | P4 (participant model) | ✓ ADR 0011; P5 (D-3 read model) | ✓ ADR 0011 | — | P4 (`Match` design doc covers ST-021) | P4 | — | — | — | P6 (fixture storage) |
+| UI flow and all states; WCAG and HAX checklists | ✓ flows A-01..A-05 | ✓ A-05 | ✓ F-01, G-01 | ✓ M-01, Q-01..Q-07 | ✓ U-01, U-02, U-04 | ✓ U-03 | ✓ U-02 / M-02 | — | — | — | — | — | — |
+| Design review held | P7 | P7 | P7 | P7 | P7 | P7 | P7 | — | — | — | — | — | — |
+| Threat-model notes attached | P8 | P8 | — | — | P8 | P8 | — | — | — | — | — | — | — |
+| Sized; PRs of about 100 lines | ✓ §3 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Dependencies available | ✓ (S0) | ✓ | P9 (coach sign-off D3; F-01 copy D-1) | ✓ | P10 (SPIKE-06 D3) | P11 (ST-025 caps) | ✓ | ✓ (ST-023 first) | ✓ | ✓ | ✓ | ✓ | P12 (OQ-06 for people) |
+| Files, interfaces and E2E step named | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Pending items, each with an owner and a due date:
+
+| # | Item | Owner | Due |
+|---|---|---|---|
+| P1 | Confirm the priorities in §14.1, which come from FR MoSCoW | product-manager | Sprint 1 planning, 2026-10-19 |
+| P2 | Agree that every criterion in §7 and §14.3 is testable and name the level | senior-qa-engineer | Sprint 0 D9 |
+| P3 | Ratify ADR 0009. Without it, ST-020a, ST-021a and ST-023 are not Ready (§2 precondition) | human product owner | Sprint 0 review, 2026-10-16 |
+| P4 | `Match` aggregate design doc and participant model, reviewed as a PR | principal-engineer | sprint-00 §4 D10 |
+| P5 | Flows D-3: the match read model exposes the upload offset and expiry | principal-engineer, senior-backend-engineer | Sprint 1 planning |
+| P6 | Where the phone fixtures live (repo, LFS or object store) | sre-devops-engineer | Sprint 1 planning |
+| P7 | Design review of `docs/design/flows-sprint-01.md` | principal-designer (with the coach, FE, BA and security) | Sprint 0 D8 |
+| P8 | Threat-model notes for auth and upload | security-privacy-engineer | Sprint 0 D5 (v0), Sprint 1 D2 (notes) |
+| P9 | Coach sign-off on the capture-guide wording; PM decision on the F-01 copy | pickleball-domain-coach; product-manager | Sprint 1 D3; ST-015 start |
+| P10 | SPIKE-06 result (may change U-01's copy) | senior-frontend-engineer | Sprint 1 D3 |
+| P11 | ST-025 cap measurement (until then the provisional caps come from config) | senior-ml-cv-engineer | Sprint 1 D7 |
+| P12 | OQ-06 answer, for any fixture footage with people | human product owner | Sprint 1 planning |
+
+**Verdict (BA, 2026-10-03):**
+
+- Every BA-owned DoR item is met for ST-013..ST-025.
+- No story is fully Ready yet: each has at least the QA testability check (P2) and the PM priority (P1) open, and these are not the BA's to tick.
+- The rules stories also wait for ADR 0009 ratification (P3).
+- The EM decides at planning.
+
+### 14.6 Glossary additions (also added to `docs/process/ddd-guidelines.md` §6)
+
+| Term | Definition | Context |
+|---|---|---|
+| Service turn | The run of rallies during which one side keeps the serve, from gaining it to the side-out or game end. In doubles it spans server 1 and server 2 (needs-verification) | Sport Plug-in / Analytics |
+| Rally ending | How a rally ended: `winner`, `unforced_error`, `forced_error`, `fault` (with an optional subtype) or `replay` (FR-050; QD X3) | Match & Scoring |
+| Unforced error / forced error | An error the player had time and position to avoid / an error caused by the opponent's shot. Coaching judgment; the label is kept only if labeller agreement reaches κ ≥ 0.6 (QD X3) | Match & Scoring / Analytics |
+| Rules preset | A named, immutable `RulesConfig`. Only `PROVISIONAL-UNVERIFIED` exists until every row of a federation preset is verified (ADR 0009) | Sport Plug-in |
+| Upload session | A resumable upload of one video to one match, with its offset, length and expiry (tus) | Capture & Media |

@@ -1,0 +1,28 @@
+[project]
+name = "racket-infra-tests"
+version = "0.0.1"
+description = "Tests for infra, CI helper scripts and Claude Code hooks (sre-devops-engineer lane, ST-001..ST-003)"
+requires-python = ">=3.11,<3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pyyaml>=6.0",
+    "boto3>=1.34",
+    "psycopg[binary]>=3.2",
+    "requests>=2.32",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
+markers = [
+    "unit: no I/O beyond temp dirs and subprocesses of the scripts under test; fast",
+    "integration: starts real local services (Postgres, SeaweedFS) or Docker",
+]

@@ -1,0 +1,450 @@
+# CI and merge gates (ST-002; sprint-00 §3.1, §8; working-agreement §7.1).
+# Every gate fails closed: a missing project, lockfile or report is a red gate, never a skip.
+# Branch protection requires the single `ci-gate` check (docs/process/ci-cd.md).
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *" # nightly: E2E streak (sprint-00 §8) and flaky-test report (NFR-074)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "22"
+  UV_VERSION: "0.8.17"
+  GITLEAKS_VERSION: "8.28.0"
+  GITLEAKS_SHA256: "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb"
+  # NFR-073 time budgets (seconds). Domain suite = unit tests under DOMAIN_TEST_PATHS.
+  DOMAIN_UNIT_BUDGET_S: "10"
+  BACKEND_UNIT_BUDGET_S: "60"
+  INTEGRATION_BUDGET_S: "600"
+  DOMAIN_TEST_PATHS: "tests/unit"
+  COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
+  FORCE_COLOR: "1"
+
+jobs:
+  # ------------------------------------------------------------------ PR policy gates
+  pr-policy:
+    name: PR policy (test immutability, size)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test and gold immutability (EP/ENG-28, NFR-078)
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/ci/check_test_immutability.py --base "$BASE_SHA" --head HEAD
+      - name: PR size (EP/ENG-04)
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/ci/check_pr_size.py --base "$BASE_SHA" --head HEAD
+
+  workflow-lint:
+    name: Workflow lint (actionlint)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "actionlint-py==1.7.12.25" "shellcheck-py==0.11.0.1"
+      - run: actionlint -color
+
+  # ------------------------------------------------------------------ backend static checks
+  python-lint:
+    name: Python lint and format (Ruff)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked
+      - run: uv run ruff check --output-format=github .
+      - run: uv run ruff format --check .
+
+  python-types:
+    name: Python types (mypy; strict on domain modules)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked
+      - run: uv run mypy
+
+  python-unit:
+    name: Python unit suites (time-budgeted)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked
+      - name: Domain unit suite < 10 s (NFR-073)
+        run: |
+          # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
+          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m unit $DOMAIN_TEST_PATHS
+      - name: Backend unit suite <= 60 s (NFR-073)
+        run: python3 ../scripts/ci/run_with_budget.py "$BACKEND_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m unit --junitxml=../reports/unit.xml
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: junit-unit
+          path: reports/unit.xml
+          if-no-files-found: warn
+
+  # ------------------------------------------------------------------ integration on Compose
+  integration:
+    name: Integration, scenario and regression suites on Compose (+ changed-lines coverage)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}" "diff-cover==10.6.0"
+      - name: Start backing services (same as production; never SQLite, AQS/OPS-05)
+        run: $COMPOSE up -d --wait postgres objectstore objectstore-init mailpit tracing
+      - name: Export service endpoints
+        run: |
+          set -a; . infra/env.example; set +a
+          {
+            echo "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_HOST_PORT}/${POSTGRES_DB}"
+            echo "S3_ENDPOINT_URL=http://127.0.0.1:${S3_HOST_PORT}"
+            echo "S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}"
+            echo "S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}"
+            echo "S3_REGION=${S3_REGION}"
+            echo "S3_BUCKET_MEDIA=${S3_BUCKET_MEDIA}"
+            echo "SMTP_HOST=127.0.0.1"
+            echo "SMTP_PORT=${MAILPIT_SMTP_HOST_PORT}"
+            echo "APP_ENV=test"
+          } >> "$GITHUB_ENV"
+      - name: Object store parity IT-00-16 (ADR 0008 part C)
+        working-directory: infra
+        run: uv sync --locked && uv run pytest -q tests/test_object_store_parity.py
+      - name: Backend suites with coverage (< 10 min, NFR-073)
+        working-directory: backend
+        run: |
+          uv sync --locked
+          python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" -- \
+            uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+              --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
+      - name: Changed-lines coverage >= 85% (testing-strategy §8, NFR-071)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: diff-cover reports/coverage-backend.xml --compare-branch="$BASE_SHA" --fail-under=85 --markdown-report reports/diff-cover-backend.md
+      - name: Service logs on failure
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=200
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: integration-reports
+          path: reports/
+          if-no-files-found: warn
+
+  fixture-integrity:
+    name: Fixture and gold-set integrity (FR-151, NFR-078)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+        run: bash scripts/ci/check_fixtures.sh "$BASE_SHA"
+
+  infra-tests:
+    name: Infra, hooks and CI-script tests (ST-001..ST-003)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}" "shellcheck-py==0.11.0.1"
+      - run: uv sync --locked
+      # The runner image ships PostgreSQL 16 server binaries; dev-postgres.sh uses them.
+      - run: uv run pytest -q -m "unit or integration"
+
+  # ------------------------------------------------------------------ web
+  web-checks:
+    name: Web lint, types, unit, coverage, bundle budget
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec eslint --max-warnings=0 .
+      - run: pnpm exec tsc --noEmit
+      - name: Vitest with coverage (Cobertura for diff-cover)
+        run: pnpm exec vitest run --coverage --coverage.reporter=cobertura --coverage.reporter=text-summary --coverage.reportsDirectory=../reports/web-coverage
+      - name: Changed-lines coverage >= 80% (testing-strategy §8)
+        if: github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          pip install "diff-cover==10.6.0"
+          diff-cover reports/web-coverage/cobertura-coverage.xml --compare-branch="$BASE_SHA" --fail-under=80
+      - run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: First-route JS <= 200 KB gzipped (NFR-015)
+        run: python3 ../scripts/ci/check_first_route_js.py --next-dir .next --route /page --budget-kb 200
+
+  e2e:
+    name: E2E (Playwright, Chromium + WebKit) with axe-core
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable
+      - name: Start the full stack
+        run: $COMPOSE up -d --build --wait
+      - working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium webkit
+      - name: Playwright journeys; axe 0 serious/critical (NFR-027)
+        working-directory: web
+        env:
+          BASE_URL: http://localhost:3000
+        run: pnpm exec playwright test --reporter=github,html
+      - name: Service logs on failure
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=300
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          if-no-files-found: warn
+
+  # ------------------------------------------------------------------ supply chain
+  secrets-and-audit:
+    name: Secret scan, dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: gitleaks (NFR-056), pinned and checksum-verified
+        run: |
+          curl -fsSL -o /tmp/gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          /tmp/gitleaks git --config .gitleaks.toml --redact --verbose --exit-code 1 .
+      - name: pip-audit (NFR-062)
+        working-directory: backend
+        run: |
+          pip install "uv==${UV_VERSION}" "pip-audit==2.10.1"
+          uv export --locked --no-dev --no-emit-project --format requirements-txt > /tmp/req.txt
+          pip-audit --strict --requirement /tmp/req.txt --disable-pip
+      - name: pnpm audit, critical (NFR-062)
+        working-directory: web
+        run: |
+          corepack enable
+          pnpm audit --prod --audit-level critical
+
+  sbom-licences:
+    name: SBOM (CycloneDX) and licence gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install the shipped graph only (no dev dependencies)
+        run: |
+          pip install "uv==${UV_VERSION}"
+          (cd backend && uv sync --locked --no-dev)
+          corepack enable
+          (cd web && pnpm install --frozen-lockfile --prod)
+      - name: SBOM for the backend environment
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: backend/.venv
+          format: cyclonedx-json
+          output-file: reports/sbom-backend.cdx.json
+          upload-artifact: false
+      - name: SBOM for the web runtime dependencies
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: web/node_modules
+          format: cyclonedx-json
+          output-file: reports/sbom-web.cdx.json
+          upload-artifact: false
+      - name: Licence gate, no AGPL or non-commercial (NFR-062)
+        run: |
+          python3 scripts/ci/check_licences.py --allow infra/licence-exceptions.json \
+            --sbom reports/sbom-backend.cdx.json --sbom reports/sbom-web.cdx.json
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom
+          path: reports/sbom-*.cdx.json
+          if-no-files-found: warn
+
+  # ------------------------------------------------------------------ nightly flaky report
+  flaky-report:
+    name: Flaky-test report (NFR-074)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: $COMPOSE up -d --wait postgres objectstore objectstore-init mailpit tracing
+      - name: Run the backend suites three times
+        working-directory: backend
+        run: |
+          set -a; . ../infra/env.example; set +a
+          export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_HOST_PORT}/${POSTGRES_DB}"
+          export S3_ENDPOINT_URL="http://127.0.0.1:${S3_HOST_PORT}" APP_ENV=test
+          uv sync --locked
+          for i in 1 2 3; do
+            uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+              --junitxml="../reports/run-$i.xml" || true
+          done
+      - run: python3 scripts/ci/flaky_report.py --out reports/flaky.md reports/run-*.xml >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flaky-report
+          path: reports/flaky.md
+
+  # ------------------------------------------------------------------ single required check
+  ci-gate:
+    name: ci-gate
+    if: always()
+    needs:
+      - pr-policy
+      - workflow-lint
+      - python-lint
+      - python-types
+      - python-unit
+      - integration
+      - fixture-integrity
+      - infra-tests
+      - web-checks
+      - e2e
+      - secrets-and-audit
+      - sbom-licences
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: All gates green (skipped is allowed only for pr-policy outside PRs)
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          echo "$RESULTS" | python3 -c '
+          import json, os, sys
+          needs = json.load(sys.stdin)
+          bad = []
+          for job, info in needs.items():
+              result = info["result"]
+              if result == "success":
+                  continue
+              if result == "skipped" and job == "pr-policy" and os.environ["EVENT"] != "pull_request":
+                  continue
+              bad.append(f"{job}: {result}")
+          print("\n".join(bad) or "all gates green")
+          sys.exit(1 if bad else 0)
+          '
