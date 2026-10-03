@@ -49,8 +49,19 @@ SECURITY_HEADERS = (
 _OWNED_HEADERS = {name for name, _ in SECURITY_HEADERS} | {b"server", b"x-request-id"}
 
 
-def error_response(error: ErrorResponse, method: str) -> Response:
-    headers = dict(error.headers)
+ERROR_HEADERS_STATE = "error_headers"
+
+
+def route_error_headers(request: Request) -> dict[str, str]:
+    """Headers a route group asks for on its error responses too, set on ``request.state``
+    by a router dependency (e.g. tus: every tus response carries ``Tus-Resumable``)."""
+    return dict(getattr(request.state, ERROR_HEADERS_STATE, None) or {})
+
+
+def error_response(
+    error: ErrorResponse, method: str, extra_headers: dict[str, str] | None = None
+) -> Response:
+    headers = {**(extra_headers or {}), **error.headers}
     if method == "HEAD":  # HEAD responses carry no body (api-sprint-00 §3)
         return Response(status_code=error.status, headers=headers)
     return JSONResponse(error.body(), status_code=error.status, headers=headers)
@@ -69,18 +80,18 @@ def install_error_handlers(app: FastAPI, mapper: ErrorMapper) -> None:
     async def on_app_error(request: Request, exc: Exception) -> Response:
         error = mapper.map(exc)
         log_error(error, exc)
-        return error_response(error, request.method)
+        return error_response(error, request.method, route_error_headers(request))
 
     async def on_http_error(request: Request, exc: Exception) -> Response:
         status = exc.status_code if isinstance(exc, StarletteHTTPException) else 500
         error = mapper.for_status(status)
         log_error(error, None)
-        return error_response(error, request.method)
+        return error_response(error, request.method, route_error_headers(request))
 
     async def on_validation_error(request: Request, exc: Exception) -> Response:
         error = mapper.for_status(422)  # never echo the input (NFR-058)
         log_error(error, None)
-        return error_response(error, request.method)
+        return error_response(error, request.method, route_error_headers(request))
 
     app.add_exception_handler(AppError, on_app_error)
     app.add_exception_handler(StarletteHTTPException, on_http_error)

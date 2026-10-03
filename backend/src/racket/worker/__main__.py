@@ -16,6 +16,7 @@ from pathlib import Path
 from types import FrameType
 
 from opentelemetry import trace
+from sqlalchemy.exc import DBAPIError
 
 from racket.analysis_jobs.stage import ShutdownRequested
 from racket.platform.logs import configure_logging
@@ -26,6 +27,12 @@ from racket.worker.runner import Runner, new_worker_id
 from racket.worker.stages import STAGES
 
 log = logging.getLogger("racket.worker")
+DB_BACKOFF_MAX_S = 5.0
+
+
+def db_backoff(failures: int, poll_seconds: float) -> float:
+    """Seconds to wait after ``failures`` consecutive database errors (capped, R1-06)."""
+    return min(DB_BACKOFF_MAX_S, max(poll_seconds, 0.05) * 2.0 ** max(failures - 1, 0))
 
 
 def main() -> int:
@@ -52,12 +59,28 @@ def main() -> int:
                "stages": sorted(STAGES), "ffprobe": ffprobe_version(),
                "settings": settings.redacted()},
     )  # fmt: skip
+    failures = 0
     try:
         while not runner.shutdown.stop:
             with contextlib.suppress(OSError):
                 heartbeat.touch()
-            if not runner.run_one():
-                deadline = time.monotonic() + settings.worker_poll_seconds
+            wait = settings.worker_poll_seconds
+            try:
+                ran = runner.run_one()
+                failures = 0
+            except DBAPIError as exc:
+                # Postgres restart, network blip, or a schema not migrated yet: log, back
+                # off and keep polling instead of dying (R1-06). Leases return stuck jobs.
+                failures += 1
+                ran, wait = False, db_backoff(failures, settings.worker_poll_seconds)
+                log.error(
+                    "database error in the poll loop",
+                    extra={"event": "worker.db_error", "worker_id": runner.worker_id,
+                           "exc_type": type(exc.orig).__name__, "failures": failures,
+                           "retry_in_s": wait},
+                )  # fmt: skip
+            if not ran:
+                deadline = time.monotonic() + wait
                 while not runner.shutdown.stop and time.monotonic() < deadline:
                     time.sleep(0.05)
     except ShutdownRequested:

@@ -14,6 +14,10 @@ from sqlalchemy.orm import Session
 from racket.video_ingest.domain import MediaFacts, UploadStatus
 from racket.video_ingest.repository import PROBE_FAILED, MediaRepository, UploadRepository
 
+# Part of the port: other contexts name upload states through here, never through the domain
+# package (context map rule 1, R2-02).
+__all__ = ["MediaFacts", "MediaSummary", "UploadStatus", "media_summary"]
+
 
 @dataclass(frozen=True)
 class MediaSummary:

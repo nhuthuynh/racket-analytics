@@ -63,6 +63,10 @@ def ffprobe_version() -> str:
 # ------------------------------------------------------------------ process sandbox (NFR-054)
 _ALLOWED_SCHEMES = ("http", "https")
 _PROTOCOL_WHITELIST = "http,https,tcp,tls"  # never "file", "concat", "subfile", ...
+# Input formats ffprobe may demux: the MP4/MOV family only (SEC-R1-01; threat model T-WS-2).
+# Without it, auto-detection lets a DASH/HLS manifest uploaded as a "video" make the worker
+# fetch any URL the uploader chooses (SSRF), even under the protocol whitelist.
+_FORMAT_WHITELIST = "mov,mp4,m4a,3gp,3g2,mj2"
 _CHILD_ENV_KEYS = ("PATH",)
 
 
@@ -102,6 +106,7 @@ def ffprobe_argv(binary: str, url: str) -> list[str]:
         binary,
         "-v", "error",
         "-protocol_whitelist", _PROTOCOL_WHITELIST,
+        "-format_whitelist", _FORMAT_WHITELIST,
         "-print_format", "json",
         "-show_format",
         "-show_streams",

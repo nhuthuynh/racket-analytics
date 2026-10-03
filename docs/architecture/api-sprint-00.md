@@ -40,7 +40,7 @@ This contract matches the QA red-first tests as they stand on 2026-10-03. Where 
 | Item | Rule |
 |---|---|
 | Availability | The `/dev/*` routes are **registered only** when `DEV_IDENTITY_ENABLED=true`. Otherwise they do not exist (404). The API **refuses to start** when `APP_ENV=prod` and `DEV_IDENTITY_ENABLED=true` (sprint-00 §5 `Settings` test 2). |
-| Seeded users | `ivy` ("Ivy") and `carlos` ("Carlos"), seeded at startup **only** when the dev provider is enabled and `APP_ENV` is `dev` or `test`. No default accounts exist in production (ASVS 6.3.2). |
+| Seeded users | `ivy` ("Ivy"), `carlos` ("Carlos") and `dana` ("Dana", who never gets a match, so the E2E empty-state check has a user with no matches; added 2026-10-03, QA-R1-04, recorded R2-01), seeded at startup **only** when the dev provider is enabled and `APP_ENV` is `dev` or `test`. No default accounts exist in production (ASVS 6.3.2). |
 | Token | 32 bytes from a CSPRNG, base64url-encoded (256 bits; ASVS 7.2.3, 11.5.1). Postgres stores **only its SHA-256** in `sessions(token_sha256, account_id, created_at, expires_at)`. The token is never logged [AQS/SEC-04 16.2.5]. |
 | Cookie name and attributes | `APP_ENV` = `dev`, `staging` or `prod`: `__Host-racket_session=<token>; Path=/; Secure; HttpOnly; SameSite=Lax`. `APP_ENV=test`: `racket_session=<token>; Path=/; HttpOnly; SameSite=Lax`. httpx over `http://testserver` will not return a `Secure` cookie, so the test environment is the only one without `Secure`/`__Host-` (ASVS 3.3.1, 3.3.3, 3.3.4, 3.3.2; judgment for the test exception). Dev runs the web app over HTTPS (ST-010), so `Secure` works through the `/api` rewrite. |
 | Lifetime | Dev provider: absolute lifetime 12 h, no idle timeout (dev only). Real sign-in lifetimes are decided in Sprint 1 and documented per ASVS 7.1.1. |
@@ -53,13 +53,13 @@ This contract matches the QA red-first tests as they stand on 2026-10-03. Where 
 Lists the dev users for the sign-in picker. No authentication is needed.
 
 ```
-200 {"items": [{"username": "ivy", "display_name": "Ivy"}, {"username": "carlos", "display_name": "Carlos"}]}
+200 {"items": [{"username": "ivy", "display_name": "Ivy"}, {"username": "carlos", "display_name": "Carlos"}, {"username": "dana", "display_name": "Dana"}]}
 ```
 
 ### 2.2 `POST /dev/sign-in`
 
 ```
-Request:  {"username": "ivy"}            // closed schema; username in {"ivy","carlos"}
+Request:  {"username": "ivy"}            // closed schema; username in {"ivy","carlos","dana"} (R2-01)
 204 No Content
 Set-Cookie: __Host-racket_session=…; Path=/; Secure; HttpOnly; SameSite=Lax
 ```
@@ -170,13 +170,13 @@ Every non-2xx response that has a body uses exactly this shape. `HEAD` responses
 | `POST /matches` | `{"title": str, "format": "singles"\|"doubles"}` (closed) | **201**, the match (`status: "awaiting_upload"`, `media: null`), and `Location: /matches/{id}` (without the `/api` prefix; clients use the body) | 401, 403 `forbidden_origin`, 422 |
 | `GET /matches?limit=50` | | **200** `{"items": [match, …], "next_cursor": null}`, **only the caller's matches** | 401, 422 (bad `limit`) |
 | `GET /matches/{match_id}` | | **200**, the match | 401, **404** (missing *or not yours*: identical body except `support_ref`) |
-| `GET /matches/{match_id}/media` | | **200**, the `media` object | 401, **404** (missing, not yours, *or not probed yet*) |
+| `GET /matches/{match_id}/media` | | **200**, the `media` object; **204** with no body and `Cache-Control: no-store` while not probed yet (amended 2026-10-03, R1-07) | 401, **404** (missing or not yours) |
 
 Every route with `{match_id}` loads the match through one ownership dependency (`WHERE id = :id AND owner_id = :me`). A miss logs `event="authz.denied"` to `racket.security`, with `account_id`, route template, method and `request_id`, and **no** target owner or title. The log does not say whether the resource exists [AQS/SEC-04 16.3.2] (NFR-057). The route is in the BOLA matrix (`backend/tests/regression/bola.py`).
 
 ## 6. Uploads: tus 1.0.0 core (ST-008; ADR 0011)
 
-The client is tus-js-client. Endpoint: `/api/matches/{match_id}/uploads`, `chunkSize: 8 * 1024 * 1024`, and `retryDelays` as the FE chooses. Every tus request except `OPTIONS` must carry `Tus-Resumable: 1.0.0`. Every tus response carries `Tus-Resumable: 1.0.0` and `Cache-Control: no-store`.
+The client is tus-js-client. Endpoint: `/api/matches/{match_id}/uploads`, `chunkSize: 8 * 1024 * 1024`, and `retryDelays` as the FE chooses. Every tus request except `OPTIONS` must carry `Tus-Resumable: 1.0.0`. Every tus response carries `Tus-Resumable: 1.0.0` and `Cache-Control: no-store`. This includes error responses from 401 onwards (enforced 2026-10-03, SEC-R2-01).
 
 ### 6.1 `OPTIONS /uploads`
 
@@ -194,7 +194,7 @@ No authentication; it reveals only configuration. `checksum` and `expiration` jo
 | Request header | Rule |
 |---|---|
 | `Tus-Resumable` | `1.0.0`, otherwise 412 |
-| `Upload-Length` | Required. A decimal integer from 1 to `UPLOAD_MAX_BYTES` (default 10,000,000,000 = 10 GB, provisional, NFR-053/K12). Missing or not an integer gives 400; 0 gives 400; too large gives 413. `Upload-Defer-Length` is not supported (400) |
+| `Upload-Length` | Required. A decimal integer from 1 to `UPLOAD_MAX_BYTES` (default 10,000,000,000 = 10 GB, provisional, NFR-053/K12). Missing or not an integer gives 400; 0 gives 400; too large gives 413. "Integer" means ASCII digits `0-9` only, with no sign, space or other Unicode digit (400); a value with more than 20 significant digits is an integer that is too large (413), never a 500 (amended 2026-10-03, SEC-R2-02). `Upload-Defer-Length` is not supported (400) |
 | `Upload-Metadata` | Optional. Parsed as tus `key base64value` pairs, at most 1 KiB in total, and malformed gives 400. **No metadata value is stored or used in Sprint 0**, including `filename` (data minimisation; it never reaches object keys or tool arguments [AQS/SEC-02 5.3.2]) |
 
 ```
@@ -237,8 +237,9 @@ Checks run in this order, and the first failure wins (ADR 0011):
 | 2 | `Tus-Resumable` = 1.0.0 | 412 `tus_version_unsupported` (+ `Tus-Version`) |
 | 3 | upload exists and is yours | 404 `not_found` |
 | 4 | `Content-Type` | 415 `unsupported_media_type` |
-| 5 | `Upload-Offset` is a non-negative integer | 400 `bad_request` |
-| 6 | `Content-Length` present; ≤ `UPLOAD_MAX_CHUNK_BYTES` (default 64 MiB) | 411 `length_required`; 413 `payload_too_large` |
+| 5 | `Upload-Offset` is a non-negative integer: ASCII digits `0-9` only, at most 20 significant digits (amended 2026-10-03, SEC-R2-01) | 400 `bad_request` |
+| 6 | `Content-Length` present and ASCII digits only; ≤ `UPLOAD_MAX_CHUNK_BYTES` (default 64 MiB) | 411 `length_required`; 413 `payload_too_large` |
+| 7a | the upload is still receiving (not complete) | 409 `conflict` (amended 2026-10-03, SEC-R1-02/R1-04) |
 | 7 | `Upload-Offset` = stored offset, and no other PATCH holds the lock | 409 `upload_offset_mismatch` |
 | 8 | `Upload-Offset + Content-Length` ≤ `Upload-Length` | 413 `payload_too_large` |
 
@@ -251,6 +252,8 @@ Tus-Resumable: 1.0.0
 Cache-Control: no-store
 ```
 
+- A PATCH with `Content-Length: 0` on an upload that is still receiving is a no-op: 204 with the stored `Upload-Offset`, nothing is written (amended 2026-10-03, R1-01).
+- A completed upload takes no more bytes, not even an empty PATCH: 409 `conflict`, and the object store is not called (check 7a). A client that lost the final 204 re-reads the offset with HEAD.
 - A PATCH is **atomic**. If the body arrives short (a dropped connection), nothing from that request is stored, and HEAD returns the previous offset (ADR 0011).
 - Every failed PATCH leaves the stored offset unchanged (regression suite).
 - When the new offset equals `Upload-Length`, the upload is complete. In the **same transaction**, the match becomes `video_received` and one `probe` job is queued (NFR-060; IT-00-08). Media facts appear on `GET /matches/{id}` after the worker's probe stage commits (ST-009). If the probe fails, the status becomes `probe_failed`.
@@ -266,7 +269,7 @@ Cache-Control: no-store
 | Route | Owner | Other user | Missing | Anonymous |
 |---|---|---|---|---|
 | `GET /matches/{id}` | 200 | 404 | 404 | 401 |
-| `GET /matches/{id}/media` | 200 / 404 (not probed) | 404 | 404 | 401 |
+| `GET /matches/{id}/media` | 200 / 204 (not probed) | 404 | 404 | 401 |
 | `POST /matches/{id}/uploads` | 201 / 409 | 404 | 404 | 401 |
 | `HEAD /uploads/{id}` | 200 | 404 | 404 | 401 |
 | `PATCH /uploads/{id}` | 204 / 409 / … | 404 | 404 | 401 |

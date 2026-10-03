@@ -14,16 +14,23 @@ import binascii
 import logging
 import re
 import uuid
+from dataclasses import dataclass
 
 from botocore.exceptions import ClientError
-from psycopg.errors import LockNotAvailable
-from sqlalchemy.exc import OperationalError
+from psycopg.errors import LockNotAvailable, UniqueViolation
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from racket.analysis_jobs.domain import JobKey
 from racket.analysis_jobs.queue import JobQueue
 from racket.matches import public as matches
-from racket.platform.errors import BadRequest, Conflict, NotFound, PayloadTooLarge
+from racket.platform.errors import (
+    BadRequest,
+    Conflict,
+    LengthRequired,
+    NotFound,
+    PayloadTooLarge,
+)
 from racket.platform.logs import SECURITY_LOGGER
 from racket.platform.settings import Settings
 from racket.platform.storage import ObjectStore, is_missing_upload
@@ -31,6 +38,7 @@ from racket.video_ingest.domain import (
     ObjectKeyPolicy,
     OffsetMismatch,
     UploadSession,
+    UploadStatus,
 )
 from racket.video_ingest.repository import MediaRepository, UploadRepository
 
@@ -50,15 +58,66 @@ class UploadExists(Conflict):
     pass
 
 
+@dataclass(frozen=True)
+class PatchTarget:
+    """What the HTTP layer needs to check a PATCH's headers, read before the body arrives.
+
+    A plain snapshot, so the read transaction can end before the (possibly slow) body is
+    streamed: no pooled connection sits idle in transaction during the upload (R1-05)."""
+
+    id: uuid.UUID
+    offset: int
+    length: int
+    complete: bool
+
+
+# tus integer headers are plain ASCII decimals. ``str.isdigit`` is not enough: it accepts
+# '²' and other Unicode digits that ``int`` rejects, and ``int`` refuses more than 4300 digits,
+# so both escaped as a 500 (SEC-R2-01, SEC-R2-02). 20 digits hold any 64-bit value.
+HEADER_MAX_DIGITS = 20
+_ASCII_DECIMAL = re.compile(r"[0-9]+")
+
+
+def _significant_digits(raw: str | None) -> str | None:
+    """The digits of ``raw`` without leading zeros (``"0"`` for zero), or ``None`` unless
+    ``raw`` is one or more ASCII digits and nothing else. Stripping first keeps ``int`` away
+    from its 4300-digit limit on zero-padded values."""
+    if raw is None or not _ASCII_DECIMAL.fullmatch(raw):
+        return None
+    return raw.lstrip("0") or "0"
+
+
 def parse_upload_length(raw: str | None, maximum: int) -> int:
-    if raw is None or not raw.isdigit():
+    digits = _significant_digits(raw)
+    if digits is None:
         raise BadRequest("Upload-Length must be a decimal integer")
-    length = int(raw)
+    if len(digits) > HEADER_MAX_DIGITS:
+        raise PayloadTooLarge("Upload-Length above the limit")  # an integer, just too large
+    length = int(digits)
     if length < 1:
         raise BadRequest("Upload-Length must be at least 1")
     if length > maximum:
         raise PayloadTooLarge("Upload-Length above the limit")
     return length
+
+
+def parse_upload_offset(raw: str | None) -> int:
+    """PATCH ``Upload-Offset``: a non-negative ASCII decimal of at most 20 significant digits
+    (§6.4 check 5)."""
+    digits = _significant_digits(raw)
+    if digits is None or len(digits) > HEADER_MAX_DIGITS:
+        raise BadRequest("Upload-Offset must be a non-negative integer")
+    return int(digits)
+
+
+def parse_content_length(raw: str | None, maximum: int) -> int:
+    """PATCH ``Content-Length``: present and an ASCII decimal (411), at most ``maximum`` (413)."""
+    digits = _significant_digits(raw)
+    if digits is None:
+        raise LengthRequired("Content-Length required")
+    if len(digits) > HEADER_MAX_DIGITS or int(digits) > maximum:
+        raise PayloadTooLarge("chunk above the limit")
+    return int(digits)
 
 
 def validate_metadata(raw: str | None) -> None:
@@ -125,9 +184,13 @@ class UploadService:
         self.uploads.add(upload)
         try:
             self.session.commit()
-        except Exception:
+        except Exception as exc:
             self.session.rollback()
             self.store.abort_multipart(object_key, s3_upload_id)
+            # Two creations raced past exists_for_match; the unique constraint on
+            # upload_sessions.match_id picked the winner. The loser is a 409 (R1-03).
+            if isinstance(exc, IntegrityError) and isinstance(exc.orig, UniqueViolation):
+                raise UploadExists("the match already has an upload") from None
             raise
         log.info("upload created", extra={"event": "upload.created", "upload_id": str(upload.id)})
         return upload
@@ -143,11 +206,31 @@ class UploadService:
             raise UploadNotFound("no such upload for this owner")
         return upload
 
+    def patch_target(
+        self, *, owner_id: uuid.UUID, raw_upload_id: str, route: str, method: str
+    ) -> PatchTarget:
+        """``load_owned`` for PATCH, then end the read transaction (R1-05)."""
+        upload = self.load_owned(
+            owner_id=owner_id, raw_upload_id=raw_upload_id, route=route, method=method
+        )
+        target = PatchTarget(
+            id=upload.id,
+            offset=upload.offset,
+            length=upload.length,
+            complete=upload.status == UploadStatus.COMPLETE or upload.is_complete,
+        )
+        self.session.rollback()  # returns the connection to the pool before the body streams
+        return target
+
     def write_chunk(self, upload_id: uuid.UUID, offset: int, data: bytes) -> int:
         """Steps 3-6 of ADR 0011. Returns the new offset."""
         try:
             upload = self._lock(upload_id)
             plan = upload.plan_chunk(offset, len(data), self.settings.upload_part_min_bytes)
+            if plan.is_noop:  # empty PATCH: nothing to write, the offset stays (R1-01)
+                stored = upload.offset
+                self.session.rollback()
+                return stored
             already_complete = False
             if plan.as_part:
                 part_number = plan.part_number or len(upload.parts) + 1

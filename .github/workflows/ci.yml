@@ -29,6 +29,9 @@ env:
   DOMAIN_UNIT_BUDGET_S: "10"
   BACKEND_UNIT_BUDGET_S: "60"
   INTEGRATION_BUDGET_S: "600"
+  # Property tests on the Hypothesis `ci` profile (>= 1,000 examples, ST-004). Own budget, so
+  # the 10 s domain budget keeps measuring the default profile (QA-R1-07; decision-log).
+  PROPERTY_BUDGET_S: "90"
   DOMAIN_TEST_PATHS: "tests/unit"
   COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
   FORCE_COLOR: "1"
@@ -128,6 +131,12 @@ jobs:
         run: |
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
           python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m unit $DOMAIN_TEST_PATHS
+      - name: Property tests, Hypothesis ci profile (>= 1,000 examples, ST-004)
+        env:
+          HYPOTHESIS_PROFILE: ci
+        run: |
+          # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
+          python3 ../scripts/ci/run_with_budget.py "$PROPERTY_BUDGET_S" -- uv run --no-sync pytest -q -m unit $DOMAIN_TEST_PATHS
       - name: Backend unit suite <= 60 s (NFR-073)
         run: python3 ../scripts/ci/run_with_budget.py "$BACKEND_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m unit --junitxml=../reports/unit.xml
       - if: always()
@@ -176,6 +185,8 @@ jobs:
           uv sync --locked
           python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" -- \
             uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+              --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
+              --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
       - name: Changed-lines coverage >= 85% (testing-strategy §8, NFR-071)
         if: github.event_name == 'pull_request'
@@ -278,6 +289,19 @@ jobs:
       - run: corepack enable
       - name: Start the full stack
         run: $COMPOSE up -d --build --wait
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Worker sandbox IT-00-10 against the running worker container (NFR-054)
+        working-directory: backend
+        env:
+          # The test calls `docker compose -f ../infra/compose.yaml`; this gives it the env file.
+          COMPOSE_ENV_FILES: ${{ github.workspace }}/infra/env.example
+        run: |
+          pip install "uv==${UV_VERSION}"
+          uv sync --locked
+          uv run --no-sync pytest -q tests/integration/test_it_00_10_worker_sandbox.py \
+            tests/integration/test_it_00_10_worker_sandbox_strict.py
       - working-directory: web
         run: |
           pnpm install --frozen-lockfile
@@ -401,6 +425,8 @@ jobs:
           uv sync --locked
           for i in 1 2 3; do
             uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+              --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
+              --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --junitxml="../reports/run-$i.xml" || true
           done
       - run: python3 scripts/ci/flaky_report.py --out reports/flaky.md reports/run-*.xml >> "$GITHUB_STEP_SUMMARY"

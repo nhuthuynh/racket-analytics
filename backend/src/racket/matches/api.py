@@ -68,9 +68,8 @@ def get_match(match: OwnedMatch, service: Service) -> MatchOut:
 def get_match_media(match: OwnedMatch, service: Service) -> Response:
     """200 with the facts, or 204 while the owner's video is not probed yet.
 
-    Deviation from api-sprint-00 §5.2 ("404 … or not probed yet"): the BOLA matrix's positive
-    control requires the owner to get something other than 404 on every ID route, so "not
-    probed yet" must differ from "not yours" (decision-log 2026-10-03, senior-backend-engineer).
+    api-sprint-00 §5.2/§7 (amended for R1-07): "not probed yet" must differ from "not yours",
+    because the BOLA matrix's positive control needs a non-404 for the owner on every ID route.
     """
     media = service.view(match).media
     if media is None:

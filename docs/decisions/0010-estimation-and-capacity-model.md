@@ -88,3 +88,5 @@ Chosen option: **Option 2.**
 - Retro 0 and retro 1 record estimate accuracy and the load factor used next.
 
 ## Notes
+
+- **2026-10-03 (engineering-manager, retro 0):** Sprint 0 measurement from `docs/sprints/00/status.json`: 28 units planned. 19 units (68%) were implemented and verified locally; 9 units are partial (ST-002, ST-010, SPIKE-01); 0 units meet the full story DoD, because no CI run has happened and the test-change approvals are pending. Every unit of the shortfall is "external evidence" work (a GitHub CI run, WebKit, peer, human or design reviews), not build effort. **Recalibration:** the Sprint 1 load factor stays at 80% as planned. From Sprint 1, every story card lists its external-evidence items with their owner and due date, and `status.json` records `implemented_units` and `dod_done_units` separately. For the Sprint 2 rule ("lower of 85% and the median completed ratio"), the completed ratio is the **dod_done** ratio (judgment).

@@ -1,0 +1,302 @@
+{
+  "sprint": "00",
+  "goal": "Foundations and walking skeleton (docs/sprints/sprint-00.md §1)",
+  "dates": {
+    "planned_start": "2026-10-05",
+    "planned_review": "2026-10-16",
+    "work_executed": "2026-10-03",
+    "status_written": "2026-10-03"
+  },
+  "owner": "engineering-manager",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. 'implemented' = built, reviewed in 3 fresh-context rounds and verified locally with command evidence. 'dod_done' = story-level DoD fully met (incl. merged to main with every CI gate green). No story is dod_done yet because CI has never run on GitHub and every test-change request is still pending QA approval (R3-02, QA-R3-02). Status values: done | partial | not_started.",
+  "capacity": {
+    "load_factor": 0.7,
+    "capacity_units_per_lane": 11.2,
+    "committed_units": 28
+  },
+  "totals": {
+    "planned_units": 28,
+    "implemented_units": 19,
+    "partial_units": 9,
+    "dod_done_units": 0,
+    "implemented_ratio": 0.68,
+    "dod_done_ratio": 0.0
+  },
+  "stories": [
+    {
+      "id": "ST-001",
+      "title": "Dev environment with production parity",
+      "owner": "sre-devops-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "Round 3: Compose -p r3review (api/worker/migrate/web images built from tree with --secret extra_ca) up -d --no-build --wait -> rc=0, all healthy; infra/tests 197 passed; IT-00-16 parity green on SeaweedFS 3.97",
+      "open": [
+        "compose --build needs the extra_ca build secret behind the proxy",
+        "F-1 shared DB owner role / S3 key for api and worker (should-fix before any non-dev deploy)",
+        "QA-R2-06 SeaweedFS master/volume/filer ports reachable from sandbox network"
+      ]
+    },
+    {
+      "id": "ST-002",
+      "title": "CI pipeline and merge gates",
+      "owner": "sre-devops-engineer",
+      "size": "L",
+      "planned_units": 4,
+      "status": "partial",
+      "completed_units": 0,
+      "dod_done": false,
+      "evidence": "actionlint rc=0; infra workflow structure tests green; all §8 gates exist in .github/workflows/ci.yml and fail closed",
+      "open": [
+        "Never run on GitHub (no remote): no green main run, no failing sample PR, no 3-night E2E streak (QA-R3-02, blocker)",
+        "Branch protection, labels and ANTHROPIC_API_KEY need a human admin"
+      ]
+    },
+    {
+      "id": "ST-003",
+      "title": "Agent hooks and test-immutability guard",
+      "owner": "sre-devops-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "Hook demo: Write .env -> exit 2 BLOCKED; PostToolUse formats; Stop blocks on failing unit test (exit 2); test_hook_* 86 passed; immutability guard 14 passed",
+      "open": [
+        "QA-R1-12 fixtures/clips/ not in PROTECTED_PREFIXES (nit)",
+        "ADR 0013 Proposed"
+      ]
+    },
+    {
+      "id": "ST-004",
+      "title": "Test harness, tags and test-data builders",
+      "owner": "senior-qa-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "Markers, pytest-bdd tag mapping, Hypothesis ci profile (CI step with 90 s budget: 262 passed in 16.8 s), ASGI client fixtures, rollback/committed DB fixtures, builders; --co -m 'not (unit or integration or scenario or regression)' -> 0 tests escape CI markers",
+      "open": [
+        "conftest APP_ENV=test change pending QA approval",
+        "QA-R3-08 stale red_until markers on 22 modules"
+      ]
+    },
+    {
+      "id": "ST-005",
+      "title": "API skeleton: health, errors, headers, logs, tracing",
+      "owner": "senior-backend-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "error bodies, trace header, IT-00-11..15, dev_environment and errors_and_tracing features green in the full backend run",
+      "open": [
+        "R3-04 a 500 on a tus route lacks Tus-Resumable (minor)",
+        "R3-05 JSON content-type lacks charset vs contract §1 (minor)"
+      ]
+    },
+    {
+      "id": "ST-006",
+      "title": "Ownership seam, minimal Match aggregate and BOLA matrix",
+      "owner": "senior-backend-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "BOLA matrix (5 ID routes + anonymous + inventory) green; ad-hoc BOLA probes as Carlos -> 404 on every route (security rounds 2 and 3)",
+      "open": [
+        "SEC-R3-01 dev identity allowed with APP_ENV=staging (nit; decide before Sprint 1 real accounts)",
+        "R1-09 N+1 on GET /matches (minor)"
+      ]
+    },
+    {
+      "id": "ST-007",
+      "title": "Postgres-backed job queue and worker, including SPIKE-09",
+      "owner": "senior-backend-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "IT-00-03/04/05, job_resilience feature green; SPIKE-09 4x1000 jobs 504-888 jobs/s, 0 double claims (dated note on ADR 0008); ADR 0017",
+      "open": [
+        "R2-08 worker coverage below 85% floor (runner 80%, __main__ 32%; subprocess coverage not collected)",
+        "ADR 0017 Proposed"
+      ]
+    },
+    {
+      "id": "ST-008",
+      "title": "tus core upload into object storage",
+      "owner": "senior-backend-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "IT-00-06/07/08, upload_resume_core feature, tus round-1/round-2 regression tests green; live Compose checks round 3 (1 MiB PATCHes, short body atomic, PATCH after complete 409)",
+      "open": [
+        "R3-06 no automated test for retried final PATCH after commit failure (minor)",
+        "R3-03 contract §8/§9 vs ADR 0019 chunk size (major, principal-engineer)"
+      ]
+    },
+    {
+      "id": "ST-009",
+      "title": "Media probe stage in a sandboxed worker",
+      "owner": "senior-ml-cv-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "IT-00-09 green; IT-00-10 strict + old on Compose -> 12 passed; LGPL ffprobe pinned (ADR 0020); format allowlist closes DASH SSRF (ADR 0021)",
+      "open": [
+        "QA-R3-07 weak IT-00-10 probe still present (QA to retire)",
+        "LGPLv3 reading needs security-privacy-engineer confirmation",
+        "HTTPS presigned URLs untested",
+        "QA-R3-05 MediaFacts nan/inf duration leaks ValueError"
+      ]
+    },
+    {
+      "id": "ST-010",
+      "title": "PWA shell and walking-skeleton screens",
+      "owner": "senior-frontend-engineer",
+      "size": "L",
+      "planned_units": 4,
+      "status": "partial",
+      "completed_units": 0,
+      "dod_done": false,
+      "evidence": "Vitest 132 passed; tsc/eslint clean; first-route JS 103.1 KB gz; Playwright Chromium 7 passed and --repeat-each=3 -> 21 passed on Compose; axe 0 serious/critical",
+      "open": [
+        "WebKit project never run (QA-R3-09)",
+        "principal-designer and security-privacy-engineer reviews of ST-010 not held",
+        "manual keyboard/screen-reader pass not done",
+        "QA-R3-06 reload test does not resume from a non-zero offset",
+        "e2e spec changes pending QA approval"
+      ]
+    },
+    {
+      "id": "ST-011",
+      "title": "Synthetic fixture clip and gold-set manifest check",
+      "owner": "senior-qa-engineer",
+      "size": "S",
+      "planned_units": 1,
+      "status": "done",
+      "completed_units": 1,
+      "dod_done": false,
+      "evidence": "deterministic sha256 over 2 runs; check_fixtures.sh HEAD -> OK synthetic-60s v1; gold_set_integrity feature 2 passed",
+      "open": []
+    },
+    {
+      "id": "ST-012",
+      "title": "Acceptance scenarios and regression-suite scaffolds, written first",
+      "owner": "senior-qa-engineer",
+      "size": "M",
+      "planned_units": 2,
+      "status": "done",
+      "completed_units": 2,
+      "dod_done": false,
+      "evidence": "7 features / 17 scenarios (19 collected) all green; 6 regression suites green; red-first baseline 74 red before implementation",
+      "open": [
+        "6 test-change requests pending QA decision (R3-02 / QA-R3-03)",
+        "test-report.md stale and unsigned (QA-R3-04)"
+      ]
+    },
+    {
+      "id": "SPIKE-01",
+      "title": "CV licence posture",
+      "owner": "senior-ml-cv-engineer",
+      "size": "S",
+      "planned_units": 1,
+      "status": "partial",
+      "completed_units": 0,
+      "dod_done": false,
+      "evidence": "ADR 0015 Proposed: 23 code, 12 weights, 10 dataset rows; GitHub licences fetched and hashed",
+      "open": [
+        "principal-engineer and security-privacy-engineer reviews not held",
+        "COCO, CrowdHuman, MOT17, AI Challenger and Ultralytics Enterprise terms unverified (egress blocked)",
+        "PO decision OQ-12"
+      ]
+    }
+  ],
+  "sprint_dod": [
+    {
+      "item": "Every §8 gate runs in CI on main; failing sample PR shows each gate blocking",
+      "met": false,
+      "why": "no GitHub remote"
+    },
+    {
+      "item": "Every ST-003 hook demonstrated",
+      "met": true,
+      "why": "hook demo evidence in decision-log.md (SRE row)"
+    },
+    {
+      "item": "ADR 0011 and SPIKE-01 licence ADR written; ADR 0008 has SPIKE-09 note",
+      "met": true,
+      "why": "ADR 0011, ADR 0015, ADR 0008 Notes"
+    },
+    {
+      "item": "Context canvases and context map merged",
+      "met": true,
+      "why": "docs/architecture/contexts/*.md, context-map.md (committed in 1d10ec8)"
+    },
+    {
+      "item": "Sprint 1 stories meet DoR",
+      "met": false,
+      "why": "sprint-01 §14.5 pending items P1-P12 (QA testability check, PO ratification of ADR 0009, design review, OQ-06)"
+    },
+    {
+      "item": "status.json holds planned and completed units per story",
+      "met": true,
+      "why": "this file"
+    },
+    {
+      "item": "Retrospective written with owned, dated actions",
+      "met": true,
+      "why": "docs/retros/2026-10-16-sprint-00.md"
+    },
+    {
+      "item": "Walking-skeleton E2E green on >=3 consecutive nightly runs",
+      "met": false,
+      "why": "no CI; local Chromium only"
+    },
+    {
+      "item": "Test report up to date and signed by QA",
+      "met": false,
+      "why": "QA-R3-04"
+    }
+  ],
+  "test_status": {
+    "source": "EM re-run 2026-10-03 (sprint-report.md §5) plus review round 3",
+    "backend_all": {
+      "command": "cd backend && env -u APP_ENV uv run pytest -q -rs",
+      "result": "439 passed, 5 skipped in 51.87s",
+      "skips": "IT-00-10 (old x2, strict x3) need Compose; on Compose 12 passed (round 3)"
+    },
+    "backend_by_marker": {
+      "unit": 282,
+      "integration": 143,
+      "scenario": 19,
+      "regression": 39,
+      "note": "markers overlap"
+    },
+    "infra": {
+      "command": "cd infra && uv run pytest -q",
+      "result": "197 passed in 46.29s"
+    },
+    "web_unit": {
+      "command": "cd web && pnpm exec vitest run",
+      "result": "17 files, 132 passed"
+    },
+    "e2e_chromium": {
+      "command": "CI=true PW_PROJECTS=chromium pnpm exec playwright test (Compose stack)",
+      "result": "7 passed; --repeat-each=3 -> 21 passed (round 3, QA reviewer)"
+    },
+    "e2e_webkit": "not run",
+    "qa_signoff": "pending (QA-R3-04)"
+  }
+}

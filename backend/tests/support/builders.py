@@ -23,7 +23,7 @@ MATCH = Seam("racket.matches.domain:Match", "ST-006", "Match.create(owner_id=, t
 MATCH_ID = Seam("racket.matches.domain:MatchId", "ST-006")
 OWNER_ID = Seam("racket.matches.domain:OwnerId", "ST-006")
 
-DEV_USERS = ("ivy", "carlos")
+DEV_USERS = ("ivy", "carlos", "dana")  # api-sprint-00 §2 (R2-01)
 MATCH_FORMATS = ("singles", "doubles")
 
 

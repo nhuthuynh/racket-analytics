@@ -117,8 +117,12 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0013 | [Agent hooks: deterministic gates that never wedge a session](0013-agent-hooks-design.md) | Proposed | 2026-10-03 |
 | 0014 | [CI merge gates: fail closed, one required check, pinned actions, SBOM-based licence gate](0014-ci-merge-gates-fail-closed.md) | Proposed | 2026-10-03 |
 | 0015 | [CV licence posture: MIT/Apache code by default, pretrained weights judged by their training data, no AGPL](0015-cv-licence-posture.md) | Proposed (PO decides OQ-12) | 2026-10-03 |
+| 0016 | [Design tokens are a JSON source of truth with an executable contrast proof](0016-design-tokens-and-contrast-proof.md) | Proposed | 2026-10-03 |
+| 0017 | [Job runtime: a hand-written `SKIP LOCKED` queue with leases, not procrastinate](0017-job-runtime-skip-locked-queue-with-leases.md) | Proposed | 2026-10-03 |
 | 0018 | [Web CSP: per-request nonce in middleware, no inline-script allowance](0018-web-csp-per-request-nonce.md) | Proposed | 2026-10-03 |
 | 0019 | [The Next.js `/api` rewrite is for dev and CI only; uploads use 8 MiB chunks](0019-web-api-rewrite-limits.md) | Proposed | 2026-10-03 |
 | 0020 | [Probe stage sandbox: a pinned LGPL ffprobe, per-process limits inside an internal-network container](0020-probe-sandbox-and-lgpl-ffprobe.md) | Proposed | 2026-10-03 |
+| 0021 | [ffprobe may demux only the MP4/MOV family (input-format allowlist)](0021-probe-input-format-allowlist.md) | Proposed | 2026-10-03 |
+| 0022 | [Review loop: route findings to their owner role, smoke-test the integrated stack before review, one story per commit](0022-review-loop-routing-and-integration-smoke.md) | Accepted for Sprint 1 | 2026-10-03 |
 
-Adversarial review findings and their fixes are logged in [review-log.md](review-log.md).
+Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.

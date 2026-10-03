@@ -318,3 +318,24 @@ Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature fil
 | `docs/domain/rules-verified.md` | pickleball-domain-coach | empty: nothing verified (OQ-01) | ST-020b, ST-021b, ST-023, all `@needs-verification` rows | FR-040..FR-048, NFR-001, NFR-003 |
 | `docs/domain/metric-dictionary.md` AN-01..AN-07 | pickleball-domain-coach | draft | Sprint 3 stats stories | FR-100..FR-103, NFR-004, NFR-038 |
 
+## 8. Sprint 0 test files per story (engineering-manager, 2026-10-03)
+
+The test files as they landed in the repo (backend paths are relative to `backend/tests/`). Every row was green in the EM re-run on 2026-10-03: `cd backend && env -u APP_ENV uv run pytest -q -rs` → `439 passed, 5 skipped` (the skips are IT-00-10, which needs Compose; it passes on Compose, 12 passed in review round 3); `cd infra && uv run pytest -q` → `197 passed`; `cd web && pnpm exec vitest run` → `132 passed`; Playwright Chromium `7 passed` (round 3). Status per story: `docs/sprints/00/status.json`.
+
+| Story | Unit | Integration / regression | Scenario (step module → feature) | E2E / other |
+|---|---|---|---|---|
+| ST-001 | — | `infra/tests/test_compose.py`, `test_compose_round1.py`, `test_dev_postgres.py`, `test_object_store_parity.py`; `integration/test_it_00_16_object_store_parity.py` | `features/test_dev_environment.py` → `dev_environment.feature` | — |
+| ST-002 | — | `infra/tests/test_workflows.py`, `test_workflows_round1.py`, `test_workflows_round2.py`, `test_ci_scripts.py`, `test_web_dockerfile_round2.py` | — | `actionlint` (CI never run on GitHub) |
+| ST-003 | — | `infra/tests/test_hook_pre_tool_use.py`, `test_hook_post_tool_use.py`, `test_hook_stop.py`, `test_claude_settings.py`, `test_test_immutability_guard.py`, `test_test_unit_script.py` | — | hook demo (decision-log) |
+| ST-004 | `unit/test_architecture.py`, `unit/test_architecture_context_imports.py` | `integration/harness/test_db_fixture.py`; `tools/test_scenario_report.py`, `tools/test_logscan.py`, `tools/test_format.py`, `tools/test_bola_inventory.py` | — | `web/e2e/helpers/axe.ts` |
+| ST-005 | `unit/platform/test_settings.py`, `test_error_mapper.py`, `test_tracing.py` | `regression/test_error_bodies.py`, `regression/test_trace_header.py`; `integration/test_it_00_11_trace_propagation.py`, `test_it_00_14_security_headers.py`, `test_it_00_15_log_scan.py`, `integration/platform/test_readiness.py` | `features/test_errors_and_tracing.py` → `errors_and_tracing.feature` | `web/e2e/security-headers.spec.ts` |
+| ST-006 | `unit/matches/test_match_domain.py` | `regression/test_bola_matrix.py` (+ `bola.py`); `integration/test_it_00_01_matches_api.py`, `test_dev_user_without_matches.py`, `test_media_not_probed_contract.py` | `features/test_object_level_authorisation.py` → `object_level_authorisation.feature` | `web/e2e/object-level-authorisation.spec.ts` |
+| ST-007 | `unit/analysis_jobs/test_job_domain.py`, `unit/test_worker_db_backoff.py` | `integration/test_it_00_03_queue.py`, `test_worker_db_resilience.py`; `regression/test_worker_crash.py`, `regression/test_fail_closed.py` | `features/test_job_resilience.py` → `job_resilience.feature` | `perf/spike_09_queue_claim.py` (SPIKE-09, not collected) |
+| ST-008 | `unit/video_ingest/test_upload_domain.py`, `test_upload_domain_round1.py`, `test_tus_header_numbers.py` | `integration/test_it_00_06_tus_upload.py`, `test_it_00_08_probe_after_final_byte.py`; `integration/video_ingest/test_tus_edges.py`, `test_tus_round1.py`, `test_tus_header_numbers_round2.py`; `regression/test_upload_resume.py` | `features/test_upload_resume_core.py` → `upload_resume_core.feature`; `features/test_walking_skeleton.py` → `walking_skeleton.feature` | E2E-00-01 |
+| ST-009 | `unit/video_ingest/test_media_facts.py`, `test_probe_sandbox_policy.py`, `test_probe_input_format_policy.py` | `integration/test_it_00_09_probe_stage.py`, `test_it_00_10_worker_sandbox.py`, `test_it_00_10_worker_sandbox_strict.py`; `integration/video_ingest/test_probe_sandbox.py`, `test_probe_input_formats.py`; `infra/tests/test_worker_sandbox.py` | `walking_skeleton.feature` | — |
+| ST-010 | `web/tests/unit/*.test.ts(x)` (17 files, 132 tests) | — | `walking_skeleton.feature` | `web/e2e/walking-skeleton.spec.ts` (E2E-00-01, axe); WebKit not run |
+| ST-011 | `unit/dataset/test_manifest_check.py`, `test_manifest_check_properties.py` | `integration/dataset/test_manifest_check_cli.py`, `test_committed_fixture_sets.py` | `features/test_gold_set_integrity.py` → `gold_set_integrity.feature` | `scripts/ci/check_fixtures.sh` |
+| ST-012 | (owns the red-first suites above) | all `regression/*` and IT-00-* files | all 7 `tests/features/*.feature` | `web/e2e/*` |
+| SPIKE-01 | — | — | — | ADR 0015 (document review) |
+
+Open test items: 6 test-change rows waiting for QA approval (`docs/sprints/00/test-change-requests.md`); stale `red_until` markers (QA-R3-08); the weak IT-00-10 probe is to be retired (QA-R3-07).

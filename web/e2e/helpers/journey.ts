@@ -9,7 +9,9 @@ export const FIXTURE_CLIP = path.resolve(
   '../../../fixtures/clips/synthetic-60s/clip.mp4',
 );
 
-export async function signInAs(page: Page, name: 'Ivy' | 'Carlos'): Promise<void> {
+// Dana never gets a match from any spec, so empty states can be checked in any spec order
+// (QA-R1-04). Ivy and Carlos accumulate matches across specs.
+export async function signInAs(page: Page, name: 'Ivy' | 'Carlos' | 'Dana'): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: new RegExp(`^(sign in as )?${name}$`, 'i') }).click();
   await expect(page.getByRole('heading', { name: /matches/i })).toBeVisible();

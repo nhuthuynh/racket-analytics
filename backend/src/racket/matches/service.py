@@ -16,8 +16,7 @@ from racket.matches.repository import MatchRepository
 from racket.matches.schemas import MatchOut, MediaOut
 from racket.platform.errors import NotFound
 from racket.platform.logs import SECURITY_LOGGER
-from racket.video_ingest.domain import UploadStatus
-from racket.video_ingest.public import media_summary
+from racket.video_ingest.public import UploadStatus, media_summary
 
 security_log = logging.getLogger(SECURITY_LOGGER)
 log = logging.getLogger(__name__)

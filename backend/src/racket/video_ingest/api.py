@@ -1,8 +1,9 @@
 """tus 1.0.0 core routes (ST-008; ADR 0011; api-sprint-00 §6).
 
 Checks run in the contract's order and the first failure wins: 401 (dependency), 412, 404,
-415, 400, 411/413, 409, 413. A PATCH body is read only after every header check passed, and
-only up to ``Content-Length`` bytes; a short body stores nothing (atomic PATCH).
+415, 400, 411/413, 409 (upload complete), 409, 413. A PATCH body is read only after every
+header check passed, and only up to ``Content-Length`` bytes; a short body stores nothing
+(atomic PATCH).
 """
 
 from __future__ import annotations
@@ -16,21 +17,32 @@ from starlette.concurrency import run_in_threadpool
 from racket.platform.db import get_session
 from racket.platform.errors import (
     BadRequest,
-    LengthRequired,
     PayloadTooLarge,
     TusVersionUnsupported,
     UnsupportedMediaType,
 )
+from racket.platform.http import ERROR_HEADERS_STATE
 from racket.platform.settings import Settings
 from racket.players.api import CurrentAccount
-from racket.video_ingest.domain import ChunkBeyondLength, OffsetMismatch
-from racket.video_ingest.service import UploadService
+from racket.video_ingest.domain import ChunkBeyondLength, OffsetMismatch, UploadAlreadyComplete
+from racket.video_ingest.service import (
+    UploadService,
+    parse_content_length,
+    parse_upload_offset,
+)
 
 TUS_VERSION = "1.0.0"
 OCTET = "application/offset+octet-stream"
 TUS_HEADERS = {"Tus-Resumable": TUS_VERSION}
 
-router = APIRouter()
+
+def _tus_headers_on_errors(request: Request) -> None:
+    """Every tus response carries ``Tus-Resumable``, errors included (api-sprint-00 §6)."""
+    setattr(request.state, ERROR_HEADERS_STATE, TUS_HEADERS)
+
+
+# A router dependency runs before the route's own (session, ownership), so even 401 has it.
+router = APIRouter(dependencies=[Depends(_tus_headers_on_errors)])
 
 
 def get_upload_service(
@@ -120,23 +132,20 @@ async def patch_upload(
     upload_id: str, request: Request, account: CurrentAccount, service: Service
 ) -> Response:
     _require_tus(request)
+    # A snapshot; the read transaction ends here, before the body streams (R1-05).
     upload = await run_in_threadpool(
-        lambda: service.load_owned(
+        lambda: service.patch_target(
             owner_id=account.id, raw_upload_id=upload_id, route=_route(request), method="PATCH"
         )
     )
     if request.headers.get("content-type", "").split(";")[0].strip().lower() != OCTET:
         raise UnsupportedMediaType("PATCH needs application/offset+octet-stream")
-    raw_offset = request.headers.get("upload-offset", "")
-    if not raw_offset.isdigit():
-        raise BadRequest("Upload-Offset must be a non-negative integer")
-    offset = int(raw_offset)
-    raw_length = request.headers.get("content-length")
-    if raw_length is None or not raw_length.isdigit():
-        raise LengthRequired("Content-Length required")
-    length = int(raw_length)
-    if length > service.settings.upload_max_chunk_bytes:
-        raise PayloadTooLarge("chunk above the limit")
+    offset = parse_upload_offset(request.headers.get("upload-offset"))
+    length = parse_content_length(
+        request.headers.get("content-length"), service.settings.upload_max_chunk_bytes
+    )
+    if upload.complete:  # a finished upload takes no more bytes (SEC-R1-02; §6.4 check 7a)
+        raise UploadAlreadyComplete("upload is complete")
     if offset != upload.offset:
         raise OffsetMismatch("chunk does not start at the stored offset")
     if offset + length > upload.length:

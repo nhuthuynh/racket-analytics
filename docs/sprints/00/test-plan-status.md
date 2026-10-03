@@ -1,5 +1,7 @@
 # Sprint 0 test-plan status
 
+> **Superseded for current counts (2026-10-03, review round 1):** the totals below are from before ST-005..ST-010 landed. Current suites, counts and commands are in [test-report.md](test-report.md). This file stays as the red-first history.
+
 - **Owner:** senior-qa-engineer · **Stories:** ST-004 (harness), ST-011 (fixture + ManifestCheck), ST-012 (scenarios and suites written first)
 - **As of:** 2026-10-03, before ST-005..ST-010 start
 - **Totals (backend):** 150 tests: **74 green, 74 red, 2 skipped**. E2E (Playwright): 7 tests, all red (no web app yet).

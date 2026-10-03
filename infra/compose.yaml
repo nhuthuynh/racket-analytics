@@ -103,6 +103,22 @@ services:
       timeout: 3s
       retries: 30
 
+  migrate:
+    # One-shot: apply the Alembic migrations (advisory-locked, idempotent) before api and
+    # worker start, so the worker never polls a missing `jobs` table (QA-R1-02, R1-06).
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+      target: api
+    command: ["python", "-m", "racket.platform.migrate"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?set POSTGRES_USER}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
+    networks: [edge]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: ..
@@ -111,12 +127,17 @@ services:
     environment:
       <<: *app-env
       OTEL_SERVICE_NAME: racket-api
+      # tus Location prefix: the browser reaches the API through the web's /api rewrite, so
+      # Location must be /api/uploads/{id} (R1-02, QA-R1-01; ADR 0011, ADR 0019).
+      API_PUBLIC_PATH_PREFIX: ${API_PUBLIC_PATH_PREFIX:?set API_PUBLIC_PATH_PREFIX (see infra/env.example)}
     ports:
       - 127.0.0.1:${API_HOST_PORT:-8000}:8000
     networks: [edge]
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       objectstore-init:
         condition: service_completed_successfully
       mailpit:
@@ -136,6 +157,8 @@ services:
     environment:
       <<: *app-env
       OTEL_SERVICE_NAME: racket-worker
+    # Back after a crash; the loop itself survives database errors (R1-06).
+    restart: unless-stopped
     # Sandbox (ST-009, NFR-054): only the internal network, so no route to the internet;
     # it reaches Postgres (queue), the object store and the tracing collector only.
     networks: [sandbox]
@@ -155,6 +178,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       objectstore-init:
         condition: service_completed_successfully
     healthcheck:

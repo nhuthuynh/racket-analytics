@@ -19,7 +19,8 @@ from sqlalchemy.orm import Session
 
 from racket.players.models import accounts, sessions
 
-DEV_USERS = {"ivy": "Ivy", "carlos": "Carlos"}
+# "dana" never gets a match from any spec: the E2E empty-state check signs in as her (QA-R1-04).
+DEV_USERS = {"ivy": "Ivy", "carlos": "Carlos", "dana": "Dana"}
 DEV_SESSION_LIFETIME = timedelta(hours=12)
 
 

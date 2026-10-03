@@ -26,6 +26,11 @@ from tests.support import contract
 from tests.support.api import ApiDriver, async_client, lifespan
 from tests.support.db import database_url, make_engine, rolled_back_session
 
+# ----------------------------------------------------------------- environment
+# The suite always runs as APP_ENV=test, whatever the shell exports (QA-R1-06). Tests that
+# need another value set it with monkeypatch.
+os.environ["APP_ENV"] = "test"
+
 # ----------------------------------------------------------------- Hypothesis profiles
 settings.register_profile("dev", max_examples=100)
 settings.register_profile(

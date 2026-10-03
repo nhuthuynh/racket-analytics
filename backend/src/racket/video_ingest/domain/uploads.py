@@ -37,6 +37,10 @@ class UploadIncomplete(Conflict):
     pass
 
 
+class UploadAlreadyComplete(Conflict):
+    """A finished upload takes no more bytes, not even an empty chunk (SEC-R1-02)."""
+
+
 class UploadStatus(StrEnum):
     RECEIVING = "receiving"
     COMPLETE = "complete"
@@ -71,6 +75,11 @@ class ChunkPlan:
     @property
     def new_offset(self) -> int:
         return self.offset + self.size
+
+    @property
+    def is_noop(self) -> bool:
+        """An empty chunk: nothing is written and the offset stays (R1-01)."""
+        return self.size == 0
 
 
 class ObjectKeyPolicy:
@@ -136,11 +145,20 @@ class UploadSession:
         return sum(s.size for s in self.staged)
 
     def plan_chunk(self, offset: int, size: int, part_min_bytes: int) -> ChunkPlan:
-        """Accept or refuse a chunk. The offset check comes first (ADR 0011 step 1)."""
+        """Accept or refuse a chunk. The offset check comes first (ADR 0011 step 1).
+
+        A finished upload refuses every chunk (SEC-R1-02). An empty chunk while receiving is
+        a no-op plan: it must not be staged, because its staging key would equal the next
+        chunk's key and the part would hold those bytes twice (R1-01)."""
         if offset != self.offset:
             raise OffsetMismatch("chunk does not start at the stored offset")
+        if self.status == UploadStatus.COMPLETE or self.is_complete:
+            raise UploadAlreadyComplete("upload is complete")
         if size < 0 or offset + size > self.length:
             raise ChunkBeyondLength("chunk goes past the declared length")
+        if size == 0:
+            return ChunkPlan(offset, 0, as_part=False, part_number=None, staged=(),
+                             completes=False)  # fmt: skip
         completes = offset + size == self.length
         as_part = completes or self.staged_bytes + size >= part_min_bytes
         return ChunkPlan(
@@ -166,6 +184,8 @@ class UploadSession:
         self._check_plan(plan)
         if plan.as_part:
             raise ValueError("plan is a part")
+        if any(s.offset == plan.offset or s.key == staging_key for s in self.staged):
+            raise ValueError("offset or key already staged")
         self.staged = [*self.staged, StagedChunk(plan.offset, plan.size, staging_key)]
         self._advance(plan)
 
@@ -177,6 +197,8 @@ class UploadSession:
         self.updated_at = _now()
 
     def _check_plan(self, plan: ChunkPlan) -> None:
+        if plan.is_noop:
+            raise ValueError("an empty chunk is never committed")
         if plan.offset != self.offset:
             raise OffsetMismatch("upload moved on since the chunk was planned")
 

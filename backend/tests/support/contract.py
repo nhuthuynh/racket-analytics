@@ -108,10 +108,10 @@ DEV_IDENTITY_ENV = "DEV_IDENTITY_ENABLED"  # "true" enables the dev identity pro
 # GET /matches/{id} -> {"id", "title", "format", "status", "media": null | {
 #     "duration_ms", "fps", "width", "height", "has_audio", "vfr", "container", "video_codec"}}
 # The dev identity provider (ST-006) signs a user in and sets a session cookie.
-DEV_SIGN_IN = ("POST", "/dev/sign-in")  # json {"username": "ivy" | "carlos"}
+DEV_SIGN_IN = ("POST", "/dev/sign-in")  # json {"username": "ivy" | "carlos" | "dana"}
 MATCHES = "/matches"
 MATCH = "/matches/{match_id}"
-MATCH_MEDIA = "/matches/{match_id}/media"  # the media facts of a match (404 until probed)
+MATCH_MEDIA = "/matches/{match_id}/media"  # media facts of a match (204 until probed)
 # tus 1.0.0 core (ST-008). The creation URL may change with ADR 0011 (tusd vs FastAPI core).
 UPLOAD_CREATE = "/matches/{match_id}/uploads"
 UPLOAD_RESOURCE = "/uploads/{upload_id}"  # tus HEAD/PATCH target returned in Location
