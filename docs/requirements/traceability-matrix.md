@@ -1,0 +1,299 @@
+# Traceability Matrix
+
+- **Status:** Baselined draft v1
+- **Date:** 2026-10-03
+- **Author:** business-analyst
+- **Chain:** requirement → epic → sprint → story → test level → test file.
+  - **Sprint assignments added 2026-10-03 by the engineering-manager** from `docs/sprints/roadmap.md` (ADR 0007). `S0`..`S9` are the sprints in the roadmap calendar; `R3 (S10-S12)` and `Later` are outline only and planned just in time. Story IDs (`ST-nnn`) exist for Sprints 0-2 only (§6). "part a" marks the engine-mechanics part of a rules FR that is Ready now; the preset values wait for OQ-01 (ADR 0009).
+  - Test files for Sprints 0-2 are the `tests/features/*.feature` files named in §6; the business-analyst confirms each path when the test lands.
+  - The DoD requires this chain to be complete for every merged story [process/definition-of-done.md].
+  - Stories and test files are filled in as sprints are planned and executed.
+- **Generated from** the `Priority`, `Release` and `Status` lines of `functional-requirements.md` and the tables of `non-functional-requirements.md`. Regenerate after any edit; do not hand-edit the counts.
+
+## 1. Epics
+
+The epics come from PROD §5. E16 is added by the BA (judgment), because many NFRs (CI gates, observability, SLOs, dev/prod parity) belong to no product epic. E13 and E14 have no FRs in the MVP; they are listed as non-goals in `functional-requirements.md` §J.
+
+| Epic | Name | Release | MoSCoW (MVP) |
+|---|---|---|---|
+| E1 | Account and privacy foundation | R1 | Must |
+| E2 | Capture and upload | R1 | Must |
+| E3 | Rules engine and score sheet | R1 | Must (blocked on rule verification for "official") |
+| E4 | Quick Tag, Full Tag and corrections | R1 | Must |
+| E5 | Starter stats dashboard and evidence | R1 | Must |
+| E6 | Rules-only general plan and drill library | R1 | Must |
+| E7 | Court calibration, player tracking, identity, positioning | R2 | Should |
+| E8 | Ball, hit, bounce and rally detection; analysis jobs | R2 | Should |
+| E9 | Automatic scoring, review queue, shot classification | R3 (review queue starts in R2) | Could (MVP) |
+| E10 | Full analytics and clips | R3 | Could |
+| E11 | LLM-written plan explanations and plan efficacy | R2 | Should |
+| E12 | Opponent profiles and scouting | Later | Won't |
+| E13 | Live mode | Later | Won't |
+| E14 | Coach multi-player view | Later | Won't |
+| E15 | Cost guardrails and usage quotas | R1 (quotas), R2 (GPU) | Must |
+| E16 | Platform, quality gates and operability (BA addition) | R1 onward | Must |
+
+Test-level key: U unit · I integration · S scenario (Gherkin) · E2E Playwright · A11y · P performance · MQ model-quality · LE coaching-LLM eval · OPS production SLI · R review/checklist · CI static check [testing-strategy §2].
+
+## 2. Functional requirements
+
+| FR | Title | Priority | Release | Status | Epic | Sprint | Test levels |
+|---|---|---|---|---|---|---|---|
+| FR-001 | Passwordless sign-in | Must | R1 | ready-candidate | E1 | S1 (ST-013) | U, I, E2E, A11y |
+| FR-002 | Only the owner can access their resources | Must | R1 | ready-candidate | E1 | S0 (ST-006, match); extended every sprint | I (BOLA suite), S |
+| FR-003 | Age confirmation and footage notice | Must (gate for any real-user beta) | R1 | needs-PO-decision (OQ-05) | E1 | S4 | U, S, E2E |
+| FR-004 | First-run promise | Should | R1 | ready-candidate | E1 | S1 (ST-015) | U, S, E2E |
+| FR-005 | Match participants by nickname | Must | R1 | ready-candidate | E1 | S1 (ST-016) | U, S, E2E |
+| FR-006 | Delete a match and everything derived from it | Must | R1 | ready-candidate (windows needs-PO-decision, OQ-07) | E1 | S3 | I (deletion), S, E2E |
+| FR-007 | Delete my account | Must | R1 | ready-candidate | E1 | S3 | I (deletion), S, E2E |
+| FR-008 | Video retention setting | Should | R1 | needs-PO-decision (OQ-07) | E1 | S4 | I, S |
+| FR-009 | Training-data consent | Should | R1 | needs-PO-decision (OQ-06) | E1 | S4 | U, I, S |
+| FR-010 | Export my data | Could | R2 | ready-candidate | E1 | S9 | I, S |
+| FR-011 | Sign out clears local data | Must | R1 | ready-candidate | E1 | S1 (ST-014) | E2E |
+| FR-012 | Opponent profiles linked across matches | Won't (this MVP) | Later | deferred (privacy gate, OQ-15) | E12 | Later | I (BOLA), S |
+| FR-020 | Capture guide | Must | R1 | ready-candidate | E2 | S1 (ST-015) | E2E, A11y, S |
+| FR-021 | Match setup flow | Must | R1 | ready-candidate | E2 | S1 (ST-016) | E2E, A11y, S |
+| FR-022 | Resumable upload | Must | R1 | ready-candidate | E2 | S0 (ST-008, core); S1 (ST-017) | I (upload-resume suite), E2E |
+| FR-023 | Upload validation | Must | R1 | ready-candidate (caps confirmed by R-05) | E2 | S1 (ST-018, ST-025) | I (upload-validation suite), S, E2E |
+| FR-024 | Abandoned uploads expire | Must | R1 | ready-candidate | E2 | S2 (ST-038) | I |
+| FR-025 | Footage quality report | Should | R1 (fps, resolution, duration); R2 (court visibility) | ready-candidate | E2 | S0 (ST-009, facts); S1 (ST-019, stretch); S6 (court visibility) | I, S, E2E |
+| FR-026 | Analysis level is explicit | Should | R2 | ready-candidate | E8 | S7 | I (fail-closed), S |
+| FR-027 | Jump to the video moment | Must | R1 | ready-candidate | E5 | S2 (ST-037) | E2E, P |
+| FR-029 | Analysis-ready notification | Should | R2 | ready-candidate | E8 | S7 | I, E2E |
+| FR-030 | Extracted clips | Could | R3 | ready-candidate | E10 | R3 (S10-S12) | I, E2E |
+| FR-031 | Framing check before the match | Could | R2 | ready-candidate | E7 | S6 (Could) | I, MQ |
+| FR-040 | Versioned, parameterised rules engine | Must | R1 | needs-verification (preset values) | E3 | S1 (ST-020, part a); preset after OQ-01 | U (table-driven + property), S |
+| FR-041 | Side-out doubles scoring | Must | R1 | needs-verification | E3 | S1 (ST-020, ST-023, part a); preset after OQ-01 | U (table-driven + property), S @needs-verification |
+| FR-042 | Side-out singles scoring | Should | R1 | needs-verification | E3 | S2 (ST-035, ST-041, part a) | U (table-driven + property), S @needs-verification |
+| FR-043 | Rally scoring option | Should | R2 | needs-verification (blocked) | E3 | S9 (only if verified) | U (table-driven + property), S @needs-verification |
+| FR-044 | Faults end the rally against the faulting side | Must | R1 | needs-verification | E3 | S1 (ST-020, ST-023, part a) | U (table-driven + property), S @needs-verification |
+| FR-045 | Match structure | Must | R1 | needs-verification | E3 | S1 (ST-021, part a) | U (table-driven + property), S @needs-verification |
+| FR-046 | Start the score sheet mid-game | Must | R1 | needs-verification | E3 | S2 (ST-034, ST-041, part a) | U (table-driven + property), S @needs-verification |
+| FR-047 | Gaps and resync | Should | R1 | ready-candidate | E3 | S2 (ST-036, stretch); else S3 | U, S |
+| FR-048 | Score call and announcement | Must | R1 | needs-verification (call format) | E3 | S2 (ST-029) | U (snapshot), E2E, A11y |
+| FR-049 | Score sheet | Must | R1 | ready-candidate (rule data needs-verification) | E3 | S2 (ST-026, ST-030) | U, S, E2E, A11y |
+| FR-050 | Quick Tag a rally | Must | R1 | ready-candidate | E4 | S2 (ST-027) | S, E2E, A11y |
+| FR-051 | Keyboard tagging | Must | R1 | ready-candidate | E4 | S2 (ST-028) | S, E2E, A11y |
+| FR-052 | Undo and correction audit | Must | R1 | ready-candidate | E4 | S2 (ST-031) | U, I, S |
+| FR-053 | Corrections replay the score and keep conflicting rallies | Must | R1 | needs-verification (game-end rule) | E4 | S2 (ST-032, ST-041, part a) | U (C-01..C-04), S |
+| FR-054 | Show the consequences of a correction | Should | R1 | ready-candidate | E4 | S2 (ST-033, stretch); else S3 | S, E2E |
+| FR-055 | "Unofficial scoring" label | Must | R1 | ready-candidate | E3 | S2 (ST-030) | S, E2E |
+| FR-056 | User corrections survive re-processing | Must | R2 | ready-candidate | E9 | S8 | I, S |
+| FR-057 | "Needs your eyes" review queue | Should | R2 (rally-level calls); Must in R3 | ready-candidate | E9 | S8 | S, E2E, A11y |
+| FR-058 | Automatic scoring with confidence | Could (MVP); Must for R3 | R3 | ready-candidate (targets per ADR 0004) | E9 | R3 (S10-S12) | MQ, S |
+| FR-059 | "Who is who" identity assignment | Should | R2 | ready-candidate | E7 | S6 | S, E2E, MQ (identity errors) |
+| FR-060 | Correction reason | Could | R2 | ready-candidate | E9 | S8 (Could) | S |
+| FR-061 | Full rally timeline with shots | Could | R3 | ready-candidate | E9 | R3 (S10-S12) | E2E, A11y |
+| FR-080 | Analysis job lifecycle | Should | R2 (the queue itself exists in R1 for media probing) | ready-candidate | E8 | S0 (ST-007, queue base); S6 (lifecycle) | I (worker-crash, fail-closed suites), S |
+| FR-081 | Media probe and normalisation | Must (probe, R1); Should (normalise, R2) | R1/R2 | ready-candidate | E2 | S0 (ST-009, probe); S6 (normalise) | I (fixture files) |
+| FR-082 | Court calibration without dragging | Should | R2 | ready-candidate | E7 | S6 | MQ, E2E (no-drag), A11y, S |
+| FR-083 | Player detection and tracking | Should | R2 | ready-candidate (licence decision ENG SPIKE-01, OQ-12) | E7 | S6 | MQ (HOTA), I (fixture clips) |
+| FR-084 | Ball tracking with visibility | Should | R2 | ready-candidate | E8 | S7 | MQ, U (deterministic logic), I (fixture clips) |
+| FR-085 | Hit detection from video and audio | Should | R2 | ready-candidate | E8 | S7 | MQ, U (deterministic logic), I (fixture clips) |
+| FR-086 | Bounce detection and landing position | Should | R2 | ready-candidate | E8 | S7 | MQ, U (deterministic logic), I (fixture clips) |
+| FR-087 | Automatic rally segmentation | Should | R2 | ready-candidate | E8 | S8 | MQ, U (deterministic logic), I (fixture clips) |
+| FR-088 | Shot classification (faceted) | Could | R3 | needs-verification (definitions [DOM G2]) | E9 | R3 (S10-S12) | MQ (per-facet F1), S |
+| FR-089 | Re-processing on a new pipeline version | Should | R2 | ready-candidate (depends on video retention, OQ-07) | E9 | S8 | I, S |
+| FR-090 | Confidence on every automatic value | Should | R2 | needs-PO-decision (OQ-10) | E8 | S7-S8 | MQ (band calibration), I, S |
+| FR-100 | Starter stats from Quick Tag | Must | R1 | needs-verification (definitions, coach review) | E5 | S3 | U, S (golden matches) |
+| FR-101 | Sample size and uncertainty on every metric | Must | R1 | ready-candidate | E5 | S3 | U, S |
+| FR-102 | Versioned metric dictionary | Must | R1 | ready-candidate | E5 | S3 | U, S |
+| FR-103 | "Show me" evidence for every metric | Must | R1 | ready-candidate | E5 | S3 | E2E (evidence crawl) |
+| FR-104 | Trends across matches | Should | R2 | ready-candidate | E5 | S9 | U, S |
+| FR-105 | Team-relative court frame | Should | R2 | needs-verification (end switching) | E7 | S6 | U (frame test), MQ |
+| FR-106 | Player heatmaps and partner spacing | Should | R2 | needs-verification (AN-16 definition) | E7 | S6 | U, MQ, A11y |
+| FR-107 | Shot-level analytics | Could | R3 | needs-verification (definitions [DOM G2]) | E10 | R3 (S10-S12) | U, S, MQ |
+| FR-108 | Pattern n-grams | Could | R3 | needs-verification | E10 | R3 (S10-S12) | U, S, MQ |
+| FR-109 | Attribution conservation | Must | R1 | ready-candidate | E5 | S3 | U (invariant) |
+| FR-110 | Opponent scouting report | Won't (this MVP) | Later | deferred | E12 | Later | U, S |
+| FR-120 | Rank weaknesses by rallies lost | Must | R1 | needs-PO-decision (OQ-08); needs-verification (side-out rule) | E6 | S4 | U, S |
+| FR-121 | Rules-only general training plan | Must | R1 | ready-candidate (needs FR-141 content) | E6 | S4 | U, S, LE (code graders) |
+| FR-122 | Every drill explains why | Must | R1 | ready-candidate | E6 | S4 | U, S, E2E |
+| FR-123 | Plan built on limited data says so | Must | R1 | ready-candidate | E6 | S4 | U, S, E2E |
+| FR-124 | Mark sessions done and swap drills | Should | R1 | ready-candidate | E6 | S4 | S, E2E |
+| FR-125 | LLM-written ordering and explanation, validated | Should | R2 | ready-candidate (eval set first) | E11 | S9 | U, I (LLM-output suite), LE |
+| FR-126 | AI-text label and global control | Should | R2 | ready-candidate | E11 | S9 | S, E2E |
+| FR-127 | Plan efficacy without over-claiming | Should | R2 | ready-candidate | E11 | S9 | U, S |
+| FR-128 | Opponent-specific plan | Won't (this MVP) | Later | deferred | E12 | Later | S, LE |
+| FR-140 | Drill schema, lint and immutability | Must | R1 | ready-candidate | E6 | S3 | CI lint, U, S |
+| FR-141 | Starter drill library by coverage | Must | R1 | needs-verification (drill content [DOM G2]) | E6 | S4 | CI coverage check, R (coach) |
+| FR-150 | Full Tag labelling tool (internal) | Must | R1 | ready-candidate (consent: OQ-06) | E4 | S3 | S, E2E |
+| FR-151 | Frozen, versioned gold sets | Must | R1 | ready-candidate | E4 | S0 (ST-011, manifest check); S2 (ST-040, schema); S3 | CI manifest check |
+| FR-160 | Upload and job rate limits | Must | R1 | needs-PO-decision (OQ-13) | E15 | S4 | I (quota suite), S |
+| FR-161 | Monthly analysis quota | Must | R2 | needs-PO-decision (OQ-13, OQ-14) | E15 | S9 | I (quota suite), S |
+| FR-162 | Pricing fake door | Could | R1 | needs-PO-decision (OQ-14) | E15 | S5 (Could, stretch) | E2E |
+
+## 3. Counts (computed)
+
+| Priority | FRs |
+|---|---|
+| Must | 42 |
+| Should | 28 |
+| Could | 10 |
+| Won't | 3 |
+| **Total** | **83** |
+
+| Epic | FRs |
+|---|---|
+| E1 | 11 |
+| E2 | 7 |
+| E3 | 11 |
+| E4 | 7 |
+| E5 | 7 |
+| E6 | 7 |
+| E7 | 6 |
+| E8 | 8 |
+| E9 | 7 |
+| E10 | 3 |
+| E11 | 3 |
+| E12 | 3 |
+| E15 | 3 |
+
+## 4. Non-functional requirements
+
+| NFR | Requirement | Release | Epic | Sprint | Test levels |
+|---|---|---|---|---|---|
+| NFR-001 | Rules engine matches the golden scoring tables | R1 gate | E3 | S1 (ST-023); S2 (ST-041) | U + S (`Scenario Outline`, tagged `@needs-verification` until rule numbers recorded) |
+| NFR-002 | Rules engine invariants hold, and an independent implementation agrees | R1 gate | E3 | S1 (ST-022, ST-024) | U (property-based); nightly job |
+| NFR-003 | "Official scoring" correctness (QD's M0b) | Gate for any release claiming an official `rules_version` | E3 | After OQ-01 (any sprint) | S on QD-GD-02 |
+| NFR-004 | Metric definitions computed correctly | R1 gate | E5 | S3 | S on QD-GD-03 |
+| NFR-005 | Plans obey the hard rules, and the LLM explanations are good | (a) R1 gate; (b)(c) R2 gate | E6/E11 | S4 (a); S9 (b, c) | LE (code + model + human graders); R1 runs (a) on rules-only plans |
+| NFR-006 | Vision accuracy at R2 entry, on a frozen, venue-split gold set | R2 gate (rally F1); others R2 entry targets, reviewed at retro | E7/E8 | S6-S8 (rally F1 gate S8) | MQ per sprint and per model PR; regression tolerances set in an ADR before R2 |
+| NFR-007 | Automatic scoring accuracy (spec M3, redefined) | R3 gate (post-MVP) | E9 | R3 | MQ on QD-GD-04 |
+| NFR-008 | Confidence bands are calibrated | R2 gate | E8 | S7-S8 | MQ |
+| NFR-009 | Metrics computed from automatic events agree with gold | R2 (heatmap/positioning metrics); R3 (shot-level) | E7/E10 | S6 (positioning); R3 (shot-level) | MQ |
+| NFR-010 | API read latency: match, score sheet, dashboard, plan | R1 gate | E16 | S2 (ST-039, baseline); S5 (gate) | P (Locust, ADR 0008) each sprint; OPS |
+| NFR-011 | Time to an interactive score sheet or dashboard on the client | R1 gate | E5 | S2 (ST-030); S3 | P (Playwright/Lighthouse lab) |
+| NFR-012 | Tag or correction feedback | R1 gate | E4 | S2 (ST-027, ST-039) | E2E timing |
+| NFR-013 | Correction confirmed by the server (rules replay + metrics recomputed) | R1 gate | E4 | S2 (ST-032, ST-039) | I + P |
+| NFR-014 | Seek from a rally row or evidence link to playing video | R1 | E5 | S2 (ST-037) | E2E timing |
+| NFR-015 | JavaScript budget for the first route | R1 gate | E16 | S0 (ST-002, ST-010) | CI bundle-size check |
+| NFR-016 | Upload throughput | R1 | E2 | S1 (ST-017) | P with network throttling |
+| NFR-017 | Results after manual tagging | R1 gate | E4 | S2 (ST-039, baseline); S5 | I + E2E |
+| NFR-018 | Results after automatic analysis | R2 gate (2.0x) | E8 | S7 | OPS job metrics; P on fixture matches |
+| NFR-019 | Plan generation time | R1 / R2 | E6/E11 | S4 (rules-only); S9 (LLM) | I + P |
+| NFR-020 | GPU cost of automatic analysis | R2 gate | E15 | S4-S5 (SPIKE-03); S7 (gate) | OPS + MQ throughput run per model PR |
+| NFR-021 | LLM usage per plan | R2 gate | E15 | S9 | LE + OPS |
+| NFR-022 | Spend guardrails | R1 / R2 gate | E15 | S4 (R1 alerts); S7 (GPU) | R (config review) + OPS |
+| NFR-023 | Quotas and rate limits enforced | R1 gate | E15 | S4; S9 (analysis quota) | I (quota regression suite) |
+| NFR-024 | Supported clients | R1 gate | E16 | S0 (ST-002, skeleton); S5 (gate) | E2E matrix |
+| NFR-025 | Phone video formats | R1 (probe) / R2 (normalise) | E2 | S0 (ST-009); S1 (ST-025); S6 (normalise) | I with fixture files |
+| NFR-026 | Resumable-upload protocol conformance | R1 gate | E2 | S0 (ST-008, core); S1 (ST-017) | I (upload-resume regression suite) |
+| NFR-027 | WCAG 2.2 Level AA conformance | R1 gate | E16 (all UI epics) | S0 (ST-002, ST-010) onward | A11y (CI + manual) |
+| NFR-028 | Target size | R1 gate | E16 (all UI epics) | S1 (ST-016) onward | E2E custom size check + R |
+| NFR-029 | Contrast | R1 gate | E16 (all UI epics) | S0 (ST-010, tokens) onward | A11y + design-token check |
+| NFR-030 | No dragging required | R1 gate (R2 for calibration) | E16 (all UI epics) | S1 onward; S6 (calibration) | E2E taps-and-keys-only journeys |
+| NFR-031 | Focus not obscured | R1 gate | E16 (all UI epics) | S1 (ST-016) | E2E |
+| NFR-032 | Accessible authentication | R1 gate | E16 (all UI epics) | S1 (ST-013) | E2E + R |
+| NFR-033 | Media alternatives | R1 gate | E16 (all UI epics) | S1 (ST-015); S2 (ST-030) | R (content checklist) |
+| NFR-034 | Keyboard, colour, reflow, announcements | R1 gate | E16 (all UI epics) | S1 (ST-016); S2 (ST-028, ST-030) | E2E viewport matrix 320/360/768/1280; A11y manual |
+| NFR-035 | Content descriptions | R1 | E16 (all UI epics) | S1 (ST-015) | A11y + R |
+| NFR-036 | Effort to get value | R1 gate | E4 | S2 (E2E part d); S5 (usability test) | Moderated usability test, ≥ 5 players on their own phones; E2E for (d) |
+| NFR-037 | Forms and errors follow the patterns | R1 gate | E2 | S1 (ST-016) | R + E2E |
+| NFR-038 | Every insight is explained by evidence | R1 gate | E5/E6 | S3 | E2E crawl; U on view-models |
+| NFR-039 | Layout stability | R1 | E16 | S3 | E2E visual regression |
+| NFR-040 | Review effort with automatic scoring | R3 | E9 | R3 | OPS product analytics in beta |
+| NFR-041 | API availability | R1 | E16 | S1 (ST-024, SLI); S5 (SLO, alerts) | OPS SLI dashboard; burn-rate alerts |
+| NFR-042 | Upload completion | R1 | E2 | S1 (ST-017, ST-024, SLI); S5 (SLO, alerts) | OPS |
+| NFR-043 | Analysis success | R2 | E8 | S7 | OPS |
+| NFR-044 | Analysis freshness | R2 | E8 | S7 | OPS |
+| NFR-045 | Durability and recovery | R1 (before beta) | E16 | S5 | Restore drill (R); I |
+| NFR-046 | Idempotent, disposable workers | R1 (queue exists in M0) gate | E8 | S0 (ST-007) | I (worker-crash regression suite) |
+| NFR-047 | Fail closed | R1 gate | E8 | S0 (ST-007) | I (fail-closed regression suite) |
+| NFR-048 | Bounded retries | R2 | E8 | S7 | I |
+| NFR-049 | Error-budget policy | R1 | E16 | S5 | R at sprint planning |
+| NFR-050 | ASVS 5.0 L2 for API and client | R1 gate | E1 | S0 (checklist); S5 (release review) | R (security-privacy-engineer checklist) |
+| NFR-051 | Object-level authorisation (BOLA) | R1 gate | E1 | S0 (ST-006) onward | I (BOLA regression suite) |
+| NFR-052 | Field-level authorisation and deny-by-default | R1 gate | E1 | S0 (ST-006) | U + I |
+| NFR-053 | Upload safety | R1 gate | E2 | S0 (ST-008, keys); S1 (ST-018) | I (upload-validation regression suite) |
+| NFR-054 | Media-processing sandbox | R1 gate | E2 | S0 (ST-009); S1 (ST-018) | I + R (infra config) |
+| NFR-055 | Media URLs | R1 gate | E2 | S1 (ST-013); S2 (ST-037) | I |
+| NFR-056 | Secrets and service identities | R1 gate | E16 | S0 (ST-002) | CI secret scan + R |
+| NFR-057 | Security logging | R1 gate | E1 | S0 (ST-006); S1 (ST-013) | I + R |
+| NFR-058 | Generic errors | R1 gate | E16 | S0 (ST-005) | I (error-body regression suite) |
+| NFR-059 | LLM output and prompt-injection containment | R2 gate (R1 has no LLM) | E11 | S9 | U + I (LLM-output regression suite) + LE |
+| NFR-060 | Business-flow order | R1 gate | E8 | S0 (ST-008); S1 (ST-018) | I |
+| NFR-061 | Hardening and client security headers | R1 gate | E16 | S0 (ST-005, ST-010) | I + automated header scan |
+| NFR-062 | Supply chain and licences | R1 gate | E16 | S0 (ST-002, SPIKE-01); S6 (CV licences) | CI scans + licence check + R |
+| NFR-063 | Data classification and per-class rules | R1 gate (before beta) | E1 | S5 | R |
+| NFR-064 | Private by default | R1 gate | E1 | S0 (ST-006) | I (BOLA suite) + R |
+| NFR-065 | No face recognition or inferred attributes | R1 gate, permanent | E1 | S0 (review checklist), permanent | R (design and code review checklist) |
+| NFR-066 | Deletion and retention execution | R1 gate | E1 | S2 (d); S3 (a, b); S4 (c) | I (delete → assert storage and DB empty) + OPS |
+| NFR-067 | Client-side data hygiene | R1 gate | E1 | S0 (ST-005, ST-010); S1 (ST-014) | I + E2E |
+| NFR-068 | Minimal data to the LLM | R2 gate | E11 | S9 | U on the prompt builder + LE transcript review |
+| NFR-069 | Pseudonymous logs | R1 gate | E16 | S0 (ST-005) | I (log scanner on test runs) |
+| NFR-070 | Legal gate before real users | Gate for any real-user beta | E1 | S5 (human gate before any real-user beta) | R |
+| NFR-071 | Coverage floors (a floor, not a goal) | R1 gate | E16 | S0 (ST-002) | CI coverage gate |
+| NFR-072 | Rules-engine test strength | R1 | E3 | S1 (ST-022, baseline); S2 (gate) | Mutation run (tool is judgment) |
+| NFR-073 | Fast tests | R1 gate | E16 | S0 (ST-002, ST-004) | CI timing |
+| NFR-074 | Flaky tests contained | R1 | E16 | S0 (ST-002) | CI analytics |
+| NFR-075 | Reproducible outputs | R1 gate | E16 | S0 (ST-004, harness); S2 (ST-026) | U + I |
+| NFR-076 | Observability | R1 gate | E16 | S0 (ST-005, ST-007) | I (trace-header regression suite) + OPS |
+| NFR-077 | Code standards and change size | R1 | E16 | S0 (ST-002) | CI + R |
+| NFR-078 | Gold-set and test immutability | R1 gate | E4 | S0 (ST-003, ST-011); S3 (gold sets) | CI manifest check + hooks |
+| NFR-079 | Rules and court facts are configuration | R1 | E3 | S1 (ST-020) | CI static check |
+| NFR-080 | Dev/prod parity | R1 gate | E16 | S0 (ST-001) | R + I runs on Compose |
+| NFR-081 | Stateless, env-configured processes | R1 gate | E16 | S0 (ST-001, ST-005) | R + I (kill/restart test) |
+| NFR-082 | Sport plug-in extensibility | R2 | E3 | S9 | U/I contract test |
+
+**NFR total:** 82
+
+## 5. Gaps this matrix exposes (for sprint planning)
+
+1. **18 FRs are `needs-verification`.** Eleven are R1 Musts, and every scoring scenario is tagged `@needs-verification`. The matrix will show these as "not Ready" until the domain coach records rule numbers (OQ-01).
+2. **Story IDs exist for Sprints 0-2 only** (`ST-001`..`ST-041`, §6). PROD US-* IDs remain candidates for later sprints. The BA will write `docs/requirements/stories/<id>.md` per story at sprint planning.
+3. **Model-quality and LLM-eval levels need data that does not exist yet:**
+   - QD-GD-02 needs rule verification first.
+   - QD-GD-04 needs the R2 gold set.
+   - QD-GD-05 needs 30 coaching cases from real tagged matches.
+
+   These are dependencies for the DoR, not test gaps.
+
+## 6. Stories for Sprints 0-2 (engineering-manager, 2026-10-03)
+
+Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature files are planned paths under `backend/tests/features/` (or `web/e2e/` for browser journeys); "—" means the story is verified by unit, integration or CI checks only.
+
+| Story | Sprint | FR | NFR | Feature file(s) | Other test levels |
+|---|---|---|---|---|---|
+| ST-001 | S0 | — | NFR-080, 081 | `dev_environment.feature` | I (IT-00-16) |
+| ST-002 | S0 | — | NFR-015, 024, 027, 056, 062, 071, 073, 074, 077 | — | CI |
+| ST-003 | S0 | — | NFR-078 | — | CI, hooks |
+| ST-004 | S0 | — | NFR-073, 075 | — | U (builders) |
+| ST-005 | S0 | — | NFR-058, 061, 069, 076, 081 | `errors_and_tracing.feature` | U, I (IT-00-11..15) |
+| ST-006 | S0 | FR-002 | NFR-051, 052, 057, 064 | `object_level_authorisation.feature` | U, I (IT-00-01, 02) |
+| ST-007 | S0 | FR-080 | NFR-046, 047, 076 | `job_resilience.feature` | U, I (IT-00-03..05) |
+| ST-008 | S0 | FR-022 | NFR-026, 053, 060 | `upload_resume_core.feature`, `walking_skeleton.feature` | U, I (IT-00-06..08) |
+| ST-009 | S0 | FR-081, FR-025 | NFR-025, 054 | `walking_skeleton.feature` | U, I (IT-00-09, 10) |
+| ST-010 | S0 | — | NFR-015, 027, 029, 061, 067 | `walking_skeleton.feature` | E2E-00-01, A11y |
+| ST-011 | S0 | FR-151 | NFR-078 | `gold_set_integrity.feature` | U, CI |
+| ST-012 | S0 | (suites for FR-002, FR-022, FR-080) | testing-strategy §5 suites | all S0 features | I |
+| ST-013 | S1 | FR-001 | NFR-032, 055, 057 | `sign_in.feature` | U, I (IT-01-01..03), E2E |
+| ST-014 | S1 | FR-011 | NFR-067 | `sign_out.feature` | I (IT-01-04), E2E |
+| ST-015 | S1 | FR-004, FR-020 | NFR-033, 035 | `first_run_and_capture_guide.feature` | E2E, A11y |
+| ST-016 | S1 | FR-021, FR-005 | NFR-028, 031, 034, 037 | `match_setup.feature` | U, I (IT-01-05), E2E, A11y |
+| ST-017 | S1 | FR-022 | NFR-016, 026, 042 | `resumable_upload.feature` | U, I (IT-01-06..08), E2E |
+| ST-018 | S1 | FR-023 | NFR-053, 054, 060 | `upload_validation.feature` | U, I (IT-01-09, 10) |
+| ST-019 (stretch) | S1 | FR-025 | — | `footage_quality_report.feature` | E2E |
+| ST-020 | S1 | FR-040, 041, 044 (part a) | NFR-079 | `scoring_engine_mechanics.feature` | U, CI (IT-01-12, 13) |
+| ST-021 | S1 | FR-045 (part a) | — | `match_structure.feature` | U |
+| ST-022 | S1 | — | NFR-002, 072 | — | U (property), nightly oracle, mutation |
+| ST-023 | S1 | FR-041, FR-044 (provisional rows); FR-045 (M-01..M-08, part a) | NFR-001 | `side_out_doubles_provisional.feature`, `faults_provisional.feature` (`@needs-verification`); `match_structure.feature` (M rows) | U |
+| ST-024 | S1 | — | NFR-002, 041, 042, 072 | — | OPS, CI |
+| ST-025 | S1 | FR-023 (caps) | NFR-025 | — | I (fixtures) |
+| ST-026 | S2 | FR-049 | NFR-075 | `score_sheet.feature` | U, I (IT-02-01) |
+| ST-027 | S2 | FR-050 | NFR-012, 028, 030 | `quick_tag.feature` | U, I (IT-02-04), E2E, A11y |
+| ST-028 | S2 | FR-051 | NFR-034 | `keyboard_tagging.feature` | E2E-02-02 |
+| ST-029 | S2 | FR-048 | — | `score_call.feature` (`@needs-verification`) | U, E2E-02-03 |
+| ST-030 | S2 | FR-049, FR-055 | NFR-011, 029, 033, 034 | `score_sheet.feature` | E2E, A11y |
+| ST-031 | S2 | FR-052 | — | `undo_and_audit.feature` | U, I (IT-02-03, 09) |
+| ST-032 | S2 | FR-053 (part a) | NFR-013 | `corrections_replay.feature` | U, I (IT-02-02, 08) |
+| ST-033 (stretch) | S2 | FR-054 | — | `correction_consequences.feature` | E2E |
+| ST-034 | S2 | FR-046 (part a) | — | `mid_game_start.feature` (`@needs-verification`) | U |
+| ST-035 | S2 | FR-042 (part a) | — | `side_out_singles_provisional.feature` (`@needs-verification`) | U |
+| ST-036 (stretch) | S2 | FR-047 | — | `gaps_and_resync.feature` | U |
+| ST-037 | S2 | FR-027 | NFR-014, 055 | `evidence_deep_link.feature` | I (IT-02-06), E2E-02-04 |
+| ST-038 | S2 | FR-024 | NFR-066 | `abandoned_upload_expiry.feature` | U, I (IT-02-07) |
+| ST-039 | S2 | (journey over FR-022, FR-050, FR-049) | NFR-010, 012, 013, 017 | — | E2E-02-01, P (Locust) |
+| ST-040 | S2 | FR-151 | — | — | CI (manifest) |
+| ST-041 | S2 | FR-042, 046, 053 (provisional rows) | NFR-001 | rows inside the ST-034, ST-035 and ST-032 features | U |
+
