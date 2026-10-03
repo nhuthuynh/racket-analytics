@@ -1,0 +1,51 @@
+{
+  "name": "racket-analytics-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Racket Analytics PWA (ST-010): Next.js App Router, TypeScript strict.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "dev:https": "next dev --experimental-https",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
+    "lint": "eslint --max-warnings=0 .",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "check:first-route-js": "python3 ../scripts/ci/check_first_route_js.py --next-dir .next --route /page --budget-kb 200",
+    "tokens": "node scripts/generate-tokens.mts"
+  },
+  "dependencies": {
+    "next": "15.5.27",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tus-js-client": "4.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@eslint/eslintrc": "^3.3.7",
+    "@playwright/test": "1.56.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "^3.2.7",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "15.5.27",
+    "jsdom": "^26.1.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
+  },
+  "pnpm": {
+    "overrides": {
+      "next>postcss": "^8.5.23"
+    }
+  }
+}

@@ -1,0 +1,88 @@
+/* GENERATED from docs/design/tokens.json by `pnpm tokens`. Do not edit by hand. */
+:root {
+  color-scheme: light dark;
+  --color-bg: #FFFFFF;
+  --color-surface: #F3F5F7;
+  --color-text: #14191F;
+  --color-text-secondary: #4D5763;
+  --color-primary: #0B6B4D;
+  --color-primary-hover: #08573F;
+  --color-on-primary: #FFFFFF;
+  --color-link: #1A56B0;
+  --color-link-visited: #5B3A9E;
+  --color-border-control: #69737E;
+  --color-border-subtle: #D3D9DF;
+  --color-focus: #1A56B0;
+  --color-focus-inner: #FFFFFF;
+  --color-error: #B3261E;
+  --color-error-surface: #FDECEA;
+  --color-success: #1B6E33;
+  --color-warning-text: #7A4A00;
+  --color-warning-surface: #FFF4DE;
+  --color-info-surface: #E8F0FC;
+  --color-progress-track: #69737E;
+  --color-scrim: #000000A6;
+  --color-on-scrim: #FFFFFF;
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-size-xs: 0.875rem;
+  --font-size-sm: 1rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.5rem;
+  --font-size-xl: 2rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-gutter-mobile: 1rem;
+  --space-gutter-desktop: 2rem;
+  --space-content-max: 40rem;
+  --size-target-min: 24px;
+  --size-target-touch: 48px;
+  --size-target-gap: 8px;
+  --size-control-height: 48px;
+  --size-icon: 24px;
+  --border-control-width: 2px;
+  --border-error-width: 4px;
+  --border-radius: 6px;
+  --border-radius-pill: 999px;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 200ms;
+  --motion-reduced-motion: 0ms;
+  --layer-sticky: 10;
+  --layer-banner: 20;
+  --layer-dialog: 30;
+  --layer-toast: 40;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0F1419;
+    --color-surface: #1B232B;
+    --color-text: #E9EDF1;
+    --color-text-secondary: #A8B3BE;
+    --color-primary: #4CC08C;
+    --color-primary-hover: #6BD3A2;
+    --color-on-primary: #0F1419;
+    --color-link: #8AB4F8;
+    --color-link-visited: #C3A6F2;
+    --color-border-control: #7F8B97;
+    --color-border-subtle: #2C3640;
+    --color-focus: #8AB4F8;
+    --color-focus-inner: #0F1419;
+    --color-error: #FF8A80;
+    --color-error-surface: #3A1A18;
+    --color-success: #6FD08C;
+    --color-warning-text: #FFC966;
+    --color-warning-surface: #33270F;
+    --color-info-surface: #16273F;
+    --color-progress-track: #7F8B97;
+    --color-scrim: #000000A6;
+    --color-on-scrim: #FFFFFF;
+  }
+}

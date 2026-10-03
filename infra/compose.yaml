@@ -149,6 +149,9 @@ services:
         limits:
           cpus: "2"
           memory: 2g
+          # Process-count cap (ST-009): RLIMIT_NPROC on ffprobe does not bind root; this does.
+          # Per-process CPU/memory/wall-clock limits on ffprobe: racket.video_ingest.probe.
+          pids: 256
     depends_on:
       postgres:
         condition: service_healthy

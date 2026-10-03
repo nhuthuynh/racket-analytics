@@ -1,0 +1,3 @@
+# next dev --experimental-https writes a local key pair here (mkcert). Never commit it.
+certificates/
+*.tmp.mjs

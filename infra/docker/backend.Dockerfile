@@ -33,13 +33,42 @@ EXPOSE 8000
 # Graceful SIGTERM (AQS/OPS-02): uvicorn drains in-flight requests.
 CMD ["sh", "-c", "exec uvicorn \"$API_APP\" --host 0.0.0.0 --port 8000 --proxy-headers --no-server-header"]
 
+FROM ${PYTHON_IMAGE} AS ffprobe
+# LGPL ffprobe for the probe stage (ST-009; ADR 0008 "LGPL build only"; ADR 0020). A static
+# BtbN FFmpeg-Builds "lgpl" build, configured without --enable-gpl/--enable-nonfree (LGPL v3
+# because of --enable-version3). Pinned to a month-end autobuild tag (month-end tags are kept
+# long-term upstream) and sha256-verified. Only bin/ffprobe and the licence text are kept.
+ARG FFMPEG_BUILD_TAG=autobuild-2026-09-30-13-08
+ARG FFMPEG_BUILD_NAME=ffmpeg-n8.1.3-9-g29e619e767-linux64-lgpl-8.1
+ARG FFMPEG_BUILD_SHA256=dfa863a00ca81f1bdf58a372b18cff4820f0017e55de32778de8ecd8ed92a02e
+RUN --mount=type=secret,id=extra_ca,required=false python - <<'EOF'
+import hashlib, os, ssl, tarfile, urllib.request
+tag, name, want = (os.environ[k] for k in ("FFMPEG_BUILD_TAG", "FFMPEG_BUILD_NAME", "FFMPEG_BUILD_SHA256"))
+url = f"https://github.com/BtbN/FFmpeg-Builds/releases/download/{tag}/{name}.tar.xz"
+ca = "/run/secrets/extra_ca"
+ctx = ssl.create_default_context(cafile=ca if os.path.exists(ca) else None)
+digest = hashlib.sha256()
+with urllib.request.urlopen(url, context=ctx, timeout=300) as r, open("/tmp/ff.tar.xz", "wb") as f:
+    while chunk := r.read(1 << 20):
+        digest.update(chunk)
+        f.write(chunk)
+if digest.hexdigest() != want:
+    raise SystemExit(f"sha256 mismatch for {name}: {digest.hexdigest()}")
+os.makedirs("/out/bin", exist_ok=True)
+with tarfile.open("/tmp/ff.tar.xz") as t:
+    for member, dest in ((f"{name}/bin/ffprobe", "/out/bin/ffprobe"), (f"{name}/LICENSE.txt", "/out/LICENSE.txt")):
+        with t.extractfile(member) as src, open(dest, "wb") as out:
+            out.write(src.read())
+os.chmod("/out/bin/ffprobe", 0o755)
+os.remove("/tmp/ff.tar.xz")
+EOF
+RUN /out/bin/ffprobe -version | head -n 1 \
+ && if /out/bin/ffprobe -version | grep -q -e '--enable-gpl' -e '--enable-nonfree'; then \
+      echo "refusing a GPL or nonfree ffprobe build" >&2; exit 1; fi
+
 FROM base AS worker
-# FFmpeg/ffprobe for the probe stage (ST-009). NOTE: Debian's ffmpeg is built with GPL
-# components; ADR 0008 requires an LGPL build. Tracked in docs/sprints/00/blockers.md for
-# the ST-009 owner (senior-ml-cv-engineer) and security-privacy-engineer.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg \
- && rm -rf /var/lib/apt/lists/*
-ENV WORKER_MODULE=racket.worker
+# No apt ffmpeg: Debian's build is GPL-enabled (ADR 0008 requires LGPL).
+COPY --from=ffprobe /out /opt/ffmpeg
+ENV WORKER_MODULE=racket.worker FFPROBE_BIN=/opt/ffmpeg/bin/ffprobe
 USER app
 CMD ["sh", "-c", "exec python -m \"$WORKER_MODULE\""]

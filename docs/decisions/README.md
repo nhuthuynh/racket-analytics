@@ -117,5 +117,8 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0013 | [Agent hooks: deterministic gates that never wedge a session](0013-agent-hooks-design.md) | Proposed | 2026-10-03 |
 | 0014 | [CI merge gates: fail closed, one required check, pinned actions, SBOM-based licence gate](0014-ci-merge-gates-fail-closed.md) | Proposed | 2026-10-03 |
 | 0015 | [CV licence posture: MIT/Apache code by default, pretrained weights judged by their training data, no AGPL](0015-cv-licence-posture.md) | Proposed (PO decides OQ-12) | 2026-10-03 |
+| 0018 | [Web CSP: per-request nonce in middleware, no inline-script allowance](0018-web-csp-per-request-nonce.md) | Proposed | 2026-10-03 |
+| 0019 | [The Next.js `/api` rewrite is for dev and CI only; uploads use 8 MiB chunks](0019-web-api-rewrite-limits.md) | Proposed | 2026-10-03 |
+| 0020 | [Probe stage sandbox: a pinned LGPL ffprobe, per-process limits inside an internal-network container](0020-probe-sandbox-and-lgpl-ffprobe.md) | Proposed | 2026-10-03 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md).

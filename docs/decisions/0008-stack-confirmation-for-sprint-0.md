@@ -205,3 +205,13 @@ Note: the GitHub REST API was not reachable from this session, so star counts fo
   - **Caveat:** server-side encryption, object lock and lifecycle rules were not tested. They are not used in Sprint 0.
 
 - **2026-10-03 (principal-engineer):** The open "Resumable upload server" row is decided by ADR 0011: a tus 1.0.0 core inside the FastAPI app, not a tusd sidecar. The reasons are that tusd has no blocking hook on HEAD/PATCH for per-request BOLA, its `post-finish` enqueue is non-blocking, and its S3 locking is per-process. The evidence is the tusd docs fetched and hashed in ADR 0011. tusd is not adopted, so its MIT licence entry stays informational.
+
+- **2026-10-03 (senior-backend-engineer, SPIKE-09 / ST-007): part B confirmed (Postgres queue); the library question goes to the hand-written fallback, see ADR 0017.**
+  - **Setup:** the production code path (`JobQueue.claim` + commit, then `lock_running` + `complete` + commit, as `racket.worker.runner` does), 4 worker processes, 1,000 pre-enqueued jobs, local Postgres 16.14 from `scripts/dev-postgres.sh` (fsync off, shared dev container with other lanes running). Script: `backend/tests/perf/spike_09_queue_claim.py`.
+  - **Command:** `cd backend && uv run python -m tests.perf.spike_09_queue_claim --workers 4 --jobs 1000 [--work-ms 5]`.
+  - **Claim throughput (no-op stage), 4 runs:** 888.1, 888.2, 681.4 and 504.2 jobs/s. Claim latency p50 2.17-2.76 ms, p95 3.49-6.68 ms, p99 8.21-14.26 ms, max 37-69 ms.
+  - **With a 5 ms stage:** 401.0 jobs/s; p50 2.46 ms, p95 3.33 ms, p99 5.35 ms; jobs per worker 249/250/251/250.
+  - **Lock contention:** 0 empty claims while work remained (SKIP LOCKED never starved a worker). `pg_stat_activity` sampled every 5 ms showed `Lock`/`transactionid` waits in 6-10 % of samples with the no-op stage (at most 3 waiting backends) and none with the 5 ms stage. Likely cause (judgment): rows locked by a `SKIP LOCKED` scan and then dropped by the re-check stay locked until that claim commits, so a concurrent `lock_running` waits for it briefly.
+  - **Correctness:** every run ended with 1,000/1,000 jobs `done` at `attempts = 1`; no job was claimed twice.
+  - **Reading:** the MVP load (ENG §1.1) is orders of magnitude below 500 claims/s, so lock contention is not a risk for R1 (judgment). Re-measure if fan-out per match grows past ~100 stages or workers past ~32.
+  - **procrastinate:** not adopted. Its SIGTERM behaviour waits for running jobs instead of requeueing, SIGKILLed jobs need an app-defined periodic retry task, and queueing locks only hold while a job is queued (docs fetched and hashed in ADR 0017, E1-E3).
