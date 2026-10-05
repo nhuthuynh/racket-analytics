@@ -1,9 +1,10 @@
 """The ``send_sign_in_link`` job stage (ST-013; ADR 0025; api-sprint-01 §2.1).
 
 ``POST /auth/links`` answers 202 at once and leaves the address in the ``sign_in_requests``
-outbox; this stage issues the link (only its SHA-256 is stored), sends the email and deletes the
-outbox row, all in the runner's transaction. A request already handled is a no-op (idempotent).
-It needs SMTP, so it runs in a worker outside the media sandbox (``WORKER_STAGES``).
+outbox; this stage issues the link (only its SHA-256 is stored) and deletes the outbox row in
+the runner's transaction, and sends the email once that transaction has committed (C-07). A
+request already handled is a no-op (idempotent). It needs SMTP, so it runs in a worker outside
+the media sandbox (``WORKER_STAGES``).
 """
 
 from __future__ import annotations
@@ -53,8 +54,16 @@ class SendSignInLinkStage:
         ctx.session.execute(sa.delete(sign_in_requests).where(sign_in_requests.c.id == request.id))
         message = SignInEmail.compose(sign_in_link_url(ctx.settings.public_web_origin, token), ttl)
         mailer = self._mailer or SmtpMailer(ctx.settings.mail_smtp_url, ctx.settings.mail_from)
-        mailer.send(request.email, message)
-        log.info("sign-in email sent", extra={"event": "mail.sent", "email_key": link.email_key})
+        address, key = request.email, link.email_key
+
+        def send() -> None:
+            """After the commit (C-07, PE-R3R-02): never mail a link whose row was rolled
+            back. At-most-once: a send that fails after the runner's retries is logged
+            (``job.after_commit_failed``) and the player asks for a new link."""
+            mailer.send(address, message)
+            log.info("sign-in email sent", extra={"event": "mail.sent", "email_key": key})
+
+        ctx.after_commit.append(send)
 
     def on_failure(self, ctx: StageContext) -> None:
         """Drop the address: the player asks for a new link (data minimisation, judgment)."""
