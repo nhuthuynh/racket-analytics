@@ -63,7 +63,13 @@ test.describe('Threat controls (Sprint 1)', () => {
     const main = page.locator('main');
     await expect(main).toContainText(NICK_XSS); // Q-07 shows the nickname and the file name as text
     await expect(main).toContainText(`${XSS}.mp4`);
+    // The return visit reads the upload from the server, so wait until the tus creation POST has
+    // answered before opening the second page (QA-V2-01: without this the page can open first).
+    const created = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && /\/uploads$/.test(new URL(r.url()).pathname),
+    );
     await createAndUpload(page);
+    expect((await created).status()).toBe(201);
     const matchUrl = page.url();
 
     // Return visit: the resume prompt names the stored file (U-04). Nicknames render only in
