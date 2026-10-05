@@ -16,7 +16,9 @@ import { currentCall } from '@/lib/tagging/score';
 import { gameStatus, sideNames, tagLine, winnerWord } from '@/lib/tagging/view';
 import { ENDING_LABELS, ENDINGS, otherSide, type Ending, type ScoreSheet, type Side } from '@/lib/tagging/types';
 import { tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
+import { actionForKey, loadSingleKeys, saveSingleKeys, type KeyAction } from '@/lib/tagging/keymap';
 import { GameStartForm } from './GameStartForm';
+import { KeyMapDialog } from './KeyMapDialog';
 
 export type QuickTagApi = Pick<ApiClient, 'tagRally' | 'startGame' | 'getScoreSheet' | 'undo'>;
 
@@ -50,7 +52,13 @@ export function QuickTag({
   );
   const status = gameStatus(state.sheet);
   const [gameOverSeen, setGameOverSeen] = useState(false);
+  const [singleKeys, setSingleKeys] = useState(true);
+  const [keysOpen, setKeysOpen] = useState(false);
+  const opener = useRef<HTMLElement | null>(null);
   const video = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    setSingleKeys(loadSingleKeys(typeof window === 'undefined' ? null : window.localStorage));
+  }, []);
   const opened = useRef(0);
   useEffect(() => {
     opened.current = performance.now();
@@ -96,6 +104,66 @@ export function QuickTag({
       }
     })();
   }, [api, match.id, refresh, state.pending]);
+
+  const tagging = !status.matchOver;
+  // Keyboard tagging (ST-028a): document-level, so focus can stay on any control (E2E-02-03).
+  const onKey = useRef<(action: KeyAction) => void>(() => {});
+  onKey.current = (action: KeyAction) => {
+    const v = video.current;
+    const fps = match.media?.fps && match.media.fps > 0 ? match.media.fps : 30;
+    const players = names.players;
+    switch (action) {
+      case 'show_keys':
+        opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setKeysOpen(true);
+        return;
+      case 'play_pause':
+        if (v) void (v.paused ? v.play().catch(() => {}) : v.pause());
+        return;
+      case 'back_5s':
+      case 'forward_5s':
+      case 'frame_back':
+      case 'frame_forward': {
+        if (!v) return;
+        const step = action.startsWith('frame') ? 1 / fps : 5;
+        v.currentTime = Math.max(0, v.currentTime + (action.endsWith('back') || action === 'back_5s' ? -step : step));
+        return;
+      }
+      default:
+    }
+    if (!tagging) return;
+    if (action === 'mark_start') dispatch({ type: 'mark_start', ms: now() });
+    else if (action === 'mark_end') dispatch({ type: 'mark_end', ms: now() });
+    else if (action === 'clear') dispatch({ type: 'clear' });
+    else if (action === 'winner_mine') dispatch({ type: 'choose_winner', side: names.mySide });
+    else if (action === 'winner_other') dispatch({ type: 'choose_winner', side: otherSide(names.mySide) });
+    else if (action.startsWith('player_')) {
+      const p = players[Number(action.slice(7)) - 1];
+      if (p) dispatch({ type: 'choose_player', slot: p.slot });
+    } else if (action.startsWith('ending_')) dispatch({ type: 'choose_ending', ending: action.slice(7) as Ending });
+  };
+  useEffect(() => {
+    if (keysOpen) return;
+    const listener = (e: KeyboardEvent) => {
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      const action = actionForKey(
+        {
+          key: e.key,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          altKey: e.altKey,
+          targetTag: target?.tagName ?? 'BODY',
+          targetEditable: target?.isContentEditable ?? false,
+        },
+        { singleKeys },
+      );
+      if (!action) return;
+      e.preventDefault();
+      onKey.current(action);
+    };
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, [keysOpen, singleKeys]);
 
   const needsGame = status.current === 0 || (status.over && !status.matchOver) || (gameOverSeen && status.over);
   const nextGame = status.current === 0 ? 1 : status.current + 1;
@@ -209,9 +277,35 @@ export function QuickTag({
         </div>
       )}
 
-      <p>
-        <Link href={`/matches/${match.id}/sheet`}>Score sheet</Link>
-      </p>
+      <div className="quick-tag__row">
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={(e) => {
+            opener.current = e.currentTarget;
+            setKeysOpen(true);
+          }}
+        >
+          Keyboard shortcuts
+        </button>
+        <Link href={`/matches/${match.id}/sheet`} className="button button--secondary">
+          Score sheet
+        </Link>
+      </div>
+      {keysOpen ? (
+        <KeyMapDialog
+          playerNames={names.players.map((p) => p.nickname)}
+          singleKeys={singleKeys}
+          onSingleKeys={(on) => {
+            setSingleKeys(on);
+            saveSingleKeys(window.localStorage, on);
+          }}
+          onClose={() => {
+            setKeysOpen(false);
+            opener.current?.focus();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
