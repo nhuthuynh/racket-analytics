@@ -161,7 +161,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}" "diff-cover==10.6.0"
       - name: Start backing services (same as production; never SQLite, AQS/OPS-05)
-        run: $COMPOSE up -d --wait postgres objectstore objectstore-init mailpit tracing
+        # `up --wait` fails on a one-shot that exits (even 0), so the bucket init runs after.
+        run: |
+          $COMPOSE up -d --wait postgres objectstore mailpit tracing
+          $COMPOSE run --rm objectstore-init
       - name: Export service endpoints
         run: |
           set -a; . infra/env.example; set +a
@@ -348,7 +351,8 @@ jobs:
         working-directory: backend
         run: |
           pip install "uv==${UV_VERSION}" "pip-audit==2.10.1"
-          uv export --locked --no-dev --no-emit-project --format requirements-txt > /tmp/req.txt
+          # FORCE_COLOR=1 would put ANSI codes into the file (CI run 37277549983).
+          uv export --color never --locked --no-dev --no-emit-project --format requirements-txt -o /tmp/req.txt
           pip-audit --strict --requirement /tmp/req.txt --disable-pip
       - name: pnpm audit, critical (NFR-062)
         working-directory: web
@@ -372,6 +376,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install the shipped graph only (no dev dependencies)
         run: |
+          mkdir -p reports # sbom-action does not create the output directory
           pip install "uv==${UV_VERSION}"
           (cd backend && uv sync --locked --no-dev)
           corepack enable
@@ -415,7 +420,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}"
-      - run: $COMPOSE up -d --wait postgres objectstore objectstore-init mailpit tracing
+      - run: |
+          $COMPOSE up -d --wait postgres objectstore mailpit tracing
+          $COMPOSE run --rm objectstore-init
       - name: Run the backend suites three times
         working-directory: backend
         run: |

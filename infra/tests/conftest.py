@@ -23,7 +23,14 @@ def run_hook(
     timeout: float = 60,
 ) -> subprocess.CompletedProcess[str]:
     """Invoke a hook script exactly as Claude Code does: JSON on stdin, project dir in env."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith("RA_")}
+    # Hermetic: the runner's own RA_* and GITHUB_ACTIONS must not leak into the hook (on a
+    # GitHub runner GITHUB_ACTIONS=true makes stop.py a no-op). Tests that need either pass
+    # it in `extra_env` (CI run 37277549983, decision-log 2026-10-05).
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("RA_") and k not in {"GITHUB_ACTIONS", "CI"}
+    }
     env["CLAUDE_PROJECT_DIR"] = str(project_dir)
     if extra_env:
         env.update(extra_env)
