@@ -920,3 +920,21 @@ main:focus-visible,
 .history-list__time {
   color: var(--color-text-secondary);
 }
+
+/* Rally corrections on the score sheet (ST-032): 48px controls, wrap at narrow widths. */
+.rally-fix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-target-gap);
+  margin-block-start: var(--space-2);
+}
+
+.rally-fix__button,
+.rally-fix__select {
+  min-block-size: var(--size-target-touch);
+}
+
+.rally-fix__select {
+  inline-size: auto;
+  max-inline-size: 100%;
+}

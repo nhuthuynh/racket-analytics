@@ -10,8 +10,10 @@ import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
 import { commandProblem } from '@/lib/tagging/messages';
 import type { Match } from '@/lib/api/types';
-import type { HistoryItem, ScoreSheet, Versioned } from '@/lib/tagging/types';
+import type { CorrectableField, HistoryItem, ScoreSheet, SheetRow, Versioned } from '@/lib/tagging/types';
+import { sideNames } from '@/lib/tagging/view';
 import { CorrectionHistory } from './CorrectionHistory';
+import { RallyCorrections } from './RallyCorrections';
 import { ScoreSheetTable } from './ScoreSheetTable';
 
 export type SheetApi = Pick<ApiClient, 'undo' | 'corrections' | 'correctRally' | 'getScoreSheet' | 'rallyMedia'>;
@@ -81,6 +83,15 @@ export function ScoreSheetView({
     [api, busy, loadHistory, match.id, version],
   );
 
+  const names = sideNames(match);
+  function correct(row: SheetRow, field: CorrectableField, value: string | null) {
+    void run(
+      'Correction',
+      (v) => api.correctRally(match.id, v, row.rally_id, field, value),
+      () => `Rally ${row.number} corrected. The score sheet is up to date.`,
+    );
+  }
+
   return (
     <div className="stack">
       {problem ? (
@@ -89,7 +100,11 @@ export function ScoreSheetView({
         </p>
       ) : null}
       <ScoreAnnouncer message={said} />
-      <ScoreSheetTable match={match} sheet={sheet} />
+      <ScoreSheetTable
+        match={match}
+        sheet={sheet}
+        rowActions={(row) => <RallyCorrections row={row} names={names} onCorrect={correct} />}
+      />
       <p>
         <button
           type="button"
