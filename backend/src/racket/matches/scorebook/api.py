@@ -49,20 +49,29 @@ def get_score_sheet(match: OwnedMatch, service: Service) -> JSONResponse:
 
 @router.post("/matches/{match_id}/games", status_code=201)
 def start_game(
-    match: OwnedMatch, account: CurrentAccount, service: Service, body: JsonBody,
+    match: OwnedMatch,
+    account: CurrentAccount,
+    service: Service,
+    body: JsonBody,
     if_match: IfMatch = None,
-) -> JSONResponse:  # fmt: skip
+) -> JSONResponse:
     version = parse_version(if_match)
     book = service.start_game(match, account.id, body, version)
-    return JSONResponse({"version": book.version, "sheet": project(book)}, status_code=201,
-                        headers=_etag(book.version))  # fmt: skip
+    return JSONResponse(
+        {"version": book.version, "sheet": project(book)},
+        status_code=201,
+        headers=_etag(book.version),
+    )
 
 
 @router.post("/matches/{match_id}/rallies", status_code=201)
 def tag_rally(
-    match: OwnedMatch, account: CurrentAccount, service: Service, body: JsonBody,
+    match: OwnedMatch,
+    account: CurrentAccount,
+    service: Service,
+    body: JsonBody,
     if_match: IfMatch = None,
-) -> JSONResponse:  # fmt: skip
+) -> JSONResponse:
     """FR-050: one tag; the response carries the new projection (NFR-012 server half)."""
     version = parse_version(if_match)
     book, rally_id = service.tag(match, account.id, body, version)

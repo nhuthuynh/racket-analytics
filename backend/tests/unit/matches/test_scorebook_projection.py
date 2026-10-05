@@ -51,10 +51,17 @@ def book_with(winners: list[str | None], first: str = "A") -> Scorebook:
         )
         for i, side in enumerate(winners)
     )
-    game = GameStart(number=1, first_serving_side=Side(first), ends_switched=False,
-                     created_version=1)  # fmt: skip
-    return Scorebook(rules_version="PROVISIONAL-UNVERIFIED", format="doubles", best_of=3,
-                     version=len(rallies) + 1, games=(game,), rallies=rallies)  # fmt: skip
+    game = GameStart(
+        number=1, first_serving_side=Side(first), ends_switched=False, created_version=1
+    )
+    return Scorebook(
+        rules_version="PROVISIONAL-UNVERIFIED",
+        format="doubles",
+        best_of=3,
+        version=len(rallies) + 1,
+        games=(game,),
+        rallies=rallies,
+    )
 
 
 def call(state) -> str:  # type: ignore[no-untyped-def]
@@ -64,8 +71,9 @@ def call(state) -> str:  # type: ignore[no-untyped-def]
 
 # ---------------------------------------------------------------- 1. empty
 def test_an_empty_match_has_an_empty_unofficial_sheet() -> None:
-    sheet = project(Scorebook.new(rules_version="PROVISIONAL-UNVERIFIED", format="doubles",
-                                  best_of=3))  # fmt: skip
+    sheet = project(
+        Scorebook.new(rules_version="PROVISIONAL-UNVERIFIED", format="doubles", best_of=3)
+    )
     assert (sheet["rows"], sheet["games"], sheet["match_winner"]) == ([], [], None)
     assert sheet["rules_version"] == "PROVISIONAL-UNVERIFIED"
     assert (sheet["unofficial"], sheet["label"]) == (True, UNOFFICIAL_LABEL)

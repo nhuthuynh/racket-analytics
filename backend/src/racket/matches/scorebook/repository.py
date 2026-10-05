@@ -79,11 +79,16 @@ match_corrections = sa.Table(
 
 def _rally_row(match_id: uuid.UUID, rally: Rally) -> dict[str, Any]:
     return {
-        "id": rally.id, "match_id": match_id, "game_number": rally.game_number,
-        "seq": rally.seq, "start_ms": rally.times.start_ms, "end_ms": rally.times.end_ms,
-        **rally.outcome.as_json(), "withdrawn": rally.withdrawn,
+        "id": rally.id,
+        "match_id": match_id,
+        "game_number": rally.game_number,
+        "seq": rally.seq,
+        "start_ms": rally.times.start_ms,
+        "end_ms": rally.times.end_ms,
+        **rally.outcome.as_json(),
+        "withdrawn": rally.withdrawn,
         "created_version": rally.created_version,
-    }  # fmt: skip
+    }
 
 
 def _stored_outcome(row: Any) -> OutcomeInput:
@@ -112,34 +117,56 @@ class ScorebookRepository:
         games = tuple(
             GameStart(r.number, Side(r.first_serving_side), r.ends_switched, r.created_version)
             for r in self.session.execute(
-                sa.select(match_games).where(match_games.c.match_id == match_id)
+                sa.select(match_games)
+                .where(match_games.c.match_id == match_id)
                 .order_by(match_games.c.number)
             )
-        )  # fmt: skip
+        )
         rallies = tuple(
             Rally(
-                id=r.id, game_number=r.game_number, seq=r.seq,
+                id=r.id,
+                game_number=r.game_number,
+                seq=r.seq,
                 times=RallyTimes(r.start_ms, r.end_ms),
                 outcome=_stored_outcome(r),
-                created_version=r.created_version, withdrawn=r.withdrawn,
+                created_version=r.created_version,
+                withdrawn=r.withdrawn,
             )
             for r in self.session.execute(
-                sa.select(match_rallies).where(match_rallies.c.match_id == match_id)
+                sa.select(match_rallies)
+                .where(match_rallies.c.match_id == match_id)
                 .order_by(match_rallies.c.seq)
             )
-        )  # fmt: skip
+        )
         changes = tuple(
-            Change(id=r.id, kind=r.kind, version=r.version, actor_id=r.actor_id, at=r.at,
-                   rally_id=r.rally_id, game_number=r.game_number, field=r.field,
-                   old_value=r.old_value, new_value=r.new_value, undoes=r.undoes)
+            Change(
+                id=r.id,
+                kind=r.kind,
+                version=r.version,
+                actor_id=r.actor_id,
+                at=r.at,
+                rally_id=r.rally_id,
+                game_number=r.game_number,
+                field=r.field,
+                old_value=r.old_value,
+                new_value=r.new_value,
+                undoes=r.undoes,
+            )
             for r in self.session.execute(
-                sa.select(match_corrections).where(match_corrections.c.match_id == match_id)
+                sa.select(match_corrections)
+                .where(match_corrections.c.match_id == match_id)
                 .order_by(match_corrections.c.version, match_corrections.c.at)
             )
-        )  # fmt: skip
-        return Scorebook(rules_version=head.rules_version, format=fmt, best_of=head.best_of,
-                         version=head.version, games=games, rallies=rallies,
-                         changes=changes)  # fmt: skip
+        )
+        return Scorebook(
+            rules_version=head.rules_version,
+            format=fmt,
+            best_of=head.best_of,
+            version=head.version,
+            games=games,
+            rallies=rallies,
+            changes=changes,
+        )
 
     def save(self, match_id: uuid.UUID, before: Scorebook, after: Scorebook) -> None:
         """Write the difference; nothing is committed here (the service owns the transaction).
@@ -155,15 +182,26 @@ class ScorebookRepository:
         new_games = {g.number: g for g in after.games}
         gone = old_games - set(new_games)
         if gone:
-            self.session.execute(sa.delete(match_games).where(
-                match_games.c.match_id == match_id, match_games.c.number.in_(gone)))  # fmt: skip
+            self.session.execute(
+                sa.delete(match_games).where(
+                    match_games.c.match_id == match_id, match_games.c.number.in_(gone)
+                )
+            )
         added = [g for n, g in new_games.items() if n not in old_games]
         if added:
-            self.session.execute(sa.insert(match_games), [
-                {"match_id": match_id, "number": g.number,
-                 "first_serving_side": g.first_serving_side.value,
-                 "ends_switched": g.ends_switched, "created_version": g.created_version}
-                for g in added])  # fmt: skip
+            self.session.execute(
+                sa.insert(match_games),
+                [
+                    {
+                        "match_id": match_id,
+                        "number": g.number,
+                        "first_serving_side": g.first_serving_side.value,
+                        "ends_switched": g.ends_switched,
+                        "created_version": g.created_version,
+                    }
+                    for g in added
+                ],
+            )
         old_rallies = {r.id: r for r in before.rallies}
         fresh = [_rally_row(match_id, r) for r in after.rallies if r.id not in old_rallies]
         if fresh:
@@ -172,15 +210,30 @@ class ScorebookRepository:
             if rally.id in old_rallies and old_rallies[rally.id] != rally:
                 row = _rally_row(match_id, rally)
                 self.session.execute(
-                    sa.update(match_rallies).where(match_rallies.c.id == rally.id)
+                    sa.update(match_rallies)
+                    .where(match_rallies.c.id == rally.id)
                     .values({k: v for k, v in row.items() if k not in ("id", "match_id")})
-                )  # fmt: skip
+                )
         known = {c.id for c in before.changes}
         trail = [c for c in after.changes if c.id not in known]
         if trail:
-            self.session.execute(sa.insert(match_corrections), [
-                {"id": c.id, "match_id": match_id, "version": c.version, "kind": c.kind,
-                 "actor_id": c.actor_id, "at": c.at, "rally_id": c.rally_id,
-                 "game_number": c.game_number, "field": c.field, "old_value": c.old_value,
-                 "new_value": c.new_value, "undoes": c.undoes}
-                for c in trail])  # fmt: skip
+            self.session.execute(
+                sa.insert(match_corrections),
+                [
+                    {
+                        "id": c.id,
+                        "match_id": match_id,
+                        "version": c.version,
+                        "kind": c.kind,
+                        "actor_id": c.actor_id,
+                        "at": c.at,
+                        "rally_id": c.rally_id,
+                        "game_number": c.game_number,
+                        "field": c.field,
+                        "old_value": c.old_value,
+                        "new_value": c.new_value,
+                        "undoes": c.undoes,
+                    }
+                    for c in trail
+                ],
+            )

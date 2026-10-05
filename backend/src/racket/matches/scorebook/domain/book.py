@@ -107,9 +107,14 @@ class Scorebook:
 
     # ------------------------------------------------------------ commands
     def start_game(
-        self, *, first_serving_side: Side, ends_switched: bool, ready: bool,
-        expected_version: int, ctx: CommandContext,
-    ) -> Scorebook:  # fmt: skip
+        self,
+        *,
+        first_serving_side: Side,
+        ends_switched: bool,
+        ready: bool,
+        expected_version: int,
+        ctx: CommandContext,
+    ) -> Scorebook:
         """FR-045: the first serving side and the ends are stated, never inferred."""
         self._guard(ready=ready, expected_version=expected_version)
         played = play(self)
@@ -121,16 +126,28 @@ class Scorebook:
             raise ValueError("first serving side and ends must be stated")
         game = GameStart(len(self.games) + 1, first_serving_side, ends_switched, self.version + 1)
         change = self._change(
-            ctx, "game_started", game_number=game.number, field="first_serving_side",
+            ctx,
+            "game_started",
+            game_number=game.number,
+            field="first_serving_side",
             new_value=first_serving_side.value,  # scalar tag values only (§6, IT-02-09)
-        )  # fmt: skip
-        return replace(self, version=self.version + 1, games=(*self.games, game),
-                       changes=(*self.changes, change))  # fmt: skip
+        )
+        return replace(
+            self,
+            version=self.version + 1,
+            games=(*self.games, game),
+            changes=(*self.changes, change),
+        )
 
     def tag(
-        self, times: RallyTimes, outcome: OutcomeInput, *, ready: bool, expected_version: int,
+        self,
+        times: RallyTimes,
+        outcome: OutcomeInput,
+        *,
+        ready: bool,
+        expected_version: int,
         ctx: CommandContext,
-    ) -> tuple[Scorebook, Rally]:  # fmt: skip
+    ) -> tuple[Scorebook, Rally]:
         """Append one rally to the current game (I1, I5, I6, I7). The tag is the original
         fact, so it has no audit row; undoing it is audited (match-aggregate §4)."""
         self._guard(ready=ready, expected_version=expected_version)
@@ -145,9 +162,12 @@ class Scorebook:
             raise GameIsOver("current game is over")
         times.check_after(r.times for r in self.kept)
         rally = Rally(
-            id=ctx.new_id(), game_number=self.games[-1].number,
-            seq=max((r.seq for r in self.rallies), default=0) + 1, times=times,
-            outcome=outcome, created_version=self.version + 1,
-        )  # fmt: skip
+            id=ctx.new_id(),
+            game_number=self.games[-1].number,
+            seq=max((r.seq for r in self.rallies), default=0) + 1,
+            times=times,
+            outcome=outcome,
+            created_version=self.version + 1,
+        )
         book = replace(self, version=self.version + 1, rallies=(*self.rallies, rally))
         return book, rally

@@ -29,8 +29,12 @@ pytestmark = pytest.mark.unit
 
 
 def outcome(**over: Any) -> OutcomeInput:
-    body = {"ending": "winner", "winning_side": "A", "responsible_player": None,
-            "fault_kind": None} | over  # fmt: skip
+    body = {
+        "ending": "winner",
+        "winning_side": "A",
+        "responsible_player": None,
+        "fault_kind": None,
+    } | over
     return OutcomeInput.parse(body, format="doubles")
 
 
@@ -124,8 +128,9 @@ def test_an_unknown_player_slot_is_refused(player: Any) -> None:
 
 def test_a_singles_match_has_no_second_player() -> None:
     with pytest.raises(InvalidOutcome):
-        OutcomeInput.parse({"ending": "winner", "winning_side": "A",
-                            "responsible_player": "A2"}, format="singles")  # fmt: skip
+        OutcomeInput.parse(
+            {"ending": "winner", "winning_side": "A", "responsible_player": "A2"}, format="singles"
+        )
 
 
 def test_a_fault_kind_only_with_a_fault() -> None:
@@ -139,8 +144,9 @@ def test_a_fault_kind_only_with_a_fault() -> None:
 
 def test_unknown_keys_are_refused() -> None:
     with pytest.raises(InvalidOutcome) as exc:
-        OutcomeInput.parse({"ending": "winner", "winning_side": "A", "score": "11-0"},
-                           format="doubles")  # fmt: skip
+        OutcomeInput.parse(
+            {"ending": "winner", "winning_side": "A", "score": "11-0"}, format="doubles"
+        )
     assert codes(exc) == [(None, "unknown_field")]
 
 
@@ -161,7 +167,11 @@ def test_the_engine_outcome_carries_only_who_won(ending: str, side: str, expecte
 
 def test_the_input_round_trips_through_its_json_form() -> None:
     value = outcome(ending="fault", winning_side="B", responsible_player="A2", fault_kind="foot")
-    assert value.as_json() == {"ending": "fault", "winning_side": "B",
-                               "responsible_player": "A2", "fault_kind": "foot"}  # fmt: skip
+    assert value.as_json() == {
+        "ending": "fault",
+        "winning_side": "B",
+        "responsible_player": "A2",
+        "fault_kind": "foot",
+    }
     assert OutcomeInput.parse(value.as_json(), format="doubles") == value
     assert Ending("fault") is value.ending

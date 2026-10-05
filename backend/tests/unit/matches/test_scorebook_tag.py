@@ -48,15 +48,19 @@ class Tagger:
     """Drives a scorebook the way the API does: each command sends the last version."""
 
     def __init__(self, best_of: int = 3, ready: bool = True) -> None:
-        self.book = Scorebook.new(rules_version="PROVISIONAL-UNVERIFIED", format="doubles",
-                                  best_of=best_of)  # fmt: skip
+        self.book = Scorebook.new(
+            rules_version="PROVISIONAL-UNVERIFIED", format="doubles", best_of=best_of
+        )
         self.ready, self.ctx, self.clock = ready, ctx(), 0
 
     def start(self, first: str = "A") -> None:
         self.book = self.book.start_game(
-            first_serving_side=Side(first), ends_switched=False, ready=self.ready,
-            expected_version=self.book.version, ctx=self.ctx,
-        )  # fmt: skip
+            first_serving_side=Side(first),
+            ends_switched=False,
+            ready=self.ready,
+            expected_version=self.book.version,
+            ctx=self.ctx,
+        )
 
     def tag(self, outcome: OutcomeInput) -> uuid.UUID:
         times = RallyTimes.parse(self.clock, self.clock + 900)
@@ -131,8 +135,13 @@ def test_a_command_with_an_older_version_is_stale_and_changes_nothing() -> None:
     t.start()
     before = t.book
     with pytest.raises(StaleMatch) as exc:
-        t.book.tag(RallyTimes.parse(0, 10), won("A"), ready=True,
-                   expected_version=t.book.version - 1, ctx=t.ctx)  # fmt: skip
+        t.book.tag(
+            RallyTimes.parse(0, 10),
+            won("A"),
+            ready=True,
+            expected_version=t.book.version - 1,
+            ctx=t.ctx,
+        )
     assert (exc.value.status, exc.value.code) == (409, "stale_match")
     assert t.book is before
 
@@ -142,8 +151,13 @@ def test_a_rally_overlapping_the_last_one_is_refused() -> None:
     t.start()
     t.tag(won("A"))
     with pytest.raises(InvalidRally):
-        t.book.tag(RallyTimes.parse(500, 1_500), won("A"), ready=True,
-                   expected_version=t.book.version, ctx=t.ctx)  # fmt: skip
+        t.book.tag(
+            RallyTimes.parse(500, 1_500),
+            won("A"),
+            ready=True,
+            expected_version=t.book.version,
+            ctx=t.ctx,
+        )
 
 
 # ---------------------------------------------------------------- 3. a tag appends a rally
@@ -167,5 +181,9 @@ def test_each_command_bumps_the_version_by_one_and_records_who_and_when() -> Non
     assert t.book.version == 3
     started = t.book.changes[0]
     assert (started.kind, started.actor_id, started.at, started.version) == (
-        "game_started", ACTOR, AT, 1)  # fmt: skip
+        "game_started",
+        ACTOR,
+        AT,
+        1,
+    )
     assert [r.created_version for r in t.book.rallies] == [2, 3]

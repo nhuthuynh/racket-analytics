@@ -23,8 +23,9 @@ def test_a_missing_or_malformed_if_match_is_a_stale_version(raw: str | None) -> 
     assert (exc.value.status, exc.value.code) == (409, "stale_match")
 
 
-@pytest.mark.parametrize(("raw", "expected"), [("0", 0), ("3", 3), ('"3"', 3), ('W/"12"', 12),
-                                               (" 7 ", 7)])  # fmt: skip
+@pytest.mark.parametrize(
+    ("raw", "expected"), [("0", 0), ("3", 3), ('"3"', 3), ('W/"12"', 12), (" 7 ", 7)]
+)
 def test_if_match_takes_a_bare_or_quoted_version(raw: str, expected: int) -> None:
     assert parse_version(raw) == expected
 

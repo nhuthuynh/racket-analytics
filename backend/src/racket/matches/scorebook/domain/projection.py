@@ -65,20 +65,32 @@ class Played:
 def _row(number: int, rally: Any, corrected: bool) -> dict[str, Any]:
     out = rally.outcome.as_json()
     return {
-        "number": number, "rally_id": str(rally.id), "game": rally.game_number,
-        "start_ms": rally.times.start_ms, "end_ms": rally.times.end_ms,
-        "winning_side": out["winning_side"], "ending": out["ending"],
-        "responsible_player": out["responsible_player"], "fault_kind": out["fault_kind"],
-        "corrected_by_user": corrected, "serving_side": None, "server": None,
-        "score_before": None, "score_after": None, "marker": NEEDS_DECISION,
-    }  # fmt: skip
+        "number": number,
+        "rally_id": str(rally.id),
+        "game": rally.game_number,
+        "start_ms": rally.times.start_ms,
+        "end_ms": rally.times.end_ms,
+        "winning_side": out["winning_side"],
+        "ending": out["ending"],
+        "responsible_player": out["responsible_player"],
+        "fault_kind": out["fault_kind"],
+        "corrected_by_user": corrected,
+        "serving_side": None,
+        "server": None,
+        "score_before": None,
+        "score_after": None,
+        "marker": NEEDS_DECISION,
+    }
 
 
 def corrected_rallies(book: Scorebook) -> set[Any]:
     """Rallies with a correction or resolution that is not undone (FR-052 marker)."""
     undone = {c.undoes for c in book.changes if c.kind == "undo"}
-    return {c.rally_id for c in book.changes
-            if c.kind in ("correction", "resolution") and c.id not in undone}  # fmt: skip
+    return {
+        c.rally_id
+        for c in book.changes
+        if c.kind in ("correction", "resolution") and c.id not in undone
+    }
 
 
 def play(book: Scorebook) -> Played:
@@ -90,8 +102,13 @@ def play(book: Scorebook) -> Played:
     played, number, blocked = Played(), 0, config is None
     for game in sorted(book.games, key=lambda g: g.number):
         state = None if config is None else new_game(config, game.first_serving_side)
-        current = PlayedGame(game.number, game.first_serving_side, game.ends_switched,
-                             None if blocked else state, blocked)  # fmt: skip
+        current = PlayedGame(
+            game.number,
+            game.first_serving_side,
+            game.ends_switched,
+            None if blocked else state,
+            blocked,
+        )
         for rally in by_game.get(game.number, []):
             number += 1
             row = _row(number, rally, rally.id in corrected)
@@ -101,9 +118,13 @@ def play(book: Scorebook) -> Played:
             after = apply(state, rally.outcome.to_engine(), config)
             if isinstance(after, DomainError):
                 continue  # defensive: stored data the engine refuses is marked, not raised
-            row.update(serving_side=state.serving_side.value, server=state.server_player,
-                       score_before=score_call(state), score_after=score_call(after),
-                       marker=None)  # fmt: skip
+            row.update(
+                serving_side=state.serving_side.value,
+                server=state.server_player,
+                score_before=score_call(state),
+                score_after=score_call(after),
+                marker=None,
+            )
             state = after
         current.state = None if blocked else state
         played.games.append(current)

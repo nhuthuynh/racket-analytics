@@ -131,8 +131,9 @@ class OutcomeInput:
         if self.winning_side is None:
             return RallyOutcome.replay()
         if self.ending is Ending.FAULT:
-            return RallyOutcome.fault(by=self.winning_side.other,
-                                      kind=self.fault_kind or FaultKind.OTHER)  # fmt: skip
+            return RallyOutcome.fault(
+                by=self.winning_side.other, kind=self.fault_kind or FaultKind.OTHER
+            )
         return RallyOutcome.won_by(self.winning_side)
 
     def as_json(self) -> dict[str, str | None]:

@@ -31,8 +31,9 @@ from racket.platform.errors import FieldError, ValidationFailed
 from racket.sports.pickleball.rules import Side
 
 log = logging.getLogger(__name__)
-TAG_KEYS = frozenset({"start_ms", "end_ms", "ending", "winning_side", "responsible_player",
-                      "fault_kind"})  # fmt: skip
+TAG_KEYS = frozenset(
+    {"start_ms", "end_ms", "ending", "winning_side", "responsible_player", "fault_kind"}
+)
 START_KEYS = frozenset({"first_serving_side", "ends_switched"})
 
 
@@ -63,8 +64,9 @@ class ScorebookService:
         book = self.books.load(match.id.value)
         return book.version, project(book)
 
-    def _run(self, match: Match, actor_id: uuid.UUID, command: Callable[..., Any],
-             event: str) -> tuple[Scorebook, Any]:  # fmt: skip
+    def _run(
+        self, match: Match, actor_id: uuid.UUID, command: Callable[..., Any], event: str
+    ) -> tuple[Scorebook, Any]:
         before = self.books.load(match.id.value, lock=True)
         ctx = CommandContext(actor_id=actor_id, at=self.clock())
         try:
@@ -75,8 +77,10 @@ class ScorebookService:
         after, extra = result if isinstance(result, tuple) else (result, None)
         self.books.save(match.id.value, before, after)
         self.session.commit()
-        log.info("scorebook changed", extra={"event": event, "match_id": str(match.id),
-                                             "version": after.version})  # fmt: skip
+        log.info(
+            "scorebook changed",
+            extra={"event": event, "match_id": str(match.id), "version": after.version},
+        )
         return after, extra
 
     def start_game(self, match: Match, actor_id: uuid.UUID, body: Any, version: int) -> Scorebook:
@@ -92,9 +96,12 @@ class ScorebookService:
 
         def command(book: Scorebook, ctx: CommandContext, ready: bool) -> Scorebook:
             return book.start_game(
-                first_serving_side=Side(side), ends_switched=ends, ready=ready,
-                expected_version=version, ctx=ctx,
-            )  # fmt: skip
+                first_serving_side=Side(side),
+                ends_switched=ends,
+                ready=ready,
+                expected_version=version,
+                ctx=ctx,
+            )
 
         book, _ = self._run(match, actor_id, command, "match.game_started")
         return book
