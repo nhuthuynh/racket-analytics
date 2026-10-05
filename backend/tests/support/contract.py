@@ -197,3 +197,41 @@ RULES_PACKAGE_DIR = "src/racket/sports/pickleball/rules"  # module or package (I
 #   ms.rules_version -> str (a match keeps the preset it was scored under, QD-RE-02)
 MATCH_STATE = Seam("racket.matches.domain:MatchState", "ST-021")
 MATCH_OVER = Seam("racket.matches.domain:MatchOver", "ST-021", "a DomainError subclass")
+
+# ------------------------------------------------------------------ HTTP contract, Sprint 1
+# docs/architecture/api-sprint-01.md (Accepted 2026-10-05). Routes are relative to the API root.
+AUTH_LINKS = "/auth/links"  # POST {"email"} -> 202 always (no account oracle, D-4)
+AUTH_EXCHANGE = "/auth/exchange"  # POST {"token"} -> 200 + session cookie; 401 link_expired
+AUTH_SIGN_OUT = "/auth/sign-out"  # POST -> 204 + Clear-Site-Data: "cache"
+ME = "/me"
+UPLOAD_POLICY = "/upload-policy"  # GET -> caps and chunk bounds (§6.1)
+UPLOAD_OPTIONS = "/uploads"  # OPTIONS -> Tus-Extension: creation,checksum,expiration
+SESSION_COOKIE_TEST = "racket_session"  # test env name (prod: __Host-racket_session)
+SIGN_IN_LINK = r"/auth/callback#token=(?P<token>[A-Za-z0-9_-]{43})"  # in the email body
+# Auth events are JSON log lines whose ``msg`` is one of these, with ``ts`` (UTC),
+# ``request_id`` and ``user_id`` (pseudonymous) or ``email_key`` (HMAC); never the address or
+# token (NFR-057, T-ML-9). Names are a QA proposal matching the racket.auth.links outcomes.
+AUTH_LOG_EVENTS = ("auth.link_requested", "auth.link_exchanged", "auth.link_refused")
+SEND_SIGN_IN_LINK_STAGE = "send_sign_in_link"  # queued job that sends the email (§2.1)
+MAILPIT_API_ENV = "MAILPIT_API_URL"  # e.g. http://127.0.0.1:8025 (Compose `mailpit` UI port)
+CHECKSUM_MISMATCH = 460  # tus checksum extension status (§6.5)
+# Configuration the tests set before the app is built (§8). ``api``/``committed_app`` build
+# the app from the environment, so a test sets these with monkeypatch before using them.
+UPLOAD_EXPIRY_ENV = "UPLOAD_EXPIRY_SECONDS"
+UPLOAD_MAX_BYTES_ENV = "UPLOAD_MAX_BYTES"
+UPLOAD_MAX_DURATION_ENV = "UPLOAD_MAX_DURATION_MS"
+PROVISIONAL_CAP_BYTES = 10_000_000_000  # 10 GB (FR-023, provisional until ST-025)
+PROVISIONAL_CAP_DURATION_MS = 9_000_000  # 150 min
+
+# Participants (ST-016, ADR 0024): pure predicate shared by client and domain (§5.4).
+PARTICIPANTS = Seam(
+    "racket.matches.domain:Participants",
+    "ST-016",
+    "Participants.looks_like_contact_details(nickname: str) -> bool",
+)
+# Upload policy (ST-018): pure check of probe facts (§6.6).
+UPLOAD_POLICY_DOMAIN = Seam(
+    "racket.video_ingest.domain:UploadPolicy",
+    "ST-018",
+    "UploadPolicy(max_bytes, max_duration_ms, ...).check(facts) -> None | rejection code",
+)
