@@ -154,6 +154,9 @@ export const API_ERROR_CODES = [
   'match_over',
   'nothing_to_undo',
   'illegal_start',
+  'game_not_started',
+  'game_not_over',
+  'decision_needed',
 ] as const;
 export type ServerErrorCode = (typeof API_ERROR_CODES)[number];
 export type ApiErrorCode = ServerErrorCode | 'network_error' | 'invalid_response' | 'unknown';

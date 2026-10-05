@@ -16,6 +16,10 @@ export function tagFailureMessage(e: unknown): string {
         return 'You can tag this match once its video is received.';
       case 'match_over':
         return 'The match is over.';
+      case 'decision_needed':
+        return 'Some rallies need your decision first. Open the score sheet to decide.';
+      case 'game_not_started':
+        return 'Start the game first: choose who serves first.';
       default:
         return `The rally was not saved. Try again.${ref}`;
     }

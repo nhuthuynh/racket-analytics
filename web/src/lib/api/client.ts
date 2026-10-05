@@ -241,6 +241,16 @@ export function createApiClient(options: ApiClientOptions) {
       const path = `${matchPath(id)}/rallies/${rallyPath(rallyId)}`;
       return parsed(await request('PATCH', path, { field, value }, ifMatch(version)), parseVersioned);
     },
+    /** FR-053 (a), provisional: decide a "needs your decision" rally. */
+    async resolveRally(
+      id: string,
+      version: number,
+      rallyId: string,
+      decision: 'withdraw' | 'move_to_next_game',
+    ): Promise<Versioned> {
+      const path = `${matchPath(id)}/rallies/${rallyPath(rallyId)}/resolution`;
+      return parsed(await request('POST', path, { decision }, ifMatch(version)), parseVersioned);
+    },
     async undo(id: string, version: number): Promise<Versioned> {
       return parsed(await request('POST', `${matchPath(id)}/undo`, undefined, ifMatch(version)), parseVersioned);
     },

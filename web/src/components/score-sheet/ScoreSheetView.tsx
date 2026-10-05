@@ -17,7 +17,8 @@ import { RallyCorrections } from './RallyCorrections';
 import { RallyVideo } from './RallyVideo';
 import { ScoreSheetTable } from './ScoreSheetTable';
 
-export type SheetApi = Pick<ApiClient, 'undo' | 'corrections' | 'correctRally' | 'getScoreSheet' | 'rallyMedia'>;
+export type SheetApi = Pick<ApiClient, 'undo' | 'corrections' | 'correctRally' | 'getScoreSheet' | 'rallyMedia'> &
+  Partial<Pick<ApiClient, 'resolveRally'>>;
 
 export function ScoreSheetView({
   match,
@@ -87,6 +88,17 @@ export function ScoreSheetView({
 
   const names = sideNames(match);
 
+  function decide(row: SheetRow, decision: 'withdraw' | 'move_to_next_game') {
+    void run(
+      'Decision',
+      (v) => (api.resolveRally ?? browserApi.resolveRally)(match.id, v, row.rally_id, decision),
+      () =>
+        decision === 'withdraw'
+          ? `Rally ${row.number} removed. It stays in the correction history.`
+          : `Rally ${row.number} moved to the next game.`,
+    );
+  }
+
   async function watch(row: SheetRow) {
     setProblem(null);
     try {
@@ -132,6 +144,16 @@ export function ScoreSheetView({
         sheet={sheet}
         rowActions={(row) => (
           <>
+            {row.marker === 'needs_decision' ? (
+              <span className="rally-fix">
+                <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_next_game')}>
+                  {`Move rally ${row.number} to the next game`}
+                </button>
+                <button type="button" className="button button--secondary rally-fix__button" onClick={() => decide(row, 'withdraw')}>
+                  {`Remove rally ${row.number}`}
+                </button>
+              </span>
+            ) : null}
             <button type="button" className="button button--secondary rally-fix__button" onClick={() => void watch(row)}>
               {`Watch rally ${row.number}`}
             </button>
