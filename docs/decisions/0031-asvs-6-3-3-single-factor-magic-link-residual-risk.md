@@ -58,6 +58,10 @@ Questions for the PO: (a) option 1 or option 2 for the first real-user beta; (b)
 
 **Pending.** The PO's answer goes here as a dated note naming the PO as decider. Until then T-ML-13 / S1-F1 stay **O** (open) and `blockers.md` row 1 stays Open.
 
+### Dated notes
+
+- **2026-10-05, product-manager (sprint-close review round 2, SEC-R4-S1-04 / BLK-ASVS-6.3.3, QA-R2V-11). Not a decision.** Checked again for a PO answer and found none in the repo. `grep -n '6\.3\.3\|MFA\|passkey' docs/requirements/po-input-2026-10-05.md docs/decisions/0023-*.md` → no matches (rc=1). The only PO input is "accept all recommendations" for `open-questions.md`, which has no ASVS 6.3.3 question, so it cannot be read as an answer here. The product-manager does not record a PO answer the PO has not given, and does not accept the risk on the PO's behalf (Deciders line above). The questions are with the PO through the engineering-manager's single PO decision request, item **P2** (`docs/sprints/01/blockers.md`, row "PO decision request, sprint-close review round 2"). To make answering quick, the PO can reply with one line, which the product-manager will record here verbatim with the date: *"ADR 0031: option 1 for the first real-user beta, review date YYYY-MM-DD"* or *"ADR 0031: option 2 (passkeys before the real-user beta)"*. Until then there is no effect on Sprint 1 dev or internal use, and any real-user beta stays blocked. `python3 scripts/measure/open_defects.py docs/sprints/01/review-rounds.md` counts `SEC-R4-S1-04`/`BLK-ASVS-6.3.3` as one open major (parser fixed in `351488e`, PE-R2-S1-02).
+
 ## Evidence
 
 | Claim | Evidence | Type |

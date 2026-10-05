@@ -642,7 +642,7 @@ This section adds what `docs/process/definition-of-ready.md` asks for beyond §3
 - **Out of scope:**
   - the framing check from a still frame (R2, FR-UX-13);
   - device-specific 60 fps steps until checked on the ST-025 phones;
-  - the consent courtesy line (OQ-06, D-8).
+  - the consent courtesy line (OQ-06, D-8). **Amended 2026-10-05 (product-manager, review round 2, PD-R2R-03):** back in scope. The line also carries the PO-accepted OQ-05 "no matches with minors" ask, which this plan missed. Wording and reasons are in flows §10.1 D-8. ST-015 is not done until it ships.
 - **Dependencies:**
   - coach sign-off of the wording (Sprint 1 D3);
   - the PM decision on the F-01 copy, which corrects FR-004's example for R1 (flows D-1);
