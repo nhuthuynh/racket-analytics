@@ -138,7 +138,7 @@ def project(book: Scorebook) -> dict[str, Any]:
         "best_of": book.best_of,
         "games": games,
         "rows": played.rows,
-        "winner": None if played.winner is None else played.winner.value,
+        "match_winner": None if played.winner is None else played.winner.value,
     }
 
 

@@ -101,12 +101,13 @@ class ScorebookRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def load(self, match_id: uuid.UUID) -> Scorebook:
-        """The scorebook of a match the caller has already loaded (and locked) as its owner."""
-        head = self.session.execute(
-            sa.select(matches.c.rules_version, matches.c.format, matches.c.best_of,
-                      matches.c.version).where(matches.c.id == match_id)
-        ).one()  # fmt: skip
+    def load(self, match_id: uuid.UUID, *, lock: bool = False) -> Scorebook:
+        """The scorebook of a match the caller has already loaded as its owner. ``lock`` takes
+        the match row lock first, so commands on one match run one at a time (IT-02-04)."""
+        query = sa.select(
+            matches.c.rules_version, matches.c.format, matches.c.best_of, matches.c.version
+        ).where(matches.c.id == match_id)
+        head = self.session.execute(query.with_for_update() if lock else query).one()
         fmt = str(getattr(head.format, "value", head.format))
         games = tuple(
             GameStart(r.number, Side(r.first_serving_side), r.ends_switched, r.created_version)

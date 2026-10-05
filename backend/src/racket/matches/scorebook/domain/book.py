@@ -121,9 +121,8 @@ class Scorebook:
             raise ValueError("first serving side and ends must be stated")
         game = GameStart(len(self.games) + 1, first_serving_side, ends_switched, self.version + 1)
         change = self._change(
-            ctx, "game_started", game_number=game.number,
-            new_value={"first_serving_side": first_serving_side.value,
-                       "ends_switched": ends_switched},
+            ctx, "game_started", game_number=game.number, field="first_serving_side",
+            new_value=first_serving_side.value,  # scalar tag values only (§6, IT-02-09)
         )  # fmt: skip
         return replace(self, version=self.version + 1, games=(*self.games, game),
                        changes=(*self.changes, change))  # fmt: skip
