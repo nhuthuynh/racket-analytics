@@ -44,6 +44,16 @@ It does **not** block Sprint 1 development or internal use. It **blocks any real
 
 Option 1 for development and internal use now, as `sprint-report.md` §6 D3 proposes, **and** the PO decides between options 1 and 2 before the real-user beta is planned. The EM does not decide this: accepting a security risk belongs to the PO.
 
+## Recommendation (product-manager, judgment; not a decision)
+
+Added 2026-10-05 in sprint-close review round 1 (finding BLK-ASVS-6.3.3). The product-manager is the PO's proxy but does not accept security risk (role file: "escalate ... anything legal/privacy" to the human PO; this ADR's Deciders line).
+
+- **Now (dev and internal use):** option 1, same as the EM. Nothing in Sprint 1 reaches real users.
+- **Before a real-user beta:** option 2 (passkeys as an optional second sign-in path), because the sign-in FR already names "a passkey or an email magic link" (`functional-requirements.md:80`, FR-UX-01, NFR-A11Y-08), so option 2 finishes an existing requirement rather than adding scope, and the accounts hold match videos of the player and others (judgment).
+- **Fallback if the PO wants the beta before passkeys ship:** option 1 with the listed conditions, limited to an invite-only beta, and a review date before general availability.
+
+Questions for the PO: (a) option 1 or option 2 for the first real-user beta; (b) if option 1, the review date.
+
 ## Decision outcome
 
 **Pending.** The PO's answer goes here as a dated note naming the PO as decider. Until then T-ML-13 / S1-F1 stay **O** (open) and `blockers.md` row 1 stays Open.
