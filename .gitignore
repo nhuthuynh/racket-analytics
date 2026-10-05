@@ -56,3 +56,6 @@ minio-data/
 redis-data/
 *.sqlite
 *.db
+
+# mutmut working copy (ST-024 nightly mutation job)
+backend/mutants/

@@ -63,6 +63,7 @@ class Settings:
     worker_lease_seconds: int = 15
     worker_poll_seconds: float = 1.0
     otel_exporter_otlp_endpoint: str | None = None
+    otel_exporter_otlp_metrics_endpoint: str | None = None  # SLI metrics (ST-024); off if unset
 
     # -------------------------------------------------------------- construction
     @classmethod
@@ -139,6 +140,7 @@ class Settings:
             worker_lease_seconds=integer("WORKER_LEASE_SECONDS", 15),
             worker_poll_seconds=integer("WORKER_POLL_MS", 1000) / 1000,
             otel_exporter_otlp_endpoint=optional("OTEL_EXPORTER_OTLP_ENDPOINT"),
+            otel_exporter_otlp_metrics_endpoint=optional("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"),
         )
 
     # -------------------------------------------------------------- views

@@ -23,6 +23,7 @@ from racket.platform.health import router as health_router
 from racket.platform.http import EdgeMiddleware, install_error_handlers
 from racket.platform.logs import configure_logging
 from racket.platform.settings import Settings
+from racket.platform.slis import HttpMetricsMiddleware, configure_metrics
 from racket.platform.storage import ObjectStore
 from racket.platform.tracing import configure_tracing
 
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     configure_logging(settings.log_level)
     configure_tracing("racket-api", settings.otel_exporter_otlp_endpoint)
+    configure_metrics("racket-api", settings.otel_exporter_otlp_metrics_endpoint)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -69,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     mapper = ErrorMapper()
     install_error_handlers(app, mapper)
     app.add_middleware(EdgeMiddleware, mapper=mapper, allowed_origins=settings.allowed_origins)
+    app.add_middleware(HttpMetricsMiddleware)  # outermost: NFR-041 availability SLI (ST-024)
 
     from racket.matches.api import router as matches_router
     from racket.players.api import dev_router

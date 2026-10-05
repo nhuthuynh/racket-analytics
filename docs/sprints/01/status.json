@@ -545,7 +545,7 @@
         }
       ],
       "planned_units": 2,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "dod_done": false,
@@ -568,8 +568,22 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "cd infra && uv run pytest -q tests/test_nightly_quality.py -> 15 passed (13 failed before scripts/workflow existed)",
+        "cd backend && env -u APP_ENV uv run pytest -q tests/unit/platform/ -> 69 passed (test_slis.py, test_sli_wiring.py red first)",
+        "QA binding tests/features/test_nightly_quality.py -> 4 SLI scenarios passed; 'Nightly run completes' red until the first nightly run on main",
+        "oracle pipeline controls: candidate=oracle_run exit 0; candidate=mutants.receiver_scores exit 1 (1955/2000 disagreements)",
+        "mutation_score.py positive control on src/racket/matches (scratch copy): measured, 239 mutants, score 0.1381",
+        "actionlint .github/workflows/nightly-quality.yml -> no findings"
+      ],
+      "open": [
+        "Nightly workflow has not run on GitHub yet (needs push to main by the EM)",
+        "Oracle and mutation jobs red until ST-020 creates racket.sports.pickleball.rules",
+        "Upload-completion SLI needs the upload context to call SLIRecorder.upload_event (senior-backend-engineer, ST-017/ST-018)",
+        "Branch-protection bypass for github-actions[bot] if main requires PRs (human admin, ADR 0026)",
+        "Metrics backend for the dashboard (Sprint 5, with alerts)",
+        "Review by senior-qa-engineer and principal-engineer"
+      ]
     },
     {
       "id": "ST-025",
