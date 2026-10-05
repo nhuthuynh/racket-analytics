@@ -137,9 +137,10 @@ class Settings:
         app_env = required("APP_ENV")
         # The unsafe combination is reported first, whatever else is missing.
         dev_identity = boolean("DEV_IDENTITY_ENABLED", default=app_env == "test")
-        if app_env == "prod" and dev_identity:
+        if dev_identity and app_env not in ("dev", "test"):  # C-19: staging too (SEC-R5-S1-04)
             raise ConfigurationError(
-                "development sign-in (DEV_IDENTITY_ENABLED=true) is not allowed when APP_ENV=prod"
+                "development sign-in (DEV_IDENTITY_ENABLED=true) is not allowed when "
+                f"APP_ENV={app_env}"
             )
         database_url = required("DATABASE_URL")
         bucket = required("S3_BUCKET_MEDIA")
