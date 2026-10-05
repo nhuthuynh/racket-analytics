@@ -5,7 +5,7 @@
     "planned_start": "2026-10-19",
     "planned_review": "2026-10-30",
     "work_started": "2026-10-05",
-    "status_written": "2026-10-05"
+    "status_written": "2026-10-05 (sprint close, engineering-manager)"
   },
   "owner": "engineering-manager",
   "branch": "sprint-01",
@@ -25,11 +25,18 @@
   },
   "totals": {
     "planned_units": 32,
-    "implemented_units": 23,
+    "implemented_units": 25,
     "dod_done_units": 0,
-    "implemented_ratio": 0.719,
+    "implemented_ratio": 0.781,
     "dod_done_ratio": 0.0,
-    "stretch_implemented_units": 1
+    "stretch_implemented_units": 1,
+    "implemented_units_per_lane": {
+      "BE": 10,
+      "FE": 11,
+      "QA": 2,
+      "SRE": 2,
+      "ML": 0
+    }
   },
   "preconditions": [
     {
@@ -69,12 +76,12 @@
           "lane": "FE",
           "size": "S",
           "planned_units": 1,
-          "implemented_units": 0
+          "implemented_units": 1
         }
       ],
       "planned_units": 3,
-      "status": "in_progress",
-      "implemented_units": 2,
+      "status": "implemented",
+      "implemented_units": 3,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -112,12 +119,14 @@
         "BE deea4e3 (+93993af, 625cf0b): IT-01-01..03 green in the backend run",
         "FE e845c22: sign-in.spec.ts 3 passed, 2 failed (smoke.md S-02, S-06)",
         "WebKit cookie issue fixed (ADR 0029; 93993af, 3fbfc32, 6358c6d, 2390e9a): CI run 37298471332 job 111725272519 (head 2390e9a, before the round-1 fixes), no WebKit test fails at sign-in; smoke.md §1 Set-Cookie __Host-racket_session ... Secure over https",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "FE lane not counted: sign-in.spec.ts:17 (axe context, TCR row 20 Pending) and :46 (flake 1 in 3, S-06) red locally",
-        "Design review P7 not yet held (PD-R1-06; scheduled 2026-10-06)",
-        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs"
+        "Round-3 majors open: SEC-R3-S1-02 (no test kills the 7-day idle timeout or the 10-session cap; both mutants survive), SEC-R3-S1-03 (T-ML-5 prefetch test missing), SEC-R3-S1-01 (AUTH_EMAIL_KEY is the account-identity key, docs say rate limits only; principal-engineer), PD-R3-01 (error summary does not refocus on a repeated failed attempt)",
+        "ASVS 6.3.3 single-factor residual risk needs a PO decision before any real-user beta (blockers.md row 1)",
+        "Design review P7 scheduled 2026-10-06, not yet held (flows-sprint-01 §10)",
+        "WebKit unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 961648e, local head is later; no run since (list_workflow_runs, 2026-10-05 EM). Blocks DoD (PE-R3-05, QA-R3-05)"
       ]
     },
     {
@@ -161,11 +170,13 @@
       ],
       "evidence": [
         "FE 673fdc1, BE part in deea4e3: sign-out journey 3 passed (smoke.md); IT-01-04 green in the backend run",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "WebKit-only CI failure sign-out.spec.ts:46 'Your upload will stop' (blockers.md, senior-frontend-engineer)",
-        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs"
+        "PD-R1-04 (round-1 blocker, no disposition): WebKit does not show 'Your upload will stop' on sign-out",
+        "WebKit-only CI failure sign-out.spec.ts:46 'Your upload will stop' (blockers.md S-09, senior-frontend-engineer); not re-run since",
+        "WebKit unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 961648e, local head is later; no run since (list_workflow_runs, 2026-10-05 EM). Blocks DoD (PE-R3-05, QA-R3-05)"
       ]
     },
     {
@@ -217,13 +228,16 @@
       ],
       "evidence": [
         "FE b40db17: first run and capture guide journey 5 passed (smoke.md)",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "WebKit-only CI failures first-run-and-guide.spec.ts:42, :63 (blockers.md, senior-frontend-engineer)",
-        "Design review P7 not yet held (PD-R1-06)",
-        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs",
-        "Coach wording sign-off (D3) outstanding (PD-R2-04): docs/domain/capture-guide-wording.md status is still `draft`; routed to pickleball-domain-coach at the 2026-10-06 design review. Stays open until the wording doc's sign-off row says `signed-off`"
+        "PD-R1-05 (round-1 blocker): coach wording sign-off missing",
+        "PD-R1-02 (round-1 blocker): WebKit guide captions off by default and no fallback",
+        "WebKit-only CI failures first-run-and-guide.spec.ts:42, :63 (guide text track, fallback; PD-R1-02) not re-run since",
+        "Coach wording sign-off (D3) outstanding: docs/domain/capture-guide-wording.md is still `draft` (PD-R1-05, PD-R2-04)",
+        "Design review P7 scheduled 2026-10-06, not yet held (flows-sprint-01 §10)",
+        "WebKit unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 961648e, local head is later; no run since (list_workflow_runs, 2026-10-05 EM). Blocks DoD (PE-R3-05, QA-R3-05)"
       ]
     },
     {
@@ -284,12 +298,15 @@
       "evidence": [
         "BE bcdc7d0: IT-01-05 green in the backend run",
         "FE aa52c48: match setup journey 13 passed, 1 skipped (smoke.md)",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "Sprint 0 test test_it_00_01 allowlist red vs the new participant fields (TCR, smoke S-05)",
-        "EM waiver for the ~1,000-line FE commit still to be recorded (decision-log)",
-        "Design review P7 not yet held (PD-R1-06)"
+        "PD-R1-03 (round-1 blocker, no disposition): error-summary links below 24 px on the Q-03 error state; PD-R1-07 (major): Q-07 Change links 24 px vs 48 px",
+        "SEC-R3-S1-03: T-UV-10 (nickname rendered as text) has no test",
+        "Commit-size waivers recorded late (decision-log 2026-10-05 EM row, ADR 0030)",
+        "Design review P7 scheduled 2026-10-06, not yet held (flows-sprint-01 §10)",
+        "WebKit unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 961648e, local head is later; no run since (list_workflow_runs, 2026-10-05 EM). Blocks DoD (PE-R3-05, QA-R3-05)"
       ]
     },
     {
@@ -348,13 +365,16 @@
       ],
       "evidence": [
         "BE 78902e0, FE 722f0c5: upload-with-resume journey 6 passed, 2 skipped (smoke.md)",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "BE lane not counted: its own scenarios test_resumable_upload 'a damaged chunk is not kept' and 'return after closing the tab' are red (TCR, smoke S-05, Pending QA decision)",
-        "WebKit-only CI failure resumable-upload.spec.ts:43 (blockers.md)",
-        "U-04 copy deviations await the design review (PD-R1-06)",
-        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs"
+        "PD-R1-01 (round-1 blocker, no disposition): M-02 shows 'Video received' and 'Checking video…' together (`!!file` in showUpload)",
+        "BE lane not counted: its own resumable_upload scenarios pass only through TCR row 32(a) (percent_of rounding), still Pending and disputed (QA-R3-01: the UI floors, so the scenario hides 63% vs 64%; PE-R3-04)",
+        "Round-3 majors open: PE-R3-01 (malformed metadata at quota gets 429, contract says 400), PE-R3-03/PD-R3-02 (every 429 shown as the quota message; rate_limited and retry_at lost), PD-R3-03 (U-01 'trouble' state never shows when PATCHes fail after progress), SEC-R3-S1-03 (T-UV-9 file-name log scan and T-UV-10 file-name render tests missing)",
+        "QA-R3-02 / PE-R3-06: whole-bucket diffs in upload tests fail when the object store is shared",
+        "WebKit-only CI failure resumable-upload.spec.ts:43 (damaged chunk rewritten cross-engine by QA-R1-05, never run on WebKit)",
+        "WebKit unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 961648e, local head is later; no run since (list_workflow_runs, 2026-10-05 EM). Blocks DoD (PE-R3-05, QA-R3-05)"
       ]
     },
     {
@@ -377,12 +397,12 @@
           "lane": "FE",
           "size": "S",
           "planned_units": 1,
-          "implemented_units": 0
+          "implemented_units": 1
         }
       ],
       "planned_units": 3,
-      "status": "in_progress",
-      "implemented_units": 2,
+      "status": "implemented",
+      "implemented_units": 3,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -412,12 +432,13 @@
       ],
       "evidence": [
         "BE 1d099e5 + review fix 4aaccbb (PE-R1-01): IT-01-09/10 green in the backend run",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "FE lane not counted: upload-validation.spec.ts:38 red (two role=alert, TCR row 26, S-03)",
-        "Sprint 0 tus tests red against the ST-018 415 refusal (TCR row 16, S-04)",
-        "Caps provisional until ST-025 R-05 numbers (DoR P11)"
+        "Round-3 major open: PE-R3-02 (probe refusal deletes the object before the commit; a rolled-back job leaves a match that can never take a new upload)",
+        "Caps provisional until ST-025 R-05 numbers (DoR P11)",
+        "WebKit unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 961648e, local head is later; no run since (list_workflow_runs, 2026-10-05 EM). Blocks DoD (PE-R3-05, QA-R3-05)"
       ]
     },
     {
@@ -464,10 +485,13 @@
       ],
       "evidence": [
         "77a5082, 5999097, 52953f0, 131dcb7 + review fix 4f10ba2 (PE-R1-03): rules unit, property and scenario tests green in the backend run (P3 skipped: rally scoring, FR-043/OQ-01)",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "Presets PROVISIONAL-UNVERIFIED, rows @needs-verification (OQ-01)"
+        "PE-R1-07 (minor, deferred): apply raises ValueError on a game-over state without a winner",
+        "Presets PROVISIONAL-UNVERIFIED, rows @needs-verification (OQ-01)",
+        "principal-engineer has not amended scoring-engine.md §2.2/§2.4 (PE-R1-09 routed)"
       ],
       "notes": "ADR 0009 Accepted 2026-10-05 (ADR 0023). Only preset: PROVISIONAL-UNVERIFIED; provisional rows @needs-verification until OQ-01 rulebook files arrive."
     },
@@ -512,9 +536,12 @@
       ],
       "evidence": [
         "45eb70d: M-01..M-08 scenarios green in the backend run",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
-      "open": []
+      "open": [
+        "PE-R1-10 (nit, deferred)"
+      ]
     },
     {
       "id": "ST-022",
@@ -557,10 +584,11 @@
       ],
       "evidence": [
         "Tests committed: cdbec82 (P1-P8), 45dd859 (oracle P9), 6a10368 (oracle self-tests); green in the backend run",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "Not counted: mutation baseline on sports/pickleball/rules not yet recorded; first nightly oracle run (100,000 sequences) not yet run"
+        "Not counted: mutation baseline on sports/pickleball/rules not recorded; first nightly oracle run (100,000 sequences) not run on GitHub (nightly-quality.yml never dispatched)"
       ]
     },
     {
@@ -601,7 +629,8 @@
       ],
       "evidence": [
         "0c152f9, 47ea499: provisional tables as executable scenarios, green in the backend run",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
         "Coach review; rows @needs-verification (OQ-01)"
@@ -655,15 +684,13 @@
         "oracle pipeline controls: candidate=oracle_run exit 0; candidate=mutants.receiver_scores exit 1 (1955/2000 disagreements)",
         "mutation_score.py positive control on src/racket/matches (scratch copy): measured, 239 mutants, score 0.1381",
         "actionlint .github/workflows/nightly-quality.yml -> no findings",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "Nightly workflow has not run on GitHub yet (needs push to main by the EM)",
-        "Upload-completion SLI needs the upload context to call SLIRecorder.upload_event (senior-backend-engineer, ST-017/ST-018)",
-        "Branch-protection bypass for github-actions[bot] if main requires PRs (human admin, ADR 0026)",
-        "Metrics backend for the dashboard (Sprint 5, with alerts)",
-        "Review by senior-qa-engineer and principal-engineer",
-        "Oracle and mutation jobs: racket.sports.pickleball.rules now exists (ST-020); confirm on the first nightly run"
+        "Nightly workflow has never run on GitHub (not dispatched); test_nightly_quality::test_nightly_run_completes red",
+        "Upload-completion SLI wiring and metrics backend (Sprint 5)",
+        "Branch-protection bypass for github-actions[bot] if main requires PRs (ADR 0026)"
       ]
     },
     {
@@ -682,7 +709,7 @@
         }
       ],
       "planned_units": 2,
-      "status": "partial",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "dod_done": false,
@@ -712,7 +739,8 @@
       ],
       "evidence": [
         "30baddc consent rule, 10170c6 synthetic profile set and manifest builder, 281d459 protocol",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
         "Not counted: real phone clips needed (blockers.md, PO); test_phone_fixtures 2 red; R-05 numbers not measured"
@@ -754,7 +782,8 @@
       ],
       "evidence": [
         "9c1030d findings and ADR 0028 (Proposed), desktop-Chromium proxy data",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
         "Not counted: real iOS Safari / Android Chrome runs not possible in the sandbox (blockers.md)"
@@ -799,11 +828,13 @@
         }
       ],
       "evidence": [
-        "6cc2259: quality-report.test.tsx 5 passed (in the vitest run)",
-        "Review round 1 held 2026-10-05 (review-rounds.md)"
+        "6cc2259: quality-report.test.tsx in the vitest run (251 passed)",
+        "073d3f3: '30 fps video' scenario bound in web/e2e/sprint-01/footage-quality-report.spec.ts (QA-R2-03); QA round 3 Chromium run green on it",
+        "Review rounds 1-3 held 2026-10-05"
       ],
       "open": [
-        "Stretch: feature §7.6 not yet bound by QA; copy routed to principal-designer"
+        "Design review P7 scheduled 2026-10-06, not yet held (flows-sprint-01 §10)",
+        "WebKit unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 961648e, local head is later; no run since (list_workflow_runs, 2026-10-05 EM). Blocks DoD (PE-R3-05, QA-R3-05)"
       ],
       "stretch": true
     }
@@ -852,7 +883,7 @@
     },
     {
       "oq": "OQ-05",
-      "item": "Name the beta jurisdiction; legal review recorded as an ADR before any real-user beta",
+      "item": "Legal/privacy review recorded as an ADR before any real-user beta, covering the PO-named jurisdictions US and AU (po-input-2026-10-05.md; ADR 0023 note)",
       "effect": "No real-user beta",
       "need_by": "before any real-user beta"
     },
@@ -875,7 +906,7 @@
       "need_by": "2026-10-14"
     }
   ],
-  "counting_rule": "2026-10-05 (EM, QA-R1-03): a lane's units count as implemented when its code is committed, review round 1 has been held, and that story's own tests for the lane are green in the latest local run (backend: 2026-10-05 EM re-run at 094a344: cd backend && env -u APP_ENV uv run pytest -q (dev Postgres + object store) -> 18 failed, 1020 passed, 16 skipped, 9 errors; every red test is a Pending test-change row or an open blocker (smoke.md S-04, S-05, S-07, S-08); web: 2026-10-05 EM re-run at 094a344: cd web && pnpm exec vitest run -> 30 files, 244 passed; browser: smoke.md §3 (tree 6ba9b28): Playwright chromium over https -> 38 passed, 6 failed, 6 skipped). A lane with any of its own tests red locally counts 0 until the fix or the test-change decision lands. WebKit-only CI failures stay in 'open' and block DoD, not 'implemented'. dod_done_units stay 0: ci-gate is red (blockers.md) and external evidence is open.",
+  "counting_rule": "2026-10-05 sprint close (EM, QA-R3-04): a lane counts as implemented when its code is committed, review rounds have been held, and that story's own tests for the lane are green in the latest isolated run without depending on an undecided test-change row. Isolated runs (ADR 0030): backend at cf8cd19, own RA_DEV_STATE Postgres + object store, Mailpit: cd backend && env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfEs -> 3 failed, 1060 passed, 6 skipped (failures: nightly x1, ST-025 phone fixtures x2, both open blockers); web: pnpm exec vitest run -> 31 files, 251 passed; infra: uv run pytest -q -> 245 passed; browser: QA review round 3 on a fresh HEAD stack -> 34 passed, 11 failed (all upload journeys, object store out of disk), 6 skipped; non-upload journeys all green; upload-validation + footage-quality rerun after freeing disk -> 6 passed, 2 skipped (PD-R3-07). Not counted: ST-017 BE (green only through Pending TCR row 32(a)), ST-022 (no mutation baseline, no nightly run), ST-025 (real phone clips), SPIKE-06 (real devices). dod_done_units stay 0: no green CI run on any head with the Sprint 1 fixes, and external evidence is open.",
   "ci_runs": {
     "note": "CI and nightly runs on GitHub for sprint-01 (PE-R2-02). Recorded by the EM/SRE from mcp__github__actions_list list_workflow_runs; a story is DoD-done only against a green run whose head includes its commits.",
     "runs": [
@@ -892,17 +923,17 @@
     "pending": [
       {
         "workflow": "ci.yml",
-        "head_required": "local sprint-01 head after QA-R2-01 is committed and pushed (961648e lacks 4430b25, 5873308, 0519599 and QA-R2-01)",
+        "head_required": "local sprint-01 head at sprint close (later than cf8cd19); GitHub sprint-01 is at 961648e",
         "status": "not dispatched",
         "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)",
-        "checked": "2026-10-05 (sre-devops-engineer, QA-R2-02): still not dispatched; list_workflow_runs branch sprint-01 total_count=1"
+        "checked": "2026-10-05 sprint close (engineering-manager): list_workflow_runs on the repo total_count=2 (37277549983 main, 37298471332 sprint-01 at 2390e9a); still not dispatched"
       },
       {
         "workflow": "nightly-quality.yml",
-        "head_required": "local sprint-01 head after QA-R2-01 is committed and pushed (961648e lacks 4430b25, 5873308, 0519599 and QA-R2-01)",
+        "head_required": "local sprint-01 head at sprint close (later than cf8cd19); GitHub sprint-01 is at 961648e",
         "status": "not dispatched",
         "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)",
-        "checked": "2026-10-05 (sre-devops-engineer, QA-R2-02): still not dispatched; list_workflow_runs branch sprint-01 total_count=1",
+        "checked": "2026-10-05 sprint close (engineering-manager): list_workflow_runs on the repo total_count=2 (37277549983 main, 37298471332 sprint-01 at 2390e9a); still not dispatched",
         "note": "publish job commits the nightly key to GitHub sprint-01 (ADR 0026); the EM pulls that commit before the next local commit"
       }
     ],
@@ -913,9 +944,80 @@
       "local_ahead": [
         "4430b25",
         "5873308",
-        "0519599"
+        "0519599",
+        "20ebb1d",
+        "c5b5367",
+        "111f2d4",
+        "073d3f3",
+        "cf8cd19",
+        "sprint-close docs commit"
       ],
-      "rechecked": "2026-10-05 sre-devops-engineer (QA-R2-02): list_branches sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14"
+      "rechecked": "2026-10-05 sre-devops-engineer (QA-R2-02): list_branches sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14",
+      "rechecked_at_close": "2026-10-05 engineering-manager: list_branches sprint-01 961648e75a0e, main 2b9c6ca73ee2 (protected: false)"
     }
+  },
+  "review": {
+    "rounds": 3,
+    "limit_reached": true,
+    "findings_per_round": {
+      "1": {
+        "blocker": 9,
+        "major": 10,
+        "minor": 9,
+        "nit": 3
+      },
+      "2": {
+        "blocker": 3,
+        "major": 7,
+        "minor": 4,
+        "nit": 2
+      },
+      "3": {
+        "blocker": 2,
+        "major": 14,
+        "minor": 8,
+        "nit": 1
+      }
+    },
+    "unresolved_after_round_3": [
+      "PE-R3-01",
+      "PE-R3-02",
+      "PE-R3-03",
+      "PE-R3-04",
+      "PE-R3-05",
+      "SEC-R3-S1-01",
+      "SEC-R3-S1-02",
+      "SEC-R3-S1-03",
+      "QA-R3-01",
+      "QA-R3-02",
+      "QA-R3-03",
+      "QA-R3-04",
+      "QA-R3-05",
+      "PD-R3-01",
+      "PD-R3-02",
+      "PD-R3-03"
+    ],
+    "closed_at_close": {
+      "QA-R3-04": "status.json and progress.md refreshed at sprint close (this update)"
+    },
+    "escalated_to_po": "docs/sprints/01/sprint-report.md §6",
+    "open_without_disposition_since_round_1": [
+      "PD-R1-01",
+      "PD-R1-02",
+      "PD-R1-03",
+      "PD-R1-04",
+      "PD-R1-05",
+      "PD-R1-07",
+      "PE-R1-04",
+      "QA-R1-04"
+    ],
+    "note": "Found by the EM at close: round 1 and 2 tables held 11 of 31 and 10 of 16 findings; the rest had no disposition row (review-rounds.md last table). implemented_units is an upper bound: these defects have no test. ADR 0030 rule 1."
+  },
+  "sprint_close": {
+    "date": "2026-10-05",
+    "report": "docs/sprints/01/sprint-report.md",
+    "retro": "docs/retros/2026-10-30-sprint-01.md",
+    "goal_met": "partly",
+    "process_adr": "docs/decisions/0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md"
   }
 }

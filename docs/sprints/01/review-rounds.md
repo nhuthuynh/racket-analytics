@@ -30,3 +30,62 @@
 | PD-R2-02 | major | Fixed (copy provisional). On a 429 quota refusal, and on a 409 conflict before any byte was sent, the panel goes back to idle: no progress bar, no "Stopped", no "You can use other pages…" text; "No video yet" and the chooser stay. The quota summary link goes to `/matches` (`FieldError.href`, rendered with `next/link`) with copy "You have too many unfinished uploads. Finish one of them from Your matches, then try again." **principal-designer:** confirm or replace this copy at the 2026-10-06 design review and add the quota state to flows-sprint-01 §6. A failure after bytes were sent keeps its progress and "Stopped" (new guard test). The E2E 429 at creation in walking-skeleton.spec.ts:55 is a test-data/quota issue for QA, not changed here | `web/src/components/MatchUpload.tsx`, `web/src/components/ErrorSummary.tsx`; test `web/tests/unit/match-upload.test.tsx` (3 new cases); `docs/sprints/01/decision-log.md` | as PD-R2-01: red `5 failed` (quota: progressbar present; conflict: progressbar present), green `26 passed` / full unit `251 passed` |
 | QA-R2-03 | major | Fixed. The ST-019 scenario '30 fps video' is bound by a new Playwright spec: a fresh account uploads the 1080p30 phone-profile fixture, then the spec asserts the 'Footage quality' region says 'Recorded at 30 fps', 'may be less accurate' and 'Your score and rally stats are unaffected.', does not report 1080p, shows 'You can still tag this match.', and has no error summary and no button to acknowledge (it never blocks). Traceability row and the feature's binding comment updated. Not red-first: the story landed before the binding, so a negative control was used instead | `web/e2e/sprint-01/footage-quality-report.spec.ts` (new), `docs/sprints/01/test-plan-status.md`, `tests/features/footage_quality_report.feature` (header comment only) | Stack: Compose project `qar2` from the `racket-qa2-*` images (ST-019 included). `cd web && PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers BASE_URL=https://localhost:3000 PW_PROJECTS=chromium pnpm exec playwright test e2e/sprint-01/footage-quality-report.spec.ts --workers=1` → 1 passed. Negative control (temporary copy with `h264-mp4-1080p60.mp4`) → 1 failed: `Expected substring "Recorded at 30 fps"`, `Received "Footage qualityGood: 1080p or better at 50 fps or more.You can still tag this match."` |
 | PD-R2-03 | major | Fixed. Cause confirmed: an upload left unfinished (by an interrupted or slow run) counts toward the 3-session per-owner quota (T-UV-7), and the journeys that upload ran as shared dev player Ivy. The walking skeleton (both journeys) and Ivy's side of OLA now use a fresh magic-link account. Carlos stays a dev player because he never uploads. The `journey.ts` comment now says dev players are only for journeys without uploads. TCR row added (QA lane, approved) | `web/e2e/walking-skeleton.spec.ts`, `web/e2e/object-level-authorisation.spec.ts`, `web/e2e/helpers/journey.ts`, `docs/sprints/01/test-change-requests.md` | Red: a temporary spec left Ivy with 3 `receiving` sessions (`select … from upload_sessions` → Ivy receiving 3). Then `playwright test e2e/walking-skeleton.spec.ts e2e/object-level-authorisation.spec.ts --workers=1` → 2 failed, `Received: 429`. Green, with Ivy still at the quota: same command → 3 passed. Repeatability: `cd web && PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers BASE_URL=https://localhost:3000 PW_PROJECTS=chromium pnpm exec playwright test --workers=1`, run twice on the same stack → `45 passed, 6 skipped` both times |
+
+## Round 3 (last iteration, working-agreement §7.5)
+
+Recorded by the engineering-manager at sprint close, 2026-10-05. Round 3 was the third fix iteration, so the open findings below are **escalated to the human product owner** (`sprint-report.md` §6) and are not fixed in Sprint 1. Each finding has one disposition (ADR 0030): fixed, open-escalated (blocker or major), or deferred to a named Sprint 2 backlog item (minor or nit).
+
+| Finding | Severity | Disposition | Owner | Evidence or target |
+|---|---|---|---|---|
+| PE-R3-05 / QA-R3-05 | blocker | Open, escalated: no CI or nightly run on any head after `2390e9a` | human PO (push, dispatch), sre-devops-engineer (record) | `list_workflow_runs` → total_count=2 (37277549983 on main, 37298471332 on sprint-01 at `2390e9a`); `list_branches` sprint-01 = `961648e` |
+| PE-R3-01 | major | Open, escalated: malformed metadata at quota gets 429, contract says 400 | senior-backend-engineer | PE scratch test → `(201, 429)` |
+| PE-R3-02 | major | Open, escalated: probe refusal deletes the object before the commit (repeat of PE-R1-08) | senior-backend-engineer | probe.py `_reject`; runner.py rollback paths |
+| PE-R3-03 / PD-R3-02 | major | Open, escalated: every 429 shown as the quota message; `rate_limited` and `retry_at` lost | senior-frontend-engineer (copy: principal-designer) | PD probe: 429 `rate_limited` showed the quota copy |
+| PE-R3-04 / QA-R3-01 | major | Open, escalated: TCR row 32 still Pending; QA reviewer recommends rejecting 32(a) (`percent_of` rounding hides 63% vs 64%) | senior-qa-engineer | `grep -n Pending test-change-requests.md` → line 32 |
+| SEC-R3-S1-01 | major | Open, escalated: `AUTH_EMAIL_KEY` is the account-identity key; threat model and contract say rate limits only | principal-engineer with security-privacy-engineer | threat-model-sprint-01 lines 15, 17; players/service.py `_account_for` |
+| SEC-R3-S1-02 | major | Open, escalated: no test kills the 7-day idle timeout or the 10-session cap | senior-qa-engineer | mutants A and B both survive (`8 failed, 1055 passed`, no auth test among them) |
+| SEC-R3-S1-03 | major | Open, escalated: T-ML-5, T-UV-9, T-UV-10 marked C without their tests (repeat of SEC-R1-S1-02/03) | senior-qa-engineer; security-privacy-engineer sets rows back from C until then | greps in the finding |
+| QA-R3-02 | major | Open, escalated: upload-validation tests diff the whole bucket | senior-qa-engineer | `14 passed / 14 passed / 2 failed` on 3 runs of the same files |
+| QA-R3-03 | major | Open, escalated: no smoke at the round-2 head; disk at 99% broke upload E2E | sre-devops-engineer | `df -h /` → 99%; objectstore `No more free space left`. EM check at close: `df -h /` → 83% (6.9G free) |
+| QA-R3-04 | major | **Fixed** at close: `status.json` and `progress.md` re-derived from the round-2 commits and an isolated run | engineering-manager | `python3 -m json.tool docs/sprints/01/status.json` → valid; totals 25/32 asserted by script |
+| PD-R3-01 | major | Open, escalated: error summary does not refocus on a repeated failed attempt (regression from PD-R2-01) | senior-frontend-engineer | PD probe `mismatch 2 focus: INPUT#video-file` |
+| PD-R3-03 | major | Open, escalated: U-01 'trouble' state never shows when PATCHes fail after send progress | senior-frontend-engineer | screenshot `100% · Uploading` while PATCH → 500 |
+| PE-R3-06 | minor | Deferred to Sprint 2 with retro 1 action A2 (test isolation) | senior-qa-engineer | — |
+| PE-R3-07 | minor | Deferred: amend api-sprint-01 §2.4 (rolling window) with retro 1 action A4 | principal-engineer | — |
+| PE-R3-08 | nit | Deferred: reword the 0-0-2 seam comment in `contract.py` (repeat of PE-R2-05) | senior-qa-engineer | — |
+| PE-R3-09 | minor | Deferred: find the vitest test that failed 1 of 9 runs under load | senior-frontend-engineer | — |
+| SEC-R3-S1-04 | minor | Deferred with retro 1 actions A2 and A5 (isolated runs) | senior-qa-engineer, sre-devops-engineer | — |
+| PD-R3-04 | minor | Deferred: support reference in the upload server error (repeat of PD-R1-08); shares plumbing with PD-R3-02 | senior-frontend-engineer | — |
+| PD-R3-05 | minor | Deferred to the 2026-10-06 design review: quota, conflict and rate-limit states in flows §6; PM decides on stating the expiry or pulling Cancel forward | product-manager, principal-designer | — |
+| PD-R3-06 | minor | Deferred: distinct names for several resume banners on M-01 | senior-frontend-engineer | — |
+| PD-R3-07 | minor | Deferred with retro 1 action A5 (disk precheck in the smoke) | sre-devops-engineer | — |
+
+### Round 1 and round 2 findings that never got a disposition row (found by the engineering-manager at close)
+
+The round 1 and round 2 tables above hold 11 and 10 rows. Round 1 raised 31 findings and round 2 raised 16. The findings below had no row, no fix commit (`git log --oneline c36890b..HEAD` names none of them), and except where noted were not raised again. The EM checked the code on 2026-10-05 at `cf8cd19`. This is the main evidence for ADR 0030 rule 1.
+
+| Finding | Severity | State at close (EM check) | Owner | Disposition |
+|---|---|---|---|---|
+| PD-R1-01 | **blocker** | Open: `MatchDetail.tsx:84-89` still has `!!file` in `showUpload`; `MatchUpload` has no exit from `{kind: 'checking'}`, so M-02 can show 'Video received' and 'Checking video…' together | senior-frontend-engineer | Open, escalated |
+| PD-R1-02 | **blocker** | Not re-verified: WebKit guide captions and fallback; no fix commit; no WebKit run since `2390e9a` | senior-frontend-engineer | Open, escalated (with S-09) |
+| PD-R1-03 | **blocker** | Open: `.error-summary__list a` in `globals.css` still has no `min-block-size`; PD rounds 2-3 checked Q-01, not the Q-03 error state | senior-frontend-engineer | Open, escalated |
+| PD-R1-04 | **blocker** | Not re-verified: WebKit 'Your upload will stop' on sign-out; no fix commit | senior-frontend-engineer | Open, escalated (with S-09) |
+| PD-R1-05 | **blocker** | Open: `capture-guide-wording.md` status `draft` (re-raised as PD-R2-04, routed only) | pickleball-domain-coach via product-manager | Open, escalated |
+| PE-R1-04, QA-R1-04 | major | Same as S-09 / PD-R1-02, PD-R1-04 | senior-frontend-engineer | Open, escalated |
+| PD-R1-07 | major | Open: `.summary-list__action` has no 48 px target (Q-07 Change links) | senior-frontend-engineer | Open, escalated |
+| PE-R1-06 | minor | Open: `settings.py:20 DEV_WEB_ORIGIN = "http://localhost:3000"` | senior-backend-engineer | Deferred to Sprint 2 |
+| PE-R1-07 | minor | Open: `_check_inputs` does not reject a game-over state without a winner | senior-backend-engineer | Deferred to Sprint 2 |
+| PE-R1-08 | minor | Re-raised as PE-R3-02 (major) | senior-backend-engineer | See PE-R3-02 |
+| PE-R1-09 | minor | Open: scoring-engine.md §2.4 not amended | principal-engineer | Deferred to Sprint 2 (retro A4) |
+| PE-R1-10 | nit | Open: `match_state.py:97` unchanged | senior-backend-engineer | Deferred to Sprint 2 |
+| SEC-R1-S1-02, SEC-R1-S1-03 | minor | Re-raised as SEC-R3-S1-03 (major) | senior-qa-engineer, senior-frontend-engineer | See SEC-R3-S1-03 |
+| SEC-R1-S1-04 | nit | Open: no `used_at IS NULL` predicate and the docstrings are unchanged | senior-backend-engineer | Deferred to Sprint 2 |
+| SEC-R1-S1-05 | nit | Open: no HSTS requirement recorded | sre-devops-engineer | Deferred to the deployment ADR |
+| QA-R1-07 | minor | Done as asked: ST-025 is marked blocked, not done, in `status.json` | engineering-manager | Fixed at close |
+| PD-R1-08 | minor | Re-raised as PD-R3-04 | senior-frontend-engineer | See PD-R3-04 |
+| PD-R1-09 | minor | Open: `web/src/app/matches/` has no `error.tsx` and only a bare loading line | senior-frontend-engineer | Deferred to Sprint 2 |
+| PE-R2-03 | minor | Re-raised as PE-R3-06, SEC-R3-S1-04, QA-R3-02 | senior-qa-engineer, sre-devops-engineer | See those rows |
+| PE-R2-04 | minor | Not reproduced on an isolated DB: the EM's isolated full run has no `test_worker_crash` failure (3 failures, none of them here) | senior-qa-engineer | Fixed by isolation (no code change); recheck in Sprint 2 |
+| PE-R2-05 | nit | Re-raised as PE-R3-08 | senior-qa-engineer | See PE-R3-08 |
+| QA-R2-04, PD-R2-05 | minor | Fixed at close together with QA-R3-04 | engineering-manager | Fixed |
+| PD-R2-06 | nit | Open: F-01 link target and the 42 px menu link | senior-frontend-engineer, principal-designer | Deferred to the 2026-10-06 design review |
