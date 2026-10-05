@@ -44,6 +44,8 @@ def _check_inputs(state: object, outcome: object, config: object) -> DomainError
     )
     if not supported or state.server_number is None:
         return IllegalState("state does not match a side-out doubles configuration")
+    if state.winner is None and meets_game_over(state.score_a, state.score_b, config):
+        return IllegalState("score meets the game-over condition but has no winner")  # C-26
     return None
 
 
