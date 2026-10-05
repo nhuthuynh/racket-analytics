@@ -25,10 +25,11 @@
   },
   "totals": {
     "planned_units": 32,
-    "implemented_units": 0,
+    "implemented_units": 23,
     "dod_done_units": 0,
-    "implemented_ratio": 0.0,
-    "dod_done_ratio": 0.0
+    "implemented_ratio": 0.719,
+    "dod_done_ratio": 0.0,
+    "stretch_implemented_units": 1
   },
   "preconditions": [
     {
@@ -61,17 +62,19 @@
         {
           "lane": "BE",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 2
         },
         {
           "lane": "FE",
           "size": "S",
-          "planned_units": 1
+          "planned_units": 1,
+          "implemented_units": 0
         }
       ],
       "planned_units": 3,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "in_progress",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -105,8 +108,16 @@
           "due": "Sprint 1 D2"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "BE deea4e3 (+93993af, 625cf0b): IT-01-01..03 green in the backend run",
+        "FE e845c22: sign-in.spec.ts 3 passed, 2 failed (smoke.md S-02, S-06)",
+        "WebKit cookie issue fixed (ADR 0029; 93993af, 3fbfc32, 6358c6d, 2390e9a): CI run 37298471332 job 111725272519, no WebKit test fails at sign-in; smoke.md §1 Set-Cookie __Host-racket_session ... Secure over https",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "FE lane not counted: sign-in.spec.ts:17 (axe context, TCR row 20 Pending) and :46 (flake 1 in 3, S-06) red locally",
+        "Design review P7 not yet held (PD-R1-06; scheduled 2026-10-06)"
+      ]
     },
     {
       "id": "ST-014",
@@ -119,12 +130,13 @@
         {
           "lane": "FE",
           "size": "S",
-          "planned_units": 1
+          "planned_units": 1,
+          "implemented_units": 1
         }
       ],
       "planned_units": 1,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -146,8 +158,13 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "FE 673fdc1, BE part in deea4e3: sign-out journey 3 passed (smoke.md); IT-01-04 green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "WebKit-only CI failure sign-out.spec.ts:46 'Your upload will stop' (blockers.md, senior-frontend-engineer)"
+      ]
     },
     {
       "id": "ST-015",
@@ -162,12 +179,13 @@
         {
           "lane": "FE",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 2
         }
       ],
       "planned_units": 2,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -195,8 +213,14 @@
           "due": "Sprint 1 D3"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "FE b40db17: first run and capture guide journey 5 passed (smoke.md)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "WebKit-only CI failures first-run-and-guide.spec.ts:42, :63 (blockers.md, senior-frontend-engineer)",
+        "Design review P7 not yet held (PD-R1-06)"
+      ]
     },
     {
       "id": "ST-016",
@@ -213,17 +237,19 @@
         {
           "lane": "FE",
           "size": "L",
-          "planned_units": 4
+          "planned_units": 4,
+          "implemented_units": 4
         },
         {
           "lane": "BE",
           "size": "S",
-          "planned_units": 1
+          "planned_units": 1,
+          "implemented_units": 1
         }
       ],
       "planned_units": 5,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 5,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -251,8 +277,16 @@
           "due": "Sprint 1 D2"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "BE bcdc7d0: IT-01-05 green in the backend run",
+        "FE aa52c48: match setup journey 13 passed, 1 skipped (smoke.md)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "Sprint 0 test test_it_00_01 allowlist red vs the new participant fields (TCR, smoke S-05)",
+        "EM waiver for the ~1,000-line FE commit still to be recorded (decision-log)",
+        "Design review P7 not yet held (PD-R1-06)"
+      ]
     },
     {
       "id": "ST-017",
@@ -267,17 +301,19 @@
         {
           "lane": "BE",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 0
         },
         {
           "lane": "FE",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 2
         }
       ],
       "planned_units": 4,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "in_progress",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -306,8 +342,15 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "BE 78902e0, FE 722f0c5: upload-with-resume journey 6 passed, 2 skipped (smoke.md)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "BE lane not counted: its own scenarios test_resumable_upload 'a damaged chunk is not kept' and 'return after closing the tab' are red (TCR, smoke S-05, Pending QA decision)",
+        "WebKit-only CI failure resumable-upload.spec.ts:43 (blockers.md)",
+        "U-04 copy deviations await the design review (PD-R1-06)"
+      ]
     },
     {
       "id": "ST-018",
@@ -322,17 +365,19 @@
         {
           "lane": "BE",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 2
         },
         {
           "lane": "FE",
           "size": "S",
-          "planned_units": 1
+          "planned_units": 1,
+          "implemented_units": 0
         }
       ],
       "planned_units": 3,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "in_progress",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -360,8 +405,15 @@
           "due": "Sprint 1 D7"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "BE 1d099e5 + review fix 4aaccbb (PE-R1-01): IT-01-09/10 green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "FE lane not counted: upload-validation.spec.ts:38 red (two role=alert, TCR row 26, S-03)",
+        "Sprint 0 tus tests red against the ST-018 415 refusal (TCR row 16, S-04)",
+        "Caps provisional until ST-025 R-05 numbers (DoR P11)"
+      ]
     },
     {
       "id": "ST-020",
@@ -376,12 +428,13 @@
         {
           "lane": "BE",
           "size": "L",
-          "planned_units": 4
+          "planned_units": 4,
+          "implemented_units": 4
         }
       ],
       "planned_units": 4,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 4,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -404,8 +457,13 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
-      "open": [],
+      "evidence": [
+        "77a5082, 5999097, 52953f0, 131dcb7 + review fix 4f10ba2 (PE-R1-03): rules unit, property and scenario tests green in the backend run (P3 skipped: rally scoring, FR-043/OQ-01)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "Presets PROVISIONAL-UNVERIFIED, rows @needs-verification (OQ-01)"
+      ],
       "notes": "ADR 0009 Accepted 2026-10-05 (ADR 0023). Only preset: PROVISIONAL-UNVERIFIED; provisional rows @needs-verification until OQ-01 rulebook files arrive."
     },
     {
@@ -418,12 +476,13 @@
         {
           "lane": "BE",
           "size": "S",
-          "planned_units": 1
+          "planned_units": 1,
+          "implemented_units": 1
         }
       ],
       "planned_units": 1,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -446,7 +505,10 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
+      "evidence": [
+        "45eb70d: M-01..M-08 scenarios green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
       "open": []
     },
     {
@@ -460,11 +522,12 @@
         {
           "lane": "QA",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 0
         }
       ],
       "planned_units": 2,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "dod_done": false,
@@ -487,8 +550,13 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "Tests committed: cdbec82 (P1-P8), 45dd859 (oracle P9), 6a10368 (oracle self-tests); green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "Not counted: mutation baseline on sports/pickleball/rules not yet recorded; first nightly oracle run (100,000 sequences) not yet run"
+      ]
     },
     {
       "id": "ST-023",
@@ -500,12 +568,13 @@
         {
           "lane": "QA",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 2
         }
       ],
       "planned_units": 2,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -525,8 +594,13 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
-      "open": [],
+      "evidence": [
+        "0c152f9, 47ea499: provisional tables as executable scenarios, green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "Coach review; rows @needs-verification (OQ-01)"
+      ],
       "notes": "Rows stay @needs-verification (OQ-01 open)."
     },
     {
@@ -541,12 +615,13 @@
         {
           "lane": "SRE",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 2
         }
       ],
       "planned_units": 2,
-      "status": "in_progress",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -574,15 +649,16 @@
         "QA binding tests/features/test_nightly_quality.py -> 4 SLI scenarios passed; 'Nightly run completes' red until the first nightly run on main",
         "oracle pipeline controls: candidate=oracle_run exit 0; candidate=mutants.receiver_scores exit 1 (1955/2000 disagreements)",
         "mutation_score.py positive control on src/racket/matches (scratch copy): measured, 239 mutants, score 0.1381",
-        "actionlint .github/workflows/nightly-quality.yml -> no findings"
+        "actionlint .github/workflows/nightly-quality.yml -> no findings",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
       ],
       "open": [
         "Nightly workflow has not run on GitHub yet (needs push to main by the EM)",
-        "Oracle and mutation jobs red until ST-020 creates racket.sports.pickleball.rules",
         "Upload-completion SLI needs the upload context to call SLIRecorder.upload_event (senior-backend-engineer, ST-017/ST-018)",
         "Branch-protection bypass for github-actions[bot] if main requires PRs (human admin, ADR 0026)",
         "Metrics backend for the dashboard (Sprint 5, with alerts)",
-        "Review by senior-qa-engineer and principal-engineer"
+        "Review by senior-qa-engineer and principal-engineer",
+        "Oracle and mutation jobs: racket.sports.pickleball.rules now exists (ST-020); confirm on the first nightly run"
       ]
     },
     {
@@ -596,11 +672,12 @@
         {
           "lane": "ML",
           "size": "M",
-          "planned_units": 2
+          "planned_units": 2,
+          "implemented_units": 0
         }
       ],
       "planned_units": 2,
-      "status": "not_started",
+      "status": "partial",
       "implemented_units": 0,
       "dod_done_units": 0,
       "dod_done": false,
@@ -628,8 +705,13 @@
           "due": "Sprint 1 D1"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "30baddc consent rule, 10170c6 synthetic profile set and manifest builder, 281d459 protocol",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "Not counted: real phone clips needed (blockers.md, PO); test_phone_fixtures 2 red; R-05 numbers not measured"
+      ]
     },
     {
       "id": "SPIKE-06",
@@ -642,11 +724,12 @@
         {
           "lane": "FE",
           "size": "S",
-          "planned_units": 1
+          "planned_units": 1,
+          "implemented_units": 0
         }
       ],
       "planned_units": 1,
-      "status": "not_started",
+      "status": "partial",
       "implemented_units": 0,
       "dod_done_units": 0,
       "dod_done": false,
@@ -664,8 +747,13 @@
           "due": "Sprint 1 D3"
         }
       ],
-      "evidence": [],
-      "open": []
+      "evidence": [
+        "9c1030d findings and ADR 0028 (Proposed), desktop-Chromium proxy data",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "Not counted: real iOS Safari / Android Chrome runs not possible in the sandbox (blockers.md)"
+      ]
     },
     {
       "id": "ST-019",
@@ -677,12 +765,13 @@
         {
           "lane": "FE",
           "size": "S",
-          "planned_units": 1
+          "planned_units": 1,
+          "implemented_units": 1
         }
       ],
       "planned_units": 1,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "dod_done": false,
       "required_reviewers": [
@@ -704,8 +793,13 @@
           "due": "2026-10-30"
         }
       ],
-      "evidence": [],
-      "open": [],
+      "evidence": [
+        "6cc2259: quality-report.test.tsx 5 passed (in the vitest run)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)"
+      ],
+      "open": [
+        "Stretch: feature §7.6 not yet bound by QA; copy routed to principal-designer"
+      ],
       "stretch": true
     }
   ],
@@ -775,5 +869,6 @@
       "effect": "ST-002 DoD; every story's CI evidence",
       "need_by": "2026-10-14"
     }
-  ]
+  ],
+  "counting_rule": "2026-10-05 (EM, QA-R1-03): a lane's units count as implemented when its code is committed, review round 1 has been held, and that story's own tests for the lane are green in the latest local run (backend: 2026-10-05 EM re-run at 094a344: cd backend && env -u APP_ENV uv run pytest -q (dev Postgres + object store) -> 18 failed, 1020 passed, 16 skipped, 9 errors; every red test is a Pending test-change row or an open blocker (smoke.md S-04, S-05, S-07, S-08); web: 2026-10-05 EM re-run at 094a344: cd web && pnpm exec vitest run -> 30 files, 244 passed; browser: smoke.md §3 (tree 6ba9b28): Playwright chromium over https -> 38 passed, 6 failed, 6 skipped). A lane with any of its own tests red locally counts 0 until the fix or the test-change decision lands. WebKit-only CI failures stay in 'open' and block DoD, not 'implemented'. dod_done_units stay 0: ci-gate is red (blockers.md) and external evidence is open."
 }

@@ -19,21 +19,23 @@ Priority confirmed by the product-manager on 2026-10-05 (Sprint 1 DoR item P1): 
 
 | Story | Lanes (size → units) | Planned units | Status | Implemented units | DoD-done units | External evidence (owner) |
 |---|---|---|---|---|---|---|
-| ST-013 | BE M 2, FE S 1 | 3 | not started | 0 | 0 | CI run (SRE); security + design reviews; threat notes P8 |
-| ST-014 | FE S 1 | 1 | not started | 0 | 0 | CI run; security review |
-| ST-015 | FE M 2 | 2 | not started | 0 | 0 | CI run; design review; coach wording sign-off P9 |
-| ST-016 | FE L 4, BE S 1 | 5 | not started | 0 | 0 | CI run; design review; participant-model doc P4 (PE) |
-| ST-017 | BE M 2, FE M 2 | 4 | not started | 0 | 0 | CI run; security review; WebKit/iOS run (OQ-17) |
-| ST-018 | BE M 2, FE S 1 | 3 | not started | 0 | 0 | CI run; security review; caps from ST-025 (P11) |
-| ST-020 | BE L 4 | 4 | not started | 0 | 0 | CI run; PE review |
-| ST-021 | BE S 1 | 1 | not started | 0 | 0 | CI run; PE review |
-| ST-022 | QA M 2 | 2 | not started | 0 | 0 | CI run; first nightly oracle run |
-| ST-023 | QA M 2 | 2 | not started | 0 | 0 | CI run; coach review |
-| ST-024 | SRE M 2 | 2 | not started | 0 | 0 | CI run; nightly workflow ran on GitHub |
-| ST-025 | ML M 2 | 2 | not started | 0 | 0 | CI run; security review; fixture storage P6 (SRE) |
-| SPIKE-06 | FE S 1 | 1 | not started | 0 | 0 | Real iOS Safari / Android Chrome devices (not in sandbox) |
-| **Committed** | BE 12, FE 12, QA 4, SRE 2, ML 2 | **32** | | **0** | **0** | Capacity 12.8 per lane at load factor 0.8 |
-| ST-019 (stretch) | FE S 1 | 1 | not started | 0 | 0 | CI run; design review |
+| ST-013 | BE M 2, FE S 1 | 3 | in progress | 2 | 0 | CI run (SRE); security + design reviews; threat notes P8 |
+| ST-014 | FE S 1 | 1 | implemented | 1 | 0 | CI run; security review |
+| ST-015 | FE M 2 | 2 | implemented | 2 | 0 | CI run; design review; coach wording sign-off P9 |
+| ST-016 | FE L 4, BE S 1 | 5 | implemented | 5 | 0 | CI run; design review; participant-model doc P4 (PE) |
+| ST-017 | BE M 2, FE M 2 | 4 | in progress | 2 | 0 | CI run; security review; WebKit/iOS run (OQ-17) |
+| ST-018 | BE M 2, FE S 1 | 3 | in progress | 2 | 0 | CI run; security review; caps from ST-025 (P11) |
+| ST-020 | BE L 4 | 4 | implemented | 4 | 0 | CI run; PE review |
+| ST-021 | BE S 1 | 1 | implemented | 1 | 0 | CI run; PE review |
+| ST-022 | QA M 2 | 2 | in progress | 0 | 0 | CI run; first nightly oracle run |
+| ST-023 | QA M 2 | 2 | implemented | 2 | 0 | CI run; coach review |
+| ST-024 | SRE M 2 | 2 | implemented | 2 | 0 | CI run; nightly workflow ran on GitHub |
+| ST-025 | ML M 2 | 2 | partial | 0 | 0 | CI run; security review; fixture storage P6 (SRE) |
+| SPIKE-06 | FE S 1 | 1 | partial | 0 | 0 | Real iOS Safari / Android Chrome devices (not in sandbox) |
+| **Committed** | BE 12, FE 12, QA 4, SRE 2, ML 2 | **32** | | **23** | **0** | Capacity 12.8 per lane at load factor 0.8 |
+| ST-019 (stretch) | FE S 1 | 1 | implemented | 1 | 0 | CI run; design review |
+
+Counting rule (2026-10-05, QA-R1-03; same text as `status.json` `counting_rule`): a lane counts as implemented when its code is committed, review round 1 has been held, and that story's own tests for the lane are green in the latest local run. A lane with any of its own tests red locally counts 0 until the fix or the test-change decision lands; WebKit-only CI failures block DoD, not "implemented". DoD-done stays 0 because `ci-gate` is red and external evidence is open. Lanes not counted: ST-013 FE (sign-in.spec `:17`, `:46`), ST-017 BE (own resumable-upload scenarios, TCR Pending), ST-018 FE (upload-validation.spec `:38`), ST-022 (no mutation baseline, no nightly oracle run yet), ST-025 and SPIKE-06 (real phones needed). The WebKit cookie issue is fixed (ADR 0029, CI run 37298471332); the WebKit failures that remain are not about cookies (`blockers.md`).
 
 ## Open items that need the human product owner (ADR 0023)
 
@@ -53,3 +55,4 @@ Priority confirmed by the product-manager on 2026-10-05 (Sprint 1 DoR item P1): 
 | 2026-10-05 | Sprint 1 started on branch `sprint-01`; this file and `status.json` created | 32 units committed (BE 12, FE 12, QA 4, SRE 2, ML 2) + 1 stretch | `python3 -m json.tool docs/sprints/01/status.json` → valid; unit sums asserted when generated |
 | 2026-10-05 | senior-qa-engineer: Sprint 0 carry-over and Sprint 1 tests first | 6 Sprint 0 test-change rows decided, weak IT-00-10 probe and 21 stale `red_until` markers retired, test report rewritten and signed; Sprint 1 red-first tests for ST-013..ST-025 committed (ST-023 tables first), status in `test-plan-status.md` | `env -u APP_ENV uv run pytest -q -m "not red_until" tests` → `503 passed` (Compose, 0 skipped); `-m red_until` → `113 failed, 9 passed, 1 skipped, 8 errors`; Playwright Sprint 0 `7 passed`, Sprint 1 `37 failed, 6 skipped` |
 | 2026-10-05 | senior-backend-engineer (stream B): ST-016, ST-013 (+ ST-014 BE), ST-017, ST-018, R3-04 | Commits `bcdc7d0` (ST-016 participants, 422 `fields`), `deea4e3` (ST-013 magic link, rolling rate limits, `send_sign_in_link` stage, ADR 0027 Proposed, `Clear-Site-Data` on sign-out), `78902e0` (ST-017 checksum/expiration/quota, read-model `upload`, `/upload-policy`), `1d099e5` (ST-018 `UploadPolicy`, 413/415, probe refusal, `rejection`), `efbe3a9` (R3-04 `Tus-Resumable` on 405/500). Every story's own IT and scenarios are green except test defects filed for QA. **Next/open:** 8 test-change rows Pending (QA); EM waivers for 3 commits >400 lines (decision-log); SRE Compose wiring for the mail worker and new env vars (blockers.md); PE amendments for §2.4 (rolling window), §6.5 (check order), §8 (dev defaults) | `env -u APP_ENV uv run pytest -q tests` (private Postgres, SeaweedFS, Mailpit) → `19 failed, 963 passed, 6 skipped, 9 errors`: 4 failures are other lanes (nightly `status.json`, phone fixtures), the other 15 failures + 9 errors are the filed test-change rows (error-body keys, allowlist, Tus-Extension, quota vs multi-upload tests, `flows.percent`, non-video payloads in Sprint 0 tus tests). `uv run ruff check src tests` → all passed; `uv run ruff format --check src tests` → 217 files formatted; `uv run mypy` → no issues in 75 files |
+| 2026-10-05 | engineering-manager: status refresh (QA-R1-03) | `status.json` and this table updated from the commits and a fresh local run: 23 of 32 committed units implemented, 1 stretch unit, 0 DoD-done | `cd backend && env -u APP_ENV uv run pytest -q` → `18 failed, 1020 passed, 16 skipped, 9 errors` (all Pending TCR rows or open blockers, same set as smoke.md); `cd web && pnpm exec vitest run` → `244 passed`; `python3 -m json.tool docs/sprints/01/status.json` → valid; `cd infra && uv run pytest -q tests/test_nightly_quality.py` → `15 passed` |
