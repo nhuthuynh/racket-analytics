@@ -22,10 +22,13 @@ from racket.matches.scorebook.domain.errors import (
     GameNotStarted,
     MatchIsOver,
     MatchNotReady,
+    NothingToUndo,
+    RallyNotFound,
     StaleMatch,
 )
 from racket.matches.scorebook.domain.projection import play
 from racket.matches.scorebook.domain.values import OutcomeInput, RallyTimes
+from racket.platform.errors import FieldError, ValidationFailed
 from racket.sports.pickleball.rules import Side
 
 BEST_OF = frozenset({1, 3})
@@ -171,3 +174,146 @@ class Scorebook:
         )
         book = replace(self, version=self.version + 1, rallies=(*self.rallies, rally))
         return book, rally
+
+    # ------------------------------------------------------------ corrections (ST-031/032)
+    def _rally(self, rally_id: uuid.UUID) -> Rally:
+        found = next((r for r in self.rallies if r.id == rally_id), None)
+        if found is None:
+            raise RallyNotFound("no such rally in this match")
+        return found
+
+    def _with_rally(self, rally: Rally) -> tuple[Rally, ...]:
+        return tuple(rally if r.id == rally.id else r for r in self.rallies)
+
+    def correct(
+        self,
+        rally_id: uuid.UUID,
+        field: str,
+        value: Any,
+        *,
+        expected_version: int,
+        ctx: CommandContext,
+    ) -> Scorebook:
+        """FR-052: change one field of one rally; the old and new value are audited. Later
+        rallies are re-scored by the projection in the same step (FR-053, C-01)."""
+        if expected_version != self.version:
+            raise StaleMatch("version changed")
+        if field not in CORRECTABLE:
+            raise ValidationFailed(
+                "field cannot be corrected", [FieldError("field", "field_invalid")]
+            )
+        rally = self._rally(rally_id)
+        if field == "withdrawn":
+            if value is not True or rally.withdrawn:
+                raise ValidationFailed(
+                    "only a kept rally can be withdrawn", [FieldError("value", "invalid")]
+                )
+            changed, kind, old = replace(rally, withdrawn=True), "withdrawal", False
+        else:
+            if rally.withdrawn:
+                raise RallyNotFound("rally was withdrawn")
+            changed, old = _changed(rally, field, value, self.format), _value(rally, field)
+            kind = "correction"
+            if field in ("start_ms", "end_ms"):
+                changed.times.check_after(r.times for r in self.kept if r.id != rally.id)
+        change = self._change(
+            ctx,
+            kind,
+            rally_id=rally.id,
+            game_number=rally.game_number,
+            field=field,
+            old_value=old,
+            new_value=_value(changed, field),
+        )
+        return replace(
+            self,
+            version=self.version + 1,
+            rallies=self._with_rally(changed),
+            changes=(*self.changes, change),
+        )
+
+    def undo(self, *, expected_version: int, ctx: CommandContext) -> Scorebook:
+        """Reverse the newest change not yet undone: a correction, withdrawal, resolution or
+        game start, or the newest tag (which becomes a withdrawal). Audited (FR-052, C-04)."""
+        if expected_version != self.version:
+            raise StaleMatch("version changed")
+        undone = {c.undoes for c in self.changes if c.kind == "undo"}
+        open_changes = [c for c in self.changes if c.kind != "undo" and c.id not in undone]
+        newest_change = max(open_changes, key=lambda c: c.version, default=None)
+        newest_tag = max(self.kept, key=lambda r: r.created_version, default=None)
+        if newest_change is None and newest_tag is None:
+            raise NothingToUndo("nothing to undo")
+        if newest_tag is not None and (
+            newest_change is None or newest_tag.created_version > newest_change.version
+        ):
+            change = self._change(
+                ctx,
+                "undo",
+                rally_id=newest_tag.id,
+                game_number=newest_tag.game_number,
+                field="withdrawn",
+                old_value=False,
+                new_value=True,
+            )
+            rallies = self._with_rally(replace(newest_tag, withdrawn=True))
+            return replace(
+                self, version=self.version + 1, rallies=rallies, changes=(*self.changes, change)
+            )
+        target = newest_change
+        if target is None:  # unreachable: one of the two exists (checked above)
+            raise NothingToUndo("nothing to undo")
+        book = replace(self, version=self.version + 1)
+        if target.kind == "game_started":
+            book = replace(
+                book, games=tuple(g for g in self.games if g.number != target.game_number)
+            )
+        elif target.rally_id is not None and target.field is not None:
+            rally = self._rally(target.rally_id)
+            restored = (
+                replace(rally, withdrawn=bool(target.old_value))
+                if target.field == "withdrawn"
+                else _changed(rally, target.field, target.old_value, self.format, validate=False)
+            )
+            book = replace(book, rallies=self._with_rally(restored))
+        change = self._change(
+            ctx,
+            "undo",
+            rally_id=target.rally_id,
+            game_number=target.game_number,
+            field=target.field,
+            old_value=target.new_value,
+            new_value=target.old_value,
+            undoes=target.id,
+        )
+        return replace(book, changes=(*self.changes, change))
+
+
+CORRECTABLE = frozenset(
+    {
+        "winning_side",
+        "ending",
+        "responsible_player",
+        "fault_kind",
+        "start_ms",
+        "end_ms",
+        "withdrawn",
+    }
+)
+
+
+def _value(rally: Rally, field: str) -> Any:
+    if field in ("start_ms", "end_ms"):
+        return getattr(rally.times, field)
+    if field == "withdrawn":
+        return rally.withdrawn
+    return rally.outcome.as_json()[field]
+
+
+def _changed(rally: Rally, field: str, value: Any, format: str, *, validate: bool = True) -> Rally:
+    if validate and value == _value(rally, field):
+        raise ValidationFailed("value unchanged", [FieldError("value", "unchanged")])
+    if field in ("start_ms", "end_ms"):
+        times = {"start_ms": rally.times.start_ms, "end_ms": rally.times.end_ms, field: value}
+        return replace(rally, times=RallyTimes.parse(times["start_ms"], times["end_ms"]))
+    body = rally.outcome.as_json() | {field: value}
+    return replace(rally, outcome=OutcomeInput.parse(body, format=format))
