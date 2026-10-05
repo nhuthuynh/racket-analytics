@@ -23,6 +23,30 @@ export function GuideVideo() {
     return () => source?.removeEventListener('error', onError);
   }, []);
 
+  // Captions on by default (SC 1.2.2; PD-R1-02). WebKit applies the system caption preference
+  // instead of the track's `default`, leaving it "disabled" (CI run 37298471332). Turn it on
+  // at mount, when the media loads and on the first play only, so a viewer who switches the
+  // captions off afterwards keeps that choice.
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    const show = () => {
+      const tracks = v.textTracks as TextTrackList | undefined;
+      if (!tracks) return;
+      for (let i = 0; i < tracks.length; i += 1) {
+        const t = tracks[i];
+        if (t && t.kind === 'captions' && t.mode !== 'showing') t.mode = 'showing';
+      }
+    };
+    show();
+    v.addEventListener('loadedmetadata', show);
+    v.addEventListener('play', show, { once: true });
+    return () => {
+      v.removeEventListener('loadedmetadata', show);
+      v.removeEventListener('play', show);
+    };
+  }, []);
+
   return (
     <figure className="guide-video stack">
       <figcaption>Everything in the video is in the checklist above.</figcaption>

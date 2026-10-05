@@ -1,7 +1,7 @@
 // F-01 What this app does and G-01 How to film your match (ST-015; flows §3, §4; FR-004,
 // FR-020; NFR-033, NFR-035; wording: docs/domain/capture-guide-wording.md).
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CAPTURE_GUIDE_ITEMS } from '@/lib/content/capture-guide';
 import { GuideVideo } from '@/components/GuideVideo';
 
@@ -62,6 +62,29 @@ describe('GuideVideo', () => {
     expect(track).toHaveAttribute('default');
     expect(track).toHaveAttribute('srclang', 'en');
     expect(screen.getByText('Everything in the video is in the checklist above.')).toBeVisible();
+  });
+
+  // PD-R1-02 (WebKit CI run 37298471332: textTracks[0].mode "disabled" after play). WebKit applies
+  // its caption preference instead of the `default` attribute, so the player turns the captions
+  // on itself, also after the media loads and when it starts playing.
+  it('PD-R1-02: switches the caption track to showing, also after load and on play', () => {
+    const track = { kind: 'captions', mode: 'disabled' };
+    const spy = vi.spyOn(HTMLMediaElement.prototype, 'textTracks', 'get').mockReturnValue(
+      [track] as unknown as TextTrackList,
+    );
+    try {
+      const { container } = render(<GuideVideo />);
+      const video = container.querySelector('video')!;
+      expect(track.mode).toBe('showing');
+      track.mode = 'disabled';
+      fireEvent(video, new Event('loadedmetadata'));
+      expect(track.mode).toBe('showing');
+      track.mode = 'disabled';
+      fireEvent(video, new Event('play'));
+      expect(track.mode).toBe('showing');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('says the checklist has everything when the video cannot load', () => {
