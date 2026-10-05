@@ -66,3 +66,7 @@ Evidence for `a4dfd43`: `cd infra && uv run pytest -q tests/test_workflows_ci_ru
 - `git log --oneline 961648e..HEAD` (local) → `4430b25`, `5873308`, `0519599`; QA-R2-01 is not committed yet. GitHub is behind the round-2 fixes.
 - **Not dispatched by the SRE.** (1) The EM routed the dispatch to the human product owner (decision-log, PE-R2-02). (2) `nightly-quality.yml`'s `publish` job commits to GitHub `sprint-01` (ADR 0026); with the local branch ahead, an agent-triggered nightly would make local and GitHub diverge, and agents never push or rewrite history. (3) A run at `961648e` would not include QA-R2-01, which the finding names as a precondition.
 - Unblock order and close conditions: blockers.md, QA-R1-06 row. S-09, QA-R1-05 (WebKit damaged chunk) and `test_nightly_run_completes` stay open until a green WebKit E2E job and a published `nightly` key exist for a head that includes the round-2 fixes.
+
+## Check on 2026-10-05, sprint-close review round 1 (engineering-manager, PE-R3-05/QA-R3-05)
+
+No new run. `mcp__github__actions_list list_workflow_runs` → `total_count: 2` (37277549983 on `main` at `2b9c6ca`, 37298471332 on `sprint-01` at `2390e9a`, both `conclusion: failure`). `mcp__github__list_branches` → `sprint-01` = `9195ea9`, `main` = `2b9c6ca`; local `sprint-01` is ahead. Open and escalated to the human PO (push without force, dispatch `ci.yml` then `nightly-quality.yml`, or decide `sprint-report.md` §6 D1); see `blockers.md`. The SRE records the run IDs here when they exist.

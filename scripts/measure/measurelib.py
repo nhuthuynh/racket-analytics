@@ -138,3 +138,71 @@ def junit_rate(
         "failures": [t for t, o in selected if o == "failed"],
         "ok": rate == 1.0 and not missing and counts["failed"] == 0,
     }
+
+
+_FINDING_ID = re.compile(r"\b[A-Z]{2,4}-[RV]\d+(?:-S\d+)?-\d+\b")
+_OPEN_SEVERITY = re.compile(r"\b(blocker|blocking|major)\b")
+_OPEN_DISPOSITION = re.compile(r"^(open|not re-verified|not fixed|partly)")
+
+
+def _cells(line: str) -> list[str]:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def _disposition_column(header: list[str]) -> int | None:
+    lowered = [h.lower() for h in header]
+    for key in ("disposition", "fix", "state", "status"):
+        for i, h in enumerate(lowered):
+            if key in h:
+                return i
+    return None
+
+
+def open_defects(text: str) -> list[dict[str, Any]]:
+    """Blocker or major findings whose latest row is still open (goal scorecard G01-11).
+
+    Reads every Markdown table that has a finding-id column, a ``Severity`` column and a
+    disposition column (``Disposition`` first, else ``Fix…``, ``State…`` or ``Status``).
+    The last row naming a finding id wins. A row is open when its disposition starts with
+    "Open", "Not re-verified", "Not fixed" or "Partly" (fail closed, ADR 0014, ADR 0030).
+    A text without any such table is refused, so a wrong file never reads as 0.
+    """
+    rows: list[dict[str, Any]] = []
+    latest: dict[str, int] = {}
+    header: list[str] | None = None
+    tables = 0
+    for number, line in enumerate(text.splitlines(), start=1):
+        if not line.lstrip().startswith("|"):
+            header = None
+            continue
+        cells = _cells(line)
+        if header is None:
+            header = cells
+            lowered = [h.lower() for h in header]
+            sev_col = next((i for i, h in enumerate(lowered) if "severity" in h), None)
+            disp_col = _disposition_column(header)
+            if sev_col is not None and disp_col is not None and disp_col != sev_col:
+                tables += 1
+            else:
+                sev_col = disp_col = None
+            continue
+        if sev_col is None or disp_col is None or set("".join(cells)) <= set("-: "):
+            continue
+        ids = _FINDING_ID.findall(cells[0])
+        if not ids or len(cells) <= max(sev_col, disp_col):
+            continue
+        severity = cells[sev_col].replace("*", "").strip().lower()
+        disposition = cells[disp_col].replace("*", "").strip()
+        rows.append({"ids": ids, "severity": severity, "disposition": disposition, "line": number})
+        for finding in ids:
+            latest[finding] = len(rows) - 1
+    if tables == 0:
+        raise ValueError("no review table with Severity and Disposition columns")
+    open_rows = []
+    for index in sorted(set(latest.values())):
+        row = rows[index]
+        if _OPEN_SEVERITY.search(row["severity"]) and _OPEN_DISPOSITION.match(
+            row["disposition"].lower()
+        ):
+            open_rows.append(row)
+    return open_rows

@@ -38,7 +38,7 @@ New actors and abuse cases: **A7** email-bomber (makes us mail a victim repeated
 | T-ML-10 | S | Session fixation or a session surviving re-sign-in | New token on every exchange; presented session deleted | 7.2.4 | ST-013 | integration: old cookie invalid after exchange | C |
 | T-ML-11 | I/E | Long-lived sessions on shared devices | 30 d absolute, 7 d idle, max 10 per account; sign-out deletes server-side and sends `Clear-Site-Data: "cache"`; client clears storage and caches | 7.1.1, 7.1.2, 7.3.1, 7.3.2, 7.4.1; 14.3.1 [AQS/SEC-05]; NFR-067 | ST-013, ST-014 | unit with injected clock (idle, absolute); IT-01-04; sign-out E2E (§7.1 shared device) | C |
 | T-ML-12 | S/E | CSRF on `/auth/exchange` logs the victim into the attacker's account (login CSRF) | POST with JSON body (non-simple), `Origin` allowlist in staging/prod; token must be in the body | 3.5.1, 3.5.3 | ST-013 | integration: foreign `Origin` → 403 `forbidden_origin`, no `Set-Cookie`, on `POST /auth/links` and `POST /auth/exchange` with `ALLOWED_ORIGINS` set (`test_it_01_01_magic_link.py::test_t_ml_12_a_foreign_origin_cannot_request_a_link_or_sign_in`, SEC-R1-S1-01) | C |
-| T-ML-13 | S | Single-factor authentication at L2 | Email link is one factor; passkeys are backlog | **6.3.3** | — | — | **O: residual risk. PO must accept or reject before any real-user beta** (blockers.md) |
+| T-ML-13 | S | Single-factor authentication at L2 | Email link is one factor; passkeys are backlog | **6.3.3** | — | — | **O: residual risk. PO must accept or reject before any real-user beta** (blockers.md; options and recommendation in ADR 0031, Proposed, awaiting the PO) |
 | T-ML-14 | I | The email address is used as a username in URLs or the UI of others | The address is never in a URL, never returned except to its owner (not even in `/me` in Sprint 1) | 14.2.1 [AQS/SEC-05] | ST-013 | response allowlist test (`/me` keys) | C |
 
 ## 3. Upload validation and resumable upload (ST-017, ST-018)
@@ -68,7 +68,7 @@ New actors and abuse cases: **A7** email-bomber (makes us mail a victim repeated
 
 | ID | Severity | Finding | Fix | Owner |
 |---|---|---|---|---|
-| S1-F1 | **Should-fix before any real-user beta** | ASVS 6.3.3: magic link is single-factor at L2 (T-ML-13) | PO accepts the residual risk in an ADR, or passkeys move into R1 | human product owner (via EM) |
+| S1-F1 | **Should-fix before any real-user beta** | ASVS 6.3.3: magic link is single-factor at L2 (T-ML-13) | PO accepts the residual risk in an ADR, or passkeys move into R1. Escalated 2026-10-05 as ADR 0031 (Proposed; decider: human PO) | human product owner (via EM) |
 | S1-F2 | Should-fix before non-dev deployment | Expired sessions' staged bytes are not deleted until ST-038 (T-UV-7) | Keep ST-038 in Sprint 2; no non-dev deployment before it | BE (Sprint 2) |
 | S1-F3 | Should-fix (Sprint 1) | v0 F-1 (shared DB role and S3 key for api and worker) still open; Sprint 1 adds email addresses to the same database | Separate roles before any non-dev deployment (v0 F-1) | SRE, BE |
 | S1-F4 | Nit | Rate-limit rows keep IP addresses; retention unstated | Delete windows older than 24 h in the same job as the counter update | BE |

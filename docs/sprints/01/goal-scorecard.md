@@ -36,6 +36,13 @@
 
 **Overall:** the sprint goal is met only when all 12 rows are "yes". A row whose method could not run is "no", never "n/a" (fail closed, ADR 0014).
 
+**Verification status (engineering-manager, 2026-10-05, review round 1 after close; PE-R1-S1-02, QA-V1-04):**
+
+- **The Sprint 1 goal is not demonstrated, so Sprint 1 is not done** (PO standing rule). No verifier has filled the table at any head; the empty cells above are not a pass.
+- The table is filled only by the verifier (senior-qa-engineer) from one isolated run at one recorded head, after the round-1 fixes land (§3). The EM does not copy reviewer numbers into it.
+- Already known "no" at `488d574` from the reviewers' isolated runs: G01-03 (1 flaky test, QA-V1-04), G01-08 (no mutation score, PE-R1-S1-01) and G01-11 (24 open blocker or major findings by `open_defects.py`; GitHub bug issues 0). Supporting only: oracle `--sequences 100000` → `disagreements 0, passed true` (PE-R1-S1-02).
+- Method fixes in this round: G01-02 (strict sandbox file only in the Compose-env command, QA-V1-05), G01-09 (`and not nightly`, rc checked, QA-V1-06), G01-11 (`open_defects.py`, QA-V1-07). Decision-log rows 2026-10-05.
+
 ## 3. Rules for the verifier
 
 1. **Live stack, isolated (ADR 0030; retro 1 A5).**
@@ -100,9 +107,11 @@ eval "$(bash scripts/dev-objectstore.sh start)"; eval "$(bash scripts/dev-object
 export MAILPIT_API_URL=http://127.0.0.1:8025 SMTP_HOST=127.0.0.1 SMTP_PORT=1025 MAIL_SMTP_URL=smtp://127.0.0.1:1025
 (cd backend && env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfEs \
    tests/integration tests/regression tests/unit/sports/pickleball/test_rules_static.py \
-   --junitxml="$GOAL/backend-it.xml")
+   --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
+   --junitxml="$GOAL/backend-it.xml"); echo rc=$?
+# the strict sandbox file runs only in the next command, with the Compose env (smoke F-01, QA-V1-05)
 (cd backend && COMPOSE_PROJECT_NAME=racket-goal01 COMPOSE_ENV_FILES="$RA_DEV_STATE/goal.env" env -u APP_ENV \
-   uv run pytest -q tests/integration/test_it_00_10_worker_sandbox_strict.py --junitxml="$GOAL/sandbox.xml")
+   uv run pytest -q -rs tests/integration/test_it_00_10_worker_sandbox_strict.py --junitxml="$GOAL/sandbox.xml"); echo rc=$?
 python3 scripts/measure/junit_rate.py --include 'test_it_01_|test_bola_matrix|test_rules_static' \
   $(for i in 01 02 03 04 05 06 07 08 09 10 12 13; do printf -- '--require test_it_01_%s_ ' $i; done) \
   --require test_bola_matrix --json "$GOAL/it-rate.json" "$GOAL/backend-it.xml"; echo rc=$?
@@ -113,7 +122,8 @@ python3 scripts/measure/junit_rate.py --include 'test_upload_resume|test_it_01_0
 
 - IT-01-11 is the BOLA matrix (`tests/regression/test_bola_matrix.py`, including the inventory diff).
 - IT-01-12 and IT-01-13 are the static checks in `test_rules_static.py`.
-- **Actual:** `rate`, `selected`, `failed`, `skipped` and `missing` from each JSON. The row is met only when both commands give `rc=0`.
+- The strict worker-sandbox file is excluded from the first command (`--ignore`) because it needs `COMPOSE_PROJECT_NAME` and `COMPOSE_ENV_FILES`; without them its cases skip and `junit_rate.py` fails closed (smoke F-01, QA-V1-05). It still runs in full in the second command, and `--require worker_sandbox_strict` keeps it mandatory. Decision-log 2026-10-05 (QA-V1-05).
+- **Actual:** `rate`, `selected`, `failed`, `skipped` and `missing` from each JSON. The row is met only when both pytest commands and both `junit_rate.py` commands give `rc=0`.
 
 ### G01-03: E2E journey pass rate (and G01-10)
 
@@ -205,9 +215,9 @@ env -u APP_ENV uv run --with mutmut==3.8.0 python ../scripts/ci/mutation_score.p
 ### G01-09: coverage
 
 ```bash
-(cd backend && env -u APP_ENV uv run pytest -q -m "unit or integration or scenario or regression" \
+(cd backend && env -u APP_ENV uv run pytest -q -m "(unit or integration or scenario or regression) and not nightly" \
    --ignore=tests/integration/test_it_00_10_worker_sandbox.py --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
-   --cov --cov-branch --cov-report=xml:"$GOAL/coverage-backend.xml" --cov-report=json:"$GOAL/coverage-backend.json")
+   --cov --cov-branch --cov-report=xml:"$GOAL/coverage-backend.xml" --cov-report=json:"$GOAL/coverage-backend.json"); echo rc=$?
 uvx --from diff-cover==10.6.0 diff-cover "$GOAL/coverage-backend.xml" --compare-branch=main --fail-under=85 \
   --markdown-report "$GOAL/diff-cover.md"; echo rc=$?
 (cd backend && uv run coverage report --data-file=.coverage \
@@ -216,6 +226,7 @@ uvx --from diff-cover==10.6.0 diff-cover "$GOAL/coverage-backend.xml" --compare-
 ```
 
 - This uses the same environment as G01-02.
+- `and not nightly` drops the 100,000-sequence differential scenario (measured in G01-08), which exceeds the 120 s pytest timeout under `--cov` (QA-V1-06). The pytest command must give `rc=0`: coverage from a red run is not evidence, and the row is "no".
 - **Actual:**
   - the diff-cover "Coverage:" percentage;
   - the rules and aggregates `TOTAL` line and branch percentages, with the branch figure from `coverage-backend.json` `totals.percent_branches_covered`, restricted by the same `--include`;
@@ -224,11 +235,11 @@ uvx --from diff-cover==10.6.0 diff-cover "$GOAL/coverage-backend.xml" --compare-
 ### G01-11: open defects
 
 ```bash
-grep -E '^\| [A-Z]+-R[0-9]+' docs/sprints/01/review-rounds.md | \
-  awk -F'|' '{id=$2; gsub(/ /,"",id); sev=tolower($3); st=$4; last[id]=sev "|" st} END {for (i in last) print i "|" last[i]}' | \
-  awk -F'|' '$2 ~ /blocking|major/ && $3 ~ /^ *Open/' | tee "$GOAL/open-defects.txt" | wc -l
+python3 scripts/measure/open_defects.py --json "$GOAL/open-defects.json" docs/sprints/01/review-rounds.md; echo rc=$?
 ```
 
+- `open_defects.py` (tests in `infra/tests/test_measure_scripts.py`) replaces the earlier awk filter, which matched `blocking|major` (the tables say `blocker` or `**blocker**`) and read column 4 even where the disposition is in another column (QA-V1-07).
+- It reads every table with a finding id, a `Severity` column and a disposition column (`Disposition` first, else `Fix…`, `State…`, `Status`). The last row naming an id wins. A blocker or major row is open when its disposition starts with "Open", "Not re-verified", "Not fixed" or "Partly" (fail closed). It exits 1 while any is open and 2 when it finds no review table.
 - **GitHub:** run `mcp__github__search_issues` with `repo:nhuthuynh/racket-analytics is:issue is:open label:bug` and count the issues labelled `blocker` or `major`.
 - **Integration smoke:** add any open product-defect rows from `docs/sprints/01/smoke.md` §4 (S-xx) and from `blockers.md` that are not yet in `review-rounds.md`.
 - **Actual:** the sum of these counts, with the IDs listed in Evidence.

@@ -7,6 +7,8 @@
 
 ## 1. Verdict
 
+> **Dated note, 2026-10-05 (engineering-manager, sprint-close review round 1: PE-R1-S1-02, QA-V1-04).** Under the PO standing rule the **Sprint 1 goal is not demonstrated and Sprint 1 is not done.** [`goal-scorecard.md`](goal-scorecard.md) has no verified row yet; the reviewers' isolated runs at `488d574` already show G01-03, G01-08 and G01-11 as "no". The verdict below describes what is built, not a goal pass. The sprint stays open until a verifier fills all 12 rows "yes" from one isolated run (scorecard §2 status, §3).
+
 **Goal partly met.** All four goal bullets (sprint-01 §1) are built and work locally on real services:
 
 - Sign-in by magic link and sign-out.

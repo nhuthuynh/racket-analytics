@@ -234,3 +234,85 @@ def test_live_scripts_print_help_without_a_stack() -> None:
         )
         assert res.returncode == 0, (script, res.stderr)
         assert "--api" in res.stdout
+
+
+# ================================================================ open defects (G01-11)
+# QA-V1-07: the scorecard's awk matched /blocking|major/ (the tables say "blocker" or
+# "**blocker**") and read column 4 even where the disposition is in another column.
+_ROUND_A = """
+| Finding | Severity | Disposition | Owner | Evidence |
+|---|---|---|---|---|
+| PE-R3-05 / QA-R3-05 | blocker | Open, escalated: no CI | PO | runs |
+| PE-R3-01 | major | Open, escalated: 429 first | BE | test |
+| QA-R3-04 | major | **Fixed** at close | EM | json |
+| PE-R3-06 | minor | Open: not fixed yet | QA | — |
+| PE-R3-07 | major | Deferred to Sprint 2 | PE | — |
+"""
+
+_ROUND_B = """
+| Finding | Severity | State at close (EM check) | Owner | Disposition |
+|---|---|---|---|---|
+| PD-R1-02 | **blocker** | Not re-verified: WebKit captions | FE | Open, escalated (with S-09) |
+| PD-R1-08 | minor | Re-raised as PD-R3-04 | FE | See PD-R3-04 |
+"""
+
+
+def test_open_defects_refuses_text_without_a_review_table() -> None:
+    with pytest.raises(ValueError, match="no review table"):
+        m.open_defects("# Review rounds\n\nNothing here.\n")
+
+
+def test_open_defects_counts_bold_blocker_rows() -> None:
+    rows = m.open_defects(_ROUND_B)
+    assert [r["ids"] for r in rows] == [["PD-R1-02"]]
+    assert rows[0]["severity"] == "blocker"
+
+
+def test_open_defects_reads_the_disposition_column_not_column_4() -> None:
+    # State says "Not re-verified", Disposition says "Open": the Disposition column decides.
+    assert len(m.open_defects(_ROUND_B)) == 1
+    closed_by_disposition = _ROUND_B.replace("Open, escalated (with S-09)", "Fixed")
+    assert m.open_defects(closed_by_disposition) == []
+
+
+def test_open_defects_skips_fixed_deferred_and_minor_rows() -> None:
+    rows = m.open_defects(_ROUND_A)
+    assert [r["ids"] for r in rows] == [["PE-R3-05", "QA-R3-05"], ["PE-R3-01"]]
+
+
+def test_open_defects_latest_row_wins() -> None:
+    later = """
+| Finding | Severity | Fix | Files | Evidence |
+|---|---|---|---|---|
+| PE-R3-01 | major | Fixed. Red first, then green | a.py | 1 passed |
+"""
+    rows = m.open_defects(_ROUND_A + later)
+    assert [r["ids"] for r in rows] == [["PE-R3-05", "QA-R3-05"]]
+
+
+def test_open_defects_fails_closed_on_partly_and_not_fixed() -> None:
+    text = """
+| Finding | Severity | Fix summary | Files | Evidence |
+|---|---|---|---|---|
+| QA-R2-02 | blocker | Partly fixed: records only | a | b |
+| PE-R1-S1-02 | blocker | Not fixed: needs a verifier run | a | b |
+| QA-V1-05 | major | Fixed. Method corrected | a | b |
+"""
+    assert [r["ids"] for r in m.open_defects(text)] == [["QA-R2-02"], ["PE-R1-S1-02"]]
+
+
+def test_open_defects_cli_exit_code_follows_count(tmp_path: Path) -> None:
+    path = tmp_path / "review-rounds.md"
+    path.write_text(_ROUND_A, encoding="utf-8")
+    script = str(MEASURE / "open_defects.py")
+    bad = subprocess.run(
+        [sys.executable, script, str(path)], capture_output=True, text=True, check=False, timeout=30
+    )
+    assert bad.returncode == 1, bad.stderr
+    assert json.loads(bad.stdout)["open"] == 2
+    path.write_text(_ROUND_A.replace("Open, escalated", "Fixed"), encoding="utf-8")
+    good = subprocess.run(
+        [sys.executable, script, str(path)], capture_output=True, text=True, check=False, timeout=30
+    )
+    assert good.returncode == 0, good.stderr
+    assert json.loads(good.stdout)["open"] == 0
