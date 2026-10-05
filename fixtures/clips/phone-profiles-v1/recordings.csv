@@ -1,0 +1,7 @@
+path,device_model,shows_people,consent_record
+h264-mov-720p30-noaudio.mov,synthetic-profile/h264-mov-720p30-noaudio,false,
+h264-mp4-1080p-vfr.mp4,synthetic-profile/h264-mp4-1080p-vfr,false,
+h264-mp4-1080p30.mp4,synthetic-profile/h264-mp4-1080p30,false,
+h264-mp4-1080p60.mp4,synthetic-profile/h264-mp4-1080p60,false,
+hevc-mov-1080p60-rotated.mov,synthetic-profile/hevc-mov-1080p60-rotated,false,
+hevc10-mov-2160p30.mov,synthetic-profile/hevc10-mov-2160p30,false,
