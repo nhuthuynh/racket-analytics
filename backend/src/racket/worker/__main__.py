@@ -24,7 +24,7 @@ from racket.platform.settings import ConfigurationError, Settings
 from racket.platform.tracing import configure_tracing
 from racket.video_ingest.probe import ffprobe_version
 from racket.worker.runner import Runner, new_worker_id
-from racket.worker.stages import STAGES
+from racket.worker.stages import STAGES, selected
 
 log = logging.getLogger("racket.worker")
 DB_BACKOFF_MAX_S = 5.0
@@ -41,9 +41,14 @@ def main() -> int:
     except ConfigurationError as exc:
         print(f"worker refused to start: {exc}", file=sys.stderr)
         return 2
+    try:
+        stages = selected(STAGES, settings.worker_stages)
+    except ValueError as exc:
+        print(f"worker refused to start: {exc}", file=sys.stderr)
+        return 2
     configure_logging(settings.log_level)
     configure_tracing("racket-worker", settings.otel_exporter_otlp_endpoint)
-    runner = Runner(settings, STAGES, worker_id=new_worker_id())
+    runner = Runner(settings, stages, worker_id=new_worker_id())
     heartbeat = Path(os.environ.get("WORKER_HEARTBEAT_FILE", "/tmp/worker-heartbeat"))  # noqa: S108
 
     def on_sigterm(signum: int, frame: FrameType | None) -> None:
@@ -56,7 +61,7 @@ def main() -> int:
     log.info(
         "worker started",
         extra={"event": "worker.start", "worker_id": runner.worker_id,
-               "stages": sorted(STAGES), "ffprobe": ffprobe_version(),
+               "stages": sorted(stages), "ffprobe": ffprobe_version(),
                "settings": settings.redacted()},
     )  # fmt: skip
     failures = 0

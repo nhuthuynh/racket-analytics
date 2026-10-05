@@ -17,6 +17,10 @@ APP_ENVS = ("dev", "test", "staging", "prod")
 _TRUE = {"true", "1"}
 _FALSE = {"false", "0"}
 REDACTED = "***"
+DEV_WEB_ORIGIN = "http://localhost:3000"
+DEV_EMAIL_KEY = "dev-only-email-key-not-a-secret"  # dev/test only; prod requires its own
+EMAIL_KEY_MIN = 32
+_SECRETS = ("s3_secret_access_key", "s3_access_key_id", "auth_email_key")
 
 
 class ConfigurationError(RuntimeError):
@@ -64,6 +68,30 @@ class Settings:
     worker_poll_seconds: float = 1.0
     otel_exporter_otlp_endpoint: str | None = None
     otel_exporter_otlp_metrics_endpoint: str | None = None  # SLI metrics (ST-024); off if unset
+    # ---- Sprint 1 (api-sprint-01 §8)
+    public_web_origin: str = DEV_WEB_ORIGIN
+    mail_smtp_url: str = "smtp://mailpit:1025"
+    mail_from: str = "no-reply@localhost"
+    auth_email_key: str = field(default=DEV_EMAIL_KEY, repr=False)
+    magic_link_ttl_seconds: int = 900
+    session_absolute_seconds: int = 2_592_000
+    session_idle_seconds: int = 604_800
+    session_max_per_account: int = 10
+    auth_link_limit_per_email: int = 5
+    auth_link_limit_per_ip: int = 20
+    auth_exchange_limit_per_ip: int = 30
+    auth_window_seconds: int = 600
+    trusted_proxy_hops: int = 0
+    upload_max_duration_ms: int = 9_000_000
+    upload_max_frame_pixels: int = 8_294_400
+    upload_client_chunk_min_bytes: int = 5_242_880
+    upload_client_chunk_max_bytes: int = 8_388_608
+    upload_expiry_seconds: int = 86_400
+    upload_expiry_max_seconds: int = 259_200
+    upload_max_open_sessions: int = 3
+    upload_max_open_bytes: int = 30_000_000_000
+    upload_create_limit_per_hour: int = 10
+    worker_stages: tuple[str, ...] = ()  # empty: every registered stage
 
     # -------------------------------------------------------------- construction
     @classmethod
@@ -112,12 +140,26 @@ class Settings:
         database_url = required("DATABASE_URL")
         bucket = required("S3_BUCKET_MEDIA")
         origins = tuple(o.strip() for o in env.get("ALLOWED_ORIGINS", "").split(",") if o.strip())
-        if app_env in ("staging", "prod") and not origins:
+        deployed = app_env in ("staging", "prod")
+        if deployed and not origins:
             missing.append("ALLOWED_ORIGINS")
+        # T-ML-7: the sign-in link base comes only from configuration; dev and test fall back
+        # to the local web origin, deployed environments must set it (and the HMAC key).
+        web_origin = required("PUBLIC_WEB_ORIGIN") if deployed else env.get("PUBLIC_WEB_ORIGIN")
+        email_secret = required("AUTH_EMAIL_KEY") if deployed else env.get("AUTH_EMAIL_KEY")
         if missing:
             raise MissingSettingError(missing)
         if app_env not in APP_ENVS:
             raise ConfigurationError(f"APP_ENV must be one of {', '.join(APP_ENVS)}")
+        web_origin = (web_origin or DEV_WEB_ORIGIN).rstrip("/")
+        parts = urlsplit(web_origin)
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            raise ConfigurationError("PUBLIC_WEB_ORIGIN must be an http(s) origin")
+        if deployed and len(email_secret or "") < EMAIL_KEY_MIN:
+            raise ConfigurationError(
+                f"AUTH_EMAIL_KEY must have at least {EMAIL_KEY_MIN} characters"
+            )
+        stages = tuple(x.strip() for x in env.get("WORKER_STAGES", "").split(",") if x.strip())
 
         return cls(
             app_env=app_env,
@@ -141,6 +183,30 @@ class Settings:
             worker_poll_seconds=integer("WORKER_POLL_MS", 1000) / 1000,
             otel_exporter_otlp_endpoint=optional("OTEL_EXPORTER_OTLP_ENDPOINT"),
             otel_exporter_otlp_metrics_endpoint=optional("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"),
+            public_web_origin=web_origin,
+            mail_smtp_url=env.get("MAIL_SMTP_URL")
+            or ("smtp://127.0.0.1:1025" if app_env == "test" else "smtp://mailpit:1025"),
+            mail_from=env.get("MAIL_FROM") or "no-reply@localhost",
+            auth_email_key=email_secret or DEV_EMAIL_KEY,
+            magic_link_ttl_seconds=integer("MAGIC_LINK_TTL_SECONDS", 900),
+            session_absolute_seconds=integer("SESSION_ABSOLUTE_SECONDS", 2_592_000),
+            session_idle_seconds=integer("SESSION_IDLE_SECONDS", 604_800),
+            session_max_per_account=integer("SESSION_MAX_PER_ACCOUNT", 10),
+            auth_link_limit_per_email=integer("AUTH_LINK_LIMIT_PER_EMAIL", 5),
+            auth_link_limit_per_ip=integer("AUTH_LINK_LIMIT_PER_IP", 20),
+            auth_exchange_limit_per_ip=integer("AUTH_EXCHANGE_LIMIT_PER_IP", 30),
+            auth_window_seconds=integer("AUTH_WINDOW_SECONDS", 600),
+            trusted_proxy_hops=integer("TRUSTED_PROXY_HOPS", 0, minimum=0),
+            upload_max_duration_ms=integer("UPLOAD_MAX_DURATION_MS", 9_000_000),
+            upload_max_frame_pixels=integer("UPLOAD_MAX_FRAME_PIXELS", 8_294_400),
+            upload_client_chunk_min_bytes=integer("UPLOAD_CLIENT_CHUNK_MIN_BYTES", 5_242_880),
+            upload_client_chunk_max_bytes=integer("UPLOAD_CLIENT_CHUNK_MAX_BYTES", 8_388_608),
+            upload_expiry_seconds=integer("UPLOAD_EXPIRY_SECONDS", 86_400),
+            upload_expiry_max_seconds=integer("UPLOAD_EXPIRY_MAX_SECONDS", 259_200),
+            upload_max_open_sessions=integer("UPLOAD_MAX_OPEN_SESSIONS", 3),
+            upload_max_open_bytes=integer("UPLOAD_MAX_OPEN_BYTES", 30_000_000_000),
+            upload_create_limit_per_hour=integer("UPLOAD_CREATE_LIMIT_PER_HOUR", 10),
+            worker_stages=stages,
         )
 
     # -------------------------------------------------------------- views
@@ -151,7 +217,7 @@ class Settings:
             value = getattr(self, f.name)
             if f.name == "database_url":
                 value = _redact_url(value)
-            elif f.name in ("s3_secret_access_key", "s3_access_key_id") and value:
+            elif f.name in _SECRETS and value:
                 value = REDACTED
             view[f.name.upper()] = value
         return view

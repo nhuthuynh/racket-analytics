@@ -18,7 +18,8 @@ from racket.platform.db import get_session
 from racket.platform.errors import Unauthenticated
 from racket.platform.logs import SECURITY_LOGGER, user_id_var
 from racket.platform.settings import Settings
-from racket.players.service import Account, IdentityService
+from racket.players.domain import client_ip
+from racket.players.service import Account, IdentityService, MagicLinkService
 
 security_log = logging.getLogger(SECURITY_LOGGER)
 
@@ -49,7 +50,8 @@ async def current_account(
     token = presented_token(request)
     account = None
     if token:
-        account = await run_in_threadpool(IdentityService(session).account_for_token, token)
+        identity = IdentityService(session, settings_of(request))
+        account = await run_in_threadpool(identity.account_for_token, token)
     if account is None:
         raise Unauthenticated("no valid session")
     # Set in the request task's context, so every later log line of this request carries it.
@@ -68,7 +70,72 @@ class SignInRequest(BaseModel):
 
 class Me(BaseModel):
     id: str
-    display_name: str
+    display_name: str | None  # null for magic-link accounts (api-sprint-01 §2.3)
+
+
+class LinkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # Any JSON value; the address rules (and the ``email_invalid`` code) are the domain's.
+    email: object
+
+
+class ExchangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(pattern=r"^[A-Za-z0-9_-]{43}$")
+
+
+class ExchangedAccount(BaseModel):
+    id: str
+    display_name: str | None
+
+
+class ExchangeResponse(BaseModel):
+    account: ExchangedAccount
+    new_account: bool
+
+
+def request_ip(request: Request) -> str:
+    settings = settings_of(request)
+    peer = request.client.host if request.client else None
+    return client_ip(request.headers.get("x-forwarded-for"), peer, settings.trusted_proxy_hops)
+
+
+def set_session_cookie(response: Response, settings: Settings, token: str, max_age: int) -> None:
+    response.set_cookie(
+        cookie_name(settings),
+        token,
+        max_age=max_age,
+        path="/",
+        secure=settings.secure_cookies,
+        httponly=True,
+        samesite="lax",
+    )
+
+
+@router.post("/auth/links", status_code=202)
+def request_link(
+    body: LinkRequest, request: Request, session: Annotated[Session, Depends(get_session)]
+) -> Response:
+    """202 for every well-formed address, known or not (T-ML-6); the email is a queued job."""
+    MagicLinkService(session, settings_of(request)).request_link(body.email, request_ip(request))
+    return Response(status_code=202)
+
+
+@router.post("/auth/exchange")
+def exchange_link(
+    body: ExchangeRequest,
+    request: Request,
+    response: Response,
+    session: Annotated[Session, Depends(get_session)],
+) -> ExchangeResponse:
+    """A valid, unused, unexpired link becomes a new session cookie (api-sprint-01 §2.2)."""
+    settings = settings_of(request)
+    result = MagicLinkService(session, settings).exchange(
+        body.token, request_ip(request), presented_token(request)
+    )
+    set_session_cookie(response, settings, result.session_token, settings.session_absolute_seconds)
+    account = ExchangedAccount(id=str(result.account.id), display_name=result.account.display_name)
+    return ExchangeResponse(account=account, new_account=result.new_account)
 
 
 @dev_router.get("/users")
@@ -83,7 +150,7 @@ def dev_sign_in(
     session: Annotated[Session, Depends(get_session)],
 ) -> Response:
     settings = settings_of(request)
-    result = IdentityService(session).sign_in(body.username, presented_token(request))
+    result = IdentityService(session, settings).sign_in(body.username, presented_token(request))
     if result is None:
         security_log.info("sign-in refused", extra={"event": "auth.sign_in", "outcome": "refused"})
         raise Unauthenticated("sign-in refused")
@@ -92,15 +159,7 @@ def dev_sign_in(
         "sign-in", extra={"event": "auth.sign_in", "outcome": "ok", "account_id": str(account.id)}
     )
     response = Response(status_code=204)
-    response.set_cookie(
-        cookie_name(settings),
-        token,
-        max_age=12 * 3600,
-        path="/",
-        secure=settings.secure_cookies,
-        httponly=True,
-        samesite="lax",
-    )
+    set_session_cookie(response, settings, token, 12 * 3600)
     return response
 
 
@@ -109,8 +168,9 @@ def sign_out(request: Request, session: Annotated[Session, Depends(get_session)]
     settings = settings_of(request)
     token = presented_token(request)
     if token:
-        IdentityService(session).sign_out(token)
-    response = Response(status_code=204)
+        IdentityService(session, settings).sign_out(token)
+    # The browser drops its HTTP cache; the client clears its own storage (FR-011, NFR-067).
+    response = Response(status_code=204, headers={"Clear-Site-Data": '"cache"'})
     response.delete_cookie(
         cookie_name(settings), path="/", secure=settings.secure_cookies, httponly=True,
         samesite="lax",

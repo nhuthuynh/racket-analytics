@@ -33,6 +33,18 @@ CODE_MESSAGES: dict[str, str] = dict(STATUS_TABLE.values())
 CODE_MESSAGES["upload_offset_mismatch"] = (
     "Upload offset does not match. Ask the server for the current offset."
 )
+# api-sprint-01 §4.1: codes added in Sprint 1, with fixed messages.
+CODE_MESSAGES.update(
+    {
+        "checksum_invalid": "The upload checksum is not valid.",
+        "link_expired": "This sign-in link can no longer be used.",
+        "upload_expired": "This upload has expired. Please start again.",
+        "video_too_large": "This video is larger than allowed.",
+        "not_a_video": "This file is not a video we can read.",
+        "upload_quota_exceeded": "You have too many unfinished uploads.",
+        "checksum_mismatch": "Part of the upload was damaged. Please send it again.",
+    }
+)
 
 
 class AppError(Exception):
@@ -146,7 +158,7 @@ class ErrorMapper:
                 code=exc.code,
                 message=CODE_MESSAGES[exc.code],
                 support_ref=self._new_ref(),
-                headers=dict(exc.headers),
+                headers={**exc.headers, **getattr(exc, "response_headers", {})},
                 fields=getattr(exc, "fields", ()),
                 retry_at=getattr(exc, "retry_at", None),
             )
