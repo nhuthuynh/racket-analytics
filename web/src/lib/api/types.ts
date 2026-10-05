@@ -36,6 +36,36 @@ export interface MediaFacts {
   video_codec: string;
 }
 
+export const SLOTS = ['A1', 'A2', 'B1', 'B2'] as const;
+export type ParticipantSlot = (typeof SLOTS)[number];
+
+export interface Participant {
+  slot: ParticipantSlot;
+  nickname: string;
+  is_me: boolean;
+}
+
+/** The resume source of truth while an upload session exists (api-sprint-01 §5.2, flows D-3). */
+export interface UploadState {
+  state: 'receiving' | 'expired';
+  offset: number;
+  length: number;
+  expiresAt: string;
+  /** Same-origin tus URL, `/api/uploads/<uuid>`. */
+  resumeUrl: string;
+  fileName: string | null;
+  fileLastModifiedMs: number | null;
+  headSha256: string | null;
+}
+
+export const REJECTION_CODES = ['not_a_video', 'too_large', 'too_long', 'unsupported_video'] as const;
+export type RejectionCode = (typeof REJECTION_CODES)[number];
+
+export interface Rejection {
+  code: RejectionCode;
+  at: string;
+}
+
 export interface Match {
   id: string;
   title: string;
@@ -44,12 +74,39 @@ export interface Match {
   media: MediaFacts | null;
   created_at: string;
   updated_at: string;
+  /** Sprint 1 fields (api-sprint-01 §5.2). The parser always sets them (empty defaults when an
+   * older API omits them); optional so Sprint 0 fixtures stay valid. */
+  played_on?: string | null;
+  participants?: Participant[];
+  upload?: UploadState | null;
+  rejection?: Rejection | null;
 }
 
 export interface NewMatch {
-  title: string;
   format: MatchFormat;
+  title?: string;
+  scoring_system?: 'side_out';
+  played_on?: string;
+  participants?: Participant[];
 }
+
+/** GET /upload-policy (api-sprint-01 §6.1). Caps are provisional until ST-025 (R-05). */
+export interface UploadPolicy {
+  maxBytes: number;
+  maxDurationMs: number;
+  chunkMinBytes: number;
+  chunkMaxBytes: number;
+  expiresAfterS: number;
+}
+
+/** The provisional caps (K12, R-05), used only when the policy cannot be read. */
+export const FALLBACK_UPLOAD_POLICY: UploadPolicy = {
+  maxBytes: 10_000_000_000,
+  maxDurationMs: 9_000_000,
+  chunkMinBytes: 5 * 1024 * 1024,
+  chunkMaxBytes: 8 * 1024 * 1024,
+  expiresAfterS: 86_400,
+};
 
 export interface DevUser {
   username: string;

@@ -618,3 +618,102 @@ main:focus-visible,
   aspect-ratio: 16 / 9;
   background: var(--color-text);
 }
+
+/* Question pages (ST-016, Q-01..Q-07) */
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.fieldset__legend {
+  padding: 0;
+  margin-block-end: var(--space-4);
+}
+
+.fieldset__legend--side {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  margin-block-end: var(--space-2);
+}
+
+.radios {
+  display: grid;
+  gap: var(--size-target-gap);
+}
+
+/* Each option row is a 48px target: the radio is 24px, its label fills the row. */
+.radios__item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: center;
+  min-block-size: var(--size-target-touch);
+}
+
+.radios__input {
+  inline-size: 24px;
+  block-size: 24px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.radios__input[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.radios__label {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--size-target-touch);
+  cursor: pointer;
+}
+
+.radios__hint {
+  grid-column: 2;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-warning-surface);
+  color: var(--color-warning-text);
+  border-radius: var(--border-radius);
+}
+
+.field__warning {
+  color: var(--color-warning-text);
+  background: var(--color-warning-surface);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--border-radius);
+  font-weight: var(--font-weight-bold);
+}
+
+.date-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.date-input__item {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.input--2ch {
+  inline-size: 4.5rem;
+}
+
+.input--4ch {
+  inline-size: 6.5rem;
+}
+
+.summary-list__row--action {
+  grid-template-columns: minmax(6rem, 35%) minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.summary-list__action {
+  justify-self: end;
+}
+
+.block {
+  display: block;
+}

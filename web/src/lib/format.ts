@@ -88,3 +88,23 @@ export function formatMediaSummary(media: MediaSummaryInput): string {
     formatResolution(media.width, media.height),
   ].join(' · ');
 }
+
+/** A size cap in words for copy: `10000000000` → `"10 GB"` (SI, like phone file browsers). */
+export function formatSizeCap(bytes: number): string {
+  requirePositive(bytes, 'bytes');
+  const index = Math.max(unitIndexFor(bytes), 1);
+  const value = Number((bytes / STEP ** index).toFixed(1));
+  return `${value} ${UNITS[index]}`;
+}
+
+/** A duration cap in words: `9000000` → `"2 hours 30 minutes"`. Whole minutes. */
+export function formatDurationCap(ms: number): string {
+  requirePositive(ms, 'duration');
+  const minutesTotal = Math.round(ms / 60_000);
+  const hours = Math.floor(minutesTotal / 60);
+  const minutes = minutesTotal % 60;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`);
+  if (minutes > 0 || hours === 0) parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`);
+  return parts.join(' ');
+}

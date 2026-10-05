@@ -8,6 +8,7 @@ import {
   parseMatch,
   parseMatchList,
   parseMe,
+  parseUploadPolicy,
   ResponseShapeError,
 } from './parse';
 import {
@@ -22,6 +23,7 @@ import {
   type Match,
   type Me,
   type NewMatch,
+  type UploadPolicy,
 } from './types';
 
 export class ApiError extends Error {
@@ -169,8 +171,15 @@ export function createApiClient(options: ApiClientOptions) {
       return parsed(await request('GET', '/matches?limit=50'), parseMatchList);
     },
     async createMatch(input: NewMatch): Promise<Match> {
-      const body: NewMatch = { title: input.title, format: input.format };
+      // Closed body: only the contract's keys, and only when given (api-sprint-01 §5.1).
+      const body: Record<string, unknown> = {};
+      for (const key of ['title', 'format', 'scoring_system', 'played_on', 'participants'] as const) {
+        if (input[key] !== undefined) body[key] = input[key];
+      }
       return parsed(await request('POST', '/matches', body), parseMatch);
+    },
+    async uploadPolicy(): Promise<UploadPolicy> {
+      return parsed(await request('GET', '/upload-policy'), parseUploadPolicy);
     },
     async getMatch(id: string): Promise<Match> {
       return parsed(await request('GET', matchPath(id)), parseMatch);

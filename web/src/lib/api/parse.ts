@@ -3,6 +3,12 @@
 import {
   MATCH_FORMATS,
   MATCH_STATUSES,
+  REJECTION_CODES,
+  SLOTS,
+  type Participant,
+  type Rejection,
+  type UploadPolicy,
+  type UploadState,
   type DevUser,
   type Match,
   type MatchFormat,
@@ -73,6 +79,58 @@ export function parseMedia(value: unknown, path = 'media'): MediaFacts {
   };
 }
 
+const RESUME_URL_RE = /^\/api\/uploads\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+function nullableStr(o: Obj, key: string, path: string): string | null {
+  return o[key] === null || o[key] === undefined ? null : str(o, key, path);
+}
+
+function parseParticipant(value: unknown, path: string): Participant {
+  const o = obj(value, path);
+  return {
+    slot: oneOf(o, 'slot', SLOTS, path),
+    nickname: str(o, 'nickname', path),
+    is_me: bool(o, 'is_me', path),
+  };
+}
+
+function parseUpload(value: unknown, path: string): UploadState {
+  const o = obj(value, path);
+  const resumeUrl = str(o, 'resume_url', path);
+  if (!RESUME_URL_RE.test(resumeUrl)) throw new ResponseShapeError(`${path}.resume_url`);
+  const head = nullableStr(o, 'head_sha256', path);
+  if (head !== null && !/^[0-9a-f]{64}$/.test(head)) throw new ResponseShapeError(`${path}.head_sha256`);
+  return {
+    state: oneOf(o, 'state', ['receiving', 'expired'] as const, path),
+    offset: num(o, 'offset', path),
+    length: num(o, 'length', path),
+    expiresAt: str(o, 'expires_at', path),
+    resumeUrl,
+    fileName: nullableStr(o, 'file_name', path),
+    fileLastModifiedMs:
+      o.file_last_modified_ms === null || o.file_last_modified_ms === undefined
+        ? null
+        : num(o, 'file_last_modified_ms', path),
+    headSha256: head,
+  };
+}
+
+function parseRejection(value: unknown, path: string): Rejection {
+  const o = obj(value, path);
+  return { code: oneOf(o, 'code', REJECTION_CODES, path), at: str(o, 'at', path) };
+}
+
+export function parseUploadPolicy(value: unknown): UploadPolicy {
+  const o = obj(value, 'policy');
+  return {
+    maxBytes: num(o, 'max_bytes', 'policy'),
+    maxDurationMs: num(o, 'max_duration_ms', 'policy'),
+    chunkMinBytes: num(o, 'chunk_min_bytes', 'policy'),
+    chunkMaxBytes: num(o, 'chunk_max_bytes', 'policy'),
+    expiresAfterS: num(o, 'expires_after_s', 'policy'),
+  };
+}
+
 export function parseMatch(value: unknown, path = 'match'): Match {
   const o = obj(value, path);
   return {
@@ -83,6 +141,14 @@ export function parseMatch(value: unknown, path = 'match'): Match {
     media: o.media === null || o.media === undefined ? null : parseMedia(o.media, `${path}.media`),
     created_at: str(o, 'created_at', path),
     updated_at: str(o, 'updated_at', path),
+    played_on: nullableStr(o, 'played_on', path),
+    participants:
+      o.participants === undefined
+        ? []
+        : arr(o, 'participants', path).map((p, i) => parseParticipant(p, `${path}.participants[${i}]`)),
+    upload: o.upload === null || o.upload === undefined ? null : parseUpload(o.upload, `${path}.upload`),
+    rejection:
+      o.rejection === null || o.rejection === undefined ? null : parseRejection(o.rejection, `${path}.rejection`),
   };
 }
 

@@ -10,6 +10,7 @@ const api = {
   listMatches: vi.fn(),
   me: vi.fn(),
   getMatch: vi.fn(),
+  uploadPolicy: vi.fn(),
 };
 
 vi.mock('@/lib/api/server', () => ({
@@ -124,11 +125,15 @@ describe('new match page', () => {
     await expect(NewMatchPage()).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('shows the form', async () => {
+  // Sprint 1 (ST-016): the one-page form became the Q-01..Q-07 flow.
+  it('starts the setup flow at the first question', async () => {
     api.me.mockResolvedValue({ id: ID, display_name: 'Ivy' });
+    api.uploadPolicy.mockRejectedValue(new ApiError(503, 'unavailable'));
     render(await NewMatchPage());
-    expect(screen.getByRole('heading', { level: 1, name: 'New match' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Create match' })).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Is this a doubles or singles match?' }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeVisible();
   });
 });
 
