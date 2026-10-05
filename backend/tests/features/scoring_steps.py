@@ -280,3 +280,53 @@ def identical_sheet(ctx: dict[str, Any]) -> None:
         sheet.append(nxt)
     assert ctx["rebuilt"] == sheet
 
+
+# ------------------------------------------------------------------ match level (ST-021)
+
+
+def match_config() -> Any:
+    """Explicit mechanics configuration for the M rows (no rulebook claim)."""
+    return sc.mechanics_config(11, 2)
+
+
+def play_match(best_of: int, winners: list[str], config: Any | None = None) -> Any:
+    """Start a best-of-N match and let the named side win each game in turn.
+
+    The winner of each game is also stated as its first server; who serves first is always an
+    explicit input (QD-RE-11)."""
+    config = config or match_config()
+    ms = contract.MATCH_STATE.load().start(best_of=best_of, config=config)
+    outcome = contract.RALLY_OUTCOME.load()
+    for number, letter in enumerate(winners, start=1):
+        ms = ms.start_game(first_server=sc.side(letter), ends_switched=False)
+        assert not sc.is_domain_error(ms), f"game {number} could not start: {ms!r}"
+        for _ in range(500):
+            game = ms.games[number - 1]
+            if game.state.is_over:
+                break
+            ms = ms.record_rally(number, outcome.won_by(sc.side(letter)))
+            assert not sc.is_domain_error(ms), f"rally refused in game {number}: {ms!r}"
+        assert ms.games[number - 1].state.winner == sc.side(letter)
+    return ms
+
+
+@given(parsers.parse('Ivy\'s match was scored under preset "{name}"'))
+def match_under_preset(ctx: dict[str, Any], name: str) -> None:
+    presets = contract.RULES_PRESETS.load()
+    ctx["match"] = play_match(1, ["A"], presets[name])
+    ctx["scores"] = [(g.state.score_a, g.state.score_b) for g in ctx["match"].games]
+    ctx["preset"] = name
+
+
+@when("a newer rules preset becomes available")
+def newer_preset(ctx: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    module = contract.RULES_MODULE.load()
+    newer = sc.mechanics_config(15, 1, first_service=False)
+    monkeypatch.setattr(module, "PRESETS", {**module.PRESETS, "TEST-NEWER": newer})
+
+
+@then(parsers.parse('her match still uses "{name}" and shows the same scores'))
+def match_keeps_preset(ctx: dict[str, Any], name: str) -> None:
+    ms = ctx["match"]
+    assert ms.rules_version == name
+    assert [(g.state.score_a, g.state.score_b) for g in ms.games] == ctx["scores"]
