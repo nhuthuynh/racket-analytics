@@ -167,3 +167,16 @@ describe('taggingReducer', () => {
     expect(taggingReducer(s, { type: 'mark_start', ms: 9500 }).draft.start_ms).toBe(9500);
   });
 });
+
+describe('taggingReducer clear (ST-028a, Esc)', () => {
+  it('clears the marks but never a pending tag', () => {
+    let s = taggingReducer(ready(), { type: 'mark_start', ms: 0 });
+    s = taggingReducer(s, { type: 'clear' });
+    expect(s.draft).toEqual({});
+    s = taggingReducer(s, { type: 'mark_start', ms: 0 });
+    s = taggingReducer(s, { type: 'mark_end', ms: 10 });
+    s = taggingReducer(s, { type: 'choose_winner', side: 'A' });
+    s = taggingReducer(s, { type: 'choose_ending', ending: 'winner' });
+    expect(taggingReducer(s, { type: 'clear' }).pending).not.toBeNull();
+  });
+});

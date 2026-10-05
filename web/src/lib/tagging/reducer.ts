@@ -37,6 +37,7 @@ export type TaggingAction =
   | { type: 'choose_winner'; side: Side }
   | { type: 'choose_player'; slot: ParticipantSlot | null }
   | { type: 'choose_ending'; ending: Ending }
+  | { type: 'clear' }
   | { type: 'confirmed'; sheet: ScoreSheet; version: number }
   | { type: 'stale'; sheet: ScoreSheet; version: number }
   | { type: 'failed'; message: string }
@@ -131,6 +132,8 @@ export function taggingReducer(state: TaggingState, action: TaggingAction): Tagg
         pending: { tag, number, optimisticCall: after?.call ?? null, baseVersion: state.version },
       };
     }
+    case 'clear':
+      return busy ? state : { ...state, draft: {}, notice: null };
     case 'confirmed':
       return { ...state, sheet: action.sheet, version: action.version, pending: null, notice: null };
     case 'stale':
