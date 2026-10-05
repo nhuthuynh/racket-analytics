@@ -15,8 +15,6 @@ from tests.support.api import ApiDriver
 from tests.support.flows import create_match, upload_fixture
 from tests.support.worker import media_facts_count, probe_job
 
-pytestmark = pytest.mark.red_until(story="ST-007")
-
 
 @pytest.fixture
 def failing_probe(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -16,8 +16,6 @@ from tests.regression.bola import uncovered_routes
 from tests.support import contract
 from tests.support.api import ApiDriver
 
-pytestmark = pytest.mark.red_until(story="ST-006")
-
 scenarios("object_level_authorisation.feature")
 
 ACTIONS = {

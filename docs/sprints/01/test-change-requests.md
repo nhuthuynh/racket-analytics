@@ -1,0 +1,8 @@
+# Sprint 1 test change requests
+
+Changes to existing (accepted) tests or test support. Rows raised outside the senior-qa-engineer lane need a QA decision (PR label `qa-approved-test-change`, ADR 0014). QA's own changes to accepted tests are logged here too, so the immutability audit has one place. Append only; only the "QA decision" cell of a row is filled in later.
+
+| Date | Raised by | File | Change | Why (evidence) | Weakens a check? | QA decision |
+|---|---|---|---|---|---|---|
+| 2026-10-05 | senior-qa-engineer (QA-R3-08, retro 0 A2) | 21 Sprint 0 test modules under `backend/tests/{features,integration,regression}/` | Removed the stale `red_until(story="ST-005".."ST-009")` markers; `pytestmark = [red_until, slow]` became `pytestmark = pytest.mark.slow` | Every one of these stories is implemented and the tests are green: `env -u APP_ENV uv run pytest -q` → `439 passed, 5 skipped` before the change. A stale marker hides a test from the Stop hook (`unit and not red_until`) | No: the tests now also run in the edit-time hook where they are `unit` | Approved (QA's own lane; EM informed via progress.md) |
+| 2026-10-05 | senior-qa-engineer (QA-R2-02, QA-R3-07) | `backend/tests/integration/test_it_00_10_worker_sandbox.py`, `…_strict.py` (`_probe_from` → `probe_from`) | Weak probe retired: both tests in the old file use the strict classifier and the strict compose check | See Sprint 0 test-change-requests row 6 (decision) for the Compose run: `12 passed`; api → `OPEN tls`, worker → `BLOCKED dns` | No: stricter (a TLS-intercepting route now fails instead of passing) | Approved (QA's own lane) |

@@ -5,14 +5,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from tests.support import tus
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match
 from tests.support.worker import probe_job
-
-pytestmark = pytest.mark.red_until(story="ST-008")
 
 DATA = bytes(range(256)) * 400
 

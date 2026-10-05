@@ -13,7 +13,7 @@ from tests.support.api import ApiDriver
 from tests.support.flows import create_match, upload_fixture
 from tests.support.paths import SYNTHETIC_60S
 
-pytestmark = [pytest.mark.red_until(story="ST-009"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
 
 
 def test_probe_records_the_fixture_facts(api: ApiDriver, committed_db: Any) -> None:

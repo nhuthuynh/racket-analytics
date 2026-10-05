@@ -8,59 +8,35 @@ reason; in CI (CI=true) a missing stack is a failure, never a skip.
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
 
-import pytest
-
-pytestmark = pytest.mark.red_until(story="ST-009")
+from tests.integration import test_it_00_10_worker_sandbox_strict as strict
 
 COMPOSE = ["docker", "compose", "-f", "../infra/compose.yaml"]
-# An HTTP error status still proves the network path is open (e.g. S3 answers 403 or 404).
-PROBE = (
-    "import sys,urllib.error,urllib.request\n"
-    "try:\n"
-    "    urllib.request.urlopen(sys.argv[1], timeout=5); print('OPEN')\n"
-    "except urllib.error.HTTPError:\n"
-    "    print('OPEN')\n"
-    "except Exception as e:\n"
-    "    print('BLOCKED', type(e).__name__)\n"
-)
 
 
+# Retired 2026-10-05 (QA-R2-02, QA-R3-07): the first probe counted ANY exception other than
+# HTTPError as BLOCKED, so a TLS-intercepting proxy or a timeout gave a false pass. Both tests
+# now use the strict classifier: BLOCKED only on no route or no name resolution; TLS errors
+# are OPEN; anything else is UNKNOWN and fails.
 def _require_compose() -> None:
-    ok = (
-        shutil.which("docker") is not None
-        and subprocess.run(
-            [*COMPOSE, "ps", "--status", "running", "worker"], capture_output=True, check=False
-        ).returncode
-        == 0
-    )
-    if not ok:
-        if os.environ.get("CI") == "true":
-            pytest.fail("Compose worker container is not running in CI", pytrace=False)
-        pytest.skip("needs the Compose stack (docker compose -f infra/compose.yaml up -d)")
+    # The strict check counts running containers; `ps` alone exits 0 with none running.
+    strict._require_compose()
 
 
 def _from_worker(url: str) -> str:
-    result = subprocess.run(
-        [*COMPOSE, "exec", "-T", "worker", "python", "-c", PROBE, url],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    return result.stdout.strip()
+    return strict.probe_from("worker", url)
 
 
 def test_public_internet_is_blocked_from_the_worker() -> None:
+    """The original target (a public name over HTTPS) must fail at the network level, not at
+    TLS: an intercepting proxy answering the handshake now reads OPEN tls and fails here."""
     _require_compose()
 
-    assert _from_worker("https://example.com/").startswith("BLOCKED")
+    assert _from_worker("https://example.com/") == "BLOCKED dns"
 
 
 def test_object_store_is_reachable_from_the_worker() -> None:
     _require_compose()
     endpoint = os.environ.get("S3_ENDPOINT_URL_FROM_WORKER", "http://objectstore:8333/")
 
-    assert _from_worker(endpoint) == "OPEN"
+    assert _from_worker(endpoint).startswith("OPEN")

@@ -18,8 +18,6 @@ from tests.regression.bola import MATRIX, Probe, uncovered_routes
 from tests.support import contract, tus
 from tests.support.api import async_client, lifespan, sign_in
 
-pytestmark = pytest.mark.red_until(story="ST-006")
-
 
 @pytest.fixture
 async def users(app: Any) -> AsyncIterator[dict[str, httpx.AsyncClient]]:

@@ -23,7 +23,7 @@ from tests.support.flows import create_match, upload_fixture
 from tests.support.format import status_label
 from tests.support.worker import media_facts_count, probe_job, wait_for, worker_process
 
-pytestmark = [pytest.mark.red_until(story="ST-007"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
 
 scenarios("job_resilience.feature")
 

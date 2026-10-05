@@ -6,13 +6,10 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-import pytest
 
 from tests.support import contract
 from tests.support.api import async_client, sign_in
 from tests.support.builders import a_match
-
-pytestmark = pytest.mark.red_until(story="ST-006")
 
 
 async def test_create_get_and_list(api_client: httpx.AsyncClient, app: Any) -> None:

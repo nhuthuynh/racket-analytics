@@ -16,7 +16,7 @@ from tests.support.api import ApiDriver
 from tests.support.format import facts_display, status_label
 from tests.support.paths import SYNTHETIC_CLIP
 
-pytestmark = [pytest.mark.red_until(story="ST-008"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
 
 scenarios("walking_skeleton.feature")
 

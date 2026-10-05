@@ -14,8 +14,6 @@ from pytest_bdd import given, scenarios, then, when
 
 from tests.support import contract
 
-pytestmark = pytest.mark.red_until(story="ST-005")
-
 scenarios("dev_environment.feature")
 
 

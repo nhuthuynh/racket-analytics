@@ -13,8 +13,6 @@ from tests.support.api import ApiDriver
 from tests.support.flows import create_match, percent
 from tests.support.paths import SYNTHETIC_CLIP
 
-pytestmark = pytest.mark.red_until(story="ST-008")
-
 scenarios("upload_resume_core.feature")
 
 DATA = SYNTHETIC_CLIP.read_bytes()[: 256 * 1024]  # protocol behaviour does not need the full clip

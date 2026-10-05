@@ -15,8 +15,6 @@ from tests.support.tracing import (
     trace_id_hex,
 )
 
-pytestmark = pytest.mark.red_until(story="ST-005")
-
 
 @pytest.mark.parametrize("traceparent", MALFORMED_TRACEPARENTS, ids=lambda v: v[:40])
 async def test_malformed_traceparent_still_succeeds_under_a_new_trace(

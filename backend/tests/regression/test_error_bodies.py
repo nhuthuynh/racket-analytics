@@ -10,13 +10,10 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-import pytest
 
 from tests.support import contract
 from tests.support.api import sign_in
 from tests.support.errors import BOOBY_TRAP, ExplodingService, assert_generic_error
-
-pytestmark = pytest.mark.red_until(story="ST-005")
 
 
 async def test_unhandled_exception_returns_generic_500(

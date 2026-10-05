@@ -13,7 +13,7 @@ from tests.support.api import ApiDriver
 from tests.support.flows import create_match
 from tests.support.paths import SYNTHETIC_CLIP
 
-pytestmark = [pytest.mark.red_until(story="ST-008"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
 
 
 def test_three_chunk_upload_stores_identical_bytes(api: ApiDriver) -> None:

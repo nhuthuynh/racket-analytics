@@ -13,7 +13,7 @@ from tests.support.api import ApiDriver
 from tests.support.flows import create_match, upload_fixture
 from tests.support.tracing import by_trace
 
-pytestmark = [pytest.mark.red_until(story="ST-007"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
 
 
 def test_one_trace_from_final_patch_to_probe(api: ApiDriver, span_exporter: Any) -> None:
