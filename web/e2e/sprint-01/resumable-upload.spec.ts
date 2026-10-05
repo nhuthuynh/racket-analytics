@@ -93,11 +93,34 @@ test.describe('Resumable upload', () => {
 
   test('A different file is chosen to resume', async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);
+    let uploadUrl = '';
+    page.on('request', (r) => {
+      if (r.method() === 'PATCH' && /\/uploads\//.test(r.url())) uploadUrl = r.url();
+    });
     await signInByLink(page);
     await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy', file });
     await createAndUpload(page);
     await expect.poll(() => uploadPercent(page), { timeout: 60_000 }).toBeGreaterThanOrEqual(30);
     await page.close();
+
+    // A PATCH still in flight when the tab closes can land afterwards and move the server offset
+    // (QA-V1-02: 'is 42% done' read too early, 1 failure in 14 runs under load). Read the
+    // percentage only once the server offset has stopped changing for a full interval.
+    expect(uploadUrl).not.toBe('');
+    const serverOffset = async (): Promise<number> => {
+      const head = await context.request.head(uploadUrl, { headers: { 'Tus-Resumable': '1.0.0' } });
+      expect(head.status()).toBe(200);
+      return Number(head.headers()['upload-offset']);
+    };
+    let settled = -1;
+    await expect
+      .poll(async () => {
+        const now = await serverOffset();
+        const stable = now === settled;
+        settled = now;
+        return stable;
+      }, { intervals: [1_000], timeout: 30_000 })
+      .toBe(true);
 
     const again = await context.newPage();
     await again.goto('/');
@@ -105,6 +128,7 @@ test.describe('Resumable upload', () => {
     await again.getByRole('button', { name: 'Resume upload' }).click();
     await again.getByLabel('Choose video').setInputFiles(LONG_CLIP);
     await expect(again.getByText(/This is not the same video/)).toBeVisible();
+    expect(await serverOffset()).toBe(settled); // the other file sent nothing
     await again.goto('/');
     await expect(again.getByText(new RegExp(`is ${before}% done`))).toBeVisible();
   });
