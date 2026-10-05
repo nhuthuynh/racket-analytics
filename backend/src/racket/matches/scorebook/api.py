@@ -77,3 +77,37 @@ def tag_rally(
     book, rally_id = service.tag(match, account.id, body, version)
     body_out = {"version": book.version, "rally_id": str(rally_id), "sheet": project(book)}
     return JSONResponse(body_out, status_code=201, headers=_etag(book.version))
+
+
+@router.patch("/matches/{match_id}/rallies/{rally_id}")
+def correct_rally(
+    rally_id: str,
+    match: OwnedMatch,
+    account: CurrentAccount,
+    service: Service,
+    body: JsonBody,
+    if_match: IfMatch = None,
+) -> JSONResponse:
+    """FR-052, FR-053: one field of one rally; later rallies are re-scored in the same step."""
+    version = parse_version(if_match)
+    book = service.correct(match, account.id, rally_id, body, version)
+    return JSONResponse(
+        {"version": book.version, "sheet": project(book)}, headers=_etag(book.version)
+    )
+
+
+@router.post("/matches/{match_id}/undo")
+def undo(
+    match: OwnedMatch, account: CurrentAccount, service: Service, if_match: IfMatch = None
+) -> JSONResponse:
+    """FR-052: reverse the newest change; audited (C-04: the sheet is restored byte for byte)."""
+    version = parse_version(if_match)
+    book = service.undo(match, account.id, version)
+    return JSONResponse(
+        {"version": book.version, "sheet": project(book)}, headers=_etag(book.version)
+    )
+
+
+@router.get("/matches/{match_id}/corrections")
+def correction_history(match: OwnedMatch, service: Service) -> dict[str, Any]:
+    return {"items": service.history(match)}

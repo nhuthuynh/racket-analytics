@@ -21,6 +21,7 @@ from racket.matches.scorebook.domain import (
     CommandContext,
     InvalidRally,
     OutcomeInput,
+    RallyNotFound,
     RallyTimes,
     Scorebook,
     StaleMatch,
@@ -119,3 +120,61 @@ class ScorebookService:
 
         book, rally = self._run(match, actor_id, command, "match.rally_tagged")
         return book, rally.id
+
+    def correct(
+        self, match: Match, actor_id: uuid.UUID, raw_rally_id: str, body: Any, version: int
+    ) -> Scorebook:
+        """FR-052/FR-053: ``{"field", "value"}``; ``{"field": "withdrawn", "value": true}``
+        withdraws the rally (it stays stored and audited)."""
+        change = _object(body, CORRECTION_KEYS, ValidationFailed)
+        if set(change) != CORRECTION_KEYS:
+            raise ValidationFailed("field and value are required", [FieldError(None, "invalid")])
+        rally_id = _rally_id(raw_rally_id)
+
+        def command(book: Scorebook, ctx: CommandContext, ready: bool) -> Scorebook:
+            return book.correct(
+                rally_id, change["field"], change["value"], expected_version=version, ctx=ctx
+            )
+
+        book, _ = self._run(match, actor_id, command, "match.rally_corrected")
+        return book
+
+    def undo(self, match: Match, actor_id: uuid.UUID, version: int) -> Scorebook:
+        def command(book: Scorebook, ctx: CommandContext, ready: bool) -> Scorebook:
+            return book.undo(expected_version=version, ctx=ctx)
+
+        book, _ = self._run(match, actor_id, command, "match.undone")
+        return book
+
+    def history(self, match: Match) -> list[dict[str, Any]]:
+        """FR-052: every change, oldest first, with the rally's current sheet number. Values
+        are tag values only (sides, slots, enums, integers): no names, no free text."""
+        book = self.books.load(match.id.value)
+        numbers = {row["rally_id"]: row["number"] for row in project(book)["rows"]}
+        return [
+            {
+                "id": str(c.id),
+                "kind": c.kind,
+                "rally_id": None if c.rally_id is None else str(c.rally_id),
+                "rally_number": None if c.rally_id is None else numbers.get(str(c.rally_id)),
+                "game": c.game_number,
+                "field": c.field,
+                "old_value": c.old_value,
+                "new_value": c.new_value,
+                "undoes": None if c.undoes is None else str(c.undoes),
+                "at": c.at.astimezone(UTC)
+                .isoformat(timespec="milliseconds")
+                .replace("+00:00", "Z"),
+            }
+            for c in book.changes
+        ]
+
+
+CORRECTION_KEYS = frozenset({"field", "value"})
+
+
+def _rally_id(raw: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(raw)
+    except ValueError:
+        raise RallyNotFound("not a rally id") from None
