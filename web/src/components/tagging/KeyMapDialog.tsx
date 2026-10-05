@@ -3,20 +3,45 @@
 // Key map K-01 (ST-028a; FR-051; DES FR-UX-61): every tagging shortcut and what it does, and
 // the switch that turns single-key shortcuts off (SC 2.1.4). A modal dialog: focus moves to it
 // on open and back to the control that opened it on close (component checklist, dialogs).
-import { useEffect, useRef } from 'react';
-import { keyMapRows } from '@/lib/tagging/keymap';
+import { useEffect, useRef, useState } from 'react';
+import { DEFAULT_KEYMAP, DOES, keyMapRows, type CharAction, type KeyMap } from '@/lib/tagging/keymap';
+
+/** Actions offered for remapping (ST-028b): every character action, players by name. */
+function remappable(playerNames: readonly string[]): { action: CharAction; label: string }[] {
+  return (Object.keys(DEFAULT_KEYMAP) as CharAction[]).flatMap((action) => {
+    const player = /^player_(\d)$/.exec(action);
+    if (player) {
+      const name = playerNames[Number(player[1]) - 1];
+      return name ? [{ action, label: `Player: ${name}` }] : [];
+    }
+    return [{ action, label: DOES[action].replace(/ \(saves the rally\)$/, '') }];
+  });
+}
 
 export function KeyMapDialog({
   playerNames,
   singleKeys,
   onSingleKeys,
+  map = DEFAULT_KEYMAP,
+  onRemap = () => null,
+  onReset = () => {},
   onClose,
 }: {
   playerNames: readonly string[];
   singleKeys: boolean;
   onSingleKeys: (on: boolean) => void;
+  map?: KeyMap;
+  /** Remaps one action; returns why it was refused, or null. */
+  onRemap?: (action: CharAction, key: string) => string | null;
+  onReset?: () => void;
   onClose: () => void;
 }) {
+  const choices = remappable(playerNames);
+  const [chosen, setChosen] = useState<CharAction>(choices[0]?.action ?? 'mark_start');
+  const [capturing, setCapturing] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
+  const [done, setDone] = useState('');
+  const label = choices.find((c) => c.action === chosen)?.label ?? '';
   const dialog = useRef<HTMLDialogElement>(null);
   const close = useRef<HTMLButtonElement>(null);
 
@@ -48,7 +73,7 @@ export function KeyMapDialog({
             </tr>
           </thead>
           <tbody>
-            {keyMapRows(playerNames).map((row) => (
+            {keyMapRows(playerNames, map).map((row) => (
               <tr key={row.key}>
                 <th scope="row">
                   <kbd>{row.key}</kbd>
@@ -71,6 +96,73 @@ export function KeyMapDialog({
         <p id="single-keys-hint" className="field__hint">
           When this is off, only Space and Esc work as shortcuts. You can still tag with Tab and Enter.
         </p>
+        <fieldset className="field stack">
+          <legend className="field__label">Change a key</legend>
+          <label htmlFor="remap-action" className="field__label">
+            Shortcut to change
+          </label>
+          <select
+            id="remap-action"
+            className="input"
+            value={chosen}
+            onChange={(e) => {
+              setChosen(e.target.value as CharAction);
+              setRefused(null);
+            }}
+          >
+            {choices.map((c) => (
+              <option key={c.action} value={c.action}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <p>
+            <button
+              type="button"
+              className="button button--secondary"
+              aria-pressed={capturing}
+              onClick={() => {
+                setCapturing(true);
+                setRefused(null);
+                setDone('');
+              }}
+              onKeyDown={(e) => {
+                if (!capturing) return;
+                if (e.key === 'Tab' || e.key === 'Shift') return;
+                e.preventDefault();
+                e.stopPropagation();
+                setCapturing(false);
+                if (e.key === 'Escape') return;
+                const why = onRemap(chosen, e.key);
+                setRefused(why);
+                if (!why) setDone(`${label} is now ${e.key.toUpperCase()}.`);
+              }}
+              onBlur={() => setCapturing(false)}
+            >
+              Choose a new key
+            </button>
+          </p>
+          {capturing ? <p>{`Press the new key for ${label}. Esc cancels.`}</p> : null}
+          {refused ? (
+            <p role="alert" className="notice notice--error">
+              {refused}
+            </p>
+          ) : null}
+          <p role="status">{done}</p>
+          <p>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => {
+                onReset();
+                setRefused(null);
+                setDone('The default keys are back.');
+              }}
+            >
+              Use the default keys
+            </button>
+          </p>
+        </fieldset>
         <div className="dialog__actions">
           <button ref={close} type="button" className="button" onClick={onClose}>
             Close

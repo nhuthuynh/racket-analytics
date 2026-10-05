@@ -16,7 +16,17 @@ import { currentCall } from '@/lib/tagging/score';
 import { gameStatus, sideNames, tagLine, winnerWord } from '@/lib/tagging/view';
 import { ENDING_LABELS, ENDINGS, otherSide, type Ending, type ScoreSheet, type Side } from '@/lib/tagging/types';
 import { commandProblem, tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
-import { actionForKey, loadSingleKeys, saveSingleKeys, type KeyAction } from '@/lib/tagging/keymap';
+import {
+  actionForKey,
+  DEFAULT_KEYMAP,
+  loadKeyMap,
+  loadSingleKeys,
+  remapKey,
+  saveKeyMap,
+  saveSingleKeys,
+  type KeyAction,
+  type KeyMap,
+} from '@/lib/tagging/keymap';
 import { GameStartForm } from './GameStartForm';
 import { KeyMapDialog } from './KeyMapDialog';
 import { ScoreAnnouncer } from './ScoreAnnouncer';
@@ -58,8 +68,10 @@ export function QuickTag({
   const [announcement, setAnnouncement] = useState('');
   const opener = useRef<HTMLElement | null>(null);
   const video = useRef<HTMLVideoElement>(null);
+  const [keyMap, setKeyMap] = useState<KeyMap>(DEFAULT_KEYMAP);
   useEffect(() => {
     setSingleKeys(loadSingleKeys(typeof window === 'undefined' ? null : window.localStorage));
+    setKeyMap(loadKeyMap(typeof window === 'undefined' ? null : window.localStorage));
   }, []);
   const opened = useRef(0);
   useEffect(() => {
@@ -176,7 +188,7 @@ export function QuickTag({
           targetTag: target?.tagName ?? 'BODY',
           targetEditable: target?.isContentEditable ?? false,
         },
-        { singleKeys },
+        { singleKeys, map: keyMap },
       );
       if (!action) return;
       e.preventDefault();
@@ -184,7 +196,7 @@ export function QuickTag({
     };
     document.addEventListener('keydown', listener);
     return () => document.removeEventListener('keydown', listener);
-  }, [keysOpen, singleKeys]);
+  }, [keyMap, keysOpen, singleKeys]);
 
   const needsGame = status.current === 0 || (status.over && !status.matchOver) || (gameOverSeen && status.over);
   const nextGame = status.current === 0 ? 1 : status.current + 1;
@@ -323,6 +335,18 @@ export function QuickTag({
           onSingleKeys={(on) => {
             setSingleKeys(on);
             saveSingleKeys(window.localStorage, on);
+          }}
+          map={keyMap}
+          onRemap={(action, key) => {
+            const next = remapKey(keyMap, action, key);
+            if ('error' in next) return next.error;
+            setKeyMap(next);
+            saveKeyMap(window.localStorage, next);
+            return null;
+          }}
+          onReset={() => {
+            setKeyMap(DEFAULT_KEYMAP);
+            saveKeyMap(window.localStorage, DEFAULT_KEYMAP);
           }}
           onClose={() => {
             setKeysOpen(false);
