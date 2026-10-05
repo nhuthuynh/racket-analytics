@@ -13,6 +13,7 @@ from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Self
 
+from racket.matches.match_state import GameRecord, MatchOver, MatchState  # ST-021 score
 from racket.matches.participants import (  # ST-016 setup values (ADR 0024)
     InvalidParticipants,
     InvalidSetup,
@@ -23,10 +24,13 @@ from racket.matches.participants import (  # ST-016 setup values (ADR 0024)
 from racket.platform.errors import Conflict, ValidationFailed
 
 __all__ = [
+    "GameRecord",
     "InvalidParticipants",
     "InvalidSetup",
+    "MatchOver",
     "MatchParticipant",
     "MatchSetup",
+    "MatchState",
     "Participants",
 ]
 
