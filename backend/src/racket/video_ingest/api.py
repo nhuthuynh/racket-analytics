@@ -15,10 +15,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
+from starlette.requests import ClientDisconnect
 
 from racket.platform.db import get_session
 from racket.platform.errors import (
     BadRequest,
+    ClientClosedRequest,
     PayloadTooLarge,
     TusVersionUnsupported,
     UnsupportedMediaType,
@@ -157,11 +159,14 @@ def head_upload(
 async def _read_exactly(request: Request, length: int) -> bytes:
     chunks: list[bytes] = []
     received = 0
-    async for chunk in request.stream():
-        received += len(chunk)
-        if received > length:
-            raise PayloadTooLarge("body longer than Content-Length")
-        chunks.append(chunk)
+    try:
+        async for chunk in request.stream():
+            received += len(chunk)
+            if received > length:
+                raise PayloadTooLarge("body longer than Content-Length")
+            chunks.append(chunk)
+    except ClientDisconnect:
+        raise ClientClosedRequest("client closed the connection mid-body") from None
     if received != length:
         raise BadRequest("body shorter than Content-Length")  # dropped connection: store nothing
     return b"".join(chunks)

@@ -58,6 +58,7 @@ CODE_MESSAGES.update(
         "match_over": "This match is over.",
         "decision_needed": "Some rallies need your decision first.",
         "nothing_to_undo": "There is nothing to undo.",
+        "client_closed_request": "The connection closed before the request was complete.",
     }
 )
 
@@ -126,6 +127,13 @@ class ValidationFailed(AppError):
     def __init__(self, message: str = "validation failed", fields: Iterable[FieldError] = ()):
         super().__init__(message)
         self.fields: tuple[FieldError, ...] = tuple(fields)
+
+
+class ClientClosedRequest(AppError):
+    """The client went away mid-request (C-14, SRE-G2-02): a 400 nobody reads, logged at
+    INFO, so an abandoned tab never counts against the availability SLI (NFR-041)."""
+
+    status, code = 400, "client_closed_request"
 
 
 class Unavailable(AppError):
