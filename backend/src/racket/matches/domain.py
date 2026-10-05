@@ -22,6 +22,7 @@ from racket.matches.participants import (  # ST-016 setup values (ADR 0024)
     Participants,
 )
 from racket.platform.errors import Conflict, ValidationFailed
+from racket.platform.text import is_plain_line
 
 __all__ = [
     "GameRecord",
@@ -133,7 +134,7 @@ class Match:
         if not isinstance(owner_id, OwnerId):
             raise InvalidMatch("a match needs an owner")
         clean_title = (title or "").strip()
-        if not 1 <= len(clean_title) <= TITLE_MAX:
+        if not 1 <= len(clean_title) <= TITLE_MAX or not is_plain_line(clean_title):
             raise InvalidMatch("title must have 1 to 120 characters")
         try:
             match_format = MatchFormat(format)

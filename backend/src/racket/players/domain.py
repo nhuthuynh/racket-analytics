@@ -17,6 +17,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 
+from racket.platform.text import is_plain_line
+
 EMAIL_MIN, EMAIL_MAX = 3, 254
 TOKEN_BYTES = 32  # 256 bits -> 43 base64url characters (ASVS 6.5.3, 6.5.4)
 TOUCH_EVERY = timedelta(hours=1)
@@ -29,10 +31,13 @@ class LinkExpired(Exception):
 def normalise_email(raw: object) -> str | None:
     """The address for lookup, or ``None`` when it is not well formed (api-sprint-01 §2.1):
     after trim, 3-254 characters, exactly one ``@``, no whitespace, a dot in the domain part.
-    Lower-cased (judgment)."""
+    Lower-cased (judgment). After the trim, a control, surrogate or line-separator character
+    is refused (C-01, SEC-R6-S1-01): Postgres cannot store NUL, UTF-8 cannot encode a surrogate."""
     if not isinstance(raw, str):
         return None
     email = raw.strip().lower()
+    if not is_plain_line(email):
+        return None
     if not EMAIL_MIN <= len(email) <= EMAIL_MAX or email.count("@") != 1:
         return None
     if any(ch.isspace() for ch in email):

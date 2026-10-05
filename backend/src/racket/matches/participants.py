@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from racket.platform.errors import FieldError, ValidationFailed
+from racket.platform.text import is_plain_line
 
 NICKNAME_MAX = 30
 TITLE_MAX = 120
@@ -132,7 +133,7 @@ def _nickname_problem(raw: str) -> str | None:
     nickname = _clean_nickname(raw)
     if not nickname:
         return "nickname_required"
-    if any(unicodedata.category(ch) == "Cc" for ch in nickname):
+    if not is_plain_line(nickname):  # Cc, and Cs/Zl/Zp too (C-01)
         return "nickname_invalid"
     if len(nickname) > NICKNAME_MAX:
         return "nickname_too_long"
@@ -194,7 +195,7 @@ class MatchSetup:
         if "title" in body:
             raw_title = body["title"]
             title = raw_title.strip() if isinstance(raw_title, str) else ""
-            if not 1 <= len(title) <= TITLE_MAX:
+            if not 1 <= len(title) <= TITLE_MAX or not is_plain_line(title):  # C-01
                 problems.append(FieldError("title", "title_invalid"))
 
         participants: Participants | None = None
