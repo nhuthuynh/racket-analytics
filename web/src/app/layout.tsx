@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { AccountMenu } from '@/components/AccountMenu';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import './globals.css';
 
@@ -21,7 +23,17 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+const SESSION_COOKIES = ['__Host-racket_session', 'racket_session'];
+
+/** Shows the account menu when a session cookie is present. Display only: the API decides
+ * whether the session is valid [AQS/SEC-03]. */
+async function hasSessionCookie(): Promise<boolean> {
+  const jar = await cookies();
+  return SESSION_COOKIES.some((name) => jar.has(name));
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const signedIn = await hasSessionCookie();
   return (
     <html lang="en">
       <body>
@@ -30,16 +42,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <header className="site-header">
           <div className="site-header__inner">
-            <Link href="/matches" className="site-header__name">
+            <Link href={signedIn ? '/matches' : '/'} className="site-header__name">
               Racket Analytics
             </Link>
+            {signedIn ? <AccountMenu /> : null}
           </div>
         </header>
         <main id="main" className="page" tabIndex={-1}>
           {children}
         </main>
         <footer className="site-footer">
-          <p>Racket Analytics preview. Development sign-in only; do not upload real matches yet.</p>
+          <p>Racket Analytics preview. Do not upload real matches yet.</p>
         </footer>
         <ServiceWorkerRegistration />
       </body>

@@ -476,3 +476,57 @@ main:focus-visible,
   align-items: center;
   min-block-size: var(--size-target-min);
 }
+
+/* Account menu (ST-014): a disclosure, top right, 48px targets. */
+.site-header__inner {
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.account-menu {
+  position: relative;
+}
+
+.account-menu__items {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: calc(100% + var(--space-2));
+  z-index: var(--layer-dialog);
+  list-style: none;
+  margin: 0;
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--size-target-gap);
+  min-inline-size: 14rem;
+  background: var(--color-bg);
+  border: var(--border-control-width) solid var(--color-border-control);
+  border-radius: var(--border-radius);
+}
+
+.account-menu__items .button {
+  inline-size: 100%;
+}
+
+.account-menu__status {
+  position: absolute;
+  inset-inline-end: 0;
+}
+
+.dialog {
+  max-inline-size: min(36rem, calc(100vw - 2 * var(--space-gutter-mobile)));
+  padding: var(--space-6);
+  border: var(--border-control-width) solid var(--color-border-control);
+  border-radius: var(--border-radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.dialog::backdrop {
+  background: var(--color-scrim);
+}
+
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}

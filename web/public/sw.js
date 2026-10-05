@@ -4,8 +4,14 @@
  * Everything else goes straight to the network and is never stored: pages (they depend on the
  * session), /api/* responses, uploads and any media file. Tests: tests/unit/service-worker.test.ts
  * and web/e2e/security-headers.spec.ts.
+ *
+ * Offline (ST-014, flows A-05): a navigation that cannot reach the network is answered with the
+ * precached static /offline.html (the A-01 offline banner). It holds no account data, so it
+ * survives sign-out; no page is ever stored.
  */
 const CACHE_NAME = 'ra-static-v1';
+const OFFLINE_PAGE = '/offline.html';
+const PRECACHE = [OFFLINE_PAGE, '/offline.css'];
 const MEDIA = /\.(mp4|mov|m4v|webm|mkv|avi|3gp)(\?|$)/i;
 
 function isCacheable(request) {
@@ -18,7 +24,13 @@ function isCacheable(request) {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE))
+      .catch(() => undefined) // the offline page is a nicety; never block the update
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -32,6 +44,14 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
+  if (request.mode === 'navigate' && request.method === 'GET') {
+    event.respondWith(
+      fetch(request).catch(() =>
+        caches.match(OFFLINE_PAGE).then((page) => page || Response.error()),
+      ),
+    );
+    return;
+  }
   if (!isCacheable(request)) return; // network only, nothing stored
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
