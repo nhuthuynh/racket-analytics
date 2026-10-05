@@ -45,6 +45,19 @@ def reject_video(
     match.reject_video(code, at=at)
 
 
+def refuse_upload(
+    session: Session, match_id: uuid.UUID, owner_id: uuid.UUID, code: str, at: datetime
+) -> None:
+    """Capture & Media refused a file before receiving it (§6.3, §6.5). 409 when the match
+    already has its video (PE-R1-01). Runs in the caller's transaction."""
+    match = MatchRepository(session).get_owned(
+        MatchId(match_id), OwnerId(owner_id), for_update=True
+    )
+    if match is None:
+        raise NotFound("match vanished during upload")
+    match.refuse_upload(code, at=at)
+
+
 def clear_rejection(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> None:
     """A new upload was created: the last refusal is no longer shown (§5.2)."""
     match = MatchRepository(session).get_owned(

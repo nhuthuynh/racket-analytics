@@ -238,12 +238,14 @@ class UploadService:
         # Values beyond 20 digits stay 413 payload_too_large (not a plausible size, SEC-R2-02).
         length = parse_upload_length(upload_length, 10**HEADER_MAX_DIGITS)
         now = self.clock()
+        # The existing-session check runs before the size cap: a 413 records a refusal on the
+        # match, which must never touch a match with its video or a live upload (PE-R1-01).
+        self._replace_expired_or_refuse(match_id, now)
         if self.policy.check_declared_length(length) is not None:
             self._reject(match_id, owner_id, Rejection.TOO_LARGE, now)  # T-UV-2, NFR-053
             self.session.commit()
             raise VideoTooLarge("declared length above the cap")
         validate_metadata(upload_metadata)
-        self._replace_expired_or_refuse(match_id, now)
         self._check_quota(owner_id, length, now)
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
             f"upload:create:{owner_id}",
@@ -299,7 +301,7 @@ class UploadService:
     def _reject(
         self, match_id: uuid.UUID, owner_id: uuid.UUID, rejection: Rejection, now: datetime
     ) -> None:
-        matches.reject_video(self.session, match_id, owner_id, rejection.value, now)
+        matches.refuse_upload(self.session, match_id, owner_id, rejection.value, now)
         SLI.upload_event(UploadEvent.REJECTED, reason=rejection.value)
         log.info("upload refused", extra={"event": "upload.rejected", "reason": rejection.value})
 

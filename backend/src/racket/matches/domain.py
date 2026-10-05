@@ -166,6 +166,15 @@ class Match:
         self.rejected_at = at
         self.updated_at = at
 
+    def refuse_upload(self, code: str, *, at: datetime) -> None:
+        """A file refused before it was received (§6.3 size cap, first-chunk content check).
+
+        Only a match still waiting for its video can record such a refusal: a received video
+        is never undone by a later creation request (PE-R1-01)."""
+        if self.status is not MatchStatus.AWAITING_UPLOAD:
+            raise MatchAlreadyUploaded("match already has its video")
+        self.reject_video(code, at=at)
+
     def clear_rejection(self) -> None:
         """A new upload starts: the last refusal is no longer shown (§5.2)."""
         self.rejection_code = None

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from racket.matches.domain import InvalidMatch, Match, MatchStatus, OwnerId
+from racket.matches.domain import InvalidMatch, Match, MatchAlreadyUploaded, MatchStatus, OwnerId
 
 AT = datetime(2026, 10, 5, 9, 0, tzinfo=UTC)
 
@@ -38,3 +38,29 @@ def test_a_new_upload_clears_the_last_rejection_and_the_match_can_take_a_video_a
     assert (match.rejection_code, match.rejected_at) == (None, None)
     match.mark_uploaded(uuid.uuid4())
     assert match.status is MatchStatus.VIDEO_RECEIVED
+
+
+# ------------------------------------------------- PE-R1-01: a refusal never undoes a received video
+def test_an_upload_refusal_on_a_match_with_its_video_is_refused_and_changes_nothing() -> None:
+    match = a_match()
+    asset_id = uuid.uuid4()
+    match.mark_uploaded(asset_id)
+
+    with pytest.raises(MatchAlreadyUploaded):
+        match.refuse_upload("too_large", at=AT)
+
+    assert match.status is MatchStatus.VIDEO_RECEIVED
+    assert match.media_asset_id == asset_id
+    assert (match.rejection_code, match.rejected_at) == (None, None)
+
+
+def test_positive_control_an_upload_refusal_before_any_video_records_the_reason() -> None:
+    match = a_match()
+    match.refuse_upload("too_large", at=AT)
+    assert match.status is MatchStatus.AWAITING_UPLOAD
+    assert (match.rejection_code, match.rejected_at) == ("too_large", AT)
+
+
+def test_an_upload_refusal_with_an_unknown_code_is_refused() -> None:
+    with pytest.raises(InvalidMatch):
+        a_match().refuse_upload("virus", at=AT)
