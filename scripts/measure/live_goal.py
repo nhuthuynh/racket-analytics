@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -203,7 +204,23 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--runs", type=int, default=1)
     p.add_argument("--result-timeout", type=float, default=120.0, help="seconds")
     p.add_argument("--json", type=Path)
+    p.add_argument(
+        "--min-free-gb",
+        type=int,
+        default=10,
+        help="refuse to run with less free disk on / (default 10; ADR 0030, QA-R2V-05)",
+    )
     args = p.parse_args(argv)
+    free_gb = shutil.disk_usage("/").free // 1024**3
+    if free_gb < args.min_free_gb:
+        # Below the floor the object store refuses writes and every run fails for a reason
+        # that is not the code (QA-R2V-05); refuse instead of reporting a false red.
+        print(
+            f"live_goal: only {free_gb} GB free on /, need >= {args.min_free_gb} GB; "
+            "prune first (bash scripts/disk-precheck.sh, docs/ops/disk-and-prune.md)",
+            file=sys.stderr,
+        )
+        return 2
     data = Path(args.file).read_bytes()
     runs = []
     for i in range(args.runs):
@@ -227,6 +244,8 @@ def main(argv: list[str] | None = None) -> int:
         "file": args.file,
         "file_bytes": len(data),
         "api": args.api,
+        "disk_free_gb_start": free_gb,
+        "disk_free_gb_end": shutil.disk_usage("/").free // 1024**3,
     }
     text = json.dumps({"summary": summary, "runs": runs}, indent=2, default=str)
     print(json.dumps(summary, indent=2))
