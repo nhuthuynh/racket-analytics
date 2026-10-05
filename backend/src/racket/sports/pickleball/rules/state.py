@@ -6,8 +6,11 @@ the config-dependent rules and return ``IllegalState`` instead of raising.
 
 Doubles positions (QD-RE-03; SOD-05/SOD-06, ``@needs-verification``): players are slots
 ``A1``, ``A2``, ``B1``, ``B2``. A new or declared state puts ``A1`` and ``B1`` in the
-right-hand court; the serving side's right-court player serves at server 1 and the partner at
-server 2. Seam: ``tests/support/contract.py`` (Sprint 1 block).
+right-hand court. A new game's first server is the right-court player, at "0-0-2" too
+(PE-R1-03). A declared state's server 1 is the right-court player and server 2 the partner:
+mid-turn, either player can be serving from either court (the second server serves from
+where they stand), so slot labels of a declared state name positions.
+Seam: ``tests/support/contract.py`` (Sprint 1 block).
 """
 
 from __future__ import annotations
@@ -109,13 +112,15 @@ def new_game(config: RulesConfig, first_server: Side) -> GameState:
     if not isinstance(first_server, Side):
         raise ValueError("first_server must be a Side")
     number = SECOND_SERVER if config.first_service_single_server else FIRST_SERVER
+    # The first service turn starts from the right-hand court, at "0-0-2" too: the single
+    # server of that turn is the right-court player (DOM R6, UNVERIFIED; PE-R1-03).
     return GameState(
         score_a=0,
         score_b=0,
         serving_side=first_server,
         server_number=number,
         winner=None,
-        **_start_positions(first_server, number),
+        **_start_positions(first_server, FIRST_SERVER),
     )
 
 
