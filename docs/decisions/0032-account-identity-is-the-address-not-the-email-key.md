@@ -1,6 +1,6 @@
 # 0032. Account identity is the normalised address, not the HMAC `email_key` (amends ADR 0025)
 
-- **Status:** Proposed (principal-engineer). Needs the security-privacy-engineer's sign-off on the privacy part (storing the address for the life of the account) before it becomes Accepted. **Gate:** the implementation story below must be done before any non-dev deployment (staging, beta, prod).
+- **Status:** Accepted (2026-10-05, recorded by the engineering-manager per the routing in review-rounds.md, QA-R2V-11). Both deciders have decided: the principal-engineer authored and proposed option 1; the security-privacy-engineer signed off its direction in sprint-close review round 2 (finding SEC-R4-S1-01: the stored normalised address is the identity for the life of the account and is deleted with it; `email_key` is the log/rate-limit pseudonym only), as quoted in the senior-backend-engineer's round-2 row and blockers.md row "Account identity". The "address on the link row until use or expiry" detail stays a check for the security-privacy-engineer's review of ST-013b. **Gate:** the implementation story below must be done before any non-dev deployment (staging, beta, prod); until then never rotate `AUTH_EMAIL_KEY` where accounts must be kept.
 - **Date:** 2026-10-05
 - **Deciders:** principal-engineer, security-privacy-engineer
 - **Consulted:** senior-backend-engineer (implementation), engineering-manager (routing)
