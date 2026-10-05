@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from racket.matches.api import OwnedMatch
+from racket.matches.domain import Match
 from racket.matches.scorebook.domain import MatchNotReady, project
 from racket.matches.scorebook.service import ScorebookService, parse_version
 from racket.platform.db import get_session
@@ -132,6 +133,24 @@ def resolve_rally(
     )
 
 
+def _media_response(
+    request: Request, session: Session, match: Match, start_ms: int
+) -> JSONResponse:
+    link = media_link(
+        session,
+        request.app.state.object_store(),
+        request.app.state.settings,
+        match.id.value,
+        session_token=presented_token(request),
+    )
+    if link is None:
+        raise MatchNotReady("no received video")
+    body = {"url": link.url, "expires_in_s": link.expires_in_s, "start_ms": start_ms}
+    return JSONResponse(
+        body, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
+    )
+
+
 @router.get("/matches/{match_id}/rallies/{rally_id}/media")
 def rally_media(
     rally_id: str,
@@ -142,18 +161,14 @@ def rally_media(
 ) -> JSONResponse:
     """FR-027, NFR-055: a fresh presigned link to the match video, valid at most 15 minutes,
     with the rally's start; never the session token in the URL, never logged (NFR-069)."""
-    start_ms = service.rally_start(match, rally_id)
-    settings = request.app.state.settings
-    link = media_link(
-        session,
-        request.app.state.object_store(),
-        settings,
-        match.id.value,
-        session_token=presented_token(request),
-    )
-    if link is None:
-        raise MatchNotReady("no received video")
-    body = {"url": link.url, "expires_in_s": link.expires_in_s, "start_ms": start_ms}
-    return JSONResponse(
-        body, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
-    )
+    return _media_response(request, session, match, service.rally_start(match, rally_id))
+
+
+@router.get("/matches/{match_id}/video")
+def match_video(
+    match: OwnedMatch, request: Request, session: Annotated[Session, Depends(get_session)]
+) -> JSONResponse:
+    """The whole match video for the Quick Tag screen (FR-050, FR-UX-60), before any rally
+    exists: the same short-lived link as a rally's, from 0 ms (decision-log 2026-10-05).
+    ``GET /matches/{id}/media`` stays the probed facts (api-sprint-00 §5.2)."""
+    return _media_response(request, session, match, 0)
