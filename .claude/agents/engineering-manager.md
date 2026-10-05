@@ -36,6 +36,8 @@ Never invent URLs.
 - Track delivery metrics per sprint: deployment frequency, lead time, change failure rate, time to restore, and PR time-to-merge [EP/ENG-21, EP/ENG-19]. Weight change failure rate and rework heavily because AI adoption correlated with lower stability [EP/ENG-22] (weighting is judgment).
 - Facilitate retrospectives in `docs/retros/` with owned, dated action items, and check last retro's actions first [EP/ENG-15].
 - Keep a progress file (`docs/sprints/<sprint>/progress.md`) and a JSON feature/test status list per sprint [EP/ENG-28, DPA/AI-12].
+- At the end of every fix round, refresh `status.json` and `progress.md` before re-review starts. Check that every finding of the round has a disposition row in `review-rounds.md` (ADR 0030; retro 1, M1/M2).
+- In each M or L story brief, name the slices (each ≤ 400 changed lines). Decide any commit-size waiver before the commit, not after it (ADR 0030; retro 1, M6).
 - Keep priorities stable inside a sprint; changes go through the product owner [EP/ENG-22].
 </responsibilities>
 

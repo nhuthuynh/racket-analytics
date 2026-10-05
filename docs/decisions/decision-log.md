@@ -1,6 +1,6 @@
 # Decision log: index of all ADRs
 
-- **Maintained by:** engineering-manager (A for log completeness, working-agreement §4). Last updated 2026-10-05, after the product-owner decisions of 2026-10-05 (ADR 0023).
+- **Maintained by:** engineering-manager (A for log completeness, working-agreement §4). Last updated 2026-10-05 at the Sprint 1 close (ADRs 0027-0030 indexed; ADR 0023 note on the US/AU jurisdictions).
 - **Rules and template:** [README.md](README.md). This page is an index with a one-line evidence summary per ADR; the ADR file is authoritative.
 - **Small decisions:** [Sprint 0 decision log](../sprints/00/decision-log.md) and [Sprint 1 decision log](../sprints/01/decision-log.md) (dated rows: who, decision, evidence, reasoning).
 - **Reviews:** [review-log.md](review-log.md) (adversarial review of docs and agent definitions) and [Sprint 0 review rounds](../sprints/00/review-rounds.md) (code review findings, fixes and evidence for rounds 1-2; round-3 findings are summarised in [sprint-report.md](../sprints/00/sprint-report.md) §6).
@@ -38,6 +38,10 @@ ADR dates are 2026-10-03 unless the row says otherwise. "PO" means the human pro
 | [0024](0024-match-participants-as-per-match-nicknames.md) | Participants are per-match nickname slots (A1..B2) inside `Match`; no cross-match player identity | Accepted (PE, 2026-10-05) | FR-005; OQ-15 Won't (ADR 0023); no new ID route, so no new BOLA surface | — |
 | [0025](0025-magic-link-sign-in-design.md) | Magic link: token in URL fragment, POST exchange, no device binding; sessions 30 d absolute / 7 d idle / max 10 | Accepted for Sprint 1 (PE + security, 2026-10-05) | ASVS 6.5.x/6.6.x/7.1.x; [AQS/SEC-05 14.2.1]; sprint-01 §7.1 rate limit | PO: accept or reject ASVS 6.3.3 single-factor residual risk before any real-user beta |
 | [0026](0026-nightly-quality-results-and-sli-metrics.md) | Nightly oracle and mutation jobs publish to the sprint status file via a write-only publish job; SLI metrics use `http.server.request.duration` and `racket.upload.sessions` (2026-10-05) | Proposed (SRE; PE and QA review ST-024) | infra tests 15 passed (13 red first); platform unit 69 passed; oracle positive/negative control; mutmut positive control on `matches` | Admin: branch-protection bypass for `github-actions[bot]` on `main`, or switch to a nightly PR |
+| [0027](0027-sign-in-mail-worker-outside-the-media-sandbox.md) | Sign-in emails are sent by a worker outside the media sandbox (`WORKER_STAGES`) (2026-10-05) | Proposed (BE; PE and security review) | Compose wiring `5ee7148`; `cd infra && uv run pytest -q` → 226 passed; IT-00-10 sandbox step green in CI run 37298471332 | PE and security review |
+| [0028](0028-phone-browser-upload-resume-on-return.md) | Phone-browser uploads: "resume on return", no background-upload promise (SPIKE-06, partial) (2026-10-05) | Proposed (FE) | Desktop-Chromium proxy: 1 GiB in 25.6 s; resumed after the tab closed at 30%; offline 10 s → Paused → resumed | Real iOS Safari / Android Chrome runs (PO or tester); OQ-18 |
+| [0029](0029-dev-and-e2e-stack-served-over-https.md) | The dev and E2E stack is served over https (`web-tls`), not given an insecure cookie (2026-10-05) | Accepted (security; PO directive 2026-10-05) | `curl http://localhost:3000/` → 400; https sign-in → `__Host-racket_session ... Secure`; CI job 111725272519: no WebKit test fails at sign-in | Deployment ADR adds HSTS at the edge (SEC-R1-S1-05) |
+| [0030](0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md) | Review loop: a disposition per finding per round, isolated evidence with a disk check, M/L stories sliced before they are built (2026-10-05, retro 1) | Accepted (EM; PO may veto at the 2026-10-30 review) | Round 1-2 tables held 11/31 and 10/16 findings; 5 round-1 blockers dropped; identical runs 25 vs 19 failed; 12 of 82 commits over 400 lines | Sprint 2 confirmation checks in the ADR |
 
 ## Gaps found in this pass (2026-10-03)
 
@@ -50,3 +54,9 @@ ADR dates are 2026-10-03 unless the row says otherwise. "PO" means the human pro
 - The PO answered all open questions with "accept all recommendations" (ADR 0023). ADRs 0002, 0003, 0004, 0006 (interim), 0007, 0009 and 0015 moved from Proposed to Accepted; 0001 and 0022 lost their "pending ratification" / "may veto" qualifiers; 0010 got the PO-time confirmation note. Each carries a dated note with its previous status line.
 - Still Proposed (peer review, not PO): 0005, 0012, 0013, 0014, 0016, 0017, 0018, 0019, 0020, 0021.
 - Sprint 1 planning preconditions (ADR 0002, 0007, 0009 ratified) are met.
+
+## Changes in this pass (2026-10-05, Sprint 1 close, engineering-manager)
+
+- Indexed ADRs 0027, 0028 and 0029, which were missing from this page, and the new ADR 0030 (retro 1).
+- ADR 0023 has a dated note: the PO named the US and AU as beta jurisdictions, and the rulebook PDFs come later (`docs/requirements/po-input-2026-10-05.md`).
+- Still Proposed and waiting for peer review: 0005, 0012, 0013, 0014, 0016, 0017, 0018, 0020, 0021, 0026, 0027, 0028.

@@ -112,6 +112,7 @@ R = Responsible, A = Accountable, C = Consulted, I = Informed. Human PO is the h
 - **One concern per PR.** Tests ride with the logic they cover. Refactors go in separate PRs [EP/ENG-04].
 - Only the orchestrator (the main session) runs git commits and merges. Agents propose commit messages.
 - **Commit unit (2026-10-03, ADR 0022):** the orchestrator commits one story, or one PR-sized slice of a story, at a time, even without a remote. A commit over 400 changed lines needs an EM waiver row in `docs/sprints/<nn>/decision-log.md`. Sprint 0 landed as two ~15k-line commits (retro 0, M1).
+- **Slices are planned, waivers come first (2026-10-05, ADR 0030).** The EM's brief for an M or L story names its slices, each planned at 400 changed lines or less and green on its own (ST-020 is the model). A waiver row must exist **before** the commit. If no waiver row exists, the commit waits or is split. In Sprint 1, 12 of 82 commits were over 400 lines and 11 of them had no waiver at commit time (retro 1, M6).
 
 ## 6. Code review rules
 
@@ -146,11 +147,14 @@ The loop runs automatically in the background for every PR.
    - unit tests must pass before a turn may end (Stop);
    - CI runs lint, type checks, unit, integration, E2E, axe-core, BOLA suite, dependency and secret scans.
 1a. **Integration smoke before review (2026-10-03, ADR 0022).** Before review round 1, the orchestrator runs these on the integrated tree and attaches the output to the review input: a fresh-volume `docker compose up --wait`, the full Playwright suite, and the backend suite with no ambient service variables (retro 0, M6).
+   - **Isolated evidence (2026-10-05, ADR 0030).** Every suite count used as evidence (smoke, review, status) comes from an isolated run: its own `RA_DEV_STATE` Postgres and object store, or a fresh Compose project, and the command shows which. The smoke and every reviewer run start with `df -h /`. At least 10 GB must be free; if not, the SRE prunes first (retro 1, M4).
 2. **Fresh-context review.** The reviewers from the table in §6 review in parallel. Each returns findings labelled by severity [DPA/AI-08].
 3. **Auto-fix.** The owning engineer gets the Blocking findings and fixes them test-first. For a bug, it writes a failing test first [EP/ENG-24]. It must not edit or delete accepted tests [EP/ENG-28]. Nits and Optionals are fixed only when cheap. Otherwise they are recorded.
    - **Routing by owner (2026-10-03, ADR 0022).** Each finding goes to the role that can close it, in the same round: code to the owning engineer; API contract and ADR amendments to the principal-engineer; test-change approvals to the senior-qa-engineer; sprint artifacts (`status.json`, `progress.md`, retro) to the engineering-manager; environment, repo-admin and legal items to the human product owner via the EM. A finding marked "not my lane" is an EM routing defect, not a fix iteration (retro 0, M2/M3).
    - **Threat controls are acceptance criteria (2026-10-03, ADR 0022).** A threat-model control that names a story is an acceptance criterion of that story, with a red test (retro 0, M4).
-4. **Re-review.** The same reviewers re-check only the changed lines and their findings.
+3b. **Disposition per finding (2026-10-05, ADR 0030).** Before the next round starts, every finding of the round has one row in `docs/sprints/<nn>/review-rounds.md` with exactly one disposition: **fixed** (with evidence), **deferred** (to a named backlog row with an owner and a sprint), or **rejected** (with a reason the reviewer accepts). Minors and nits may be deferred, but never left blank. The EM checks that the number of findings matches the number of rows (retro 1, M1).
+3c. **EM status step (2026-10-05, ADR 0030).** The last step of every fix round is the EM refreshing `status.json` and `progress.md` from the round's commits and runs. Re-review starts after it (retro 1, M2).
+4. **Re-review.** The same reviewers re-check the changed lines and their findings. *(2026-10-05, ADR 0030)* They also re-check every earlier finding of theirs that is not dispositioned as fixed, or deferred, or rejected. Sprint 1 round-1 design blockers were never re-checked because their code did not change (retro 1, M1).
 5. **Iteration limit:**
    - Iterations 1 and 2 run in the same context.
    - If both fail, iteration 3 starts in a **fresh context with an improved prompt** [EP/ENG-24].

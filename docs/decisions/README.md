@@ -127,7 +127,10 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0023 | [Product-owner decisions 2026-10-05: accept all open-question recommendations](0023-product-owner-decisions-2026-10-05.md) | Accepted | 2026-10-05 |
 | 0024 | [Match participants are per-match nickname slots inside the `Match` aggregate](0024-match-participants-as-per-match-nicknames.md) | Accepted | 2026-10-05 |
 | 0025 | [Magic-link sign-in: token in the URL fragment, exchanged by POST; 30-day/7-day sessions](0025-magic-link-sign-in-design.md) | Accepted (Sprint 1; 6.3.3 residual risk needs PO) | 2026-10-05 |
+| 0026 | [Nightly quality results and SLI metrics](0026-nightly-quality-results-and-sli-metrics.md) | Proposed (Sprint 1, ST-024) | 2026-10-05 |
 | 0027 | [Sign-in emails are sent by a worker outside the media sandbox (`WORKER_STAGES`)](0027-sign-in-mail-worker-outside-the-media-sandbox.md) | Proposed (Sprint 1, ST-013) | 2026-10-05 |
+| 0028 | [Phone-browser uploads: "resume on return", no background-upload promise](0028-phone-browser-upload-resume-on-return.md) | Proposed (SPIKE-06, partial data) | 2026-10-05 |
 | 0029 | [The dev and E2E stack is served over https (`web-tls`), not given an insecure cookie](0029-dev-and-e2e-stack-served-over-https.md) | Accepted (Sprint 1, WebKit sign-in blocker) | 2026-10-05 |
+| 0030 | [Review loop: a disposition per finding, isolated evidence, M/L stories sliced before they are built](0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md) | Accepted (EM, retro 1) | 2026-10-05 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.
