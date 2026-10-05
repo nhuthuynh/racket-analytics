@@ -118,6 +118,11 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/backend.Dockerfile
+      # Base image and Dockerfile frontend through DOCKERHUB_REGISTRY, like the pulled
+      # services (smoke.md §6; infra/tests/test_compose_registry.py).
+      args: &backend-build-args
+        PYTHON_IMAGE: ${DOCKERHUB_REGISTRY:-docker.io}/library/python:3.11-slim
+        BUILDKIT_SYNTAX: ${DOCKERHUB_REGISTRY:-docker.io}/docker/dockerfile:1.7
       target: api
     command: ["python", "-m", "racket.platform.migrate"]
     environment:
@@ -132,6 +137,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/backend.Dockerfile
+      args: *backend-build-args
       target: api
     environment:
       <<: [*app-env, *sign-in-env]
@@ -171,6 +177,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/backend.Dockerfile
+      args: *backend-build-args
       target: worker
     environment:
       <<: *app-env
@@ -219,6 +226,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/backend.Dockerfile
+      args: *backend-build-args
       target: api
     command: ["python", "-m", "racket.worker"]
     environment:
@@ -251,6 +259,9 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/web.Dockerfile
+      args:
+        NODE_IMAGE: ${DOCKERHUB_REGISTRY:-docker.io}/library/node:22-slim
+        BUILDKIT_SYNTAX: ${DOCKERHUB_REGISTRY:-docker.io}/docker/dockerfile:1.7
     environment:
       APP_ENV: ${APP_ENV:?set APP_ENV}
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:?set PUBLIC_API_BASE_URL}
