@@ -83,3 +83,74 @@ Same stack (`racket-smoke01`, web-tls, raised per-IP limits). E2E only: no backe
 
 S-04 and S-05 (backend) are decided (TCR rows 4-10 approved) and routed to senior-backend-engineer to apply. S-09: the damaged-chunk test no longer depends on reading a request body (QA-R1-05); WebKit still needs CI.
 
+
+## 6. Re-run at the sprint-close head (2026-10-05, sre-devops-engineer with senior-qa-engineer; retro 1 A5)
+
+- **Tree:** `sprint-01` at `f97f0e7` (clean) for the stack start; `8e58d4d` (one infra wiring fix, below) for every suite. No product code changed between them.
+- **Host:** `nproc` 4, 15 GB RAM. `df -h /` before cleanup `17G` free; after cleanup `21G`; after the 1 GB upload run `14G`.
+- **Cleanup first (retro 1 M4):** removed the stale `qar2` Compose project (`docker compose -p qar2 down -v --remove-orphans`, idle 2 h), the default-`RA_DEV_STATE` Postgres and object store (`dev-postgres.sh stop`, `dev-objectstore.sh stop`: removed `/tmp/racket-pg.*` 64 MB and `/tmp/racket-s3.*` 771 MB), one dangling volume, `/tmp/pytest-of-root`, and `docker builder prune -f` (2.9 GB). No repo files touched.
+- **Isolation:** own `RA_DEV_STATE=.local/smoke-r4`, own Compose project `racket-smoke-r4` with fresh volumes, own local Postgres and object store started under that state dir.
+
+### 6.1 Wiring fix in the SRE lane (`8e58d4d`)
+
+`up --build` with `DOCKERHUB_REGISTRY=mirror.gcr.io` failed: `target web: failed to solve: node:22-slim: unexpected status from HEAD request to https://registry-1.docker.io/... 429 Too Many Requests`. The five built services (migrate, api, worker, mailer, web) ignored the registry variable for their base image and their `# syntax=` frontend. They now pass `PYTHON_IMAGE`/`NODE_IMAGE` and `BUILDKIT_SYNTAX` through `${DOCKERHUB_REGISTRY:-docker.io}`; with the default the references equal the Dockerfile defaults, so CI is unchanged.
+
+- Red first: `cd infra && uv run pytest -q tests/test_compose_registry.py` → `3 failed, 1 passed`.
+- Green: same → `4 passed`; whole infra suite `274 passed in 56.54s`.
+
+Sandbox-only (not committed): the build needs the agent proxy CA as the existing optional build secret, through a scratch override `secrets: {extra_ca: {file: /root/.ccr/ca-bundle.crt}}` plus `build.secrets: [extra_ca]` on the five built services. Without it `pnpm install` fails `SELF_SIGNED_CERT_IN_CHAIN`.
+
+### 6.2 Stack
+
+```
+export RA_DEV_STATE=$PWD/.local/smoke-r4
+cp infra/env.example $RA_DEV_STATE/smoke.env   # DOCKERHUB_REGISTRY=mirror.gcr.io; AUTH_LINK_LIMIT_PER_IP=1000; AUTH_EXCHANGE_LIMIT_PER_IP=1000
+DC="docker compose -p racket-smoke-r4 -f infra/compose.yaml -f <scratch CA override> --env-file $RA_DEV_STATE/smoke.env"
+$DC up -d --build --wait
+```
+
+| Check | Result |
+|---|---|
+| `up -d --build --wait` | `rc=0` in 114 s. Healthy: postgres, objectstore, mailpit, tracing, api, worker, mailer, web, web-tls. Exited 0: migrate, objectstore-init |
+| `curl -sS -o /dev/null -w '%{http_code}' http://localhost:3000/` | `400` (plain http closed) |
+| `$DC cp web-tls:/data/caddy/pki/authorities/local/root.crt …; curl --cacert root.crt https://localhost:3000/` | `200 verify=0` |
+| `docker logs racket-smoke-r4-objectstore-1 \| grep -ci 'no more free space'` | `0` |
+| `docker logs racket-smoke-r4-api-1 \| grep -c 'Traceback\|"level": "error"'` | `0` |
+
+### 6.3 Suites
+
+Backend env: `eval "$(bash scripts/dev-postgres.sh start)"`, `eval "$(bash scripts/dev-objectstore.sh start)"`, then `url`/`env`, plus `MAILPIT_API_URL=http://127.0.0.1:8025 SMTP_HOST=127.0.0.1 SMTP_PORT=1025 MAIL_SMTP_URL=smtp://127.0.0.1:1025`.
+
+| Suite | Command | Result |
+|---|---|---|
+| Backend (full) | `cd backend && env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfEs --junitxml=…/backend.xml` | **3 failed, 1060 passed, 6 skipped** in 137.3 s. The 3 failures are the known external blockers only: `test_nightly_quality::test_nightly_run_completes` (S-08) and `test_phone_fixtures::{test_coverage_of_the_set,test_probe_every_fixture}` (S-07, `RED until ST-025`). Skips: 5 × IT-00-10 strict (no Compose env in this run, run below), 1 × P3 (FR-043) |
+| Worker sandbox IT-00-10 | `COMPOSE_PROJECT_NAME=racket-smoke-r4 COMPOSE_ENV_FILES=…/smoke.env env -u APP_ENV uv run pytest -q tests/integration/test_it_00_10_worker_sandbox.py tests/integration/test_it_00_10_worker_sandbox_strict.py` | **12 passed** |
+| Sprint 1 IT ids (G01-02 a) | `junit_rate.py --include 'test_it_01_\|test_bola_matrix\|test_rules_static' --require test_it_01_{01..10,12,13}_ --require test_bola_matrix … backend.xml` | `selected 65, passed 65, failed 0, skipped 0, missing [], ok true` |
+| Regression (G01-02 b) | same Compose env, `pytest tests/regression tests/integration/test_it_00_10_worker_sandbox_strict.py tests/integration/test_it_01_09* tests/integration/test_it_01_06*`, then `junit_rate.py --include 'test_upload_resume\|test_it_01_09\|test_it_01_06\|worker_sandbox_strict' …` | `71 passed in 31.5 s`; rate `selected 41, passed 41, skipped 0, ok true`. See F-01 |
+| Infra | `cd infra && uv run pytest -q` | **274 passed** in 56.5 s |
+| Web unit | `cd web && pnpm exec vitest run` | **31 files, 251 passed** (13.2 s) |
+| Web types and lint | `pnpm exec tsc --noEmit`; `pnpm exec eslint .` | rc=0; rc=0 |
+| Playwright, all specs (Chromium, https) | `cd web && PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers BASE_URL=https://localhost:3000 PW_PROJECTS=chromium pnpm exec playwright test --workers=1 --reporter=line,junit,json` | `rc=0`: **45 passed, 6 skipped, 0 failed** (2.7 min) |
+| E2E rate | `junit_rate.py --include '.' --allow-skips --require E2E-01-02 --require E2E-01-03 --require 'walking-skeleton\|walking skeleton' --require 'First run and capture guide' --require 'Signing out leaves nothing behind' --require 'Upload validation' … e2e.xml` | `selected 51, passed 45, failed 0, skipped 6, rate 1.0, missing [], ok true`. Every skip names its API binding (16-min link TTL, 24 h expiry, other user's upload, 12 GB file, declared size, singles Q-04 rows) |
+| Flake check (sprint-01 specs) | `… playwright test e2e/sprint-01 --repeat-each=3 --workers=1`, then `scripts/ci/flaky_report.py --fail-on-flaky e2e.xml e2e-repeat.xml` | `114 passed, 18 skipped, 0 failed` (7.2 min); `2 runs, 51 tests, 0 flaky` |
+| Accessibility (axe) | `jq` on `e2e.json` (goal-scorecard §4 G01-10) | 13 axe checks, 0 failures; screens `A-01 A-04 F-01 G-01 Q-01-error Q-07 after-sign-in match-detail matches-empty new-match not-found sign-in uploading` |
+
+### 6.4 Real-time runs on the live stack
+
+| Run | Command | Result |
+|---|---|---|
+| Goal journey ×5 (fresh account each: magic link via Mailpit, `/me`, doubles match, tus drop at 40% and resume, damaged chunk 460, complete, facts, 12 GB → 413, PDF → 415, sign-out → 401) | `python3 scripts/measure/live_goal.py --api https://localhost:3000/api --origin https://localhost:3000 --mailpit http://127.0.0.1:8025 --cacert $RA_DEV_STATE/root.crt --file fixtures/clips/synthetic-60s/clip.mp4 --runs 5` | `rc=0`, **5/5 PASS**; `sign_in_p95_s 1.067`, `final_byte_to_facts_p95_s 0.888`, `throughput_min_mbps 72.1` |
+| API reads at 50 RPS for 60 s | `python3 scripts/measure/api_latency.py --api http://127.0.0.1:8000 --origin https://localhost:3000 --mailpit http://127.0.0.1:8025 --rps 50 --duration 60` | `rc=0`: `p95 16.6 ms`, `p99 71.0 ms`, availability `1.0`, unexpected `0`, achieved `50.01 RPS` |
+| 1 GB 1080p60 upload over https, 8 MiB chunks with sha256 | `bash scripts/measure/make_large_fixture.sh $RA_DEV_STATE/large-1080p60.mp4 120`; `live_goal.py --cacert … --file $RA_DEV_STATE/large-1080p60.mp4 --runs 1 --result-timeout 300` | `rc=0`; `bytes 1052829819` (= file size), `transfer_s 16.873`, **`throughput_mbps 499.2`**; result `video_received` |
+
+These are smoke evidence, not the scorecard: the verifier still fills `goal-scorecard.md` from its own isolated run (§3 rule 1).
+
+### 6.5 Findings, routed by owner
+
+| ID | Owner | Finding | Evidence |
+|---|---|---|---|
+| F-01 | engineering-manager (scorecard author) with senior-qa-engineer | goal-scorecard §4 G01-02(b) cannot pass as written: the first backend command runs `tests/integration` **without** the Compose env, so the 3 `worker_sandbox_strict` cases selected by `--include … worker_sandbox_strict` are **skipped** in `backend-it.xml`, and `junit_rate.py` fails closed even though `sandbox.xml` has them passing | `junit_rate.py … backend.xml sandbox.xml` → `selected 54, passed 51, skipped 3, ok false`; the same cases with `COMPOSE_PROJECT_NAME`/`COMPOSE_ENV_FILES` set → `41/41, ok true`. Fix: set the Compose env on the first command or exclude the strict file from it |
+| F-02 | sre-devops-engineer (done, `8e58d4d`) | Built images ignored `DOCKERHUB_REGISTRY` (429 on a fresh build) | §6.1 |
+| S-07, S-08, S-09 | unchanged | Phone clips (ST-025), nightly run, WebKit-only results still need the human PO / CI | backend failures above; WebKit cannot run here |
+
+**Verdict:** ready for review. Every suite is green except the 3 tests held by external blockers (S-07, S-08). All Sprint 1 Playwright journeys pass on Chromium over https with 0 flaky over 3 repeats, and the live goal journey passes 5 of 5. WebKit still has CI evidence only (S-09).
