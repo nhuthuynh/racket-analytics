@@ -59,8 +59,9 @@ Load factor: the lower of 85% and the median completed ratio of Sprints 0-1. Pla
 | Story | Title | FR / NFR | Owner (R) | Required reviewers | Size | Depends on |
 |---|---|---|---|---|---|---|
 | ST-042 | Least-privilege credentials for the media sandbox worker (threat model S1-F3, v0 F-1). The worker gets its own Postgres role with SELECT/UPDATE only on the job, media and upload tables, and no access to `sessions`, `sign_in_*` or `accounts`; the worker also gets its own S3 key. Then a test shows that a worker-uid process reading `/proc/1/environ` can no longer read `sessions` | NFR-054; ASVS 14.x (judgment) | BE (grants migration, S) + SRE (Compose roles, SeaweedFS identity, S) | security-privacy-engineer, principal-engineer | S+S | — |
+| ST-013b | Account identity is the stored normalised address, not the 64-bit HMAC `email_key` (ADR 0032 option 1; SEC-R3-S1-01 / SEC-R4-S1-01). New migration: `accounts.email` unique, `email_key` kept as the log/rate-limit pseudonym only (not unique); the address rides the `sign_in_links` row and is nulled when the link is used or refused; legacy dev accounts are claimed once by `email_key`. QA's red tests 1-5 in ADR 0032 first (rotation keeps the account; a forced `email_key` collision gives two accounts) | NFR-057, NFR-069; ADR 0025, 0027, 0032 | BE | QA (red tests 1-5), security-privacy-engineer, principal-engineer | S | ADR 0032 Accepted |
 
-ST-042 is a **gate before any non-dev deployment**, like S1-F2 and ST-038. The Sprint 1 part is already done: the mailer no longer holds the S3 key.
+ST-042 is a **gate before any non-dev deployment**, like S1-F2 and ST-038. ST-013b (carried 2026-10-05 by senior-backend-engineer, sprint-close review round 2, SEC-R4-S1-01) is the same kind of gate; until it ships, `AUTH_EMAIL_KEY` must never be rotated where accounts must be kept. The Sprint 1 part is already done: the mailer no longer holds the S3 key.
 
 **Stretch:** ST-033 Correction consequences (FR-054; FE S + BE XS); ST-036 Gaps and resync (FR-047; BE XS + FE XS, sized S overall).
 
