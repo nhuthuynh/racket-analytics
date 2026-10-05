@@ -11,6 +11,7 @@ from racket.sports.pickleball.rules.config import (
     ScoringSystem,
     Side,
 )
+from racket.sports.pickleball.rules.engine import apply, fold
 from racket.sports.pickleball.rules.errors import (
     DomainError,
     GameOver,
@@ -36,6 +37,8 @@ __all__ = [
     "ScoringSystem",
     "Side",
     "UnknownOutcome",
+    "apply",
     "declare_state",
+    "fold",
     "new_game",
 ]
