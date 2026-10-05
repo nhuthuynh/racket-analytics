@@ -67,6 +67,9 @@ def upgrade_to_head(database_url: str) -> None:
                 config.attributes["connection"] = connection
                 command.upgrade(config, "head")
                 connection.commit()
+            except BaseException:
+                connection.rollback()  # a half-applied migration leaves nothing (BE-PL-01)
+                raise
             finally:
                 connection.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _MIGRATION_LOCK})
                 connection.commit()
