@@ -104,10 +104,14 @@ export function historyText(item: HistoryItem, all: readonly HistoryItem[], name
       return `${rally}: ${FIELD_WORDS[field] ?? field} changed from ${valueWords(field, item.old_value, names)} to ${valueWords(field, item.new_value, names)}`;
     }
     case 'withdrawal':
-      return `${rally} removed`;
+      return item.rally_number ? `${rally} removed` : 'A rally was removed';
     case 'game_started':
       return 'A game was started';
     case 'resolution':
+      if (item.field === 'game_number') return `${rally}: moved from game ${item.old_value} to game ${item.new_value}`;
+      if (item.field === 'withdrawn') {
+        return item.rally_number ? `${rally} removed (your decision)` : 'A rally that needed your decision was removed';
+      }
       return `${rally}: your decision was recorded`;
     case 'undo': {
       const target = all.find((i) => i.id === item.undoes);

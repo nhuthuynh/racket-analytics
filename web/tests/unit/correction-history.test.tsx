@@ -105,3 +105,17 @@ describe('ScoreSheetView undo (ST-031)', () => {
     expect(screen.getByText(/ending changed from winner to forced error/)).toBeVisible();
   });
 });
+
+describe('CorrectionHistory, decisions and removed rallies (ST-032 live finding)', () => {
+  it('says what a decision did, also when the rally is no longer on the sheet', () => {
+    render(<CorrectionHistory match={match} items={[
+      { ...change, id: hid(5), kind: 'resolution', rally_number: null, field: 'withdrawn', old_value: false, new_value: true },
+      { ...change, id: hid(6), kind: 'resolution', rally_number: 12, field: 'game_number', old_value: 1, new_value: 2 },
+      { ...change, id: hid(7), kind: 'withdrawal', rally_number: null, field: 'withdrawn', old_value: false, new_value: true },
+    ]} />);
+    const items = screen.getAllByRole('listitem').map((li) => li.textContent);
+    expect(items[0]).toContain('A rally that needed your decision was removed');
+    expect(items[1]).toContain('Rally 12: moved from game 1 to game 2');
+    expect(items[2]).toContain('A rally was removed');
+  });
+});

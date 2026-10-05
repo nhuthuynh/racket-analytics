@@ -32,6 +32,7 @@ export function commandProblem(e: unknown, what: string): string {
   if (e instanceof ApiError) {
     const ref = e.supportRef ? ` Reference: ${e.supportRef}` : '';
     if (e.code === 'nothing_to_undo') return 'There is nothing to undo.';
+    if (e.code === 'game_not_started') return 'Start the next game on the tagging screen first, then move the rally.';
     if (e.code === 'network_error') return `${what} failed because the connection dropped. Try again.`;
     if (e.code === 'invalid_outcome') return `${what} was refused: the winner, the ending and the player do not fit together.`;
     return `${what} failed. Try again.${ref}`;
