@@ -30,6 +30,8 @@ matches = sa.Table(
     sa.Column("scoring_system", sa.String(32), nullable=False),
     sa.Column("rules_version", sa.String(64), nullable=False),
     sa.Column("played_on", sa.Date(), nullable=True),
+    sa.Column("rejection_code", sa.String(32), nullable=True),
+    sa.Column("rejected_at", sa.DateTime(timezone=True), nullable=True),
 )
 
 match_participants = sa.Table(

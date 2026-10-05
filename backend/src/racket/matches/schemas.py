@@ -37,6 +37,11 @@ class UploadOut(BaseModel):
     head_sha256: str | None
 
 
+class RejectionOut(BaseModel):
+    code: Literal["not_a_video", "too_large", "too_long", "unsupported_video"]
+    at: str
+
+
 class MatchOut(BaseModel):
     id: str
     title: str
@@ -47,6 +52,7 @@ class MatchOut(BaseModel):
     played_on: str | None
     participants: list[ParticipantOut]
     upload: UploadOut | None
+    rejection: RejectionOut | None
     media: MediaOut | None
     created_at: str
     updated_at: str

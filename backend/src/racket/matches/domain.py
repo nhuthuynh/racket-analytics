@@ -36,6 +36,7 @@ __all__ = [
 
 TITLE_MAX = 120
 DEFAULT_RULES_VERSION = "PROVISIONAL-UNVERIFIED"  # ADR 0009: the only shipped preset
+REJECTION_CODES = ("not_a_video", "too_large", "too_long", "unsupported_video")  # §5.2
 
 
 class InvalidId(ValueError):
@@ -114,6 +115,9 @@ class Match:
     played_on: date | None = None
     # Child values of the aggregate (ADR 0024); loaded and saved by the repository.
     participants: Participants | None = None
+    # The last refusal of a file for this match (ST-018; api-sprint-01 §5.2 ``rejection``).
+    rejection_code: str | None = None
+    rejected_at: datetime | None = None
 
     @classmethod
     def set_up(cls, *, owner_id: OwnerId, setup: MatchSetup) -> Match:
@@ -151,6 +155,21 @@ class Match:
         self.media_asset_id = media_asset_id
         self.status = MatchStatus.VIDEO_RECEIVED
         self.updated_at = _now()
+
+    def reject_video(self, code: str, *, at: datetime) -> None:
+        """A refused file: back to "No video yet", with the reason (api-sprint-01 §6.6)."""
+        if code not in REJECTION_CODES:
+            raise InvalidMatch("unknown rejection code")
+        self.status = MatchStatus.AWAITING_UPLOAD
+        self.media_asset_id = None
+        self.rejection_code = code
+        self.rejected_at = at
+        self.updated_at = at
+
+    def clear_rejection(self) -> None:
+        """A new upload starts: the last refusal is no longer shown (§5.2)."""
+        self.rejection_code = None
+        self.rejected_at = None
 
     def can_be_read_by(self, owner_id: OwnerId) -> bool:
         return self.owner_id == owner_id

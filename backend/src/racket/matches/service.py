@@ -13,7 +13,13 @@ from sqlalchemy.orm import Session
 
 from racket.matches.domain import InvalidId, Match, MatchId, MatchSetup, MatchStatus, OwnerId
 from racket.matches.repository import MatchRepository
-from racket.matches.schemas import MatchOut, MediaOut, ParticipantOut, UploadOut
+from racket.matches.schemas import (
+    MatchOut,
+    MediaOut,
+    ParticipantOut,
+    RejectionOut,
+    UploadOut,
+)
 from racket.platform.errors import NotFound
 from racket.platform.logs import SECURITY_LOGGER
 from racket.video_ingest.public import UploadStatus, media_summary
@@ -103,6 +109,9 @@ class MatchService:
                 for m in (match.participants.members if match.participants else ())
             ],
             upload=upload,
+            rejection=None
+            if match.rejection_code is None or match.rejected_at is None
+            else RejectionOut(code=match.rejection_code, at=_rfc3339(match.rejected_at)),  # type: ignore[arg-type]
             media=media,
             created_at=_rfc3339(match.created_at),
             updated_at=_rfc3339(match.updated_at),

@@ -106,6 +106,11 @@ class UploadRepository:
             query = query.with_for_update()
         return self.session.execute(query).scalar_one_or_none()
 
+    def delete_for_match(self, match_id: uuid.UUID) -> None:
+        self.session.execute(
+            sa.delete(upload_sessions).where(upload_sessions.c.match_id == match_id)
+        )
+
     def delete(self, upload: UploadSession) -> None:
         self.session.delete(upload)
         self.session.flush()
@@ -151,6 +156,10 @@ class MediaRepository:
             )
         )
         return asset_id
+
+    def delete_asset(self, asset_id: uuid.UUID) -> None:
+        self.session.execute(sa.delete(media_facts).where(media_facts.c.media_asset_id == asset_id))
+        self.session.execute(sa.delete(media_assets).where(media_assets.c.id == asset_id))
 
     def asset_for_match(self, match_id: uuid.UUID) -> Any:
         return self.session.execute(

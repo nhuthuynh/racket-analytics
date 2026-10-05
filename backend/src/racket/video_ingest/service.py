@@ -43,9 +43,11 @@ from racket.video_ingest.domain import (
     ExpiryPolicy,
     ObjectKeyPolicy,
     OffsetMismatch,
+    Rejection,
     UploadChecksum,
     UploadExpired,
     UploadFile,
+    UploadPolicy,
     UploadSession,
     UploadStatus,
 )
@@ -65,6 +67,18 @@ class UploadNotFound(NotFound):
 
 class UploadExists(Conflict):
     pass
+
+
+class VideoTooLarge(AppError):
+    """413 ``video_too_large``: ``Upload-Length`` above the cap, before any byte is stored."""
+
+    status, code = 413, "video_too_large"
+
+
+class NotAVideoUpload(AppError):
+    """415 ``not_a_video``: the first bytes are not MP4/QuickTime (T-UV-1)."""
+
+    status, code = 415, "not_a_video"
 
 
 class UploadQuotaExceeded(AppError):
@@ -161,6 +175,15 @@ def validate_metadata(raw: str | None) -> None:
                 raise BadRequest("malformed Upload-Metadata") from None
 
 
+def policy_from(settings: Settings) -> UploadPolicy:
+    """The caps from configuration (provisional until ST-025 / R-05, K12)."""
+    return UploadPolicy(
+        max_bytes=settings.upload_max_bytes,
+        max_duration_ms=settings.upload_max_duration_ms,
+        max_frame_pixels=settings.upload_max_frame_pixels,
+    )
+
+
 def parse_upload_id(raw: str) -> uuid.UUID | None:
     try:
         return uuid.UUID(raw)
@@ -182,6 +205,10 @@ class UploadService:
         self.clock = clock
         self.uploads = UploadRepository(session)
         self.media = MediaRepository(session)
+
+    @property
+    def policy(self) -> UploadPolicy:
+        return policy_from(self.settings)
 
     @property
     def expiry(self) -> ExpiryPolicy:
@@ -208,9 +235,14 @@ class UploadService:
         if match_id is None or not matches.owns_match(self.session, match_id, owner_id):
             self._deny(owner_id, route, method)
             raise UploadNotFound("no such match for this owner")
-        length = parse_upload_length(upload_length, self.settings.upload_max_bytes)
-        validate_metadata(upload_metadata)
+        # Values beyond 20 digits stay 413 payload_too_large (not a plausible size, SEC-R2-02).
+        length = parse_upload_length(upload_length, 10**HEADER_MAX_DIGITS)
         now = self.clock()
+        if self.policy.check_declared_length(length) is not None:
+            self._reject(match_id, owner_id, Rejection.TOO_LARGE, now)  # T-UV-2, NFR-053
+            self.session.commit()
+            raise VideoTooLarge("declared length above the cap")
+        validate_metadata(upload_metadata)
         self._replace_expired_or_refuse(match_id, now)
         self._check_quota(owner_id, length, now)
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
@@ -235,6 +267,7 @@ class UploadService:
             expiry=self.expiry,
             file=file,
         )
+        matches.clear_rejection(self.session, match_id, owner_id)  # before add: no autoflush
         self.uploads.add(upload)
         try:
             self.session.commit()
@@ -263,6 +296,13 @@ class UploadService:
         log.info("upload replaced", extra={"event": "upload.replaced",
                                            "upload_id": str(existing.id)})  # fmt: skip
 
+    def _reject(
+        self, match_id: uuid.UUID, owner_id: uuid.UUID, rejection: Rejection, now: datetime
+    ) -> None:
+        matches.reject_video(self.session, match_id, owner_id, rejection.value, now)
+        SLI.upload_event(UploadEvent.REJECTED, reason=rejection.value)
+        log.info("upload refused", extra={"event": "upload.rejected", "reason": rejection.value})
+
     def _discard(self, upload: UploadSession) -> None:
         """Delete a session and its stored bytes (best effort for the bytes; ST-038 sweeps)."""
         self.uploads.delete(upload)
@@ -272,6 +312,13 @@ class UploadService:
                 self.store.delete(staged.key)
         except ClientError:
             log.warning("upload bytes left", extra={"event": "upload.bytes_left"})
+
+    def _refuse_content(self, upload: UploadSession) -> None:
+        """T-UV-1: not MP4/MOV content. The session goes, nothing is kept, no job (NFR-060)."""
+        self._discard(upload)
+        self._reject(upload.match_id, upload.owner_id, Rejection.NOT_A_VIDEO, self.clock())
+        self.session.commit()
+        raise NotAVideoUpload("first bytes are not an MP4/QuickTime atom")
 
     def _check_quota(self, owner_id: uuid.UUID, length: int, now: datetime) -> None:
         count, declared = self.uploads.open_for_owner(owner_id, now)
@@ -331,7 +378,11 @@ class UploadService:
             upload = self._lock(upload_id)
             upload.ensure_open(now=self.clock())
             if offset == 0 and data:
-                upload.verify_head(data)  # T-UV-6
+                # Same-file check first: resuming with another file must not destroy the
+                # session (T-UV-6, IT-01-06); then content (T-UV-1).
+                upload.verify_head(data)
+                if UploadPolicy.sniff(data, length=upload.length) is not None:
+                    self._refuse_content(upload)  # commits the refusal, raises 415
             plan = upload.plan_chunk(offset, len(data), self.settings.upload_part_min_bytes)
             if plan.is_noop:  # empty PATCH: nothing to write, the offset stays (R1-01)
                 self.session.rollback()
@@ -400,7 +451,8 @@ class UploadService:
         )
         upload.mark_complete(asset_id)
         matches.mark_uploaded(self.session, upload.match_id, upload.owner_id, asset_id)
-        JobQueue(self.session).enqueue(
+        # enqueue_again: a new upload after a refused one must be probed again (ST-018).
+        JobQueue(self.session).enqueue_again(
             JobKey(match_id=upload.match_id, pipeline_version=self.settings.pipeline_version,
                    stage=PROBE_STAGE)
         )  # fmt: skip

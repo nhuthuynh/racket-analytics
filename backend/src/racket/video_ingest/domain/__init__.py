@@ -9,6 +9,7 @@ from racket.video_ingest.domain.extensions import (
     UploadFile,
 )
 from racket.video_ingest.domain.media_facts import InvalidProbeOutput, MediaFacts, NotAVideo
+from racket.video_ingest.domain.policy import Rejection, UploadPolicy
 from racket.video_ingest.domain.uploads import (
     ChunkBeyondLength,
     ChunkPlan,
@@ -36,12 +37,14 @@ __all__ = [
     "ObjectKeyPolicy",
     "OffsetMismatch",
     "Part",
+    "Rejection",
     "StagedChunk",
     "UploadAlreadyComplete",
     "UploadChecksum",
     "UploadExpired",
     "UploadFile",
     "UploadIncomplete",
+    "UploadPolicy",
     "UploadSession",
     "UploadStatus",
 ]
