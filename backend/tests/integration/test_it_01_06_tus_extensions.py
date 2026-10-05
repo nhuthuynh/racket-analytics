@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from sqlalchemy import text
 
 from tests.support import contract, tus, tus_ext
 from tests.support.api import ApiDriver
@@ -71,11 +72,21 @@ def test_malformed_or_unsupported_checksum_is_a_400(api: ApiDriver, header: str)
     assert _offset(api, upload) == 0
 
 
+@pytest.fixture
+def quota_out_of_the_way(monkeypatch: pytest.MonkeyPatch) -> None:
+    """TCR row 14: each example opens a new upload for ivy; the quota (T-UV-7, own tests
+    below) must not answer first. Limits stay above the example count incl. shrinking."""
+    monkeypatch.setenv("UPLOAD_MAX_OPEN_SESSIONS", "1000")
+    monkeypatch.setenv("UPLOAD_CREATE_LIMIT_PER_HOUR", "1000")
+
+
 @settings(
     max_examples=40, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
 )
 @given(header=st.text(max_size=80))
-def test_upload_checksum_parser_never_fails_open_or_crashes(api: ApiDriver, header: str) -> None:
+def test_upload_checksum_parser_never_fails_open_or_crashes(
+    quota_out_of_the_way: None, api: ApiDriver, header: str
+) -> None:
     """Retro 0 L4 / testing-strategy rule 9: any header text -> 204, 400 or 460, never 5xx."""
     upload = _start(api)
     chunk = DATA[: tus_ext.first_chunk_size(DATA)]
@@ -144,6 +155,32 @@ def test_a_fourth_open_upload_is_refused_by_the_quota(api: ApiDriver) -> None:
     assert response.status_code == 429
     assert response.json()["error"]["code"] == "upload_quota_exceeded"
     assert response.json()["error"]["retry_at"] is None
+
+
+@pytest.mark.parametrize("last_modified", [str(2**63), "9" * 20])
+def test_last_modified_out_of_bigint_range_is_a_400_and_stores_nothing(
+    api: ApiDriver, committed_db: Any, last_modified: str
+) -> None:
+    """SEC-R2-S1-01: client input beyond the BIGINT column was a 500 internal_error."""
+    ivy = api.as_user("ivy")
+    match_id = api.run(create_match(ivy, f"SEC-R2-S1-01 {time.monotonic_ns()}"))
+    response = api.request(
+        "ivy",
+        "POST",
+        contract.UPLOAD_CREATE.format(match_id=match_id),
+        headers={
+            "Tus-Resumable": contract.TUS_VERSION,
+            "Upload-Length": "1000",
+            "Upload-Metadata": tus.metadata(filename="a.mp4", last_modified=last_modified),
+        },
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["error"]["code"] == "bad_request"
+    with committed_db.connect() as conn:
+        rows = conn.execute(
+            text("SELECT count(*) FROM upload_sessions WHERE match_id = :m"), {"m": match_id}
+        ).scalar_one()
+    assert rows == 0
 
 
 # ------------------------------------------------------------------ IT-01-08 (D-3)

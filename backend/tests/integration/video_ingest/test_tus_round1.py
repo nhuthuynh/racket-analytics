@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import hashlib
-import os
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
@@ -74,7 +73,7 @@ def _count(db_session: Any, sql: str, **params: Any) -> int:
 async def test_an_empty_patch_then_data_stores_each_byte_exactly_once(
     ivy: httpx.AsyncClient, spy: SpyStore
 ) -> None:
-    data = os.urandom(6 * MIB)
+    data = tus.video_bytes(6 * MIB, random=True)  # TCR row 16
     before = set(spy.real.list_keys())
     upload = await tus.start(ivy, await create_match(ivy, "Empty first"), len(data))
 
@@ -95,15 +94,18 @@ async def test_an_empty_patch_then_data_stores_each_byte_exactly_once(
 async def test_an_empty_patch_while_receiving_writes_nothing(
     ivy: httpx.AsyncClient, spy: SpyStore
 ) -> None:
-    upload = await tus.start(ivy, await create_match(ivy, "Empty no-op"), 10)
-    await tus.patch(ivy, upload, 0, b"0123")
+    # TCR row 16: the offset-0 chunk must hold the 12-byte content-check window, so the
+    # upload is 24 bytes and the first chunk 12 (was 10 and 4); still receiving afterwards.
+    data = tus.video_bytes(24)
+    upload = await tus.start(ivy, await create_match(ivy, "Empty no-op"), len(data))
+    assert (await tus.patch(ivy, upload, 0, data[:12])).status_code == 204
     spy.calls.clear()
 
-    response = await tus.patch(ivy, upload, 4, b"")
+    response = await tus.patch(ivy, upload, 12, b"")
 
-    assert (response.status_code, response.headers["Upload-Offset"]) == (204, "4")
+    assert (response.status_code, response.headers["Upload-Offset"]) == (204, "12")
     assert spy.calls == []
-    assert await tus.offset(ivy, upload) == 4
+    assert await tus.offset(ivy, upload) == 12
 
 
 # ---------------------------------------------------------------- R1-04 / SEC-R1-02
@@ -112,18 +114,19 @@ async def test_patch_on_a_completed_upload_is_409_and_touches_nothing(
     ivy: httpx.AsyncClient, spy: SpyStore, db_session: Any, body: bytes
 ) -> None:
     match_id = await create_match(ivy, "Done")
-    upload = await tus.start(ivy, match_id, 4)
-    assert (await tus.patch(ivy, upload, 0, b"abcd")).status_code == 204
+    data = tus.video_bytes(12)  # TCR row 16: 4 bytes can never pass the content check
+    upload = await tus.start(ivy, match_id, len(data))
+    assert (await tus.patch(ivy, upload, 0, data)).status_code == 204
     spy.calls.clear()
 
-    first = await tus.patch(ivy, upload, 4, body)
-    again = await tus.patch(ivy, upload, 4, body)
+    first = await tus.patch(ivy, upload, len(data), body)
+    again = await tus.patch(ivy, upload, len(data), body)
 
     for response in (first, again):
         assert response.status_code == 409, response.text
         assert response.json()["error"]["code"] == "conflict"
     assert spy.calls == []  # no UploadPart / CompleteMultipartUpload on a finished upload
-    assert await tus.offset(ivy, upload) == 4
+    assert await tus.offset(ivy, upload) == len(data)
     assert _count(db_session, "SELECT count(*) FROM media_assets WHERE match_id = :m",
                   m=match_id) == 1  # fmt: skip
     assert _count(db_session, "SELECT count(*) FROM jobs WHERE match_id = :m", m=match_id) == 1
@@ -154,7 +157,14 @@ def committed_driver(committed_db: Any) -> Iterator[ApiDriver]:
     driver.close()
 
 
-def test_concurrent_creations_for_one_match_are_201_and_409(committed_driver: ApiDriver) -> None:
+def test_concurrent_creations_for_one_match_are_201_and_409(
+    monkeypatch: pytest.MonkeyPatch, committed_db: Any
+) -> None:
+    # TCR row 13: the race leaves 5 receiving uploads; the per-account quota (T-UV-7, its own
+    # tests) is moved out of the way for this test only, before create_app() reads it.
+    monkeypatch.setenv("UPLOAD_MAX_OPEN_SESSIONS", "10")
+    monkeypatch.setenv("UPLOAD_CREATE_LIMIT_PER_HOUR", "20")
+    committed_driver = ApiDriver(create_app())
     ivy = committed_driver.as_user("ivy")
 
     async def race() -> list[int]:
@@ -162,7 +172,10 @@ def test_concurrent_creations_for_one_match_are_201_and_409(committed_driver: Ap
         responses = await asyncio.gather(*(tus.create(ivy, match_id, 10) for _ in range(2)))
         return sorted(r.status_code for r in responses)
 
-    results = [committed_driver.run(race()) for _ in range(5)]
+    try:
+        results = [committed_driver.run(race()) for _ in range(5)]
+    finally:
+        committed_driver.close()
 
     assert results == [[201, 409]] * 5
 
@@ -188,9 +201,9 @@ def test_no_transaction_stays_open_while_a_patch_body_streams(
             )
 
     async def slow_body() -> AsyncIterator[bytes]:
-        yield b"0123"
+        yield tus.VIDEO_HEADER[:4]  # TCR row 16: bytes 4-7 are "ftyp", length still 8
         seen.append(idle_in_transaction())  # the app is now waiting for the rest of the body
-        yield b"4567"
+        yield tus.VIDEO_HEADER[4:8]
 
     response = committed_driver.run(
         ivy.patch(

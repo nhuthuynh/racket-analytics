@@ -18,7 +18,7 @@ from pytest_bdd import given, parsers, scenario, then, when
 from tests.support import contract, tus, tus_ext
 from tests.support.api import ApiDriver
 from tests.support.copy import ERROR_COPY, error_code
-from tests.support.flows import create_match, percent
+from tests.support.flows import create_match, percent_of
 from tests.support.paths import SYNTHETIC_CLIP
 
 pytestmark = [pytest.mark.red_until(story="ST-017"), pytest.mark.slow]
@@ -94,7 +94,7 @@ def chunk_refused(ctx: dict[str, Any]) -> None:
 
 @then(parsers.parse("the upload is still at {pct:d}%"))
 def still_at(api: ApiDriver, ctx: dict[str, Any], pct: int) -> None:
-    assert percent(_offset(api, ctx), len(DATA)) == pct
+    assert percent_of(_offset(api, ctx), len(DATA)) == pct
 
 
 @given(parsers.parse("Ivy closed the tab when her upload was {pct:d}% done"))
@@ -111,7 +111,7 @@ def opens_again(api: ApiDriver, ctx: dict[str, Any]) -> None:
 def offered_resume(ctx: dict[str, Any], pct: int) -> None:
     upload = ctx["match"]["upload"]
     assert upload["state"] == "receiving"
-    assert percent(upload["offset"], upload["length"]) == pct
+    assert percent_of(upload["offset"], upload["length"]) == pct
     assert upload["resume_url"]
     assert upload["expires_at"]
 

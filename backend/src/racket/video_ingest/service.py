@@ -286,7 +286,7 @@ class UploadService:
         return upload
 
     def _replace_expired_or_refuse(self, match_id: uuid.UUID, now: datetime) -> None:
-        """§6.3 check 3: an unexpired session is a 409; an expired one is replaced."""
+        """§6.3 check 2: an unexpired session is a 409; an expired one is replaced."""
         if not self.uploads.exists_for_match(match_id):
             return  # a racing creation is still caught by the unique constraint (R1-03)
         existing = self.uploads.for_match(match_id, for_update=True)

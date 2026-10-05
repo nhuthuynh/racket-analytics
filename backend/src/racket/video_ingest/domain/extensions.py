@@ -24,6 +24,7 @@ METADATA_KEYS = ("filename", "last_modified", "head_sha256")
 _BASE64 = re.compile(r"[A-Za-z0-9+/]+={0,2}")
 _HEX64 = re.compile(r"[0-9a-f]{64}")
 _DECIMAL = re.compile(r"[0-9]{1,20}")
+LAST_MODIFIED_MAX = 2**63 - 1  # upload_sessions.file_last_modified_ms is a BIGINT (SEC-R2-S1-01)
 
 
 class ChecksumInvalid(BadRequest):
@@ -118,6 +119,8 @@ class UploadFile:
             if not _DECIMAL.fullmatch(text):
                 raise BadRequest("last_modified must be decimal milliseconds")
             modified = int(text)
+            if modified > LAST_MODIFIED_MAX:
+                raise BadRequest("last_modified is out of range")
         head = None
         if "head_sha256" in values:
             head = values["head_sha256"].decode("ascii", errors="replace")

@@ -153,7 +153,7 @@ def test_completing_drops_the_file_name() -> None:
     assert s.file is None
 
 
-# ---------------------------------------------------------------- Upload-Metadata (§6.3 row 6)
+# ---------------------------------------------------------------- Upload-Metadata (§6.3 row 4)
 def meta(**pairs: str) -> str:
     return ",".join(f"{k} {base64.b64encode(v.encode()).decode()}" for k, v in pairs.items())
 
@@ -186,6 +186,29 @@ def test_metadata_name_loses_control_characters_and_is_cut_to_255_bytes() -> Non
 def test_malformed_head_hash_or_last_modified_is_a_400(pairs: dict[str, str]) -> None:
     with pytest.raises(BadRequest):
         UploadFile.from_metadata(meta(**pairs))
+
+
+@pytest.mark.parametrize("value", [str(2**63), "9" * 20])
+def test_last_modified_beyond_a_signed_64_bit_integer_is_a_400(value: str) -> None:
+    """SEC-R2-S1-01: the column is a BIGINT; a larger value must be refused, not stored."""
+    with pytest.raises(BadRequest):
+        UploadFile.from_metadata(meta(last_modified=value))
+
+
+def test_the_largest_signed_64_bit_last_modified_is_kept() -> None:
+    assert UploadFile.from_metadata(meta(last_modified=str(2**63 - 1))).last_modified_ms == (
+        2**63 - 1
+    )
+
+
+@given(st.integers(min_value=0, max_value=10**20 - 1))
+def test_last_modified_is_either_kept_within_bigint_or_refused(value: int) -> None:
+    try:
+        parsed = UploadFile.from_metadata(meta(last_modified=str(value)))
+    except BadRequest:
+        assert value > 2**63 - 1
+    else:
+        assert parsed.last_modified_ms == value <= 2**63 - 1
 
 
 def test_no_metadata_is_an_empty_file_record() -> None:

@@ -24,4 +24,13 @@ async def upload_fixture(client: httpx.AsyncClient, match_id: str, chunks: int =
 
 
 def percent(n: int, of: int) -> int:
+    """``n`` percent of ``of`` (for slicing payloads)."""
     return of * n // 100
+
+
+def percent_of(n: int, of: int) -> int:
+    """What percent ``n`` is of ``of``, to the nearest whole percent (TCR row 15).
+
+    Nearest, not floor: a slice of ``percent(40, of)`` bytes is 39.99..% of ``of``.
+    """
+    return (n * 200 + of) // (2 * of)
