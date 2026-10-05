@@ -241,8 +241,6 @@ class Scorebook:
         open_changes = [c for c in self.changes if c.kind != "undo" and c.id not in undone]
         newest_change = max(open_changes, key=lambda c: c.version, default=None)
         newest_tag = max(self.kept, key=lambda r: r.created_version, default=None)
-        if newest_change is None and newest_tag is None:
-            raise NothingToUndo("nothing to undo")
         if newest_tag is not None and (
             newest_change is None or newest_tag.created_version > newest_change.version
         ):
@@ -260,7 +258,7 @@ class Scorebook:
                 self, version=self.version + 1, rallies=rallies, changes=(*self.changes, change)
             )
         target = newest_change
-        if target is None:  # unreachable: one of the two exists (checked above)
+        if target is None:
             raise NothingToUndo("nothing to undo")
         book = replace(self, version=self.version + 1)
         if target.kind == "game_started":
