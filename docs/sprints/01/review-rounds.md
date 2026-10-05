@@ -18,6 +18,6 @@
 
 ## Round 2
 
-| Finding | Severity | Fix | Files | Evidence |
+| Finding | Severity | Fix summary | Files | Test evidence (command → result) |
 |---|---|---|---|---|
 | PE-R2-01 | major | Fixed (contract follows code; no code change). §6.3 table reordered to the order `UploadService.create` runs: 1 session/ownership 401/404, 2 existing session 409 or replace expired, 3 size cap 413, 4 `Upload-Metadata` 400, 5 quota 429, 6 rate 429; intro says the order matches the service. Keeping 400 before the 429s is deliberate (malformed requests do not spend rate budget); recorded in decision-log. Routed to senior-backend-engineer (comment-only, optional): `service.py:289` docstring says "§6.3 check 3" (now check 2) and `tests/unit/video_ingest/test_upload_extensions.py:156` says "§6.3 row 6" (now row 4) | `docs/architecture/api-sprint-01.md`, `docs/sprints/01/decision-log.md` | Doc-only: `sed -n 198,206p docs/architecture/api-sprint-01.md` shows rows 2=409, 3=413, 4=400, 5=quota, 6=rate; matches `sed -n 241-256p backend/src/racket/video_ingest/service.py` (`_replace_expired_or_refuse`, `check_declared_length`, `validate_metadata`, `_check_quota`, `RateLimiter.hit`). No behaviour change, so no regression test |
