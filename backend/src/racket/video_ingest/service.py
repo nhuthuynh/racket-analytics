@@ -245,7 +245,10 @@ class UploadService:
             self._reject(match_id, owner_id, Rejection.TOO_LARGE, now)  # T-UV-2, NFR-053
             self.session.commit()
             raise VideoTooLarge("declared length above the cap")
+        # §6.3 check 4: syntax and values (``last_modified`` range, ``head_sha256`` hex) are a
+        # 400 before quota and rate (PE-R3-01).
         validate_metadata(upload_metadata)
+        file = UploadFile.from_metadata(upload_metadata)
         self._check_quota(owner_id, length, now)
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
             f"upload:create:{owner_id}",
@@ -255,7 +258,6 @@ class UploadService:
         if retry_at is not None:
             self.session.rollback()
             raise RateLimited(retry_at, now)
-        file = UploadFile.from_metadata(upload_metadata)
         object_key = ObjectKeyPolicy().original_key()
         s3_upload_id = self.store.create_multipart(object_key)
         upload = UploadSession.start(
