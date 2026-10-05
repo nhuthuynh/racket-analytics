@@ -35,6 +35,8 @@ export function SignInForm({
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Every submit is an attempt: the same error again moves focus to the summary (PD-R3-01).
+  const [attempt, setAttempt] = useState(0);
   const [sending, setSending] = useState(false);
   const [offline, setOffline] = useState(false);
   const busy = useRef(false);
@@ -53,6 +55,7 @@ export function SignInForm({
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (busy.current) return;
+    setAttempt((n) => n + 1);
     const trimmed = email.trim();
     if (!isWellFormedEmail(trimmed)) {
       setError(EMAIL_FORMAT_MESSAGE);
@@ -97,7 +100,7 @@ export function SignInForm({
   return (
     <div className="stack">
       <PageTitle error={error !== null}>{copy.title}</PageTitle>
-      {error ? <ErrorSummary errors={[{ field: FIELD_ID, message: error }]} /> : null}
+      {error ? <ErrorSummary errors={[{ field: FIELD_ID, message: error }]} attempt={attempt} /> : null}
       {offline ? (
         <p className="notice notice--warning" role="status">
           {OFFLINE_SIGN_IN_MESSAGE}

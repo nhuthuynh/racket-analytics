@@ -16,21 +16,28 @@ export interface FieldError {
 export function ErrorSummary({
   errors,
   general,
+  attempt,
   children,
 }: {
   errors: FieldError[];
   general?: string;
+  /**
+   * Bump on every failed submit. A repeated attempt with the same messages moves focus to the
+   * summary again (PD-R3-01; flows §0 "focused on render"), while an unrelated re-render does not.
+   */
+  attempt?: number;
   /** Extra lines under the list, e.g. U-03's "Nothing from this file was saved." */
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // Focus moves only when the messages change, not on every re-render: callers pass a new array
-  // each render, and typing in the field must keep focus there (PD-R2-01; SC 3.2.2, NFR-034).
+  // Focus moves when the messages change or a new attempt failed, not on every re-render:
+  // callers pass a new array each render, and typing in the field must keep focus there
+  // (PD-R2-01; SC 3.2.2, NFR-034).
   const signature = JSON.stringify([errors.map((e) => [e.field, e.message, e.href ?? '']), general ?? '']);
   useEffect(() => {
     ref.current?.focus();
-  }, [signature]);
+  }, [signature, attempt]);
 
   if (errors.length === 0 && !general) return null;
 

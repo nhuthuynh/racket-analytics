@@ -52,6 +52,17 @@ describe('MatchSetup', () => {
     expect(document.title).toMatch(/^Error: /);
   });
 
+  it('PD-R3-01: Continue again without an answer moves focus back to the summary', async () => {
+    renderSetup();
+    await cont();
+    const summary = screen.getByRole('alert');
+    expect(summary).toHaveFocus();
+    await userEvent.click(within(summary).getByRole('link', { name: 'Select doubles or singles' }));
+    expect(screen.getByRole('radio', { name: 'Doubles' })).toHaveFocus();
+    await cont();
+    expect(screen.getByRole('alert')).toHaveFocus();
+  });
+
   it('Q-02: rally scoring is shown, provisional, and cannot be chosen', async () => {
     renderSetup();
     await userEvent.click(screen.getByRole('radio', { name: 'Doubles' }));

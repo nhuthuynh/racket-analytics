@@ -316,6 +316,10 @@ main:focus-visible,
 .error-summary__list a {
   color: var(--color-link);
   font-weight: var(--font-weight-bold);
+  /* A 24px-tall target even for a short one-line message (SC 2.5.8; NFR-028; PD-R1-03). */
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--size-target-min);
 }
 
 /* Notices */
@@ -712,6 +716,14 @@ main:focus-visible,
 
 .summary-list__action {
   justify-self: end;
+}
+
+/* Q-07 "Change" is a one-tap correction: a 48px primary touch target (flows §5 Q-07, §8;
+   HAX G8/G9; NFR-028; PD-R1-07). */
+.summary-list__action .inline-target {
+  justify-content: center;
+  min-block-size: var(--size-target-touch);
+  min-inline-size: var(--size-target-touch);
 }
 
 .block {

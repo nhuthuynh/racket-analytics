@@ -4,10 +4,10 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ErrorSummary } from '@/components/ErrorSummary';
 
-function Page({ message, tick }: { message: string; tick: number }) {
+function Page({ message, tick, attempt }: { message: string; tick: number; attempt?: number }) {
   return (
     <>
-      <ErrorSummary errors={[{ field: 'email', message }]} />
+      <ErrorSummary errors={[{ field: 'email', message }]} attempt={attempt} />
       <input id="email" aria-label="Email address" data-tick={tick} />
     </>
   );
@@ -32,5 +32,15 @@ describe('ErrorSummary focus', () => {
   it('renders a link with an href as a plain link to another page', () => {
     render(<ErrorSummary errors={[{ field: 'x', message: 'Go to Your matches', href: '/matches' }]} />);
     expect(screen.getByRole('link', { name: 'Go to Your matches' })).toHaveAttribute('href', '/matches');
+  });
+
+  it('PD-R3-01: a repeated failed attempt with the same messages moves focus to the summary again', () => {
+    const { rerender } = render(<Page message="Enter an email address" tick={0} attempt={1} />);
+    expect(screen.getByRole('alert')).toHaveFocus();
+    screen.getByLabelText('Email address').focus();
+    rerender(<Page message="Enter an email address" tick={1} attempt={1} />);
+    expect(screen.getByLabelText('Email address')).toHaveFocus();
+    rerender(<Page message="Enter an email address" tick={2} attempt={2} />);
+    expect(screen.getByRole('alert')).toHaveFocus();
   });
 });

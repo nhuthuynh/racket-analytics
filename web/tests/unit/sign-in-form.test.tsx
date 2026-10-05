@@ -37,6 +37,16 @@ describe('SignInForm (A-01)', () => {
     expect(screen.getByLabelText('Email address')).toHaveValue('not-an-email@x');
   });
 
+  it('PD-R3-01: submitting the same wrong address again moves focus back to the summary', async () => {
+    render(<SignInForm api={api()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Send me a link' }));
+    expect(screen.getByRole('alert')).toHaveFocus();
+    await userEvent.click(screen.getByRole('link', { name: /Enter an email address/ }));
+    expect(screen.getByLabelText('Email address')).toHaveFocus();
+    await userEvent.click(screen.getByRole('button', { name: 'Send me a link' }));
+    expect(screen.getByRole('alert')).toHaveFocus();
+  });
+
   it('tells a rate-limited user when to try again', async () => {
     const fake = api(async () => {
       throw new ApiError(429, 'rate_limited', null, { retryAt: '2026-10-05T14:32:00Z' });

@@ -99,6 +99,8 @@ export function MatchSetup({
   const [file, setFile] = useState<File | null>(null);
   const [general, setGeneral] = useState<string | undefined>();
   const [creating, setCreating] = useState(false);
+  // Every submit is an attempt: the same errors again move focus to the summary (PD-R3-01).
+  const [attempt, setAttempt] = useState(0);
   const [offline, setOffline] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
@@ -209,12 +211,13 @@ export function MatchSetup({
           </a>
         )}
       </p>
-      {errors.length > 0 || general ? <ErrorSummary errors={errors} general={general} /> : null}
+      {errors.length > 0 || general ? <ErrorSummary errors={errors} general={general} attempt={attempt} /> : null}
       <form
         className="stack"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
+          setAttempt((n) => n + 1);
           if (step === 'check') void create();
           else dispatch({ type: 'continue', today, policy: limits });
         }}
