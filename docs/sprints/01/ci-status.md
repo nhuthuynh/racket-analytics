@@ -48,6 +48,6 @@ Conclusion: **failure**. <https://github.com/nhuthuynh/racket-analytics/actions/
 | E2E | Playwright: 74 passed, 14 failed | no WebKit sign-in failure (ADR 0029 cookie fix holds); remaining are spec drift and WebKit-only UI issues, see blockers.md | QA, FE | QA-R1-01/02 E2E fixes in `71da707` |
 | ci-gate | aggregate | — | — | re-check on the next run |
 
-Evidence for `a4dfd43`: `cd infra && uv run pytest -q tests/test_workflows_ci_run2.py` → `6 failed` before the `ci.yml` change (per guard, red first), `6 passed` after; `GITHUB_ACTIONS=true CI=true uv run pytest -q -m "unit or integration"` → `245 passed`; `actionlint .github/workflows/ci.yml` → clean.
+Evidence for `a4dfd43`: `cd infra && uv run pytest -q tests/test_workflows_ci_run2.py` → red first per guard (`2 failed` for the warm-up guards, then `4 failed` for the ffprobe and Mailpit guards, each before its `ci.yml` change), `6 passed` after; `GITHUB_ACTIONS=true CI=true uv run pytest -q -m "unit or integration"` → `245 passed`; `actionlint .github/workflows/ci.yml` → clean.
 
 **Next run: not dispatched.** GitHub `sprint-01` is at `6ba9b28`, behind the local head; a dispatch would test stale code. Waiting for the EM push (blockers.md), then dispatch `ci.yml` and `nightly-quality.yml` and record both IDs here and in `status.json`.
