@@ -5,7 +5,7 @@
     "planned_start": "2026-10-19",
     "planned_review": "2026-10-30",
     "work_started": "2026-10-05",
-    "status_written": "2026-10-05 (review round 2 of the sprint-close review, engineering-manager; ADR 0030 status step)"
+    "status_written": "2026-10-05 (final sprint close after goal verification round 3, engineering-manager; ADR 0030/0033 status step)"
   },
   "owner": "engineering-manager",
   "branch": "sprint-01",
@@ -124,10 +124,12 @@
         "Review round 1 fixes: SEC-R4-S1-02/03 tests (432c63f, 7fb17fa3) green in the EM isolated run at 351488e; PD-R3-01 fixed in 6dde8b5"
       ],
       "open": [
-        "SEC-R4-S1-01 / SEC-R3-S1-01: account identity on the rotatable AUTH_EMAIL_KEY; ADR 0032 Proposed (security sign-off needed), code change is ST-013b; blocks any non-dev deployment",
         "ASVS 6.3.3 single-factor residual risk: ADR 0031 Proposed, awaiting the human PO (SEC-R4-S1-04, BLK-ASVS-6.3.3; PO decision P2); blocks any real-user beta, not dev use",
-        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; EM convening 2026-10-06 (blockers.md EM row, review round 2)",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "SEC-R4-S1-01 / SEC-R3-S1-01: account identity on the rotatable AUTH_EMAIL_KEY; ADR 0032 Accepted (3194096); code change carried as ST-013b, a gate before any non-dev deployment (PO item P4)",
+        "SEC-R6-S1-01 (blocker, new in sprint-close review round 3): NUL in the address gives 500 on unauthenticated POST /auth/links; reproduced at 6f6e44e (normalise_email accepts it); sprint-02 C-01",
+        "QA-R3-TEST-01 (minor): no regression test for unknown keys / non-object body on POST /auth/links; sprint-02 C-09"
       ]
     },
     {
@@ -176,7 +178,7 @@
       ],
       "open": [
         "PD-R1-04 / PE-R1-04 / QA-R1-04 / S-09: WebKit-only failure sign-out.spec.ts:46 'Your upload will stop'; not reproducible without a WebKit CI run",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
       ]
     },
     {
@@ -235,8 +237,9 @@
       ],
       "open": [
         "PD-R1-02: guide captions fix a78f583 not verified on WebKit; 'cannot load' fallback (first-run-and-guide.spec.ts:63) WebKit-only and not reproduced (S-09)",
-        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; EM convening 2026-10-06 (blockers.md EM row, review round 2)",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "PD-R2R-03: G-01 consent and minors line not shipped (wording accepted by PM and security); red test then constant (senior-frontend-engineer)"
       ]
     },
     {
@@ -302,8 +305,9 @@
         "PD-R1-03 and PD-R1-07 fixed in 6dde8b5 (24 px / 48 px targets, live probe); T-UV-10 test in 7fb17fa3. Commit-size waivers were recorded late (historical, ADR 0030; no action left)"
       ],
       "open": [
-        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; EM convening 2026-10-06 (blockers.md EM row, review round 2)",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "SEC-R6-S1-01 (blocker): NUL in the match title gives 500 on POST /matches; sprint-02 C-01"
       ]
     },
     {
@@ -368,8 +372,11 @@
       ],
       "open": [
         "WebKit-only CI failure resumable-upload.spec.ts:43 (damaged chunk, rewritten cross-engine by QA-R1-05) never run on WebKit (S-09)",
-        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; EM convening 2026-10-06 (blockers.md EM row, review round 2)",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "PE-R3R-01 (major): parallel upload creations bypass the open-upload quota; sprint-02 C-02",
+        "PD-R3V-01 (major): no recovery in the upload panel after a server error; sprint-02 C-03",
+        "QA-R3-E2E-01 / PD-R3V-02 (major): timing-window flake in walking-skeleton.spec.ts; sprint-02 C-04"
       ]
     },
     {
@@ -433,7 +440,7 @@
       ],
       "open": [
         "Caps provisional until ST-025 R-05 numbers (DoR P11; ST-025 blocked on PO phone recordings)",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
       ]
     },
     {
@@ -585,7 +592,7 @@
       ],
       "open": [
         "First nightly oracle run on GitHub (100,000 sequences) never dispatched: test_nightly_quality::test_nightly_run_completes red (S-08; PO decision P1)",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
       ]
     },
     {
@@ -685,7 +692,7 @@
         "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
       ],
       "open": [
-        "Nightly workflow has never run on GitHub (not dispatched); test_nightly_quality::test_nightly_run_completes red",
+        "Nightly workflow has never run on GitHub: dispatch returns 404 until nightly-quality.yml exists on main (PO item P1); test_nightly_quality::test_nightly_run_completes red",
         "Upload-completion SLI wiring and metrics backend (Sprint 5)",
         "Branch-protection bypass for github-actions[bot] if main requires PRs (ADR 0026)"
       ]
@@ -830,8 +837,8 @@
         "Review rounds 1-3 held 2026-10-05"
       ],
       "open": [
-        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; EM convening 2026-10-06 (blockers.md EM row, review round 2)",
-        "WebKit and ci-gate unverified on any head after 2390e9a: the only sprint-01 CI run is 37298471332 (head 2390e9a, failure); GitHub sprint-01 = 9195ea9, behind local HEAD (git rev-list --count 9195ea9..351488e -> 30); no run since (list_workflow_runs / list_branches, 2026-10-05 EM review round 2). Blocks DoD (PE-R3-05 family, QA-R2V-01; PO decision P1 in blockers.md)"
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
       ],
       "stretch": true
     }
@@ -915,42 +922,37 @@
         "conclusion": "failure",
         "url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/37298471332",
         "includes_round_1_fixes": false
+      },
+      {
+        "workflow": "ci.yml",
+        "run_id": 37372059078,
+        "event": "workflow_dispatch",
+        "head_sha": "e76fb96",
+        "status": "queued",
+        "conclusion": null,
+        "url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/37372059078",
+        "includes_round_1_fixes": true,
+        "checked": "2026-10-05 final close: mcp__github__actions_list list_workflow_runs -> status queued"
       }
     ],
     "pending": [
       {
         "workflow": "ci.yml",
-        "head_required": "local sprint-01 HEAD (351488e or later); GitHub sprint-01 is at 9195ea9",
-        "status": "not dispatched",
-        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)",
-        "checked": "2026-10-05 review round 2 (engineering-manager): list_workflow_runs total_count=2 (37277549983 main, 37298471332 sprint-01 at 2390e9a, both failure); list_branches sprint-01=9195ea9, main=2b9c6ca, both protected:false; still not dispatched"
+        "run_id": 37372059078,
+        "status": "queued",
+        "owner": "sre-devops-engineer (record and triage, retro 1 A1)"
       },
       {
         "workflow": "nightly-quality.yml",
-        "head_required": "local sprint-01 HEAD (351488e or later); GitHub sprint-01 is at 9195ea9",
-        "status": "not dispatched",
-        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)",
-        "checked": "2026-10-05 review round 2 (engineering-manager): list_workflow_runs total_count=2 (37277549983 main, 37298471332 sprint-01 at 2390e9a, both failure); list_branches sprint-01=9195ea9, main=2b9c6ca, both protected:false; still not dispatched",
-        "note": "publish job commits the nightly key to GitHub sprint-01 (ADR 0026); the EM pulls that commit before the next local commit"
+        "status": "cannot be dispatched: workflow_dispatch returns 404 until the workflow exists on main",
+        "owner": "human product owner (P1), sre-devops-engineer"
       }
     ],
     "github_branch_head": {
-      "sha": "961648e",
-      "checked": "2026-10-05",
-      "evidence": "mcp__github__list_branches: sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14",
-      "local_ahead": [
-        "4430b25",
-        "5873308",
-        "0519599",
-        "20ebb1d",
-        "c5b5367",
-        "111f2d4",
-        "073d3f3",
-        "cf8cd19",
-        "sprint-close docs commit"
-      ],
-      "rechecked": "2026-10-05 sre-devops-engineer (QA-R2-02): list_branches sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14",
-      "rechecked_at_close": "2026-10-05 engineering-manager: list_branches sprint-01 961648e75a0e, main 2b9c6ca73ee2 (protected: false)"
+      "sha": "e76fb96",
+      "checked": "2026-10-05 final close",
+      "evidence": "mcp__github__list_branches: sprint-01 e76fb96172a0, main 2b9c6ca, both protected false",
+      "local_ahead": "7a9e41e, 6f6e44e and the close commit (docs only)"
     }
   },
   "review": {
@@ -1013,14 +1015,49 @@
       "round_1": "docs/sprints/01/review-rounds.md 'Sprint-close review, review round 1'",
       "round_2_em": "docs/sprints/01/review-rounds.md 'review round 2' (engineering-manager rows)",
       "open_blocker_major_by_open_defects_py": "see review-rounds.md review round 2 EM rows; count by scripts/measure/open_defects.py after PE-R2-S1-02 (aliases counted once, every id shape)",
-      "po_decisions_needed": "blockers.md EM row 'PO decision request, review round 2' (P1 push+dispatch or D1(b); P2 ADR 0031; P3 phone recordings or ST-025 carry-over; P4 carry-over of the open majors)"
+      "po_decisions_needed": "blockers.md EM row 'PO decision request, review round 2' (P1 push+dispatch or D1(b); P2 ADR 0031; P3 phone recordings or ST-025 carry-over; P4 carry-over of the open majors)",
+      "round_3": "16 new findings (1 blocker SEC-R6-S1-01, 7 major, 8 minor) had no row until the final close; EM rows written in review-rounds.md 'Sprint close (engineering-manager, after goal round 3)'"
+    },
+    "open_blocker_major_at_close": {
+      "count": 17,
+      "command": "python3 scripts/measure/open_defects.py docs/sprints/01/review-rounds.md -> rc=1, open 17",
+      "verifier_count_round_3": 11,
+      "note": "the verifier's 11 missed the 6 round-3 families that had no row (retro 1 M10, ADR 0033)"
     }
   },
   "sprint_close": {
     "date": "2026-10-05",
     "report": "docs/sprints/01/sprint-report.md",
     "retro": "docs/retros/2026-10-30-sprint-01.md",
-    "goal_met": "no: not demonstrated (goal-scorecard; PO standing rule). G01-11 open defects > 0; no green CI run",
-    "process_adr": "docs/decisions/0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md"
+    "goal_met": "no: goal scorecard round 3 met 10 of 12 (G01-05 disk-floor invalid, G01-11 17 open); PO standing rule",
+    "process_adr": [
+      "docs/decisions/0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md",
+      "docs/decisions/0033-reviewer-written-finding-rows-dry-run-methods-and-self-cleaning-evidence.md"
+    ],
+    "po_items": [
+      "P1 nightly-quality.yml on main, branch protection, D1",
+      "P2 ADR 0031 ASVS 6.3.3",
+      "P3 phone recordings or ST-025 carry-over",
+      "P4 carry-over of the 17 open findings (sprint-02 C-01..C-06, ST-013b, ST-042, DR-01)",
+      "P5 approve removing stale racket-* images, then rerun G01-05"
+    ],
+    "carry_over_backlog": "docs/sprints/sprint-02.md section 3 'EM carry-over from the Sprint 1 review' rows C-01..C-38"
+  },
+  "goal_scorecard": {
+    "file": "docs/sprints/01/goal-scorecard.md",
+    "round": 3,
+    "head": "e76fb96",
+    "met": 10,
+    "of": 12,
+    "not_met": {
+      "G01-05": "541.8 Mbit/s but disk_free_gb_end 9 < 10 GB floor: invalid evidence (owner sre-devops-engineer; PO item P5)",
+      "G01-11": "17 open blocker/major at final close (verifier 11)"
+    },
+    "rounds": {
+      "1": "11/12 at fb9e7d6",
+      "2": "11/12 at 3194096",
+      "3": "10/12 at e76fb96"
+    },
+    "demo": "steps 1-6 and 8 live; step 7 no nightly result; step 9 PO"
   }
 }

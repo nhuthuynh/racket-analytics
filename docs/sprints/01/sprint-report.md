@@ -1,175 +1,212 @@
 # Sprint 1 report: Sign in, set up a match, upload safely; the scoring engine, test-first
 
-- **Prepared by:** engineering-manager, 2026-10-05, for the sprint review planned on 2026-10-30 with the human product owner (PO).
-- **Timing caveat:** the sprint was planned for 2026-10-19 to 2026-10-30. All the work, the integration smoke and three review rounds ran in one compressed agent session on 2026-10-05. Calendar metrics (lead time, time-to-merge, nightly streaks) cannot be measured.
-- **Inputs:** lane results, [`smoke.md`](smoke.md), [`review-rounds.md`](review-rounds.md) (rounds 1-3), [`blockers.md`](blockers.md), [`decision-log.md`](decision-log.md), [`test-change-requests.md`](test-change-requests.md), [`test-plan-status.md`](test-plan-status.md), [`ci-status.md`](ci-status.md), ADRs 0023-0029, GitHub Actions and branch listings, and the EM's own re-run of the suites (§5).
-- **Machine-readable status:** [`status.json`](status.json). **Progress:** [`progress.md`](progress.md). **Retro:** [`docs/retros/2026-10-30-sprint-01.md`](../../retros/2026-10-30-sprint-01.md). **Process ADR from the retro:** [ADR 0030](../../decisions/0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md).
+- **Prepared by:** engineering-manager, 2026-10-05 (final close, after goal verification round 3), for the sprint review with the human product owner (PO) planned for 2026-10-30.
+- **Head:** `6f6e44e` on `sprint-01`, plus this close commit (docs only). The tree under goal test was `e76fb96`. Since then only docs have changed (`git diff --stat e76fb96 6f6e44e -- backend web infra scripts` → empty).
+- **Timing caveat:** the sprint was planned for 2026-10-19 to 2026-10-30. All the build work, the integration smoke, 3 sprint-close review rounds and 3 goal verification rounds ran in one compressed agent session on 2026-10-05. Calendar metrics (lead time, time-to-merge, nightly streaks) cannot be measured.
+- **Inputs:** [`goal-scorecard.md`](goal-scorecard.md) §8 (verification round 3), [`review-rounds.md`](review-rounds.md), [`smoke.md`](smoke.md) §6, [`blockers.md`](blockers.md), [`decision-log.md`](decision-log.md), [`status.json`](status.json), GitHub (`list_workflow_runs`, `list_branches`), and the EM's own runs (§6).
+- **Retro:** [`docs/retros/2026-10-30-sprint-01.md`](../../retros/2026-10-30-sprint-01.md). **Process ADRs from the retro:** [0030](../../decisions/0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md), [0033](../../decisions/0033-reviewer-written-finding-rows-dry-run-methods-and-self-cleaning-evidence.md).
 
-## 1. Verdict
+## 1. Goal and scorecard result
 
-> **Dated note, 2026-10-05 (engineering-manager, sprint-close review round 1: PE-R1-S1-02, QA-V1-04).** Under the PO standing rule the **Sprint 1 goal is not demonstrated and Sprint 1 is not done.** [`goal-scorecard.md`](goal-scorecard.md) has no verified row yet; the reviewers' isolated runs at `488d574` already show G01-03, G01-08 and G01-11 as "no". The verdict below describes what is built, not a goal pass. The sprint stays open until a verifier fills all 12 rows "yes" from one isolated run (scorecard §2 status, §3).
+> **The Sprint 1 goal is NOT met, so Sprint 1 is not done** (PO standing rule). The independent verifiers (round 3, head `e76fb96`, isolated Compose project `racket-gv3`) measured **10 of 12 metrics met**. Two are "no": **G01-05**, because the evidence ran below the disk floor, and **G01-11**, open defects.
+>
+> At this close the EM found that **G01-11 was undercounted**. Sprint-close review round 3 raised 16 new findings that never got a row in `review-rounds.md`, so the counter could not see them. With those rows written, `open_defects.py` gives **17 open blocker/major findings, not 11** (§1.2).
 
-**Goal partly met.** All four goal bullets (sprint-01 §1) are built and work locally on real services:
+Every part of the goal *works* live over https on a fresh stack: sign-in, setup, a multi-GB resumable upload with refusals, and the scoring engine. What blocks the close is the defects and the external evidence, not the journey.
 
-- Sign-in by magic link and sign-out.
-- The capture guide and the match setup flow.
-- Resumable, validated upload.
-- The pure, configurable scoring engine with its provisional tables, property suite and oracle.
+### 1.1 Metrics: target against actual (verification round 3, `goal-scorecard.md` §8)
 
-25 of 32 committed units are implemented (78%), plus the ST-019 stretch unit. The isolated backend run gives `3 failed, 1060 passed, 6 skipped`. The 3 failures are open blockers that need the PO: phone clips for ST-025, and a nightly run for ST-024.
+| ID | Measure | Target | Actual | Met |
+|---|---|---|---|---|
+| G01-01 | Live goal journey over https, fresh account per run | 5 of 5 runs pass | 5/5, rc=0, every step ok (resume from offset 689684 after a 40% drop, damaged chunk 460, 12 GB 413, PDF 415, 401 after sign-out) | yes |
+| G01-02 | IT-01-01..13 plus regression suites, real services | 100%, 13/13 ids, 0 skipped; regression 100% | 69/69, `missing []`; regression 41/41; strict sandbox 10 passed on Compose | yes |
+| G01-03 | Playwright Chromium, all specs, then a flake check | 100% of non-skipped, ≤ 6 named skips, 0 flaky ×3 | 52 passed, 6 skipped, 0 failed; ×3: 135 passed, 0 flaky. Chromium only; the repeat covers `e2e/sprint-01` only (QA-R3-E2E-01) | yes |
+| G01-04 | API read latency at 50 RPS for 60 s | p95 ≤ 300 ms, p99 ≤ 800 ms, ≥ 99.5%, ≥ 47.5 RPS, 0 unexpected 4xx | p95 12.79 ms, p99 49.52 ms, 100%, 50.01 RPS, 0 unexpected | yes |
+| G01-05 | Upload throughput, ≥ 1 GB 1080p60 file over https | ≥ 50 Mbit/s, offset = length, run above the 10 GB disk floor | 541.8 Mbit/s, offset = size, rc=0, but `disk_free_gb_end 9`: invalid evidence | **no** |
+| G01-06 | Real-time goal steps (p95 over the 5 G01-01 runs) | (a) sign-in ≤ 10 s; (b) final byte to facts ≤ 30 s | (a) 1.058 s; (b) 0.879 s | yes |
+| G01-07 | Scoring correctness | 100% (P3 skip only); ≥ 19 `@needs-verification` cases all pass; ≤ 90 s | 204/205 (P3 skip, FR-043); 26/26 provisional cases, listed separately; 32.5 s | yes |
+| G01-08 | Differential oracle; mutation baseline | 100,000 sequences, 0 disagreements; baseline recorded | 0 disagreements; mutation 0.8654 (373/431), cold | yes |
+| G01-09 | Coverage | Backend changed lines ≥ 85%; rules and aggregates ≥ 95% line and ≥ 90% branch; web ≥ 80% | 95%; 99.4% line, 98.7% branch; web 90.22% | yes |
+| G01-10 | Accessibility on Sprint 1 screens | 0 serious/critical axe; every screen family; 0 targets < 24×24; E2E-01-03 passes | 19 axe checks, 0 violations, families A F/G Q U M, 0 small targets, E2E-01-03 passed (Chromium) | yes |
+| G01-11 | Open blocker/major defects | 0 | Verifier: 11 (rc=1); GitHub open bug issues 0. **EM recount at this close: 17** (§1.2) | **no** |
+| G01-12 | Fast tests | Domain < 10 s; backend unit ≤ 60 s; 0 failed | 7.4 s; 8.3 s; 0 failed. EM re-run: `763 passed, 1 skipped in 7.19s` | yes |
+| DEMO | Sprint-01 §12 demo, end to end in real time | All steps | Steps 1-6 and 8 passed live (Pixel 7 Chromium, 1.05 GB file, a real 120 s offline, closed-tab resume to "Video received"). Step 7: no *nightly* result (local oracle and mutation only). Step 9 is for the PO | partly |
 
-**No story meets the full story DoD** (0 of 32 units), for three reasons:
+**Why G01-05 is "no":** the throughput is 10 times the target. But both runs ended at 9 GB free, under the 10 GB floor (`docs/ops/disk-and-prune.md`), so the evidence is invalid. Removing the stale images of earlier rounds needs human approval (the session's permission policy denied it). This is a host-capacity problem, not a product defect. ADR 0033 rule 3 stops the pile-up from recurring. The PO approves the image removal (item P5), then any verifier reruns §4 G01-05 with ≥ 12 GB free.
 
-1. **CI has not run on any head that holds the Sprint 1 fixes.** The only sprint-01 run, 37298471332 (head `2390e9a`), failed. GitHub `sprint-01` is at `961648e`, local is later, and no CI or nightly run was dispatched. WebKit (iOS Safari, release-blocking per OQ-17) is therefore unverified for ST-013 to ST-019.
-2. **The fix loop hit its 3-iteration limit.** Round 3 left 2 blockers and 14 majors open (§6). At close, the EM also found **5 round-1 design blockers** (PD-R1-01..05) that never got a disposition row and are still open in the code or the docs, plus 2 round-1 majors (PD-R1-07, and the WebKit item PE-R1-04/QA-R1-04) (`review-rounds.md`, last table). Under working-agreement §7.5 all of these are escalated to the PO. The implemented count of 25 units is therefore an upper bound: the counting rule checks each lane's own tests, and these defects have no test.
-3. **External evidence is open:** the design review (P7, scheduled 2026-10-06), the coach's sign-off on the capture-guide wording, the first nightly oracle run, the mutation baseline, real phone clips and real phones.
+### 1.2 Open blocker and major findings at close (G01-11)
 
-The PO's WebKit cookie directive (https for the dev stack, never an insecure cookie) is done. ADR 0029 covers it, and since then no WebKit test has failed at sign-in (CI job 111725272519). The remaining WebKit failures are product and test issues, not cookie issues (S-09).
+`python3 scripts/measure/open_defects.py docs/sprints/01/review-rounds.md` → rc=1, **open 17**. Aliases are counted once.
 
-## 2. Committed vs done per story
+| # | Finding (family) | Sev. | What is open | Who can close it |
+|---|---|---|---|---|
+| 1 | PE-R3-05 family (QA-R1-06, PE-R2-02, QA-R2-02, QA-R3-05, QA-R2V-01) | blocker | No green CI run on a head with the Sprint 1 fixes. CI run 37372059078 (`ci.yml`, head `e76fb96`) is still `queued`. `main` is unprotected | PO P1 (partly done: pushed at `e76fb96`, `ci.yml` dispatched); SRE records the run |
+| 2 | DEMO-07 | blocker | No nightly result for demo step 7. `nightly-quality.yml` cannot be dispatched until it exists on `main` (dispatch → 404) | PO P1 (merge or add the workflow to `main`) |
+| 3 | S-08 / QA-R2V-08 | major | `test_nightly_run_completes` correctly red: no nightly run | as #2 |
+| 4 | WebKit family (PD-R1-02, PD-R1-04, PE-R1-04, QA-R1-04, S-09, QA-R2V-06, PD-R2R-01) | blocker | Guide captions and fallback, and the sign-out "Your upload will stop" dialog, are unverified on WebKit (release-blocking, OQ-17) | senior-frontend-engineer after the WebKit job of run 37372059078 |
+| 5 | S-07 / QA-R2V-07 | blocker | ST-025 has no real phone recordings; 2 scenarios red on purpose | PO P3 (clips, or approve the carry-over) |
+| 6 | SEC-R4-S1-04 / BLK-ASVS-6.3.3 | major | Single-factor sign-in, residual risk at ASVS L2 6.3.3 (ADR 0031 Proposed) | PO P2. Blocks a real-user beta, not dev use |
+| 7 | QA-R2V-11 | major | The ADR 0031 half (the ADR 0032 half is done, `3194096`) | PO P2 |
+| 8 | SEC-R3-S1-01 / SEC-R4-S1-01 | major | Account identity is still the 64-bit `email_key`; fix is ST-013b (ADR 0032 Accepted). Gate before any non-dev deployment | senior-backend-engineer in Sprint 2; PO P4 approves the carry-over |
+| 9 | PD-R2R-03 | major | The G-01 consent and minors line has not shipped. Security accepted the wording in review round 3 | senior-frontend-engineer, test-first |
+| 10 | PD-R1-06 / PD-R2R-02 / QA-R2V-12 | major | The DoR P7 flows design review has not been held. Decisions due 2026-10-06, otherwise DR-01 in Sprint 2 | principal-designer (chair) with the participants |
+| 11 | QA-R2V-03 | blocker | The meta-finding "G01-11 not met"; closes when 1-10 and 12-17 close | engineering-manager |
+| 12 | **SEC-R6-S1-01** (new, round 3) | blocker | A NUL character in the e-mail address (unauthenticated) or in the match title gives a 500. Still reproduces: `normalise_email('a\x00b@example.com')` returns the address | senior-backend-engineer (sprint-02 C-01) |
+| 13 | **PE-R3R-01** (new) | major | Parallel upload creations get past the open-upload quota (8 × 201 against a cap of 3) | senior-backend-engineer (C-02) |
+| 14 | **PD-R3V-01** (new) | major | After a server error the upload panel offers no recovery | senior-frontend-engineer (C-03) |
+| 15 | **QA-R3-E2E-01 / PD-R3V-02** (new) | major | `walking-skeleton.spec.ts` has a timing-window flake | senior-qa-engineer (C-04) |
+| 16 | **QA-R3-E2E-02** (new) | major | Playwright evidence is not isolated between concurrent agents | sre-devops-engineer (C-05) |
+| 17 | **QA-R3-GATE-01** (new) | major | Manual screen-reader pass (NFR-027b) not done and had no disposition | senior-qa-engineer with a human tester (C-06); PO P4 |
 
-Units come from ADR 0010. **Implemented** means: committed, reviewed (3 rounds), and the lane's own tests green in the latest isolated run without depending on an undecided test-change row (the counting rule in `status.json`). **DoD-done** additionally needs a green CI run that includes the story's commits, and all external evidence closed.
+Rows 12-17 had no `review-rounds.md` row until this close (retro M10; ADR 0033 rule 1). Row 12 is a real product defect found by security review that **every goal metric missed**, because no method sends control characters.
 
-| Story | Units (lanes) | Implemented | DoD | Evidence | Open (owner) |
-|---|---|---|---|---|---|
-| ST-013 Magic-link sign-in | 3 (BE 2, FE 1) | 3 | 0 | BE `deea4e3`, `93993af`, `625cf0b`; FE `e845c22`, `71da707`. IT-01-01..03 and T-ML-12 green. Magic link with Mailpit: 12 passed (security round 2). QA round 3: `sign-in.spec.ts` 4 passed, `:54 --repeat-each=5` → 5 passed | SEC-R3-S1-01 identity key (PE), SEC-R3-S1-02 idle/cap tests, SEC-R3-S1-03 T-ML-5 test (QA), PD-R3-01 refocus (FE), ASVS 6.3.3 risk (PO), design review, WebKit |
-| ST-014 Sign-out clears the device | 1 (FE 1) | 1 | 0 | `673fdc1`; IT-01-04 green; sign-out journey 3 passed (smoke) | WebKit `sign-out.spec.ts:46` (FE), CI |
-| ST-015 First run and capture guide | 2 (FE 2) | 2 | 0 | `b40db17`; journey 5 passed; copy matches the wording doc word for word (PD round 3) | WebKit guide track (PD-R1-02, FE), **coach sign-off still `draft`**, design review, CI |
-| ST-016 Match setup | 5 (FE 4, BE 1) | 5 | 0 | BE `bcdc7d0`; FE `aa52c48`. IT-01-05 green. `match-setup.spec.ts` 13 passed incl. E2E-01-03 keyboard-only and the reflow matrix | T-UV-10 nickname test (QA), design review, CI |
-| ST-017 Resumable upload | 4 (BE 2, FE 2) | 2 | 0 | BE `78902e0`, `c5b5367`; FE `722f0c5`, `111f2d4`. IT-01-06..08 green; E2E-01-02 green on Chromium | BE not counted: its scenarios pass only through Pending TCR row 32(a) (QA-R3-01). PE-R3-01 (BE), PE-R3-03/PD-R3-02, PD-R3-03 (FE), QA-R3-02 (QA), WebKit damaged chunk |
-| ST-018 Upload validation | 3 (BE 2, FE 1) | 3 | 0 | BE `1d099e5`, `4aaccbb`; FE `722f0c5`. IT-01-09/10 green; upload-validation.spec green after the disk was freed (6 passed, 2 skipped, PD-R3-07) | PE-R3-02 delete-before-commit (BE); caps provisional until R-05 (ML/PO); CI |
-| ST-020 Scoring engine core (a) | 4 (BE 4) | 4 | 0 | `77a5082`, `5999097`, `52953f0`, `131dcb7`, `4f10ba2`. IT-01-12/13 green. Coverage 99% (QA round 2) | Presets PROVISIONAL-UNVERIFIED (OQ-01); scoring-engine.md §2.2/§2.4 amendment (PE); CI |
-| ST-021 Match structure (a) | 1 (BE 1) | 1 | 0 | `45eb70d`; M-01..M-08 green | CI; PE-R1-10 nit |
-| ST-022 Property suite, oracle, mutation baseline | 2 (QA 2) | 0 | 0 | P1, P2, P4-P8 green under the `ci` profile (P3 skipped, FR-043). Oracle P9 locally: 100,000 sequences, 0 disagreements (lane report) | **Not counted:** no mutation baseline, and no nightly run on GitHub |
-| ST-023 Golden tables | 2 (QA 2) | 2 | 0 | `0c152f9`, `47ea499`. 26 `@needs-verification` cases green, reported separately (§5) | Coach review; OQ-01 rulebook files |
-| ST-024 Nightly jobs and SLIs | 2 (SRE 2) | 2 | 0 | `595e5a5`; infra `test_nightly_quality.py` green; 4 SLI scenarios green | Nightly never dispatched; `test_nightly_run_completes` red (PO dispatch) |
-| ST-025 Phone fixtures and R-05 | 2 (ML 2) | 0 | 0 | `30baddc`, `10170c6`, `281d459`: consent rule, synthetic profile set, protocol | **Blocked:** real phone clips from the PO; 2 tests red on purpose |
-| SPIKE-06 Phone-browser upload | 1 (FE 1) | 0 | 0 | `9c1030d`, ADR 0028 Proposed with desktop proxy data | Real iOS Safari / Android Chrome runs (PO or tester) |
-| **Committed total** | **32** (BE 12, FE 12, QA 4, SRE 2, ML 2) | **25** (BE 10, FE 11, QA 2, SRE 2, ML 0) | **0** | | |
-| ST-019 Footage quality report (stretch) | 1 (FE 1) | 1 | 0 | `6cc2259`; scenario bound in `073d3f3` | Design review, WebKit, CI |
+## 2. The four goal bullets
 
-**Ratio:** 25 / 32 = 0.78 implemented; 0.00 DoD-done. Sprint 0 was 19 / 28 = 0.68 and 0.00.
-
-> **Dated note, 2026-10-05 (engineering-manager, sprint-close review round 2: PE-R2-S1-03, QA-R2V-09).** Recount after the round-1 fixes, from an isolated run at `351488e` (`status.json` `counting_rule`): **29 / 32 implemented** (ST-017 BE counted: TCR 32 decided, 157/157 upload tests green; ST-022 counted: mutation baseline 0.8654, 28/28 property and oracle tests green). **DoD-done stays 0 / 32: no story is Done.** Every story's DoD needs a green `ci-gate` run whose head includes its commits, and none exists (PE-R3-05 family, QA-R2V-01). ST-025 stays blocked and SPIKE-06 partial. The table above is the sprint-close snapshot; `status.json` is current.
-
-## 3. Quality gates (sprint-00 §8 per-PR gates plus sprint-01 §8)
-
-"Local" means this sandbox on real services. "CI" means GitHub Actions; no CI run includes the Sprint 1 fixes.
-
-| Gate | Threshold | Status | Command → result |
+| Bullet | Works live? | Evidence | Still open |
 |---|---|---|---|
-| Ruff, mypy, ESLint, tsc | 0 errors | **Pass (local)** | EM, `cf8cd19`: `uv run ruff check .` → All checks passed!; `uv run mypy` → no issues in 76 source files; `pnpm exec tsc --noEmit` rc=0; `pnpm exec eslint --max-warnings=0 .` rc=0 |
-| Unit suites; domain suite < 10 s | 100%; < 10 s | **Pass (local)** | QA round 3: `pytest -q -m unit tests/unit` → 718 passed, 1 skipped in 6.58 s. EM: `vitest run` → 31 files, 251 passed |
-| Integration and scenario | 100% | **Fail (known blockers)** | EM isolated run: `3 failed, 1060 passed, 6 skipped`. Failures: `test_nightly_run_completes` (no nightly run), `test_phone_fixtures` x2 (no real clips). Skips: 5 IT-00-10 strict (need Compose; QA round 2 on Compose → 37 passed incl. sandbox), 1 P3 (OQ-01) |
-| Upload-validation and upload-resume regression suites | 100% | **Pass (isolated), flaky on shared services** | Isolated run: no failure in `test_upload_resume`, `test_it_01_09`, `test_upload_validation`. On the shared object store: `14 / 14 / 12 of 14` passed across 3 runs (QA-R3-02) |
-| Rules engine and aggregate coverage | ≥ 95% line, ≥ 90% branch | **Pass (local)** | QA round 2: `--cov=racket.sports.pickleball --cov=racket.matches.domain --cov-branch` → 99% (365 stmts, 1 miss; 90 branches, 1 partial) |
-| Property suite P1-P8 | ≥ 1,000 sequences per run, 0 failures | **Pass (local)**; P3 skipped (FR-043, OQ-01) | EM: `HYPOTHESIS_PROFILE=ci pytest -m "scoring and not nightly"` → 204 passed, 1 skipped in 33.18 s (`ci` profile `max_examples=1000`, `tests/conftest.py`) |
-| BOLA inventory diff | empty | **Pass (local)** | `test_bola_matrix` and the route inventory green in the isolated run; no new ID route (IT-01-11) |
-| `@needs-verification` listed separately | never counted toward a Must FR | **Pass** | EM: `pytest --co -m "scoring and needs_verification"` → 26 cases (21 at planning; PE-R1-03 added positions), all green, reported separately in §5 |
-| Keyboard-only journeys, target size ≥ 24 px | 100%; 0 below 24 px | **Fail** | Keyboard-only: E2E-01-03 green. Target size: PD-R1-03 (axe `target-size` on the Q-03 error state) is unfixed; `.error-summary__list a` has no `min-block-size` at `cf8cd19`. PD rounds 2-3 measured Q-01, not Q-03. Q-07 Change links are 24 px against the 48 px flows spec (PD-R1-07, open) |
-| axe-core | 0 serious or critical | **Pass (Chromium only)** | PD rounds 2-3: 0 violations at 320 and 360 px. WebKit not run since `2390e9a` |
-| Secrets, audit, licence, SBOM | 0 / 0 / 0 | **Not evidenced this sprint** | They run in CI only; no CI run on the current head |
-| Test and gold immutability | no unapproved test change | **Fail** | `grep -n Pending test-change-requests.md` → row 32 (committed in `c5b5367` before QA decided it; PE-R3-04) |
-| PR size | ≈100 lines; > 400 needs an EM waiver before the commit | **Fail** | 82 commits, median 152.5 changed lines, 12 over 400 (max 2,111, `722f0c5`). 1 waiver recorded on time; 11 accepted late by the EM at close (decision-log) |
-| Fresh-context review | no open Blocking; ≤ 3 iterations | **Fail → escalated** | 3 rounds. Open after round 3: 2 blockers (one CI item, reported twice) and 14 majors. Also open, with no disposition since round 1: 5 design blockers and 2 majors (§6) |
-| Per sprint: nightly oracle 0 disagreements; mutation baseline | recorded | **Not met** | Oracle 0 disagreements locally (BE lane, 100,000 sequences); nightly never ran on GitHub; no mutation baseline |
-| Per sprint: manual screen-reader pass (NFR-027b) | done | **Not done** | No record in the repo |
-| Per sprint: flaky rate < 1% | < 1% | **Not measurable** | No CI history. Known flakes: the S-06 sign-in race (fixed in `71da707`), vitest 1 in 9 under load (PE-R3-09), shared-DB and shared-bucket interference (QA-R3-02, SEC-R3-S1-04) |
+| 1. Magic-link sign-in; sign-out leaves nothing | **Yes (Chromium)** | G01-01 steps 1-2 and 9; `sign-in.spec.ts`, `sign-out.spec.ts` green; demo steps 1 and 8 | WebKit (#4); ASVS 6.3.3 (#6); identity key (#8); NUL address 500 (#12) |
+| 2. Capture guide; doubles/singles setup, one question per page, error summary | **Yes (Chromium)** | G01-03 `match-setup.spec.ts` incl. E2E-01-03; G01-10 0 violations; demo steps 2-3 | Consent line (#9); design review (#10); NUL title 500 (#12) |
+| 3. Multi-GB upload survives a drop and a closed tab; bad files refused with a reason | **Yes** | G01-01 (40% drop, resume, 460, 413, 415); demo step 4 with 1.05 GB (goal round 2: 2.98 GB); G01-05 541.8 Mbit/s (invalid only for disk) | Quota race (#13); server-error recovery (#14); real phones (SPIKE-06, ST-025) |
+| 4. Pure, configurable scoring engine, test-first; provisional tables `@needs-verification`; property suite and oracle green | **Yes** | G01-07 204/205 + 26/26 provisional; G01-08 oracle 0/100,000, mutation 0.8654; G01-09 99.4%/98.7% | Rulebook PDFs (OQ-01); nightly run on GitHub (#2) |
 
-## 4. Definition of Done (sprint-01 §9 plus the sprint-level DoD)
+## 3. Committed vs done per story
+
+Units come from ADR 0010. **Implemented** = committed, reviewed, and the lane's own tests green in an isolated run (the `status.json` `counting_rule`). **DoD-done** additionally needs a green `ci-gate` run whose head includes the story's commits, plus all external evidence closed.
+
+| Story | Units | Implemented | DoD-done | Open (owner) |
+|---|---|---|---|---|
+| ST-013 Magic-link sign-in | 3 | 3 | 0 | #1, #4, #6, #8, #12 (BE), design review |
+| ST-014 Sign-out clears the device | 1 | 1 | 0 | #1, #4 |
+| ST-015 First run and capture guide | 2 | 2 | 0 | #1, #4, #9, #10. Coach sign-off done (decision-log, pickleball-domain-coach row) |
+| ST-016 Match setup | 5 | 5 | 0 | #1, #10, #12 (title) |
+| ST-017 Resumable upload | 4 | 4 | 0 | #1, #4, #13, #14, #15 |
+| ST-018 Upload validation | 3 | 3 | 0 | #1; caps provisional until ST-025 |
+| ST-020 Scoring engine core (a) | 4 | 4 | 0 | #1; presets PROVISIONAL-UNVERIFIED (OQ-01) |
+| ST-021 Match structure (a) | 1 | 1 | 0 | #1 |
+| ST-022 Property suite, oracle, mutation baseline | 2 | 2 | 0 | #1, #2 (first nightly oracle on GitHub) |
+| ST-023 Golden tables | 2 | 2 | 0 | #1; coach review; rule numbers (OQ-01) |
+| ST-024 Nightly jobs and SLIs | 2 | 2 | 0 | #1, #2, #3 |
+| ST-025 Phone fixtures and R-05 | 2 | 0 | 0 | **Blocked** on #5 |
+| SPIKE-06 Phone-browser upload | 1 | 0 | 0 | **Partial**: real iOS Safari and Android Chrome runs |
+| **Committed total** | **32** | **29** (BE 12, FE 11, QA 4, SRE 2, ML 0) | **0** | |
+| ST-019 Footage quality report (stretch) | 1 | 1 | 0 | #1, design review |
+
+**Ratio:** 29/32 = 0.906 implemented, 0.00 DoD-done. Sprint 0: 19/28 = 0.68 and 0.00. Every story waits on the same thing: a green CI run (#1). The 3 missing units are all external inputs: phone clips (2) and real devices (1).
+
+## 4. Quality gates (sprint-00 §8 per-PR gates plus sprint-01 §8)
+
+"Local" means isolated runs in this sandbox on real services. "CI" means GitHub Actions.
+
+| Gate | Threshold | Status | Evidence |
+|---|---|---|---|
+| Lint and types (ruff, mypy, ESLint, tsc) | 0 errors | Pass (local) | Smoke §6: `tsc --noEmit` rc=0, `eslint .` rc=0; ruff clean on the harness (scorecard commit) |
+| Domain unit suite time | < 10 s | **Pass** | G01-12: 7.4 s; EM: `pytest -q -m unit` → `763 passed, 1 skipped in 7.19s` |
+| Rules engine and aggregate coverage | ≥ 95% line, ≥ 90% branch | **Pass** | G01-09: 99.4% line, 98.7% branch |
+| Property suite P1-P8 | ≥ 1,000 sequences, 0 failures | **Pass**; P3 skipped (FR-043, OQ-01) | G01-07 |
+| Upload-validation and upload-resume regression | 100% | **Pass** | G01-02: 41/41 |
+| BOLA inventory diff | empty | **Pass** | G01-02 requires `test_bola_matrix` → present and passed |
+| `@needs-verification` listed separately | never counted toward a Must FR | **Pass** | G01-07: 26 cases in their own report |
+| Keyboard-only journeys and target size | 100%; 0 below 24×24 | **Pass (Chromium)** | G01-10: E2E-01-03 passed, 0 small targets; PD-R1-03/07 fixed in `6dde8b5` |
+| axe-core | 0 serious/critical | **Pass (Chromium)** | G01-10: 19 checks, 0 violations |
+| Secrets, audit, licence, SBOM | 0 / 0 / 0 | **Not evidenced** | Only in CI. Run 37372059078 is queued |
+| Test and gold immutability | no unapproved change | **Pass** | `grep -c Pending docs/sprints/01/test-change-requests.md` → 0 |
+| PR / commit size | ≈ 100 lines; > 400 needs a waiver before the commit | **Fail (late waivers)** | 139 commits, median 94 changed lines, 13 over 400. 2 waivers were given on time (`8c4c7fa` and one earlier); 11 were accepted late (decision-log) |
+| Fresh-context review | no open Blocking; ≤ 3 iterations | **Fail → escalated** | 3 sprint-close review rounds and 3 goal rounds; 17 blocker/major findings open (§1.2) |
+| Nightly oracle; mutation baseline | 0 disagreements; recorded | **Partly** | Local: 0/100,000 and 0.8654. No nightly run on GitHub (#2) |
+| Manual screen-reader pass (NFR-027b) | done | **Not done** | QA-R3-GATE-01 (#17) |
+| Flaky rate (NFR-074) | < 1% | **Pass locally, with a known gap** | G01-03 0 flaky ×3 on `e2e/sprint-01`. Root specs are never repeated; one timing flake is known (#15). No CI history |
+| Smoke before review (ADR 0022) | at the review head | **Partly** | `smoke.md` §6 at `8e58d4d`. The later heads were exercised by goal rounds 1-3, but `smoke.md` has no entry for them (QA-R3-SMOKE-01, C-12) |
+
+## 5. Definition of Done (sprint-01 §9 plus sprint level)
 
 | Item | Met? | Evidence |
 |---|---|---|
-| ST-013, ST-017, ST-018 carry threat-model notes and a security review with no open Blocking finding | **Partly** | `threat-model-sprint-01.md` (`cea394a`); 3 security rounds; no security blocker is open. **Majors are open**: SEC-R3-S1-01/02/03, and some controls are marked C without a test |
-| No rule literal outside `RulesConfig` (IT-01-12); no I/O import (IT-01-13) | **Yes** | Both green in the isolated run |
-| Test report shows provisional counts as `@needs-verification`, separate from Ready | **Partly** | This report §5 and `test-plan-status.md` do this. A signed Sprint 1 QA test report (as in Sprint 0) does not exist |
-| SPIKE-06 ADR and the R-05 measurement note written | **Partly** | ADR 0028 (Proposed, no real-device data); `docs/data/phone-fixtures.md` holds the R-05 decision rule, but **no measurement** |
-| Sprint 2 stories meet the DoR, incl. the approved `Match` aggregate design doc | **No** | The PE's Match aggregate design doc (rallies, corrections, score as projection) is not written (PE kickoff report); Sprint 2 DoR not checked |
+| ST-013, ST-017, ST-018: threat-model notes and a security review with no open Blocking | **No** | SEC-R6-S1-01 (blocker, ST-013 address path) and PE-R3R-01 (ST-017 quota race) are open |
+| No rule literal outside `RulesConfig` (IT-01-12); no I/O import (IT-01-13) | **Yes** | G01-02 includes `test_rules_static` → passed |
+| Provisional counts shown as `@needs-verification`, separate from Ready | **Yes** | G01-07; §6 |
+| SPIKE-06 ADR and R-05 measurement note | **Partly** | ADR 0028 Proposed (proxy data only); `docs/data/phone-fixtures.md` has the rule but no measurement |
+| Sprint 2 stories meet the DoR, including the approved Match aggregate design doc | **Partly** | `docs/architecture/match-aggregate.md` written (`869b1d9`), status Proposed: its PR review needs GitHub. DR-01 is open |
 | Retro 0 actions reviewed first in retro 1 | **Yes** | Retro §1 |
-| Every story meets the story-level DoD | **No** | §2: 0 of 32 units |
-| `status.json`, `progress.md` up to date | **Yes (at close)** | Refreshed 2026-10-05 (closes QA-R3-04); they were stale in every round (retro M2) |
-| Delivery metrics recorded | **Partly** | Retro §2; DORA metrics are N/A (nothing deployed, no PRs) |
-| Every significant decision has an ADR | **Yes** | ADRs 0023-0030. Small decisions in `decision-log.md` (80+ rows) |
+| Every story meets story-level DoD | **No** | 0 of 32 units (§3) |
+| Sprint goal demonstrated live, every metric met (PO standing rule) | **No** | 10 of 12 (§1) |
+| `status.json` and `progress.md` current | **Yes** | Refreshed in this close commit from `6f6e44e` |
+| Delivery metrics recorded | **Yes (proxies)** | Retro §2 |
+| Every significant decision has an ADR | **Yes** | ADRs 0023-0033. Small decisions are in `decision-log.md` |
 
-## 5. Test counts by level
+## 6. Test counts by level
 
-EM re-run, 2026-10-05, at `cf8cd19`. Backend on its own Postgres 16 and SeaweedFS (`RA_DEV_STATE` in the scratchpad, stopped afterwards), with the shared Mailpit (`MAILPIT_API_URL=http://127.0.0.1:8025`). Marker counts overlap (a regression test is also an integration test).
+The EM ran these at `6f6e44e` on 2026-10-05; the verifier's round-3 results come from `e76fb96` (same code). Marker counts overlap: a regression test is also an integration test.
 
 | Level | Count | Command → result |
 |---|---|---|
-| Backend, all | 1,069 collected | `cd backend && env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfEs` → **3 failed, 1060 passed, 6 skipped in 139.76s** |
-| Backend unit | 761 | `--co -m unit` → 761/1069 |
-| Backend integration | 218 | `--co -m integration` → 218/1069 |
-| Backend scenario (pytest-bdd) | 90 | `--co -m scenario` → 90/1069 |
-| Backend mandatory regression | 39 | `--co -m regression` → 39/1069; all green |
-| Scoring (Ready + provisional) | 206 | `--co -m scoring` → 206; `-m "scoring and not nightly"` (ci profile) → 204 passed, 1 skipped |
-| of which `@needs-verification` | **26** | `--co -m "scoring and needs_verification"` → 26 (19 rows SOD-01..12, 16, F-01..06 plus the PE-R1-03 position cases). Never counted toward a Must FR |
-| Nightly (100,000-sequence oracle) | 1 | `--co -m nightly` → 1; passed locally in 56.7 s (BE lane); not run on GitHub |
-| Web unit (Vitest) | 251 | `cd web && pnpm exec vitest run` → 31 files, 251 passed |
-| Infra | 245 | `cd infra && env -u S3_ENDPOINT_URL uv run pytest -q` → 245 passed in 50.23s |
-| E2E Playwright Chromium | 51 | QA round 2 (fresh stack at `961648e`): 44 passed, 6 skipped, 0 failed. Round 3 (stack at `cf8cd19`): 34 passed, 11 failed, 6 skipped; all 11 are upload journeys failing on `No more free space left` in the object store, an environment fault. The EM did not re-run E2E |
-| E2E WebKit | — | Not runnable in the sandbox (`/opt/pw-browsers` has Chromium only). Last CI result (`2390e9a`): 4 WebKit-only failures (S-09) |
+| Backend, all | 1,084 collected | `cd backend && env -u APP_ENV uv run pytest --co -q` → `1084 tests collected`. QA review round 3, isolated, at `fb9e7d6` (same backend code): `3 failed, 1080 passed, 1 skipped`. The 3 failures are the PO-blocked S-07 ×2 and S-08 |
+| Backend unit | 764 | `--co -m unit` → 764/1084. EM run: `763 passed, 1 skipped in 7.19s` |
+| Backend integration | 230 | `--co -m integration` → 230/1084. G01-02: `223 passed, 2 skipped` (2 Sprint 0 strict-sandbox cases need Compose) plus 10 strict-sandbox cases on Compose |
+| Backend scenario (pytest-bdd) | 90 | `--co -m scenario` → 90/1084 |
+| Mandatory regression | 39 | `--co -m regression` → 39/1084; G01-02 regression rate 41/41 (with the BOLA and rules-static selection) |
+| Scoring (Ready plus provisional) | 206 | `--co -m scoring` → 206; G01-07 `204 passed, 1 skipped in 31.50s` |
+| of which `@needs-verification` | **26** | `--co -m "scoring and needs_verification"` → 26; all passed and reported separately (SOD-01..12, SOD-16, F-01..06 and position cases). Never counted toward a Must FR |
+| Nightly (100,000-sequence oracle) | 1 | `--co -m nightly` → 1; G01-08 local run 0 disagreements in 57 s |
+| Coverage run | — | G01-09: `1067 passed, 1 skipped, 4 deselected` (nightly and the 3 PO-blocked tests by node id, decision-log QA-R2V-04) |
+| Web unit (Vitest) | 269 | `cd web && pnpm exec vitest run` → `31 passed` files, `269 passed` |
+| Infra | 305 | `cd infra && uv run pytest -q -p no:cacheprovider` → `305 passed in 57.73s` |
+| E2E Playwright Chromium | 58 | G01-03: `52 passed, 6 skipped`, 0 failed; `--repeat-each=3` on `e2e/sprint-01` → `135 passed, 18 skipped`, 0 flaky |
+| E2E WebKit | — | Not runnable here (`/opt/pw-browsers` has Chromium only). CI run 37372059078 queued at close |
 
-Skips: 5 IT-00-10 strict tests need Compose (green on Compose in QA round 2); 1 P3 rally-scoring property is blocked on FR-043 / OQ-01. Six E2E rows skip on purpose, and each names its API-level binding.
+The 6 E2E skips are named, and each names its API-level binding. The backend has 1 skip: P3 rally scoring (FR-043, OQ-01).
 
-## 6. Escalation to the human product owner (working-agreement §7.5 and §8)
+## 7. Decisions and inputs needed from the PO
 
-The fix loop reached iteration 3. These findings stay open, and each has an owner and a proposed next step. Full rows are in `review-rounds.md` round 3.
+Until these are answered, agents work only on independent items (working-agreement §8). The list is the same as the blockers.md EM row (items P1-P4), with P5 added at this close.
 
-| Finding | Severity | What is wrong | Owner | Proposed next step |
-|---|---|---|---|---|
-| PE-R3-05 / QA-R3-05 | blocker | No CI or nightly run since `2390e9a`; WebKit and the nightly oracle are unverified | **PO** (push and dispatch), sre-devops-engineer | PO pushes `sprint-01` at the sprint-close head, dispatches `ci.yml` then `nightly-quality.yml`; SRE records the run IDs. Decision D1 below |
-| SEC-R3-S1-01 | major | Accounts are keyed by a 64-bit HMAC under `AUTH_EMAIL_KEY`; rotating the key orphans every account. Docs say the opposite | principal-engineer, security-privacy-engineer | ADR amendment before any non-dev deployment |
-| SEC-R3-S1-02, SEC-R3-S1-03 | major | Session idle-timeout and 10-session cap have no killing test; T-ML-5, T-UV-9, T-UV-10 marked C without tests | senior-qa-engineer | Tests first; until then the threat-model rows go back from C |
-| PE-R3-01, PE-R3-02 | major | 429 before 400 on malformed metadata; probe refusal deletes the object before the commit | senior-backend-engineer | Red-first fixes before any Sprint 2 upload story |
-| PE-R3-03/PD-R3-02, PD-R3-01, PD-R3-03 | major | Wrong 429 copy; error summary does not refocus; 'trouble' state never shows | senior-frontend-engineer | Red-first fixes before any Sprint 2 FE story |
-| PE-R3-04/QA-R3-01, QA-R3-02 | major | TCR row 32 Pending and disputed; whole-bucket diffs in tests | senior-qa-engineer | Reject 32(a), round the slice up; assert only own keys |
-| QA-R3-03 | major | No smoke at the round-2 head; disk exhaustion | sre-devops-engineer | Prune, precheck the disk, re-run the smoke at the fixed head |
-| PD-R1-01 | **blocker** (round 1, no disposition) | M-02 shows 'Video received' and 'Checking video…' together after an upload | senior-frontend-engineer | Red-first unit test, then drop `!!file` once the match is decided |
-| PD-R1-02, PD-R1-04 (= PE-R1-04, QA-R1-04, S-09) | **blocker** (round 1) | WebKit: guide captions off and no fallback; no 'Your upload will stop' on sign-out | senior-frontend-engineer | Diagnose from the CI traces; needs a WebKit CI run (D1) |
-| PD-R1-03, PD-R1-07 | **blocker** / major (round 1) | Error-summary links below 24 px on Q-03; Q-07 Change links 24 px against 48 px | senior-frontend-engineer | Target-size tokens on both; add the `wcag22aa` axe tag |
-| PD-R1-05 | **blocker** (round 1) | Capture-guide wording still `draft`; ST-015 was merged without the coach sign-off | pickleball-domain-coach (via product-manager) | Sign off at the 2026-10-06 design review |
-
-**Decisions needed from the PO** (options and recommendation; until answered, agents continue only on independent work):
-
-| # | Question | Options | Recommendation |
+| # | Ask | Options | EM recommendation |
 |---|---|---|---|
-| D1 | How will CI evidence reach GitHub each round? | (a) The PO pushes and dispatches by hand each round. (b) The PO allows the orchestrator to push `sprint-*` branches, with no force push, and the SRE adds `push: branches: [sprint-*]` to `ci.yml`. (c) Agents open PRs | **(b)**. Every story's DoD waits on CI. In two sprints the human-only path produced 1 run per sprint (judgment) |
-| D2 | Accept the escalated majors as Sprint 2 carry-over, fixed before any new Sprint 2 story starts? | Accept / re-plan Sprint 2 | Accept, and size the carry-over into Sprint 2 capacity (about 10 units including deferred minors, judgment) |
-| D3 | ASVS 6.3.3 residual risk of the single-factor magic link | Accept the risk in an ADR / pull passkeys into R1 | Accept for dev and internal use now; decide before any real-user beta (blockers.md row 1) |
-| D4 | Inputs only the PO can give | OQ-01 rulebook PDFs (need-by 2026-11-16); ≥ 5 phone models of real clips for ST-025; real iOS Safari and Android Chrome runs for SPIKE-06; OQ-13 budget amount; OQ-20 recruitment; branch protection (`list_branches`: `main` `protected: false`) | Supply the phone clips and device runs first: they unblock 3 units (ST-025, SPIKE-06) and the R-05 caps |
-| D5 | US + AU legal review scope (OQ-05, PO input 2026-10-05) | — | Recorded in ADR 0023 (note) and `open-questions.md`; review must cover US state privacy/biometric law and the AU Privacy Act 1988 / APPs before any real-user beta |
+| P1 | CI evidence | Push and dispatch have been done once (`e76fb96`, run 37372059078 queued). Remaining: (a) put `nightly-quality.yml` on `main` so it can be dispatched; (b) turn on branch protection for `main`; (c) decide D1 for future rounds | (a) and (b) now. D1 option (b): the orchestrator pushes `sprint-*` without force, and CI runs on `push: sprint-*` |
+| P2 | ASVS 6.3.3 residual risk (ADR 0031) | Accept for R1 / passkeys in R1 | Accept for dev and internal use now; passkeys before any real-user beta (security and PM positions in ADR 0031) |
+| P3 | Real phone recordings for ST-025 | Supply ≥ 5 models incl. VFR / carry ST-025 to Sprint 2 | Approve the carry-over now and supply the clips by Sprint 2 planning (2026-11-02) |
+| P4 | Carry-over of the open majors and blockers (§1.2 rows 8-17) to Sprint 2, fixed before new stories | Accept / re-plan Sprint 2 | Accept: sprint-02 rows C-01..C-06 first, then ST-013b, ST-042, DR-01. About 12 units (§8) |
+| P5 | Disk for G01-05 | Approve removing the stale `racket-*` images of finished rounds, or add disk | Approve the removal; a verifier reruns G01-05 at ≥ 12 GB free |
+| — | Standing inputs | OQ-01 rulebook PDFs (need-by 2026-11-16); OQ-05 legal review for US and AU before any real-user beta; OQ-13 budget; OQ-20 recruitment; a VoiceOver/TalkBack tester for C-06 | — |
 
-## 7. Carry-over to Sprint 2
+## 8. Carry-over to Sprint 2
 
-| Item | Units (judgment) | Owner |
+| Item | Units (judgment) | Owner | Where |
+|---|---|---|---|
+| Open blockers/majors C-01..C-06 (NUL 500, quota race, upload recovery, E2E flake, evidence isolation, screen-reader pass) | ~6 | BE, FE, QA, SRE, PO | `sprint-02.md` §3 EM carry-over |
+| Deferred minors and nits C-07..C-38 | ~6 | per row | same |
+| ST-013b account identity (gate before non-dev deployment) | 1 | senior-backend-engineer | `sprint-02.md` §3 |
+| ST-042 least-privilege worker credentials (gate) | 2 | BE + SRE | `sprint-02.md` §3 |
+| ST-025 remaining part (after the PO's clips) | 1 | senior-ml-cv-engineer | `sprint-02.md` §3 |
+| DR-01 flows design review (if not held by 2026-10-06) | 0.5 | principal-designer | `sprint-02.md` §3 |
+| PD-R2R-03 consent line on G-01 | 0.5 | senior-frontend-engineer | ST-015 reopen |
+| WebKit family: triage from the CI traces of run 37372059078 | ~1 | senior-frontend-engineer | after P1 |
+| SPIKE-06 real-device runs; ADR 0028 decision | 1 | senior-frontend-engineer with the PO or a tester | — |
+| Match aggregate design-doc PR review (Sprint 2 DoR) | — | principal-engineer | after P1 |
+| G01-05 rerun at ≥ 12 GB free | — | sre-devops-engineer after P5 | C-15 |
+
+The Sprint 0 carry-over is unchanged except where noted: ST-002 GitHub evidence is now pushed and dispatched once, but has no green run and no branch protection; ST-010 WebKit is unverified.
+
+## 9. Demo outcome (sprint-01 §12, run live by the round-3 verifiers)
+
+| Step | Shown? | Evidence |
 |---|---|---|
-| ST-017 BE lane (TCR row 32, PE-R3-01) | 2 (already planned) | senior-backend-engineer, senior-qa-engineer |
-| ST-022 mutation baseline and first nightly oracle run | 2 (already planned) | senior-qa-engineer, sre-devops-engineer |
-| ST-025 real phone clips, R-05 measurement | 2 (already planned) | senior-ml-cv-engineer after the PO supplies clips |
-| SPIKE-06 real-device runs | 1 (already planned) | senior-frontend-engineer with the PO or a tester |
-| Open blockers and majors from rounds 1-3 (FE 7, BE 1 beyond ST-017, QA 3, PE 1, coach 1) | about 8 new | per §6 |
-| Deferred minors and nits from rounds 1-3 (about 17) | about 2 | per `review-rounds.md` round 3 tables |
-| External evidence: design review P7 (2026-10-06), coach wording sign-off, security and PE reviews, manual screen-reader pass, Sprint 1 QA test report | — | principal-designer, pickleball-domain-coach, security-privacy-engineer, principal-engineer, senior-qa-engineer |
-| Match aggregate design doc (Sprint 2 DoR) | — | principal-engineer |
-| Sprint 0 carry-over still open: ST-002 GitHub evidence (branch protection, labels, secret, nightly streak); ST-010 WebKit; SPIKE-01 reviews | — | PO with sre-devops-engineer; senior-frontend-engineer; principal-engineer and security-privacy-engineer |
+| 1. Request a link, open it from Mailpit, clean address bar | **Yes** | Signed in in 1.55 s, no token in the URL |
+| 2. First run and capture guide, video muted | **Yes** | 6 checklist items; no autoplay; "unofficial" shown |
+| 3. Doubles setup, error summary, rally scoring disabled, Check your answers | **Yes** | Error summary and page title `Error: …`; `aria-disabled` rally scoring |
+| 4. Large upload, offline at 40%, close the tab, resume | **Yes** | 1.05 GB here, 120 s offline, resumed at 60% after closing the tab, "Video received" (goal round 2: 2.98 GB) |
+| 5. PDF renamed `.mp4`; 4-hour file | **Yes** | Both refused with their copy |
+| 6. `pytest -m scoring` live, provisional rows separate | **Yes** | 204 passed, 26 provisional |
+| 7. Nightly oracle result and mutation baseline | **Partly** | Local oracle and mutation only; no nightly run (#2) |
+| 8. Sign out, offline reopen, nothing left | **Yes** | No participant names or match data visible |
+| 9. SPIKE-06/SPIKE-01 results; ask OQ-12, OQ-18 | **PO at the review** | — |
 
-## 8. Demo outcome (sprint-01 §12)
+## 10. Delivery metrics (summary; detail in the retro §2)
 
-The review is on 2026-10-30, so this is a dry-run against the demo script, based on the evidence above.
+139 commits on `sprint-01` (`c32b878^..HEAD`): 18 feat, 32 test, 26 fix, 60 docs, 2 ci, 1 style. Median 94 changed lines per commit (Sprint 0: about 15,000); 13 over 400. 49 commits came after the smoke at `488d574`: 12 fix, 7 test, 30 docs. DORA metrics are N/A: nothing was deployed and no PRs were opened. CI ran 3 times in total, and only once on a head with the Sprint 1 fixes (still queued).
 
-| Step | Can it be shown today? | Evidence or gap |
-|---|---|---|
-| 1. Request a link, open it from Mailpit, clean address bar | **Yes (desktop Chromium)** | IT-01-01; `sign-in.spec.ts` green; the token is removed by `replaceState` (security round 2). Not shown on a phone browser |
-| 2. First-run screen and capture guide, video muted | **Yes (Chromium)** | `first-run-and-guide.spec.ts` 5 passed. WebKit captions fail (PD-R1-02, last CI) |
-| 3. Doubles setup with error summary, disabled rally scoring, Check your answers | **Yes** | `match-setup.spec.ts` 13 passed |
-| 4. ~3 GB upload, airplane mode at 40%, close tab, resume | **Partly** | E2E-01-02 runs at reduced scale (48 MiB, 10 s offline). SPIKE-06 proxy: 1 GiB in 25.6 s, resumed after a closed tab. No ~3 GB phone fixture and no phone |
-| 5. PDF renamed `match.mp4`; 4-hour file | **Yes** | `upload-validation.spec.ts` green after freeing disk; real 4-hour fixture `fixtures/clips/long-4h` |
-| 6. `pytest -m scoring` live, provisional rows reported separately | **Yes** | 204 passed, 1 skipped; 26 `@needs-verification` cases listed separately |
-| 7. Nightly oracle result and mutation baseline | **No** | Nightly never ran on GitHub; no mutation baseline. Only the local 100,000-sequence run can be shown |
-| 8. Sign out, offline, reopen: nothing left | **Yes (Chromium)** | `sign-out.spec.ts` 3 passed |
-| 9. SPIKE-06 and SPIKE-01 results; ask OQ-12 and OQ-18 | **Partly** | ADR 0028 has proxy data only; OQ-12 answered (ADR 0015 Accepted); OQ-18 needs real-device data |
+## 11. History of this report's verdict
 
-## 9. Delivery metrics
-
-See the retro, §2. Summary: 82 commits on `sprint-01` (`c32b878^..HEAD`): 18 feat, 25 test, 13 fix, 23 docs, 2 ci, 1 style. Median 152.5 changed lines per commit (Sprint 0: about 15,000). 12 commits were over 400 lines. 18 commits came after the smoke (review-fix work). DORA metrics are N/A: nothing was deployed and no PRs were opened.
+- 2026-10-05, first close at `9195ea9`: "goal partly met", 25/32. This was written before any goal measurement and was superseded (PE-R1-S1-02, QA-V1-04).
+- 2026-10-05, sprint-close review rounds 1-2: dated notes added (not demonstrated; 29/32 after the round-1 fixes).
+- 2026-10-05, goal rounds 1-3: 11/12, 11/12 and 10/12 met; G01-11 "no" in every round.
+- 2026-10-05, this rewrite (PE-R3R-04, QA-R3-DOC-01): the verdict is taken from the round-3 scorecard, and the open count is corrected from 11 to 17.

@@ -132,6 +132,8 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0028 | [Phone-browser uploads: "resume on return", no background-upload promise](0028-phone-browser-upload-resume-on-return.md) | Proposed (SPIKE-06, partial data) | 2026-10-05 |
 | 0029 | [The dev and E2E stack is served over https (`web-tls`), not given an insecure cookie](0029-dev-and-e2e-stack-served-over-https.md) | Accepted (Sprint 1, WebKit sign-in blocker) | 2026-10-05 |
 | 0030 | [Review loop: a disposition per finding, isolated evidence, M/L stories sliced before they are built](0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md) | Accepted (EM, retro 1) | 2026-10-05 |
+| 0031 | [ASVS 6.3.3: residual risk of the single-factor magic link, or passkeys in R1](0031-asvs-6-3-3-single-factor-magic-link-residual-risk.md) | Proposed (awaiting the human PO, item P2) | 2026-10-05 |
 | 0032 | [Account identity is the normalised address, not the HMAC `email_key` (amends 0025)](0032-account-identity-is-the-address-not-the-email-key.md) | Accepted (security-privacy-engineer sign-off recorded 2026-10-05; code is ST-013b, gate before any non-dev deployment) | 2026-10-05 |
+| 0033 | [Reviewers write their own finding rows, goal methods are dry-run, evidence cleans up after itself](0033-reviewer-written-finding-rows-dry-run-methods-and-self-cleaning-evidence.md) | Accepted (EM, retro 1 final close) | 2026-10-05 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.

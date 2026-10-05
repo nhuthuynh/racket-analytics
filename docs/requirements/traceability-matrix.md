@@ -361,3 +361,30 @@ The test files as they landed (backend paths relative to `backend/tests/`; featu
 | ST-025 | `unit/dataset/test_manifest_consent.py`, `test_phone_set.py` | `integration/dataset/test_phone_manifest_tool.py` | `features/test_phone_fixtures.py` → `phone_fixtures.feature` (2 scenarios red until real clips) | — | Real phone clips (PO) |
 | SPIKE-06 | — | — | — | ADR 0028 (proxy data) | Real-device runs |
 
+
+## 10. Sprint 1 outcome per requirement (engineering-manager, 2026-10-05, final close)
+
+This section shows the state of each Sprint 1 requirement at the final close. Evidence is goal-scorecard verification round 3 at `e76fb96` (`docs/sprints/01/goal-scorecard.md` §8) and the open findings in `docs/sprints/01/sprint-report.md` §1.2. "Live" means the requirement was shown on an isolated https Compose stack. **No requirement is release-verified**: no green CI run includes these tests, and WebKit is unverified. The test files per story are in §9.
+
+| Requirement | Story | Shown live (goal metric) | Open at close |
+|---|---|---|---|
+| FR-001 Passwordless sign-in | ST-013 | Yes (G01-01, G01-06a 1.058 s) | NUL address 500 (SEC-R6-S1-01); identity key (ST-013b); ASVS 6.3.3 (ADR 0031) |
+| FR-004 First-run promise | ST-015 | Yes (G01-03, demo step 2) | — |
+| FR-005 Match participants by nickname | ST-016 | Yes (G01-01 step 3, G01-03) | NUL title 500 (SEC-R6-S1-01) |
+| FR-011 Sign out clears local data | ST-014 | Yes, Chromium (G01-01 step 9, demo step 8) | WebKit sign-out dialog |
+| FR-020 Capture guide | ST-015 | Yes, Chromium (G01-03, G01-10) | WebKit captions/fallback; consent line (PD-R2R-03) |
+| FR-021 Match setup flow | ST-016 | Yes (G01-03 incl. E2E-01-03, G01-10) | Design review P7 |
+| FR-022 Resumable upload | ST-017 | Yes (G01-01 drop and resume, G01-05 541.8 Mbit/s but run invalid on disk) | Quota race (PE-R3R-01); server-error recovery (PD-R3V-01) |
+| FR-023 Upload validation | ST-018 | Yes (G01-01 460/413/415, demo step 5) | Caps provisional until ST-025 (real phone clips) |
+| FR-025 Footage quality report (stretch) | ST-019 | Yes (G01-01 facts, demo step 4) | Design review |
+| FR-040, FR-041, FR-044, FR-045 (part a) | ST-020, ST-021, ST-023 | Yes (G01-07: 204/205, 26/26 `@needs-verification`) | Presets PROVISIONAL-UNVERIFIED until OQ-01 |
+| NFR-001 / NFR-002 golden tables, invariants, oracle | ST-022, ST-023, ST-024 | Yes, locally (G01-07, G01-08: 0/100,000) | Nightly run on GitHub (P1) |
+| NFR-010 / NFR-041 latency and availability | ST-024 | Yes (G01-04: p95 12.79 ms, 100%) | — |
+| NFR-016 Upload throughput | ST-017 | Measured 541.8 Mbit/s; evidence invalid (G01-05, disk) | Rerun at ≥ 12 GB free (PO P5) |
+| NFR-025 Phone video formats | ST-025 | No | Real phone clips (PO P3) |
+| NFR-026 / NFR-053 upload regression suites | ST-017, ST-018 | Yes (G01-02: 41/41) | — |
+| NFR-027b Manual screen-reader pass | — | No | QA-R3-GATE-01 (sprint-02 C-06) |
+| NFR-028, NFR-030, NFR-031, NFR-034, NFR-037 a11y | ST-016 | Yes, Chromium (G01-10: 0 violations, 0 targets < 24×24) | WebKit |
+| NFR-072 Rules-engine test strength | ST-022 | Baseline 0.8654 (G01-08) | Gate from Sprint 2 |
+| NFR-073 Fast tests | — | Yes (G01-12: 7.4 s / 8.3 s) | — |
+| NFR-074 Flaky rate | — | 0 flaky ×3 on `e2e/sprint-01` (G01-03) | Root specs not repeated; known flake (QA-R3-E2E-01) |

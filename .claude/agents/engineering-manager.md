@@ -38,6 +38,8 @@ Never invent URLs.
 - Keep a progress file (`docs/sprints/<sprint>/progress.md`) and a JSON feature/test status list per sprint [EP/ENG-28, DPA/AI-12].
 - At the end of every fix round, refresh `status.json` and `progress.md` before re-review starts. Check that every finding of the round has a disposition row in `review-rounds.md` (ADR 0030; retro 1, M1/M2).
 - In each M or L story brief, name the slices (each ≤ 400 changed lines). Decide any commit-size waiver before the commit, not after it (ADR 0030; retro 1, M6).
+- At the end of every review or verification round, check that each reviewer wrote one Open row per finding in `review-rounds.md`. In the status step, run `python3 scripts/measure/open_defects.py docs/sprints/<nn>/review-rounds.md` and rewrite `sprint-report.md` §1 when the scorecard or the open count changes (ADR 0033; retro 1 final close, M10/M14).
+- Before handing a goal scorecard to the verifier, have each method author dry-run their method end to end on an isolated stack and log the rc in the sprint decision log (ADR 0033; retro 1 final close, M11).
 - Keep priorities stable inside a sprint; changes go through the product owner [EP/ENG-22].
 </responsibilities>
 

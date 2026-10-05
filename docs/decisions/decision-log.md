@@ -1,6 +1,6 @@
 # Decision log: index of all ADRs
 
-- **Maintained by:** engineering-manager (A for log completeness, working-agreement §4). Last updated 2026-10-05 at the Sprint 1 close (ADRs 0027-0030 indexed; ADR 0023 note on the US/AU jurisdictions).
+- **Maintained by:** engineering-manager (A for log completeness, working-agreement §4). Last updated 2026-10-05 at the Sprint 1 final close (ADRs 0031-0033 indexed; earlier: ADRs 0027-0030 and the ADR 0023 note on the US/AU jurisdictions).
 - **Rules and template:** [README.md](README.md). This page is an index with a one-line evidence summary per ADR; the ADR file is authoritative.
 - **Small decisions:** [Sprint 0 decision log](../sprints/00/decision-log.md) and [Sprint 1 decision log](../sprints/01/decision-log.md) (dated rows: who, decision, evidence, reasoning).
 - **Reviews:** [review-log.md](review-log.md) (adversarial review of docs and agent definitions) and [Sprint 0 review rounds](../sprints/00/review-rounds.md) (code review findings, fixes and evidence for rounds 1-2; round-3 findings are summarised in [sprint-report.md](../sprints/00/sprint-report.md) §6).
@@ -42,6 +42,9 @@ ADR dates are 2026-10-03 unless the row says otherwise. "PO" means the human pro
 | [0028](0028-phone-browser-upload-resume-on-return.md) | Phone-browser uploads: "resume on return", no background-upload promise (SPIKE-06, partial) (2026-10-05) | Proposed (FE) | Desktop-Chromium proxy: 1 GiB in 25.6 s; resumed after the tab closed at 30%; offline 10 s → Paused → resumed | Real iOS Safari / Android Chrome runs (PO or tester); OQ-18 |
 | [0029](0029-dev-and-e2e-stack-served-over-https.md) | The dev and E2E stack is served over https (`web-tls`), not given an insecure cookie (2026-10-05) | Accepted (security; PO directive 2026-10-05) | `curl http://localhost:3000/` → 400; https sign-in → `__Host-racket_session ... Secure`; CI job 111725272519: no WebKit test fails at sign-in | Deployment ADR adds HSTS at the edge (SEC-R1-S1-05) |
 | [0030](0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md) | Review loop: a disposition per finding per round, isolated evidence with a disk check, M/L stories sliced before they are built (2026-10-05, retro 1) | Accepted (EM; PO may veto at the 2026-10-30 review) | Round 1-2 tables held 11/31 and 10/16 findings; 5 round-1 blockers dropped; identical runs 25 vs 19 failed; 12 of 82 commits over 400 lines | Sprint 2 confirmation checks in the ADR |
+| [0031](0031-asvs-6-3-3-single-factor-magic-link-residual-risk.md) | ASVS 6.3.3: residual risk of the single-factor magic link, or passkeys in R1 (2026-10-05) | **Proposed, awaiting the human PO** (PO item P2) | blockers.md row 1; threat model S1-F1, T-ML-13; `grep 6.3.3` on ADR 0023 and po-input → no match | PO decision; blocks any real-user beta |
+| [0032](0032-account-identity-is-the-address-not-the-email-key.md) | Account identity is the normalised address, not the HMAC `email_key` (amends ADR 0025) (2026-10-05) | Accepted (principal-engineer, security-privacy-engineer; recorded `3194096`) | SEC-R3-S1-01/SEC-R4-S1-01: `hexdigest()[:16]`; live `\d accounts` has no email column | ST-013b in Sprint 2, gate before any non-dev deployment |
+| [0033](0033-reviewer-written-finding-rows-dry-run-methods-and-self-cleaning-evidence.md) | Reviewers write their own Open finding rows; goal methods dry-run before handover; self-cleaning, isolated evidence; status step rewrites the PO report (2026-10-05) | Accepted (engineering-manager; PO may veto at the 2026-10-30 review) | `open_defects.py` 11 → 17 once the missing round-3 rows were written; G01-05 invalid at 9 GB free; QA-V1-01/05/06/07 | SRE rows C-05, C-15, C-23 |
 
 ## Gaps found in this pass (2026-10-03)
 
@@ -60,3 +63,9 @@ ADR dates are 2026-10-03 unless the row says otherwise. "PO" means the human pro
 - Indexed ADRs 0027, 0028 and 0029, which were missing from this page, and the new ADR 0030 (retro 1).
 - ADR 0023 has a dated note: the PO named the US and AU as beta jurisdictions, and the rulebook PDFs come later (`docs/requirements/po-input-2026-10-05.md`).
 - Still Proposed and waiting for peer review: 0005, 0012, 0013, 0014, 0016, 0017, 0018, 0020, 0021, 0026, 0027, 0028.
+
+## Changes in this pass (2026-10-05, Sprint 1 final close after goal round 3, engineering-manager)
+
+- Indexed ADR 0031 (Proposed, waiting for the PO), ADR 0032 (Accepted in `3194096`) and the new ADR 0033 (retro 1, final close).
+- PO input `docs/requirements/po-input-2026-10-05.md` is folded in: ADR 0023 dated note (US and AU; rulebook PDFs later) and `open-questions.md` OQ-01 and OQ-05. Checked again with `grep -n 'po-input' docs/decisions/0023-*.md docs/requirements/open-questions.md`; nothing is missing.
+- Still Proposed: 0005, 0012, 0013, 0014, 0016, 0017, 0018, 0020, 0021, 0026, 0027, 0028 (peer review); 0031 (PO).

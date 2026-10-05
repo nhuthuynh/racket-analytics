@@ -259,3 +259,19 @@ S3 metric dictionary + drill schema ──> S4 drill library (coach) ──> S9 
 - A sprint that misses its goal is analysed with 5 Whys at the retro; the next sprint's load factor follows ADR 0010.
 - If an external dependency in §8.1 misses its need-by date, the EM applies the fallback and records it as a dated note on ADR 0007, or a superseding ADR if the order changes.
 - Each later sprint gets its own `sprint-NN.md` at planning, with the same sections as Sprints 0-2: goal, backlog with FR/NFR IDs and estimates, task breakdown per agent, TDD plan, integration tests, Gherkin scenarios, quality gates, DoD, demo script and retro link.
+
+## 12. Actuals (updated at each sprint close)
+
+The plan above is not rewritten; actuals are added here (engineering-manager). Sprints 0 and 1 both ran in compressed agent sessions on 2026-10-05, ahead of their calendar dates, so the calendar in §2 is still the review cadence with the PO.
+
+| Sprint | Planned units | Implemented | DoD-done | Goal | Evidence |
+|---|---|---|---|---|---|
+| S0 | 28 | 19 (0.68) | 0 | Partly: walking skeleton local; no green CI | `docs/sprints/00/`, retro 0 |
+| S1 | 32 (+1 stretch) | 29 (0.906) + 1 stretch | 0 | **Not met** (PO standing rule): scorecard round 3 met 10 of 12; G01-05 invalid below the disk floor, G01-11 17 open blocker/major | `docs/sprints/01/sprint-report.md` §1; `goal-scorecard.md` §8 |
+
+**Effect on the plan (judgment, for the PO at the 2026-10-30 review; changes go through the PO, §11):**
+- **S2** starts with a carry-over of about 12 units: `sprint-02.md` §3 rows C-01..C-38, plus ST-013b, ST-042 and DR-01. At load factor 0.8 this takes about 1 lane-week out of the Quick Tag scope. The fallback, if the PO keeps the S2 scope, is to move the stretch stories ST-033 and ST-036 to S3.
+- **Gates before any non-dev deployment** (staging, beta): ST-013b, ST-042, ST-038, S1-F2 and the ADR 0031 decision. They must be in place by the S5 R1 release candidate (2026-12-14). They are on the R1 critical path (§8.2).
+- **External dependencies are unchanged:** OQ-01 rulebook PDFs need-by 2026-11-16 (S3 planning); OQ-05 legal review (US + AU) before any real-user beta; real phone clips for ST-025 before S2 planning (2026-11-02).
+- **CI cadence:** run 37372059078 is the first run that includes the S1 fixes. Until D1 is decided, every sprint's DoD depends on the PO pushing and dispatching (retro 1 A1).
+

@@ -77,6 +77,49 @@ Until ST-025 lands, ST-018 keeps the provisional 10 GB / 150 min caps and the de
 |---|---|---|---|---|---|---|
 | DR-01 (carried) | Finish the DoR P7 flows design review of `docs/design/flows-sprint-01.md` §10.1: the remaining "Decision at review" cells, then the chair records the outcome in §10, amends U-04 (R-2a, R-2b) and adds the §6 quota, conflict and rate-limit states (R-5). **Hard date: 2026-11-02 (planning).** No Sprint 2 UI story starts before it | DoR P7; NFR-030..NFR-037 | principal-designer (chair) | pickleball-domain-coach, senior-frontend-engineer, business-analyst, security-privacy-engineer, product-manager | XS | Participants' decisions |
 
+**EM carry-over from the Sprint 1 review (engineering-manager, 2026-10-05, sprint close after goal round 3; ADR 0030 rule 1, PE-R3R-05).** These rows are open Sprint 1 findings. Every deferred finding has one row here with an owner, so none is lost. **C-01..C-06 are blockers or majors.** They are fixed red-first before any new Sprint 2 story starts, unless the PO re-plans (blockers.md item P4; retro 1 final action A2). The minors and nits (C-07..C-38) go into the review-loop reserve. Sizes are judgment. Total: about 6 units for C-01..C-06 and about 6 units for C-07..C-38, inside the 10-12 unit carry-over reserve of the Sprint 1 retro.
+
+| Row | Finding(s) | Work | Owner (R) | Reviewer | Size |
+|---|---|---|---|---|---|
+| C-01 | SEC-R6-S1-01 (blocker) | Refuse Cc/Cs characters in `normalise_email` and in the match title check. Red first: unit tests, plus an IT asserting 422 `email_invalid` / `title_invalid` and no row written | senior-backend-engineer | senior-qa-engineer, security-privacy-engineer | S |
+| C-02 | PE-R3R-01 (major) | Take the per-owner lock before `_check_quota`. Red first: a concurrency IT (8 parallel creations → 3 × 201) | senior-backend-engineer | senior-qa-engineer, security-privacy-engineer | S |
+| C-03 | PD-R3V-01 (major), with PD-R3-04 | U-01 server-error state per flows §6: "Try again" keeps the transfer, no contradictory "No video yet", and `support_ref` shown | senior-frontend-engineer | principal-designer, senior-qa-engineer | S |
+| C-04 | QA-R3-E2E-01 / PD-R3V-02 (major) | `walking-skeleton.spec.ts`: hold the PATCH until the progress text is checked; add the root specs to the G01-03 repeat. TCR row first | senior-qa-engineer | sre-devops-engineer | XS |
+| C-05 | QA-R3-E2E-02 (major) | Evidence E2E runs use `--output` under the run directory and take the E2E evidence lock (ADR 0033 rule 3) | sre-devops-engineer | senior-qa-engineer | XS |
+| C-06 | QA-R3-GATE-01 (major) | Manual screen-reader pass (NFR-027b) on the Sprint 1 screens with VoiceOver (iOS) and TalkBack (Android), by a human with devices; results in `docs/sprints/02/a11y-manual.md`. Due 2026-11-13 | senior-qa-engineer (plan, record), human PO (devices or tester) | principal-designer | S |
+| C-07 | PE-R3R-02 | Sign-in mail sent in `after_commit`; record the at-least-once or at-most-once choice | senior-backend-engineer | principal-engineer | XS |
+| C-08 | PE-R3R-03 | Pin DB `TimeZone=UTC`, or format timestamps in UTC; unit test with a non-UTC session | senior-backend-engineer | senior-qa-engineer | XS |
+| C-09 | QA-R3-TEST-01 | Regression test: unknown key and non-object body on `POST /auth/links` | senior-backend-engineer | senior-qa-engineer | XS |
+| C-10 | PE-R3R-06 | `JobKey.match_id` overload: rename to `subject_id` or document it in context map R7 | principal-engineer | senior-backend-engineer | XS |
+| C-11 | SEC-R6-S1-02 | Do not publish the API port to the host, or document that T-ML-8 holds only behind web-tls | sre-devops-engineer | security-privacy-engineer | XS |
+| C-12 | QA-R3-SMOKE-01 | `smoke.md` §7 at the sprint-close head | sre-devops-engineer | senior-qa-engineer | XS |
+| C-13 | SRE-G2-01 | OTLP metrics exporter: point it at a metrics backend, or switch metrics export off in dev | sre-devops-engineer | — | XS |
+| C-14 | SRE-G2-02 | `ClientDisconnect` during PATCH is not logged as a 5xx | senior-backend-engineer | sre-devops-engineer | XS |
+| C-15 | G01-05 goal round 3 | Teardown of every evidence stack uses `down -v --rmi local` (ADR 0033 rule 3); rerun G01-05 with ≥ 12 GB free once the human approves removing the stale images | sre-devops-engineer, human PO | senior-qa-engineer | XS |
+| C-16 | PE-R2-S1-05 | Upload creation: defer `_discard` deletes until after commit; test with expired session plus malformed metadata | senior-backend-engineer | senior-qa-engineer | XS |
+| C-17 | SEC-R5-S1-02 | Durable pending-delete for a refused original (outbox row), or an `originals/` reconciliation in ST-038; T-UV-3 note | senior-backend-engineer, principal-engineer | security-privacy-engineer | S |
+| C-18 | SEC-R5-S1-03 | `ALLOWED_ORIGINS=${PUBLIC_WEB_ORIGIN}` in env.example and the CI E2E env; infra test | sre-devops-engineer | security-privacy-engineer | XS |
+| C-19 | SEC-R5-S1-04 | Refuse `DEV_IDENTITY_ENABLED=true` outside dev/test (red unit test first) | senior-backend-engineer | security-privacy-engineer | XS |
+| C-20 | PD-R2R-05 | "You can still tag this match." only after a consequence finding | senior-frontend-engineer | principal-designer | XS |
+| C-21 | PD-R2R-06 | M-01 date in the viewer's time zone; flows M-01 status copy | senior-frontend-engineer | principal-designer | XS |
+| C-22 | PD-R2R-08 | axe and target-size checks on A-02, U-01 trouble/paused/stopped, the 429 states and M-02 with the report | senior-qa-engineer | principal-designer | XS |
+| C-23 | PD-R2R-10 | Disk precheck at the start of every E2E evidence run (not only live_goal) | sre-devops-engineer | senior-qa-engineer | XS |
+| C-24 | QA-R2V-14 | Scorecard §4.0 template documents the host-port remap for isolated stacks | engineering-manager | senior-qa-engineer | XS |
+| C-25 | PE-R1-06 | `DEV_WEB_ORIGIN` default to the https origin | senior-backend-engineer | — | XS |
+| C-26 | PE-R1-07 | `_check_inputs` rejects a game-over state without a winner | senior-backend-engineer | senior-qa-engineer | XS |
+| C-27 | PE-R1-10 | `match_state.py:97` nit | senior-backend-engineer | — | XS |
+| C-28 | SEC-R1-S1-04 | `used_at IS NULL` predicate on the exchange UPDATE, assert rowcount 1 | senior-backend-engineer | security-privacy-engineer | XS |
+| C-29 | SEC-R1-S1-05 | HSTS in the deployment ADR's acceptance criteria | sre-devops-engineer | security-privacy-engineer | XS |
+| C-30 | PD-R1-09 / PD-R2R-07 | M-01 `error.tsx` with support_ref, skeleton loading rows, offline message | senior-frontend-engineer | principal-designer | S |
+| C-31 | PE-R2-04 | Recheck `test_worker_crash` on a shared DB once isolation lands | senior-qa-engineer | — | XS |
+| C-32 | PE-R3-06 | Test-isolation follow-up (retro 1 A2) | senior-qa-engineer | — | XS |
+| C-33 | PE-R1-09 / PE-R3-07 | Amend api-sprint-01 §2.4 and scoring-engine.md §2.2/§2.4 (rolling window) | principal-engineer | senior-backend-engineer | XS |
+| C-34 | PE-R3-08 / QA-R2V-13 | Reword the 0-0-2 seam comment in `contract.py` | senior-qa-engineer | principal-engineer | XS |
+| C-35 | PD-R3-04 | Support reference in the upload server error (with C-03) | senior-frontend-engineer | principal-designer | XS |
+| C-36 | PD-R3-06 | Distinct names for several resume banners on M-01 | senior-frontend-engineer | principal-designer | XS |
+| C-37 | PD-R2-06 / PD-R2R-11 | F-01 link target; 48 px touch targets for the menu and secondary links (design review R-6) | senior-frontend-engineer, principal-designer | — | XS |
+| C-38 | PD-R3-05 / PD-R2R-09 | Quota, conflict and rate-limit states in flows §6 (DR-01, R-5) | principal-designer, product-manager | security-privacy-engineer | XS |
+
 **Stretch:** ST-033 Correction consequences (FR-054; FE S + BE XS); ST-036 Gaps and resync (FR-047; BE XS + FE XS, sized S overall).
 
 ### 3.1 Acceptance notes per story
