@@ -86,7 +86,7 @@ export function AccountMenu({
       {open ? (
         <ul id="account-menu-items" className="account-menu__items">
           <li>
-            <Link href="/guide" className="inline-target">
+            <Link href="/guide" className="touch-link">
               How to film your match
             </Link>
           </li>

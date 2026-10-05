@@ -946,3 +946,11 @@ main:focus-visible,
   border-radius: var(--border-radius);
   background: var(--color-surface);
 }
+
+/* A standalone text link on touch screens: 48px tall like the buttons (C-37, design review R-6;
+ * [DPA/DESIGN-10]). */
+.touch-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--size-target-touch);
+}

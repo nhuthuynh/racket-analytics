@@ -26,7 +26,7 @@ export default function WelcomePage() {
         </Link>
       </p>
       <p>
-        <Link href="/matches/new" className="inline-target">
+        <Link href="/matches/new" className="touch-link">
           Record your first match
         </Link>
       </p>
