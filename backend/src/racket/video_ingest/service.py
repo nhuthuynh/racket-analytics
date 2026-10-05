@@ -205,6 +205,8 @@ class UploadService:
         self.clock = clock
         self.uploads = UploadRepository(session)
         self.media = MediaRepository(session)
+        # Bytes of replaced sessions, deleted only once the creation commits (C-16).
+        self._after_commit: list[UploadSession] = []
 
     @property
     def policy(self) -> UploadPolicy:
@@ -244,6 +246,7 @@ class UploadService:
         if self.policy.check_declared_length(length) is not None:
             self._reject(match_id, owner_id, Rejection.TOO_LARGE, now)  # T-UV-2, NFR-053
             self.session.commit()
+            self._delete_replaced_bytes()
             raise VideoTooLarge("declared length above the cap")
         # §6.3 check 4: syntax and values (``last_modified`` range, ``head_sha256`` hex) are a
         # 400 before quota and rate (PE-R3-01).
@@ -286,6 +289,7 @@ class UploadService:
             if isinstance(exc, IntegrityError) and isinstance(exc.orig, UniqueViolation):
                 raise UploadExists("the match already has an upload") from None
             raise
+        self._delete_replaced_bytes()
         log.info("upload created", extra={"event": "upload.created", "upload_id": str(upload.id)})
         SLI.upload_event(UploadEvent.CREATED)
         return upload
@@ -299,7 +303,8 @@ class UploadService:
             return
         if not existing.is_expired(now):
             raise UploadExists("the match already has an upload")
-        self._discard(existing)
+        self.uploads.delete(existing)  # its bytes go after the commit (C-16, PE-R2-S1-05)
+        self._after_commit.append(existing)
         log.info("upload replaced", extra={"event": "upload.replaced",
                                            "upload_id": str(existing.id)})  # fmt: skip
 
@@ -310,9 +315,17 @@ class UploadService:
         SLI.upload_event(UploadEvent.REJECTED, reason=rejection.value)
         log.info("upload refused", extra={"event": "upload.rejected", "reason": rejection.value})
 
+    def _delete_replaced_bytes(self) -> None:
+        for upload in self._after_commit:
+            self._delete_bytes(upload)
+        self._after_commit.clear()
+
     def _discard(self, upload: UploadSession) -> None:
         """Delete a session and its stored bytes (best effort for the bytes; ST-038 sweeps)."""
         self.uploads.delete(upload)
+        self._delete_bytes(upload)
+
+    def _delete_bytes(self, upload: UploadSession) -> None:
         try:
             self.store.abort_multipart(upload.object_key, upload.s3_upload_id)
             for staged in upload.staged:
