@@ -118,6 +118,35 @@ describe('MatchUpload', () => {
     expect(screen.getByText('No video yet')).toBeVisible();
   });
 
+  it('PD-R2-02: an unfinished-upload quota refusal shows no progress and links to Your matches', () => {
+    const { t } = renderPanel({ initialFile: video(1_724_207) });
+    act(() => t.cb().onError(429));
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText('Stopped')).toBeNull();
+    expect(screen.queryByText(/You can use other pages while this tab stays open/)).toBeNull();
+    expect(screen.getByRole('alert')).toHaveFocus();
+    const link = screen.getByRole('link', { name: /too many unfinished uploads/ });
+    expect(link).toHaveAttribute('href', '/matches');
+    expect(screen.queryByText('Nothing from this file was saved.')).toBeNull();
+    expect(screen.getByText('No video yet')).toBeVisible();
+  });
+
+  it('PD-R2-02: a conflict refusal before any byte was sent shows no progress', () => {
+    const { t } = renderPanel({ initialFile: video(1_724_207) });
+    act(() => t.cb().onError(409));
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText('Stopped')).toBeNull();
+    expect(screen.getByRole('link', { name: /already has an unfinished upload/ })).toBeVisible();
+  });
+
+  it('PD-R2-02: a failure after bytes were sent keeps the progress it made', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onProgress(640, 1000));
+    act(() => t.cb().onError(500));
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '64');
+    expect(screen.getByText('Stopped')).toBeVisible();
+  });
+
   it('reports completion and then checks the video', () => {
     const { t, onUploaded } = renderPanel({ initialFile: video() });
     act(() => t.cb().onSuccess());

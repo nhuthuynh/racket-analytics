@@ -26,6 +26,17 @@ describe('SignInForm (A-01)', () => {
     expect(document.title).toMatch(/^Error: /);
   });
 
+  it('PD-R2-01: after the error, typing into the field keeps focus and every character', async () => {
+    render(<SignInForm api={api()} />);
+    await userEvent.type(screen.getByLabelText('Email address'), 'not-an-email');
+    await userEvent.click(screen.getByRole('button', { name: 'Send me a link' }));
+    expect(screen.getByRole('alert')).toHaveFocus();
+    await userEvent.click(screen.getByRole('link', { name: /Enter an email address/ }));
+    await userEvent.keyboard('@x');
+    expect(screen.getByLabelText('Email address')).toHaveFocus();
+    expect(screen.getByLabelText('Email address')).toHaveValue('not-an-email@x');
+  });
+
   it('tells a rate-limited user when to try again', async () => {
     const fake = api(async () => {
       throw new ApiError(429, 'rate_limited', null, { retryAt: '2026-10-05T14:32:00Z' });

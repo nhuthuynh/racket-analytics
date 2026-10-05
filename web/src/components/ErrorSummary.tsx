@@ -2,12 +2,15 @@
 
 // Error summary [DPA/DESIGN-13]; component checklist §5: heading "There is a problem",
 // focus on render, one link per field to its input.
+import Link from 'next/link';
 import { useEffect, useRef, type ReactNode } from 'react';
 
 export interface FieldError {
   /** id of the input the link moves focus to */
   field: string;
   message: string;
+  /** A page to go to instead of a field, when the fix is elsewhere (e.g. "/matches"). */
+  href?: string;
 }
 
 export function ErrorSummary({
@@ -22,9 +25,12 @@ export function ErrorSummary({
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
+  // Focus moves only when the messages change, not on every re-render: callers pass a new array
+  // each render, and typing in the field must keep focus there (PD-R2-01; SC 3.2.2, NFR-034).
+  const signature = JSON.stringify([errors.map((e) => [e.field, e.message, e.href ?? '']), general ?? '']);
   useEffect(() => {
     ref.current?.focus();
-  }, [errors, general]);
+  }, [signature]);
 
   if (errors.length === 0 && !general) return null;
 
@@ -44,15 +50,19 @@ export function ErrorSummary({
         <ul className="error-summary__list">
           {errors.map((e) => (
             <li key={e.field}>
-              <a
-                href={`#${e.field}`}
-                onClick={(event) => {
-                  event.preventDefault();
-                  document.getElementById(e.field)?.focus();
-                }}
-              >
-                {e.message}
-              </a>
+              {e.href ? (
+                <Link href={e.href}>{e.message}</Link>
+              ) : (
+                <a
+                  href={`#${e.field}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    document.getElementById(e.field)?.focus();
+                  }}
+                >
+                  {e.message}
+                </a>
+              )}
             </li>
           ))}
         </ul>

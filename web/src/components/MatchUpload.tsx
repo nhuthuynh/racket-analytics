@@ -28,6 +28,8 @@ interface Problem {
   message: string;
   /** U-03 refusals: nothing was kept from the file. */
   nothingSaved: boolean;
+  /** The summary link goes to this page instead of the file input. */
+  href?: string;
 }
 
 const STATE_TEXT: Record<Mode, string> = {
@@ -83,6 +85,7 @@ export function MatchUpload({
   const retries = useRef(0);
   const lastTen = useRef(0);
   const started = useRef(false);
+  const progressed = useRef(false);
   const viewRef = useRef(view);
   viewRef.current = view;
 
@@ -116,6 +119,7 @@ export function MatchUpload({
       setProblem(null);
       retries.current = 0;
       lastTen.current = 0;
+      progressed.current = false;
       const offset = from.offset ?? 0;
       estimate.current = createEstimate(performance.now(), offset);
       setView({ kind: 'transfer', mode: 'uploading', sent: offset, total: file.size });
@@ -126,6 +130,7 @@ export function MatchUpload({
         callbacks: {
           onProgress: (sent, total) => {
             retries.current = 0;
+            progressed.current = true;
             if (estimate.current) estimate.current = recordProgress(estimate.current, performance.now(), sent);
             setEstimateTick((n) => n + 1);
             setView((v) => {
@@ -166,16 +171,23 @@ export function MatchUpload({
               setProblem({ message: reason === 'too_large' ? rejectionMessage('too_large', policy) : NOT_A_VIDEO, nothingSaved: true });
               return;
             }
-            setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'stopped' } : v));
+            // Refused before any byte was sent (quota, or another upload already open): nothing
+            // was started, so no progress or "leaving" copy, just the chooser (PD-R2-02).
+            if (reason === 'quota' || (reason === 'conflict' && !progressed.current)) {
+              setView({ kind: 'idle' });
+            } else {
+              setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'stopped' } : v));
+            }
             setProblem({
               nothingSaved: false,
+              ...(reason === 'quota' ? { href: '/matches' } : {}),
               message:
                 reason === 'expired'
                   ? 'This upload has expired. Start the upload again.'
                   : reason === 'conflict'
                     ? 'This match already has an unfinished upload. Reload the page to continue it.'
                     : reason === 'quota'
-                      ? 'You have too many unfinished uploads. Finish one of them, then try again.'
+                      ? 'You have too many unfinished uploads. Finish one of them from Your matches, then try again.'
                       : reason === 'network'
                         ? 'The upload stopped. Check your connection, then try again. It continues where it stopped.'
                         : 'Sorry, the upload stopped because of a problem on our side. Your progress is saved. Try again.',
@@ -270,7 +282,7 @@ export function MatchUpload({
     <section aria-labelledby="upload-title" className="stack panel">
       <h2 id="upload-title">Video upload</h2>
       {shownProblem ? (
-        <ErrorSummary errors={[{ field: FILE_INPUT, message: shownProblem.message }]}>
+        <ErrorSummary errors={[{ field: FILE_INPUT, message: shownProblem.message, href: shownProblem.href }]}>
           {shownProblem.nothingSaved ? <p>{NOTHING_SAVED}</p> : null}
         </ErrorSummary>
       ) : null}
