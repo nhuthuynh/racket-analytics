@@ -76,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from racket.matches.api import router as matches_router
     from racket.players.api import dev_router
     from racket.players.api import router as players_router
+    from racket.video_ingest.api import policy_router
     from racket.video_ingest.api import router as uploads_router
 
     app.include_router(health_router)
@@ -84,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(dev_router)  # the /dev/* routes exist only when enabled (api §2)
     app.include_router(matches_router)
     app.include_router(uploads_router)
+    app.include_router(policy_router)  # plain JSON, not a tus route (no Tus-Resumable)
     return app
 
 

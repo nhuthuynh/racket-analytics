@@ -17,6 +17,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from racket.platform.db import metadata
+from racket.platform.errors import AppError
 
 rate_limit_events = sa.Table(
     "rate_limit_events",
@@ -25,6 +26,18 @@ rate_limit_events = sa.Table(
     sa.Column("key", sa.String(128), nullable=False),
     sa.Column("at", sa.DateTime(timezone=True), nullable=False),
 )
+
+
+class RateLimited(AppError):
+    """429 with ``retry_at`` and ``Retry-After`` (api-sprint-01 §1.1, §2.4)."""
+
+    status, code = 429, "rate_limited"
+
+    def __init__(self, retry_at: datetime, now: datetime) -> None:
+        super().__init__("rate limited")
+        self.retry_at: str | None = retry_at.isoformat(timespec="seconds").replace("+00:00", "Z")
+        wait = max(1, int((retry_at - now).total_seconds() + 0.999))
+        self.response_headers = {"Retry-After": str(wait)}
 
 
 def _utcnow() -> datetime:

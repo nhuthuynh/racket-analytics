@@ -18,9 +18,11 @@ from racket.players.api import CurrentAccount
 router = APIRouter()
 
 
-def get_match_service(session: Annotated[Session, Depends(get_session)]) -> MatchService:
+def get_match_service(
+    request: Request, session: Annotated[Session, Depends(get_session)]
+) -> MatchService:
     """ADR 0012 seam: tests override this to make the service fail."""
-    return MatchService(session)
+    return MatchService(session, request.app.state.settings.api_public_path_prefix)
 
 
 Service = Annotated[MatchService, Depends(get_match_service)]

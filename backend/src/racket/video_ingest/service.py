@@ -14,7 +14,9 @@ import binascii
 import logging
 import re
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from botocore.exceptions import ClientError
 from psycopg.errors import LockNotAvailable, UniqueViolation
@@ -25,6 +27,7 @@ from racket.analysis_jobs.domain import JobKey
 from racket.analysis_jobs.queue import JobQueue
 from racket.matches import public as matches
 from racket.platform.errors import (
+    AppError,
     BadRequest,
     Conflict,
     LengthRequired,
@@ -32,11 +35,17 @@ from racket.platform.errors import (
     PayloadTooLarge,
 )
 from racket.platform.logs import SECURITY_LOGGER
+from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
+from racket.platform.slis import SLIRecorder, UploadEvent
 from racket.platform.storage import ObjectStore, is_missing_upload
 from racket.video_ingest.domain import (
+    ExpiryPolicy,
     ObjectKeyPolicy,
     OffsetMismatch,
+    UploadChecksum,
+    UploadExpired,
+    UploadFile,
     UploadSession,
     UploadStatus,
 )
@@ -58,6 +67,20 @@ class UploadExists(Conflict):
     pass
 
 
+class UploadQuotaExceeded(AppError):
+    """429 ``upload_quota_exceeded`` with ``retry_at: null``: waiting does not help (T-UV-7)."""
+
+    status, code = 429, "upload_quota_exceeded"
+    retry_at = None
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+SLI = SLIRecorder()  # NFR-042 upload-completion SLI (api-sprint-01 §10); no user data
+
+
 @dataclass(frozen=True)
 class PatchTarget:
     """What the HTTP layer needs to check a PATCH's headers, read before the body arrives.
@@ -69,6 +92,7 @@ class PatchTarget:
     offset: int
     length: int
     complete: bool
+    expires_at: datetime | None = None
 
 
 # tus integer headers are plain ASCII decimals. ``str.isdigit`` is not enough: it accepts
@@ -145,12 +169,29 @@ def parse_upload_id(raw: str) -> uuid.UUID | None:
 
 
 class UploadService:
-    def __init__(self, session: Session, store: ObjectStore, settings: Settings) -> None:
+    def __init__(
+        self,
+        session: Session,
+        store: ObjectStore,
+        settings: Settings,
+        clock: Callable[[], datetime] = _utcnow,
+    ) -> None:
         self.session = session
         self.store = store
         self.settings = settings
+        self.clock = clock
         self.uploads = UploadRepository(session)
         self.media = MediaRepository(session)
+
+    @property
+    def expiry(self) -> ExpiryPolicy:
+        return ExpiryPolicy(
+            idle=timedelta(seconds=self.settings.upload_expiry_seconds),
+            max_age=timedelta(
+                seconds=max(self.settings.upload_expiry_max_seconds,
+                            self.settings.upload_expiry_seconds)
+            ),
+        )  # fmt: skip
 
     # ------------------------------------------------------------ creation
     def create(
@@ -169,8 +210,18 @@ class UploadService:
             raise UploadNotFound("no such match for this owner")
         length = parse_upload_length(upload_length, self.settings.upload_max_bytes)
         validate_metadata(upload_metadata)
-        if self.uploads.exists_for_match(match_id):
-            raise UploadExists("the match already has an upload")
+        now = self.clock()
+        self._replace_expired_or_refuse(match_id, now)
+        self._check_quota(owner_id, length, now)
+        retry_at = RateLimiter(self.session, clock=self.clock).hit(
+            f"upload:create:{owner_id}",
+            limit=self.settings.upload_create_limit_per_hour,
+            window=timedelta(hours=1),
+        )
+        if retry_at is not None:
+            self.session.rollback()
+            raise RateLimited(retry_at, now)
+        file = UploadFile.from_metadata(upload_metadata)
         object_key = ObjectKeyPolicy().original_key()
         s3_upload_id = self.store.create_multipart(object_key)
         upload = UploadSession.start(
@@ -180,6 +231,9 @@ class UploadService:
             max_length=self.settings.upload_max_bytes,
             object_key=object_key,
             s3_upload_id=s3_upload_id,
+            now=now,
+            expiry=self.expiry,
+            file=file,
         )
         self.uploads.add(upload)
         try:
@@ -193,17 +247,60 @@ class UploadService:
                 raise UploadExists("the match already has an upload") from None
             raise
         log.info("upload created", extra={"event": "upload.created", "upload_id": str(upload.id)})
+        SLI.upload_event(UploadEvent.CREATED)
         return upload
+
+    def _replace_expired_or_refuse(self, match_id: uuid.UUID, now: datetime) -> None:
+        """§6.3 check 3: an unexpired session is a 409; an expired one is replaced."""
+        if not self.uploads.exists_for_match(match_id):
+            return  # a racing creation is still caught by the unique constraint (R1-03)
+        existing = self.uploads.for_match(match_id, for_update=True)
+        if existing is None:
+            return
+        if not existing.is_expired(now):
+            raise UploadExists("the match already has an upload")
+        self._discard(existing)
+        log.info("upload replaced", extra={"event": "upload.replaced",
+                                           "upload_id": str(existing.id)})  # fmt: skip
+
+    def _discard(self, upload: UploadSession) -> None:
+        """Delete a session and its stored bytes (best effort for the bytes; ST-038 sweeps)."""
+        self.uploads.delete(upload)
+        try:
+            self.store.abort_multipart(upload.object_key, upload.s3_upload_id)
+            for staged in upload.staged:
+                self.store.delete(staged.key)
+        except ClientError:
+            log.warning("upload bytes left", extra={"event": "upload.bytes_left"})
+
+    def _check_quota(self, owner_id: uuid.UUID, length: int, now: datetime) -> None:
+        count, declared = self.uploads.open_for_owner(owner_id, now)
+        if (
+            count >= self.settings.upload_max_open_sessions
+            or declared + length > self.settings.upload_max_open_bytes
+        ):
+            raise UploadQuotaExceeded("too many unfinished uploads")
 
     # ------------------------------------------------------------ HEAD / PATCH
     def load_owned(
         self, *, owner_id: uuid.UUID, raw_upload_id: str, route: str, method: str
     ) -> UploadSession:
+        """Ownership first (404 for others, T-UV-8), then expiry (410 for the owner, §6.4)."""
         upload_id = parse_upload_id(raw_upload_id)
         upload = None if upload_id is None else self.uploads.get_owned(upload_id, owner_id)
         if upload is None:
             self._deny(owner_id, route, method)
             raise UploadNotFound("no such upload for this owner")
+        now = self.clock()
+        if upload.is_expired(now):
+            newly = upload.status is UploadStatus.RECEIVING
+            try:
+                upload.ensure_open(now=now)
+            except UploadExpired:
+                if newly:  # persist "expired" and the dropped file name, then refuse
+                    self.session.commit()
+                    SLI.upload_event(UploadEvent.EXPIRED)
+                raise
         return upload
 
     def patch_target(
@@ -218,19 +315,27 @@ class UploadService:
             offset=upload.offset,
             length=upload.length,
             complete=upload.status == UploadStatus.COMPLETE or upload.is_complete,
+            expires_at=upload.expires_at,
         )
         self.session.rollback()  # returns the connection to the pool before the body streams
         return target
 
-    def write_chunk(self, upload_id: uuid.UUID, offset: int, data: bytes) -> int:
-        """Steps 3-6 of ADR 0011. Returns the new offset."""
+    def write_chunk(
+        self, upload_id: uuid.UUID, offset: int, data: bytes, checksum: UploadChecksum | None = None
+    ) -> UploadSession:
+        """Steps 3-6 of ADR 0011, with the checksum (460) and same-file checks of §6.5 before
+        anything is stored. Returns the session after the chunk (offset and expiry)."""
         try:
+            if checksum is not None:
+                checksum.verify(data)  # T-UV-5: a damaged chunk is not kept
             upload = self._lock(upload_id)
+            upload.ensure_open(now=self.clock())
+            if offset == 0 and data:
+                upload.verify_head(data)  # T-UV-6
             plan = upload.plan_chunk(offset, len(data), self.settings.upload_part_min_bytes)
             if plan.is_noop:  # empty PATCH: nothing to write, the offset stays (R1-01)
-                stored = upload.offset
                 self.session.rollback()
-                return stored
+                return upload
             already_complete = False
             if plan.as_part:
                 part_number = plan.part_number or len(upload.parts) + 1
@@ -251,6 +356,7 @@ class UploadService:
                 key = ObjectKeyPolicy.staging_key(upload.id, offset)
                 self.store.put_bytes(key, data)
                 upload.commit_staged(plan, staging_key=key)
+            upload.touch(now=self.clock(), expiry=self.expiry)
             if plan.completes:
                 self._complete(upload, already_complete)
             self.session.commit()
@@ -262,7 +368,9 @@ class UploadService:
                 self.store.delete(staged.key)
             except ClientError:
                 log.warning("staging delete failed", extra={"event": "upload.staging_left"})
-        return upload.offset
+        if plan.completes:
+            SLI.upload_event(UploadEvent.COMPLETED)
+        return upload
 
     # ------------------------------------------------------------ helpers
     def _lock(self, upload_id: uuid.UUID) -> UploadSession:

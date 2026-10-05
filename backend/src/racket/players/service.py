@@ -26,7 +26,7 @@ from racket.analysis_jobs.domain import JobKey
 from racket.analysis_jobs.queue import JobQueue
 from racket.platform.errors import AppError, FieldError, ValidationFailed
 from racket.platform.logs import SECURITY_LOGGER, user_id_var
-from racket.platform.ratelimit import RateLimiter
+from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
 from racket.players.domain import (
     LinkExpired,
@@ -69,18 +69,6 @@ class LinkRefused(AppError):
     """401 ``link_expired`` for unknown, used and expired links alike (flows D-4)."""
 
     status, code = 401, "link_expired"
-
-
-class RateLimited(AppError):
-    """429 with ``retry_at`` and ``Retry-After`` (api-sprint-01 §1.1, §2.4)."""
-
-    status, code = 429, "rate_limited"
-
-    def __init__(self, retry_at: datetime, now: datetime) -> None:
-        super().__init__("rate limited")
-        self.retry_at = retry_at.isoformat(timespec="seconds").replace("+00:00", "Z")
-        wait = max(1, int((retry_at - now).total_seconds() + 0.999))
-        self.response_headers = {"Retry-After": str(wait)}
 
 
 class IdentityService:

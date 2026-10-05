@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from racket.matches.domain import InvalidId, Match, MatchId, MatchSetup, MatchStatus, OwnerId
 from racket.matches.repository import MatchRepository
-from racket.matches.schemas import MatchOut, MediaOut, ParticipantOut
+from racket.matches.schemas import MatchOut, MediaOut, ParticipantOut, UploadOut
 from racket.platform.errors import NotFound
 from racket.platform.logs import SECURITY_LOGGER
 from racket.video_ingest.public import UploadStatus, media_summary
@@ -31,9 +31,10 @@ def _rfc3339(value: datetime) -> str:
 
 
 class MatchService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, api_path_prefix: str = "") -> None:
         self.session = session
         self.matches = MatchRepository(session)
+        self.api_path_prefix = api_path_prefix  # resume_url like the tus Location (§5.2)
 
     def create(self, owner: OwnerId, body: object, *, today: date | None = None) -> Match:
         """``POST /matches`` (api-sprint-01 §5.1): every field problem is reported at once."""
@@ -76,6 +77,19 @@ class MatchService:
             status = "awaiting_upload"
         facts = summary.facts
         media = None if facts is None else MediaOut(**vars(facts))
+        pending = summary.pending
+        upload = None
+        if pending is not None:
+            upload = UploadOut(
+                state=pending.state,  # type: ignore[arg-type]
+                offset=pending.offset,
+                length=pending.length,
+                expires_at=None if pending.expires_at is None else _rfc3339(pending.expires_at),
+                resume_url=f"{self.api_path_prefix}/uploads/{pending.upload_id}",
+                file_name=pending.file_name,
+                file_last_modified_ms=pending.file_last_modified_ms,
+                head_sha256=pending.head_sha256,
+            )
         return MatchOut(
             id=str(match.id),
             title=match.title,
@@ -88,6 +102,7 @@ class MatchService:
                 ParticipantOut(slot=m.slot, nickname=m.nickname, is_me=m.is_me)
                 for m in (match.participants.members if match.participants else ())
             ],
+            upload=upload,
             media=media,
             created_at=_rfc3339(match.created_at),
             updated_at=_rfc3339(match.updated_at),

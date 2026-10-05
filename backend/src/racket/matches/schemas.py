@@ -24,6 +24,19 @@ class MediaOut(BaseModel):
     video_codec: str
 
 
+class UploadOut(BaseModel):
+    """The owner's unfinished upload (api-sprint-01 §5.2; flows D-3)."""
+
+    state: Literal["receiving", "expired"]
+    offset: int
+    length: int
+    expires_at: str | None
+    resume_url: str
+    file_name: str | None
+    file_last_modified_ms: int | None
+    head_sha256: str | None
+
+
 class MatchOut(BaseModel):
     id: str
     title: str
@@ -33,6 +46,7 @@ class MatchOut(BaseModel):
     rules_version: str
     played_on: str | None
     participants: list[ParticipantOut]
+    upload: UploadOut | None
     media: MediaOut | None
     created_at: str
     updated_at: str
