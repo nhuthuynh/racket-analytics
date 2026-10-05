@@ -58,3 +58,11 @@ Evidence for `a4dfd43`: `cd infra && uv run pytest -q tests/test_workflows_ci_ru
 - `mcp__github__list_branches` → GitHub `sprint-01` is now at `961648e75a0e` (the push asked for in blockers.md has happened). That head includes `71da707` (QA-R1-01/02/05 E2E fixes, including the WebKit damaged-chunk rewrite), `4f10ba2` and `a4dfd43`.
 - Consequence: the ADR 0029 WebKit cookie fix is verified only at `2390e9a`. No WebKit sign-in or E2E claim for code after `71da707` has evidence. S-09 (smoke.md) stays **Open**. ST-013, ST-014, ST-015 and ST-017 carry this in `status.json` `open` and are not DoD-done. `ci-gate` stays red.
 - **Next step (human product owner):** dispatch `ci.yml` and `nightly-quality.yml` (`workflow_dispatch`, ref `sprint-01`) at `961648e` or later. Agents have not dispatched them. The finding routes the dispatch to the human. The SRE then records both run IDs here and in `status.json` `ci_runs.runs`, and closes S-09 or reopens it with the WebKit job logs.
+
+## QA-R2-02 check, 2026-10-05 (sre-devops-engineer): still no run after `2390e9a`; dispatch left to the human
+
+- `mcp__github__list_branches` → GitHub `sprint-01` = `961648e75a0e00f2050e261d38cf965d4c745f14` (push from the QA-R1-06 blocker has happened; that part of the blocker row is resolved).
+- `mcp__github__actions_list list_workflow_runs` branch `sprint-01` → `total_count=1`: run 37298471332, head `2390e9a`, failure. No `ci.yml` run after it and no `nightly-quality.yml` run at all.
+- `git log --oneline 961648e..HEAD` (local) → `4430b25`, `5873308`, `0519599`; QA-R2-01 is not committed yet. GitHub is behind the round-2 fixes.
+- **Not dispatched by the SRE.** (1) The EM routed the dispatch to the human product owner (decision-log, PE-R2-02). (2) `nightly-quality.yml`'s `publish` job commits to GitHub `sprint-01` (ADR 0026); with the local branch ahead, an agent-triggered nightly would make local and GitHub diverge, and agents never push or rewrite history. (3) A run at `961648e` would not include QA-R2-01, which the finding names as a precondition.
+- Unblock order and close conditions: blockers.md, QA-R1-06 row. S-09, QA-R1-05 (WebKit damaged chunk) and `test_nightly_run_completes` stay open until a green WebKit E2E job and a published `nightly` key exist for a head that includes the round-2 fixes.

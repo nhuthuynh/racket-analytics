@@ -892,21 +892,30 @@
     "pending": [
       {
         "workflow": "ci.yml",
-        "head_required": "961648e or later",
+        "head_required": "local sprint-01 head after QA-R2-01 is committed and pushed (961648e lacks 4430b25, 5873308, 0519599 and QA-R2-01)",
         "status": "not dispatched",
-        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)"
+        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)",
+        "checked": "2026-10-05 (sre-devops-engineer, QA-R2-02): still not dispatched; list_workflow_runs branch sprint-01 total_count=1"
       },
       {
         "workflow": "nightly-quality.yml",
-        "head_required": "961648e or later",
+        "head_required": "local sprint-01 head after QA-R2-01 is committed and pushed (961648e lacks 4430b25, 5873308, 0519599 and QA-R2-01)",
         "status": "not dispatched",
-        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)"
+        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)",
+        "checked": "2026-10-05 (sre-devops-engineer, QA-R2-02): still not dispatched; list_workflow_runs branch sprint-01 total_count=1",
+        "note": "publish job commits the nightly key to GitHub sprint-01 (ADR 0026); the EM pulls that commit before the next local commit"
       }
     ],
     "github_branch_head": {
       "sha": "961648e",
       "checked": "2026-10-05",
-      "evidence": "mcp__github__list_branches: sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14"
+      "evidence": "mcp__github__list_branches: sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14",
+      "local_ahead": [
+        "4430b25",
+        "5873308",
+        "0519599"
+      ],
+      "rechecked": "2026-10-05 sre-devops-engineer (QA-R2-02): list_branches sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14"
     }
   }
 }
