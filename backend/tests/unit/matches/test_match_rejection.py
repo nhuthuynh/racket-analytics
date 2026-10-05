@@ -40,7 +40,7 @@ def test_a_new_upload_clears_the_last_rejection_and_the_match_can_take_a_video_a
     assert match.status is MatchStatus.VIDEO_RECEIVED
 
 
-# ------------------------------------------------- PE-R1-01: a refusal never undoes a received video
+# ---------------------------------------- PE-R1-01: a refusal never undoes a received video
 def test_an_upload_refusal_on_a_match_with_its_video_is_refused_and_changes_nothing() -> None:
     match = a_match()
     asset_id = uuid.uuid4()
