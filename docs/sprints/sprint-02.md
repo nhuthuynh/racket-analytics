@@ -63,6 +63,14 @@ Load factor: the lower of 85% and the median completed ratio of Sprints 0-1. Pla
 
 ST-042 is a **gate before any non-dev deployment**, like S1-F2 and ST-038. ST-013b (carried 2026-10-05 by senior-backend-engineer, sprint-close review round 2, SEC-R4-S1-01) is the same kind of gate; until it ships, `AUTH_EMAIL_KEY` must never be rotated where accounts must be kept. The Sprint 1 part is already done: the mailer no longer holds the S3 key.
 
+**ML carry-over from Sprint 1 (proposed 2026-10-05 by senior-ml-cv-engineer, sprint-close review round 2, S-07 / QA-R2V-07; the PO approves via blockers.md item P3, the EM confirms at planning):**
+
+| Story | Title | FR / NFR | Owner (R) | Required reviewers | Size | Depends on |
+|---|---|---|---|---|---|---|
+| ST-025 (carried) | Phone-file fixture set `phones-v1` and upload-cap measurement (R-05), remaining part only: the PO hands over real recordings from ≥ 5 phone models incl. one VFR file (empty court or consenting team members, OQ-06) per `docs/data/phone-fixtures.md` §3; senior-ml-cv-engineer runs `scripts/fixtures/build_phone_manifest.py`, makes `phone_fixtures.feature` "Coverage of the set" and "Probe every fixture" green unchanged, and writes the R-05 numbers on FR-023 conflict K12. The consent rule, build tool, `phone-profiles-v1` shape set and recording protocol are already done in Sprint 1 | NFR-025; FR-023 (caps) | ML | QA, security-privacy-engineer, sre-devops-engineer (LFS or object store if a clip is over 15 MiB, P6) | S | PO recordings (input needed by Sprint 2 planning, 2026-11-02) |
+
+Until ST-025 lands, ST-018 keeps the provisional 10 GB / 150 min caps and the device-specific 60 fps menu paths stay hidden. If the recordings are not in hand at planning, ST-025 stays out of the committed load (it cannot start without them) and the blocker row stays Open.
+
 **Stretch:** ST-033 Correction consequences (FR-054; FE S + BE XS); ST-036 Gaps and resync (FR-047; BE XS + FE XS, sized S overall).
 
 ### 3.1 Acceptance notes per story
