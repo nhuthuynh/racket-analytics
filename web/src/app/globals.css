@@ -837,3 +837,72 @@ main:focus-visible,
   font-family: inherit;
   font-weight: var(--font-weight-bold);
 }
+
+/* Score sheet S-01 (ST-030; DES FR-UX-70): a table on wide screens, labelled lines per rally on
+ * narrow ones, so 320-360 px needs no sideways scrolling (NFR-034). Roles are explicit in the
+ * markup, so changing display keeps the table semantics. */
+.score-sheet {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-sheet__caption {
+  text-align: start;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  padding-block-end: var(--space-2);
+}
+
+.score-sheet th,
+.score-sheet td {
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--color-border-subtle);
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.score-sheet__marker {
+  display: block;
+}
+
+.score-sheet__rules {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 48em) {
+  .score-sheet thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .score-sheet tr {
+    display: block;
+    padding-block: var(--space-2);
+    border-block-end: 1px solid var(--color-border-control);
+  }
+
+  .score-sheet th,
+  .score-sheet td {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 40%) minmax(0, 1fr);
+    gap: var(--space-2);
+    border: 0;
+    padding-block: var(--space-1);
+  }
+
+  .score-sheet tbody th {
+    display: block;
+    font-size: var(--font-size-lg);
+  }
+
+  .score-sheet td::before {
+    content: attr(data-label) / '';
+    font-weight: var(--font-weight-bold);
+  }
+}

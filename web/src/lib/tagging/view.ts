@@ -65,3 +65,12 @@ export function gameStatus(sheet: ScoreSheet): GameStatus {
   const first = sheet.rows.find((r) => r.game === current && r.serving_side)?.serving_side ?? null;
   return { current, firstServingSide: first, over: false, lastWinner: null, matchOver: matchWinner !== null, matchWinner };
 }
+
+/** Rally start as "14:32" (or "1:02:05"), floored so the video never starts after the rally. */
+export function formatClock(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const ss = String(total % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
