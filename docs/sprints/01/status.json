@@ -1,0 +1,765 @@
+{
+  "sprint": "01",
+  "goal": "Sign in, set up a match, upload safely; the scoring engine, test-first (docs/sprints/sprint-01.md §1)",
+  "dates": {
+    "planned_start": "2026-10-19",
+    "planned_review": "2026-10-30",
+    "work_started": "2026-10-05",
+    "status_written": "2026-10-05"
+  },
+  "owner": "engineering-manager",
+  "branch": "sprint-01",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. Per retro 0 and the ADR 0010 2026-10-03 note, 'implemented_units' (built, reviewed, verified locally with command evidence) and 'dod_done_units' (story DoD fully met, including a green CI run on GitHub and every external-evidence item closed) are tracked separately. Status values: not_started | in_progress | implemented | done | partial | blocked. Stories are updated by their owning lane; the EM keeps totals consistent.",
+  "capacity": {
+    "load_factor": 0.8,
+    "capacity_units_per_lane": 12.8,
+    "committed_units_per_lane": {
+      "BE": 12,
+      "FE": 12,
+      "QA": 4,
+      "SRE": 2,
+      "ML": 2
+    },
+    "committed_units": 32,
+    "stretch_units": 1
+  },
+  "totals": {
+    "planned_units": 32,
+    "implemented_units": 0,
+    "dod_done_units": 0,
+    "implemented_ratio": 0.0,
+    "dod_done_ratio": 0.0
+  },
+  "preconditions": [
+    {
+      "item": "PO ratified ADR 0002 and ADR 0007 (OQ-02)",
+      "status": "met",
+      "evidence": "ADR 0023, 2026-10-05"
+    },
+    {
+      "item": "PO ratified ADR 0009",
+      "status": "met",
+      "evidence": "ADR 0023, 2026-10-05"
+    },
+    {
+      "item": "Sprint 0 DoD met or carry-over re-sized",
+      "status": "open",
+      "evidence": "sprint-report §8 lists 8 carry-over items; none sized into the 32 committed units"
+    }
+  ],
+  "stories": [
+    {
+      "id": "ST-013",
+      "title": "Passwordless sign-in with an email magic link",
+      "fr_nfr": [
+        "FR-001",
+        "NFR-032",
+        "NFR-055",
+        "NFR-057"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "M",
+          "planned_units": 2
+        },
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1
+        }
+      ],
+      "planned_units": 3,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-005",
+        "ST-006"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Threat-model notes attached (DoR P8)",
+          "owner": "security-privacy-engineer",
+          "due": "Sprint 1 D2"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-014",
+      "title": "Sign-out clears local data",
+      "fr_nfr": [
+        "FR-011",
+        "NFR-067"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1
+        }
+      ],
+      "planned_units": 1,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer"
+      ],
+      "depends_on": [
+        "ST-013"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-015",
+      "title": "First-run promise and capture guide",
+      "fr_nfr": [
+        "FR-004",
+        "FR-020",
+        "NFR-033",
+        "NFR-035"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "M",
+          "planned_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-designer",
+        "pickleball-domain-coach"
+      ],
+      "depends_on": [
+        "coach wording"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Coach sign-off on capture-guide wording (DoR P9)",
+          "owner": "pickleball-domain-coach",
+          "due": "Sprint 1 D3"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-016",
+      "title": "Match setup flow with participants by nickname",
+      "fr_nfr": [
+        "FR-021",
+        "FR-005",
+        "NFR-028",
+        "NFR-031",
+        "NFR-034",
+        "NFR-037"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "L",
+          "planned_units": 4
+        },
+        {
+          "lane": "BE",
+          "size": "S",
+          "planned_units": 1
+        }
+      ],
+      "planned_units": 5,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-designer",
+        "principal-engineer"
+      ],
+      "depends_on": [
+        "ST-006"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Match aggregate / participant model design doc reviewed (DoR P4)",
+          "owner": "principal-engineer",
+          "due": "Sprint 1 D2"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-017",
+      "title": "Resumable upload: checksum and expiration extensions, resume on return",
+      "fr_nfr": [
+        "FR-022",
+        "NFR-016",
+        "NFR-026",
+        "NFR-042"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "M",
+          "planned_units": 2
+        },
+        {
+          "lane": "FE",
+          "size": "M",
+          "planned_units": 2
+        }
+      ],
+      "planned_units": 4,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-008",
+        "SPIKE-06"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "WebKit/iOS Safari E2E run (OQ-17 release-blocking browsers)",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-018",
+      "title": "Upload validation by content, size and duration",
+      "fr_nfr": [
+        "FR-023",
+        "NFR-053",
+        "NFR-054",
+        "NFR-060"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "M",
+          "planned_units": 2
+        },
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1
+        }
+      ],
+      "planned_units": 3,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer"
+      ],
+      "depends_on": [
+        "ST-009",
+        "ST-025"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Caps confirmed by ST-025 measurement (DoR P11)",
+          "owner": "senior-ml-cv-engineer",
+          "due": "Sprint 1 D7"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-020",
+      "title": "Scoring engine core (a)",
+      "fr_nfr": [
+        "FR-040 (a)",
+        "FR-041 (a)",
+        "FR-044 (a)",
+        "NFR-079"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "L",
+          "planned_units": 4
+        }
+      ],
+      "planned_units": 4,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-engineer",
+        "pickleball-domain-coach"
+      ],
+      "depends_on": [
+        "ST-023"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-engineer",
+          "owner": "principal-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": [],
+      "notes": "ADR 0009 Accepted 2026-10-05 (ADR 0023). Only preset: PROVISIONAL-UNVERIFIED; provisional rows @needs-verification until OQ-01 rulebook files arrive."
+    },
+    {
+      "id": "ST-021",
+      "title": "Match structure (a)",
+      "fr_nfr": [
+        "FR-045 (a)"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "S",
+          "planned_units": 1
+        }
+      ],
+      "planned_units": 1,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-engineer",
+        "pickleball-domain-coach"
+      ],
+      "depends_on": [
+        "ST-020"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-engineer",
+          "owner": "principal-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-022",
+      "title": "Property suite P1-P8, nightly differential oracle P9, mutation baseline",
+      "fr_nfr": [
+        "NFR-002",
+        "NFR-072"
+      ],
+      "lanes": [
+        {
+          "lane": "QA",
+          "size": "M",
+          "planned_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "principal-engineer",
+        "senior-backend-engineer"
+      ],
+      "depends_on": [
+        "ST-020"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "First nightly oracle run on GitHub (100,000 sequences)",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-023",
+      "title": "Golden scoring tables as executable scenarios (written before ST-020)",
+      "fr_nfr": [
+        "NFR-001 (provisional rows)"
+      ],
+      "lanes": [
+        {
+          "lane": "QA",
+          "size": "M",
+          "planned_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "pickleball-domain-coach",
+        "principal-engineer"
+      ],
+      "depends_on": [],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by pickleball-domain-coach",
+          "owner": "pickleball-domain-coach",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": [],
+      "notes": "Rows stay @needs-verification (OQ-01 open)."
+    },
+    {
+      "id": "ST-024",
+      "title": "Nightly quality jobs and upload SLIs",
+      "fr_nfr": [
+        "NFR-002",
+        "NFR-042",
+        "NFR-072"
+      ],
+      "lanes": [
+        {
+          "lane": "SRE",
+          "size": "M",
+          "planned_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-engineer"
+      ],
+      "depends_on": [
+        "ST-022"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Nightly workflow has run on GitHub",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-025",
+      "title": "Phone-file fixture set and upload-cap measurement (R-05)",
+      "fr_nfr": [
+        "NFR-025",
+        "FR-023"
+      ],
+      "lanes": [
+        {
+          "lane": "ML",
+          "size": "M",
+          "planned_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer"
+      ],
+      "depends_on": [
+        "OQ-06 (answered 2026-10-05: team footage with written consent, or empty court)"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Fixture storage location decided (DoR P6)",
+          "owner": "sre-devops-engineer",
+          "due": "Sprint 1 D1"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "SPIKE-06",
+      "title": "Upload behaviour on phone browsers: tus client, background tab, 8 GB file",
+      "fr_nfr": [
+        "FR-022",
+        "OQ-18"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1
+        }
+      ],
+      "planned_units": 1,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "principal-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-008"
+      ],
+      "external_evidence": [
+        {
+          "item": "Runs on real iOS Safari and Android Chrome devices (sandbox has none)",
+          "owner": "human product owner / senior-frontend-engineer",
+          "due": "Sprint 1 D3"
+        }
+      ],
+      "evidence": [],
+      "open": []
+    },
+    {
+      "id": "ST-019",
+      "title": "Footage quality report, R1 facts",
+      "fr_nfr": [
+        "FR-025"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1
+        }
+      ],
+      "planned_units": 1,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-009"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [],
+      "open": [],
+      "stretch": true
+    }
+  ],
+  "carry_over_from_sprint_00": [
+    {
+      "item": "ST-002 CI evidence: first GitHub run, failing sample PR, 3 nightly runs, WebKit",
+      "owner": "sre-devops-engineer with human PO (repo admin)",
+      "note": "Remote created by PO 2026-10-05 (nhuthuynh/racket-analytics); push is the orchestrator's; branch protection, labels and secret not yet evidenced"
+    },
+    {
+      "item": "ST-010 remainder: WebKit, design/security reviews, manual a11y pass, non-zero-offset reload test",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "item": "SPIKE-01 PE/security reviews (ADR 0015 Accepted by PO; reviews pending)",
+      "owner": "principal-engineer, security-privacy-engineer"
+    },
+    {
+      "item": "QA decisions on 6 Sprint 0 test-change rows; signed test report",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "item": "Contract hygiene: ADR 0019, api-sprint-00 §1/§8/§9, Tus-Resumable on 500/405, charset",
+      "owner": "principal-engineer, senior-backend-engineer"
+    },
+    {
+      "item": "Robustness: R3-06, QA-R3-05, R2-08, R1-09",
+      "owner": "senior-backend-engineer, senior-ml-cv-engineer"
+    },
+    {
+      "item": "Security hardening: F-1, QA-R2-06, SEC-R3-01, SEC-R2-03, HTTPS presign CA",
+      "owner": "sre-devops-engineer, senior-backend-engineer, security-privacy-engineer"
+    },
+    {
+      "item": "Sprint 1 DoR items P1-P12",
+      "owner": "business-analyst, product-manager, human PO"
+    }
+  ],
+  "open_po_items": [
+    {
+      "oq": "OQ-01",
+      "item": "Supply 2026 USAP rulebook and change document PDFs",
+      "effect": "Presets stay PROVISIONAL-UNVERIFIED; rows @needs-verification",
+      "need_by": "2026-11-16 (Sprint 3 planning)"
+    },
+    {
+      "oq": "OQ-05",
+      "item": "Name the beta jurisdiction; legal review recorded as an ADR before any real-user beta",
+      "effect": "No real-user beta",
+      "need_by": "before any real-user beta"
+    },
+    {
+      "oq": "OQ-13",
+      "item": "Name the monthly beta budget amount",
+      "effect": "NFR-022 alert thresholds have no base",
+      "need_by": "Sprint 2 review"
+    },
+    {
+      "oq": "OQ-20",
+      "item": "Recruit >= 5 testers, >= 8 interviewees, 1 second coach",
+      "effect": "NFR-036, QD-AN-03 untestable",
+      "need_by": "Sprint 3 planning"
+    },
+    {
+      "oq": "retro A1",
+      "item": "Branch protection on ci-gate, 3 labels, ANTHROPIC_API_KEY secret",
+      "effect": "ST-002 DoD; every story's CI evidence",
+      "need_by": "2026-10-14"
+    }
+  ]
+}

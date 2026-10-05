@@ -1,6 +1,6 @@
 # 0002. MVP scope: a walking-skeleton R1 on manual tagging, then automation by release
 
-- **Status:** Proposed. Needs approval from the human product owner, because it changes the scope of spec milestones M0 and M5 (OQ-02).
+- **Status:** Accepted by the human product owner on 2026-10-05 (OQ-02, ADR 0023).
 - **Date:** 2026-10-03
 - **Deciders:** business-analyst (proposer); human product owner (approver)
 - **Consulted:** product-manager, principal-engineer, senior-ml-cv-engineer, principal-designer, senior-qa-engineer, pickleball-domain-coach (through `docs/requirements/brainstorm-*.md`)
@@ -95,3 +95,4 @@ Chosen option: **Option 2, with ENG's sprint sequencing inside it.**
 - The R1 usability panel meets NFR-036.
 
 ## Notes
+- **2026-10-05 (product-manager, recording the human product owner):** PO accepted the recommendation for OQ-02 ("accept all recommendations"). The R1/R2/R3 slicing is the plan of record; Sprint 1 planning precondition met. Previous status line: "Proposed. Needs approval from the human product owner, because it changes the scope of spec milestones M0 and M5 (OQ-02).". See ADR 0023.

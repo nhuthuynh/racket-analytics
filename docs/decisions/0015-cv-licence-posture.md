@@ -1,6 +1,6 @@
 # 0015. CV licence posture: MIT/Apache code by default, pretrained weights judged by their training data, no AGPL
 
-- **Status:** Proposed. The human product owner decides OQ-12. Need-by date: Sprint 1 review (sprint-00 §10).
+- **Status:** Accepted by the human product owner on 2026-10-05 (OQ-12, ADR 0023): MIT/Apache-only CV stack by default, no AGPL without an ADR. Principal-engineer and security-privacy-engineer reviews of the SPIKE-01 evidence are still pending and are recorded as dated notes.
 - **Date:** 2026-10-03
 - **Deciders:** human product owner (OQ-12); principal-engineer (licence choice, R/A); senior-ml-cv-engineer (author, SPIKE-01)
 - **Consulted / required reviewers:** principal-engineer, security-privacy-engineer (sprint-00 §3, SPIKE-01 row). **Neither review has happened yet.** This draft is not approved.
@@ -195,3 +195,4 @@ Note: the sha256 values are of the LICENSE files as fetched on 2026-10-03; re-ru
 ## Notes
 
 - 2026-10-03, senior-ml-cv-engineer: drafted in SPIKE-01. Principal-engineer and security-privacy-engineer reviews are **pending**. No review approval is claimed.
+- **2026-10-05 (product-manager, recording the human product owner):** PO accepted OQ-12. The PE/security reviews of the licence evidence remain pending; any finding that changes the posture needs a superseding ADR. Previous status line: "Proposed. The human product owner decides OQ-12. Need-by date: Sprint 1 review (sprint-00 §10).". See ADR 0023.
