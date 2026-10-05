@@ -88,3 +88,32 @@ No new run. `mcp__github__actions_list list_workflow_runs` → `total_count: 2` 
 ## Check on 2026-10-05, goal round 2 (sre-devops-engineer, DEMO-07)
 
 No new run. `mcp__github__actions_list list_workflow_runs` → `total_count: 2` (37298471332 on `sprint-01` at `2390e9a`, 37277549983 on `main` at `2b9c6ca`, both `conclusion: failure`). There is no `nightly-quality.yml` run, so demo step 7 still has no nightly result. `mcp__github__list_branches` → `sprint-01` = `9195ea9`, `main` = `2b9c6ca`, both `protected: false`. Still waiting on the human PO (blockers.md EM row P1).
+
+## Release: PR #1 `sprint-01` -> `main` (sre-devops-engineer, 2026-10-05)
+
+PR: <https://github.com/nhuthuynh/racket-analytics/pull/1>. `git push -u origin sprint-01` → `e76fb96..7de88fb`. Results read with `mcp__github__pull_request_read get_check_runs` and `get_job_logs`.
+
+**Run 37372059078** (`workflow_dispatch`, head `e76fb96`, dispatched by the PO): failure. Green: actionlint, mypy, Python unit, infra, fixtures, secrets/audit, flaky report. Ruff, web, SBOM, integration and E2E were `cancelled` before they started (21:03:56, no runner steps); ci-gate failure on the cancellations. Superseded by the PR runs below.
+
+**Run 37376048821** (`pull_request`, head `7de88fb`): failure. Integration: `4 failed, 1067 passed, 1 skipped`; one of the 4 was `test_nightly_differential_check - Failed: Timeout (>120.0s)`, the `@nightly @slow` 100,000-sequence scenario run per PR. Fixed test-first in `9808296` (decision-log row; guard `infra/tests/test_workflows_ci_run4.py` red `2 failed, 1 passed`, then `3 passed`; infra `308 passed`; actionlint clean).
+
+**Run 37377206126** (`pull_request`, head `9808296`): failure.
+
+| Job | Result | Cause | Owner | Action |
+|---|---|---|---|---|
+| Workflow lint (actionlint) | success | — | — | — |
+| Python lint and format (Ruff) | success | — | — | — |
+| Python types (mypy) | success | — | — | — |
+| Python unit suites (time-budgeted) | success | — | — | — |
+| Fixture and gold-set integrity | success | — | — | — |
+| Infra, hooks and CI-script tests | success | — | — | — |
+| Web lint, types, unit, coverage, bundle budget | success | — | — | — |
+| Secret scan, dependency audit | success | — | — | — |
+| SBOM (CycloneDX) and licence gate | success | — | — | — |
+| Flaky-test report | skipped | by design (schedule/dispatch only) | — | — |
+| PR policy (test immutability, size) | **failure** | `check_test_immutability.py`: Sprint 1 modified accepted test files (`backend/tests/...`, `web/e2e/...`; TCR rows in test-change-requests.md) and the PR has no `qa-approved-test-change` label; `check_pr_size.py`: `27252 changed lines` (sprint PR), no `size-waiver` label | senior-qa-engineer (label), engineering-manager (label) | Not applied by the SRE: ci-cd.md §87 reserves the labels to QA and the EM |
+| Integration on Compose | **failure** | `3 failed, 1067 passed, 1 skipped, 1 deselected`: `test_nightly_run_completes` (no `nightly` key in status.json: `nightly-quality.yml` cannot be dispatched until it exists on `main`, S-08) and `test_phone_fixtures.py::test_coverage_of_the_set`, `::test_probe_every_fixture` ("RED until ST-025": no phone clips, S-07) | PO (phone clips, ST-025); SRE after the first nightly on `main` | PO-blocked tests are red by design; not skipped or edited |
+| E2E (Playwright, Chromium + WebKit) | **failure** | `96 passed, 8 failed, 12 skipped`; all 8 failures `[webkit]`: error-states-a11y U-04 and A-03, first-run "Guide video cannot load", resumable-upload "A damaged chunk is not kept", sign-out "Upload in progress", threat-controls T-UV-10, walking-skeleton upload facts and reload-resume. Chromium all green | frontend-engineer, senior-qa-engineer (WebKit family PD-R1-02 et al.) | Routed; WebKit does not run in the sandbox |
+| ci-gate | **failure** | aggregates PR policy, integration and E2E | — | — |
+
+**Merge:** not merged. `ci-gate` is not green on the PR head; the PO instruction merges only on green CI.

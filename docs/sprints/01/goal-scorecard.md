@@ -462,3 +462,9 @@ python3 ../scripts/ci/run_with_budget.py 60 -- env -u APP_ENV uv run pytest -q -
 **Observations (not goal metrics; for owners to triage):**
 - SRE-G2-01 is still present: the API's OTLP metrics export gets 404 from Jaeger every minute (3 `ERROR` lines in `api-demo.log`, 21:00:59-21:02:59). Owner: sre-devops-engineer.
 - Every verification round leaves about 4.6 GB of `racket-<round>-*` images, and this session may not remove other rounds' images. Each fresh `up --build` now lands under the floor (6.1 G) before pruning. This is the cause of G01-05's "no". Owner: sre-devops-engineer (disk-and-prune.md).
+
+## 9. CI metric at release (sre-devops-engineer, 2026-10-05)
+
+| Metric | Target | Actual | Met |
+|---|---|---|---|
+| CI on the PR head (PR #1) | every job success (skips by design only), `ci-gate` success | Run 37377206126 at `9808296`: 9 jobs success, flaky report skipped by design; PR policy, integration (3 PO-blocked red tests) and E2E (8 WebKit-only failures) failure; `ci-gate` failure. Detail: ci-status.md "Release" | no |
