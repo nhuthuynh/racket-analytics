@@ -156,6 +156,7 @@ jq -r '[.. | objects | select(has("attachments")) | .attachments[] | select(.nam
 ```
 
 - The target-size check (NFR-028) and E2E-01-03 are tests in `match-setup.spec.ts`. They must be among the passed cases in `e2e-rate.json`.
+- Error and transient states (PD-V1-01): `error-states-a11y.spec.ts` runs axe and the 24×24 target check on Q-03 error, U-03, U-04 (banner and different file), A-03 and A-05. All its cases must be among the passed cases. Count target failures with `jq '[.. | objects | select(has("errors")) | .errors[]? | .message? // "" | select(test("targets below 24x24"))] | length' "$GOAL/e2e.json"` (must be 0). At `d560ace` + the QA round-1 specs this is 2 (Q-03 error, U-03: the error-summary link is 21 px high, PD-R1-03), so G01-10 is "no" until senior-frontend-engineer fixes PD-R1-03.
 - An axe failure fails its test, so G01-10 is also "no" whenever G01-03 has an axe-labelled failure.
 
 ### G01-04: API read latency at 50 RPS
