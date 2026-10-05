@@ -254,7 +254,7 @@ No new route takes a path ID in Sprint 1. New routes without an ID: `POST /auth/
 |---|---|---|
 | `PUBLIC_WEB_ORIGIN` | none; required unless `APP_ENV=test` | Base of sign-in links; never taken from `Host` |
 | `MAIL_SMTP_URL` / `MAIL_FROM` | `smtp://mailpit:1025` in dev / `no-reply@localhost` | Prod provider: Sprint 4 ADR |
-| `AUTH_EMAIL_KEY` | none; required in `staging`/`prod` (secret) | HMAC key for `email_key` (rate limits, logs) |
+| `AUTH_EMAIL_KEY` | none; required in `staging`/`prod` (secret) | HMAC key for `email_key` (rate limits, logs). **Until ST-013b also the account-identity key** (SEC-R3-S1-01): do not rotate; ADR 0032 moves identity to the stored address |
 | `MAGIC_LINK_TTL_SECONDS` | `900` | FR-001 |
 | `SESSION_ABSOLUTE_SECONDS` / `SESSION_IDLE_SECONDS` / `SESSION_MAX_PER_ACCOUNT` | `2592000` / `604800` / `10` | ADR 0025 |
 | `AUTH_LINK_LIMIT_PER_EMAIL` / `AUTH_LINK_LIMIT_PER_IP` / `AUTH_EXCHANGE_LIMIT_PER_IP` / `AUTH_WINDOW_SECONDS` | `5` / `20` / `30` / `600` | §2.4 |

@@ -12,9 +12,9 @@
 
 | Asset | Class | Where | Notes |
 |---|---|---|---|
-| Account email address | **Medium-High** (contact data, account recovery) | `accounts.email` | Never logged; logs use `email_key` (HMAC, ADR 0025) |
+| Account email address | **Medium-High** (contact data, account recovery) | **Today (`17c850d`):** only in `sign_in_requests` until the mail job sends the link; `accounts` holds no address (identity is the 64-bit `email_key`, SEC-R3-S1-01). **Target (ADR 0032, ST-013b):** `accounts.email` (unique identity) and `sign_in_links.email` until use or expiry | Never logged; logs use `email_key` (HMAC, ADR 0025) |
 | Sign-in link token | **High** (credential, 15 min) | email body; URL fragment for milliseconds; Postgres stores SHA-256 only | Single use |
-| `AUTH_EMAIL_KEY` | **High** (secret) | environment / secret store | Rotating it resets rate-limit keys only |
+| `AUTH_EMAIL_KEY` | **High** (secret) | environment / secret store | **Today:** also the account-identity key, so rotating or losing it orphans every account and a 64-bit collision merges two people (SEC-R3-S1-01). Do not rotate before ST-013b. **After ADR 0032 / ST-013b:** rotating it resets rate-limit windows and log correlation only |
 | Participant nicknames (third parties) | Medium | `match_participants` | ADR 0024; deleted with the match |
 | Upload file name | Medium | `upload_sessions` while open (**changed**: v0 said "not stored") | Display only for resume (D-3); deleted at completion or expiry |
 | `head_sha256` of the first MiB | Low | `upload_sessions` while open | Not reversible to content in practice (judgment) |
