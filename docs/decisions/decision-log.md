@@ -35,6 +35,8 @@ ADR dates are 2026-10-03 unless the row says otherwise. "PO" means the human pro
 | [0021](0021-probe-input-format-allowlist.md) | ffprobe demuxes only the MP4/MOV family | Proposed | DASH canary fetch reproduced, then blocked by `-format_whitelist`; the fixture still probes. Evidence is in a section rather than the template's table | Security accepts (round-1 review) |
 | [0022](0022-review-loop-routing-and-integration-smoke.md) | Review loop: owner routing, integration smoke before review, one story per commit | Accepted (PO, 2026-10-05; applies from Sprint 1) | Round-3 blockers were non-code items open since round 1; 3 integration-only blockers in round 1; two ~15k-line commits | — |
 | [0023](0023-product-owner-decisions-2026-10-05.md) | Product-owner decisions 2026-10-05: accept all open-question recommendations | Accepted (2026-10-05) | PO answer verbatim; maps OQ-01..OQ-22 to accepted recommendations and residual open items | PO: rulebook PDFs (OQ-01), jurisdiction and legal review (OQ-05), beta budget amount (OQ-13), recruitment (OQ-20), repo-admin setup (retro A1) |
+| [0024](0024-match-participants-as-per-match-nicknames.md) | Participants are per-match nickname slots (A1..B2) inside `Match`; no cross-match player identity | Accepted (PE, 2026-10-05) | FR-005; OQ-15 Won't (ADR 0023); no new ID route, so no new BOLA surface | — |
+| [0025](0025-magic-link-sign-in-design.md) | Magic link: token in URL fragment, POST exchange, no device binding; sessions 30 d absolute / 7 d idle / max 10 | Accepted for Sprint 1 (PE + security, 2026-10-05) | ASVS 6.5.x/6.6.x/7.1.x; [AQS/SEC-05 14.2.1]; sprint-01 §7.1 rate limit | PO: accept or reject ASVS 6.3.3 single-factor residual risk before any real-user beta |
 
 ## Gaps found in this pass (2026-10-03)
 

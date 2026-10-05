@@ -125,5 +125,7 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0021 | [ffprobe may demux only the MP4/MOV family (input-format allowlist)](0021-probe-input-format-allowlist.md) | Proposed | 2026-10-03 |
 | 0022 | [Review loop: route findings to their owner role, smoke-test the integrated stack before review, one story per commit](0022-review-loop-routing-and-integration-smoke.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
 | 0023 | [Product-owner decisions 2026-10-05: accept all open-question recommendations](0023-product-owner-decisions-2026-10-05.md) | Accepted | 2026-10-05 |
+| 0024 | [Match participants are per-match nickname slots inside the `Match` aggregate](0024-match-participants-as-per-match-nicknames.md) | Accepted | 2026-10-05 |
+| 0025 | [Magic-link sign-in: token in the URL fragment, exchanged by POST; 30-day/7-day sessions](0025-magic-link-sign-in-design.md) | Accepted (Sprint 1; 6.3.3 residual risk needs PO) | 2026-10-05 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.
