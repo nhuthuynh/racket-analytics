@@ -7,17 +7,27 @@ Match & Scoring composes its status/media read model from ``media_summary`` and 
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from racket.video_ingest.domain import MediaFacts, UploadStatus
+from racket.platform.settings import Settings
+from racket.platform.storage import ObjectStore
+from racket.video_ingest.domain import MediaFacts, MediaUrlPolicy, UploadStatus
 from racket.video_ingest.repository import PROBE_FAILED, MediaRepository, UploadRepository
 
 # Part of the port: other contexts name upload states through here, never through the domain
 # package (context map rule 1, R2-02).
-__all__ = ["MediaFacts", "MediaSummary", "PendingUpload", "UploadStatus", "media_summary"]
+__all__ = [
+    "MediaFacts",
+    "MediaLink",
+    "MediaSummary",
+    "PendingUpload",
+    "UploadStatus",
+    "media_link",
+    "media_summary",
+]
 
 
 @dataclass(frozen=True)
@@ -81,3 +91,32 @@ def media_summary(session: Session, match_id: uuid.UUID) -> MediaSummary:
         probe_failed=asset is not None and asset.probe_status == PROBE_FAILED,
         pending=pending,
     )
+
+
+@dataclass(frozen=True)
+class MediaLink:
+    """A short-lived GET link to the match's original video (ST-037; NFR-055). ``repr`` hides
+    the URL: it is a bearer secret and never reaches a log line (NFR-069)."""
+
+    url: str = field(repr=False)
+    expires_in_s: int
+
+
+def media_link(
+    session: Session,
+    store: ObjectStore,
+    settings: Settings,
+    match_id: uuid.UUID,
+    *,
+    session_token: str | None,
+) -> MediaLink | None:
+    """The link to the received video of ``match_id``, or ``None`` while there is none. The
+    caller has already checked that the match is the requester's (I9)."""
+    asset = MediaRepository(session).asset_for_match(match_id)
+    if asset is None:
+        return None
+    policy = MediaUrlPolicy(ttl_seconds=settings.media_url_ttl_seconds)
+    url = store.presigned_get(
+        asset.object_key, policy.ttl_seconds, public_endpoint=settings.s3_public_endpoint_url
+    )
+    return MediaLink(policy.check(url, session_token=session_token), policy.ttl_seconds)

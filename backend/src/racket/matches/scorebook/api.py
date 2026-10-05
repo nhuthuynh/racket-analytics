@@ -16,10 +16,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from racket.matches.api import OwnedMatch
-from racket.matches.scorebook.domain import project
+from racket.matches.scorebook.domain import MatchNotReady, project
 from racket.matches.scorebook.service import ScorebookService, parse_version
 from racket.platform.db import get_session
-from racket.players.api import CurrentAccount
+from racket.players.api import CurrentAccount, presented_token
+from racket.video_ingest.public import media_link
 
 router = APIRouter()
 
@@ -128,4 +129,31 @@ def resolve_rally(
     book = service.resolve(match, account.id, rally_id, body, version)
     return JSONResponse(
         {"version": book.version, "sheet": project(book)}, headers=_etag(book.version)
+    )
+
+
+@router.get("/matches/{match_id}/rallies/{rally_id}/media")
+def rally_media(
+    rally_id: str,
+    match: OwnedMatch,
+    service: Service,
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+) -> JSONResponse:
+    """FR-027, NFR-055: a fresh presigned link to the match video, valid at most 15 minutes,
+    with the rally's start; never the session token in the URL, never logged (NFR-069)."""
+    start_ms = service.rally_start(match, rally_id)
+    settings = request.app.state.settings
+    link = media_link(
+        session,
+        request.app.state.object_store(),
+        settings,
+        match.id.value,
+        session_token=presented_token(request),
+    )
+    if link is None:
+        raise MatchNotReady("no received video")
+    body = {"url": link.url, "expires_in_s": link.expires_in_s, "start_ms": start_ms}
+    return JSONResponse(
+        body, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
     )

@@ -159,6 +159,15 @@ class ScorebookService:
         book, _ = self._run(match, actor_id, command, "match.rally_resolved")
         return book
 
+    def rally_start(self, match: Match, raw_rally_id: str) -> int:
+        """The start of a kept rally of this match, in ms from the video start (FR-027)."""
+        rally_id = _rally_id(raw_rally_id)
+        book = self.books.load(match.id.value)
+        rally = next((r for r in book.kept if r.id == rally_id), None)
+        if rally is None:
+            raise RallyNotFound("no such rally in this match")
+        return rally.times.start_ms
+
     def history(self, match: Match) -> list[dict[str, Any]]:
         """FR-052: every change, oldest first, with the rally's current sheet number. Values
         are tag values only (sides, slots, enums, integers): no names, no free text."""

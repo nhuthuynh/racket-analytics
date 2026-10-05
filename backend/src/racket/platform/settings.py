@@ -20,6 +20,7 @@ REDACTED = "***"
 DEV_WEB_ORIGIN = "http://localhost:3000"
 DEV_EMAIL_KEY = "dev-only-email-key-not-a-secret"  # dev/test only; prod requires its own
 EMAIL_KEY_MIN = 32
+MEDIA_URL_TTL_MAX = 15 * 60  # NFR-055
 _SECRETS = ("s3_secret_access_key", "s3_access_key_id", "auth_email_key")
 
 
@@ -92,6 +93,9 @@ class Settings:
     upload_max_open_bytes: int = 30_000_000_000
     upload_create_limit_per_hour: int = 10
     worker_stages: tuple[str, ...] = ()  # empty: every registered stage
+    # ---- Sprint 2 (ST-037; NFR-055): rally video links
+    media_url_ttl_seconds: int = 300
+    s3_public_endpoint_url: str | None = None  # the origin the browser reaches the store at
 
     # -------------------------------------------------------------- construction
     @classmethod
@@ -163,6 +167,9 @@ class Settings:
                 f"AUTH_EMAIL_KEY must have at least {EMAIL_KEY_MIN} characters"
             )
         stages = tuple(x.strip() for x in env.get("WORKER_STAGES", "").split(",") if x.strip())
+        media_ttl = integer("MEDIA_URL_TTL_SECONDS", 300)
+        if media_ttl > MEDIA_URL_TTL_MAX:
+            raise ConfigurationError(f"MEDIA_URL_TTL_SECONDS must be at most {MEDIA_URL_TTL_MAX}")
 
         return cls(
             app_env=app_env,
@@ -210,6 +217,8 @@ class Settings:
             upload_max_open_bytes=integer("UPLOAD_MAX_OPEN_BYTES", 30_000_000_000),
             upload_create_limit_per_hour=integer("UPLOAD_CREATE_LIMIT_PER_HOUR", 10),
             worker_stages=stages,
+            media_url_ttl_seconds=media_ttl,
+            s3_public_endpoint_url=(optional("S3_PUBLIC_ENDPOINT_URL") or "").rstrip("/") or None,
         )
 
     # -------------------------------------------------------------- views
