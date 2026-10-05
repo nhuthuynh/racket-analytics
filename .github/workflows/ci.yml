@@ -198,7 +198,7 @@ jobs:
         run: |
           uv sync --locked
           python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" -- \
-            uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
@@ -465,7 +465,7 @@ jobs:
           export MAILPIT_API_URL="http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
           uv sync --locked
           for i in 1 2 3; do
-            uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --junitxml="../reports/run-$i.xml" || true
