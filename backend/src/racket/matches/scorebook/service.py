@@ -146,6 +146,19 @@ class ScorebookService:
         book, _ = self._run(match, actor_id, command, "match.undone")
         return book
 
+    def resolve(
+        self, match: Match, actor_id: uuid.UUID, raw_rally_id: str, body: Any, version: int
+    ) -> Scorebook:
+        """FR-053 (a), provisional: ``{"decision": "withdraw" | "move_to_next_game"}``."""
+        decision = _object(body, frozenset({"decision"}), ValidationFailed).get("decision")
+        rally_id = _rally_id(raw_rally_id)
+
+        def command(book: Scorebook, ctx: CommandContext, ready: bool) -> Scorebook:
+            return book.resolve(rally_id, decision, expected_version=version, ctx=ctx)
+
+        book, _ = self._run(match, actor_id, command, "match.rally_resolved")
+        return book
+
     def history(self, match: Match) -> list[dict[str, Any]]:
         """FR-052: every change, oldest first, with the rally's current sheet number. Values
         are tag values only (sides, slots, enums, integers): no names, no free text."""

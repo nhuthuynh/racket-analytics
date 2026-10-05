@@ -287,7 +287,51 @@ class Scorebook:
         )
         return replace(book, changes=(*self.changes, change))
 
+    def resolve(
+        self,
+        rally_id: uuid.UUID,
+        decision: object,
+        *,
+        expected_version: int,
+        ctx: CommandContext,
+    ) -> Scorebook:
+        """FR-053 (a), provisional (§8 Q1): a rally marked "needs your decision" is withdrawn
+        or moved to the next game. Audited as a ``resolution``; undo reverses it."""
+        if expected_version != self.version:
+            raise StaleMatch("version changed")
+        if decision not in DECISIONS:
+            raise ValidationFailed("unknown decision", [FieldError("decision", "decision_invalid")])
+        rally = self._rally(rally_id)
+        marked = {row["rally_id"] for row in play(self).rows if row["marker"] is not None}
+        if rally.withdrawn or str(rally.id) not in marked:
+            raise ValidationFailed("no decision needed", [FieldError("decision", "not_needed")])
+        old: int | bool
+        if decision == "withdraw":
+            field, old, changed = "withdrawn", False, replace(rally, withdrawn=True)
+        else:
+            target = rally.game_number + 1
+            if target not in {g.number for g in self.games}:
+                raise GameNotStarted("the next game is not started")
+            field, old = "game_number", rally.game_number
+            changed = replace(rally, game_number=target)
+        change = self._change(
+            ctx,
+            "resolution",
+            rally_id=rally.id,
+            game_number=rally.game_number,
+            field=field,
+            old_value=old,
+            new_value=_value(changed, field),
+        )
+        return replace(
+            self,
+            version=self.version + 1,
+            rallies=self._with_rally(changed),
+            changes=(*self.changes, change),
+        )
 
+
+DECISIONS = frozenset({"withdraw", "move_to_next_game"})
 CORRECTABLE = frozenset(
     {
         "winning_side",
@@ -304,14 +348,16 @@ CORRECTABLE = frozenset(
 def _value(rally: Rally, field: str) -> Any:
     if field in ("start_ms", "end_ms"):
         return getattr(rally.times, field)
-    if field == "withdrawn":
-        return rally.withdrawn
+    if field in ("withdrawn", "game_number"):
+        return getattr(rally, field)
     return rally.outcome.as_json()[field]
 
 
 def _changed(rally: Rally, field: str, value: Any, format: str, *, validate: bool = True) -> Rally:
     if validate and value == _value(rally, field):
         raise ValidationFailed("value unchanged", [FieldError("value", "unchanged")])
+    if field == "game_number":
+        return replace(rally, game_number=int(value))
     if field in ("start_ms", "end_ms"):
         times = {"start_ms": rally.times.start_ms, "end_ms": rally.times.end_ms, field: value}
         return replace(rally, times=RallyTimes.parse(times["start_ms"], times["end_ms"]))

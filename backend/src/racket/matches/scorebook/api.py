@@ -111,3 +111,21 @@ def undo(
 @router.get("/matches/{match_id}/corrections")
 def correction_history(match: OwnedMatch, service: Service) -> dict[str, Any]:
     return {"items": service.history(match)}
+
+
+@router.post("/matches/{match_id}/rallies/{rally_id}/resolution")
+def resolve_rally(
+    rally_id: str,
+    match: OwnedMatch,
+    account: CurrentAccount,
+    service: Service,
+    body: JsonBody,
+    if_match: IfMatch = None,
+) -> JSONResponse:
+    """FR-053 (a), provisional (match-aggregate §8 Q1): withdraw a "needs your decision" rally,
+    or move it to the next game. Never deletes it."""
+    version = parse_version(if_match)
+    book = service.resolve(match, account.id, rally_id, body, version)
+    return JSONResponse(
+        {"version": book.version, "sheet": project(book)}, headers=_etag(book.version)
+    )
