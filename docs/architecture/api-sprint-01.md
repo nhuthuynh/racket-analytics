@@ -193,16 +193,16 @@ All values come from configuration (§8); the caps are provisional until ST-025 
 
 ### 6.3 `POST /matches/{match_id}/uploads`: creation (delta to api-sprint-00 §6.2)
 
-Checks, in order, after the Sprint 0 header checks (`Tus-Resumable`, `Upload-Length` syntax):
+Checks, in order, after the Sprint 0 header checks (`Tus-Resumable`, `Upload-Length` syntax). The order matches `UploadService.create` (`racket.video_ingest.service`); amended 2026-10-05 for PE-R1-01 / PE-R2-01:
 
 | # | Check | Result |
 |---|---|---|
 | 1 | session; match exists and is yours | 401; 404 |
-| 2 | `Upload-Length` > `UPLOAD_MAX_BYTES` | **413 `video_too_large`**, before any byte is stored; `rejection` set to `too_large` (NFR-053) |
-| 3 | an **unexpired** session already exists for the match | 409 `conflict`. An expired one is marked expired and replaced (no 409) |
-| 4 | the account has ≥ `UPLOAD_MAX_OPEN_SESSIONS` (3) receiving sessions, or their declared bytes plus this one exceed `UPLOAD_MAX_OPEN_BYTES` (30 GB) | 429 `upload_quota_exceeded`, `retry_at: null` (T-UP-6; ASVS 5.2.4) |
-| 5 | creation rate (§2.4) | 429 `rate_limited` |
-| 6 | `Upload-Metadata` | Sprint 1 reads only `filename` (decoded UTF-8, control characters removed, cut to 255 bytes), `last_modified` (decimal ms) and `head_sha256` (64 lowercase hex: SHA-256 of the first min(1 MiB, length) bytes). Malformed `head_sha256` or `last_modified` → 400. Other keys are ignored and not stored |
+| 2 | an **unexpired** session already exists for the match | 409 `conflict`. An expired one is marked expired and replaced (no 409). Runs before the size cap so a 413 never records a refusal on a match with a live upload or its video (PE-R1-01) |
+| 3 | `Upload-Length` > `UPLOAD_MAX_BYTES` | **413 `video_too_large`**, before any byte is stored; `rejection` set to `too_large` (NFR-053) |
+| 4 | `Upload-Metadata` | Sprint 1 reads only `filename` (decoded UTF-8, control characters removed, cut to 255 bytes), `last_modified` (decimal ms) and `head_sha256` (64 lowercase hex: SHA-256 of the first min(1 MiB, length) bytes). Malformed `head_sha256` or `last_modified` → 400. Other keys are ignored and not stored. Checked before quota and rate, so a malformed request does not spend a creation-rate slot |
+| 5 | the account has ≥ `UPLOAD_MAX_OPEN_SESSIONS` (3) receiving sessions, or their declared bytes plus this one exceed `UPLOAD_MAX_OPEN_BYTES` (30 GB) | 429 `upload_quota_exceeded`, `retry_at: null` (T-UP-6; ASVS 5.2.4) |
+| 6 | creation rate (§2.4) | 429 `rate_limited`. Counted only for requests that passed checks 1-5 |
 
 Success: **201**, `Location`, `Tus-Resumable`, and **`Upload-Expires: <HTTP-date>`** (e.g. `Tue, 06 Oct 2026 09:12:44 GMT`). The stored file name never reaches object keys, logs, metrics or tool arguments [AQS/SEC-02 5.3.2]; it is deleted when the session completes or expires.
 
