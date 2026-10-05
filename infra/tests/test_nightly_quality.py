@@ -166,6 +166,114 @@ def test_mutation_run_refuses_to_overwrite_an_existing_setup_cfg(tmp_path: Path)
     assert (tmp_path / "setup.cfg").read_text() == "[metadata]\n"
 
 
+def _fake_mutmut(tmp_path: Path) -> dict[str, str]:
+    """A ``mutmut`` on PATH that saves the setup.cfg it was started with, then does nothing."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    fake = bindir / "mutmut"
+    fake.write_text(
+        f"#!{sys.executable}\n"
+        "import pathlib, shutil, sys\n"
+        "if sys.argv[1:] == ['run']:\n"
+        f"    shutil.copy('setup.cfg', {str(tmp_path / 'seen.cfg')!r})\n"
+    )
+    fake.chmod(0o755)
+    return {**os.environ, "PATH": f"{bindir}{os.pathsep}{os.environ.get('PATH', '')}"}
+
+
+def test_mutation_run_keeps_source_scanning_tests_out_of_the_mutant_test_set(
+    tmp_path: Path,
+) -> None:
+    """PE-R1-S1-01: mutmut 3 adds a ``mutmut`` import to every mutated file, so a static
+    import scan (IT-01-13) fails on the instrumented copy and mutmut stops before scoring.
+    The run must be able to leave such tests out; they still run in the normal suite."""
+    (tmp_path / "src" / "x").mkdir(parents=True)
+    static = "tests/unit/sports/pickleball/test_rules_static.py"
+    res = subprocess.run(
+        [
+            sys.executable,
+            str(CI / "mutation_score.py"),
+            "--project",
+            str(tmp_path),
+            "--target",
+            "src/x",
+            "--tests",
+            "tests/unit/sports",
+            "--ignore",
+            static,
+            "--out",
+            str(tmp_path / "m.json"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=_fake_mutmut(tmp_path),
+    )
+    assert res.returncode == 1, res.stderr  # the fake writes no stats: never a pass
+    seen = (tmp_path / "seen.cfg").read_text()
+    assert f"pytest_add_cli_args =\n    --ignore={static}\n" in seen
+    assert "pytest_add_cli_args_test_selection =\n    tests/unit/sports/\n" in seen
+    assert not (tmp_path / "setup.cfg").exists()
+
+
+def test_mutation_run_without_ignore_adds_no_pytest_args(tmp_path: Path) -> None:
+    (tmp_path / "src" / "x").mkdir(parents=True)
+    res = subprocess.run(
+        [
+            sys.executable,
+            str(CI / "mutation_score.py"),
+            "--project",
+            str(tmp_path),
+            "--target",
+            "src/x",
+            "--out",
+            str(tmp_path / "m.json"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=_fake_mutmut(tmp_path),
+    )
+    assert res.returncode == 1, res.stderr
+    assert "pytest_add_cli_args =" not in (tmp_path / "seen.cfg").read_text()
+
+
+def test_mutation_run_never_scores_a_stale_stats_file_from_an_earlier_run(
+    tmp_path: Path,
+) -> None:
+    """QA-V1-03: when mutmut stops early it writes no new stats; a stats file left in
+    ``mutants/`` by an earlier run must not be scored as this run's result."""
+    (tmp_path / "src" / "x").mkdir(parents=True)
+    (tmp_path / "mutants").mkdir()
+    (tmp_path / "mutants" / "mutmut-cicd-stats.json").write_text(
+        json.dumps({"killed": 10, "survived": 0, "total": 10, "no_tests": 0, "timeout": 0})
+    )
+    out = tmp_path / "m.json"
+    res = subprocess.run(
+        [
+            sys.executable,
+            str(CI / "mutation_score.py"),
+            "--project",
+            str(tmp_path),
+            "--target",
+            "src/x",
+            "--out",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=_fake_mutmut(tmp_path),
+    )
+    assert res.returncode == 1, res.stdout
+    report = json.loads(out.read_text())
+    assert report["score"] is None
+    assert report["status"] == "no_stats"
+
+
 # ================================================================ nightly_status.py
 def test_a_missing_oracle_report_is_recorded_as_not_run_never_passed(
     status: Path, tmp_path: Path
@@ -319,6 +427,13 @@ def test_oracle_job_runs_100000_sequences_and_mutation_job_targets_the_rules() -
     assert "mutation_score.py" in mutation_runs
     assert "src/racket/sports/pickleball/rules" in mutation_runs
     assert "mutmut==" in mutation_runs  # pinned
+
+
+def test_mutation_job_leaves_the_static_rules_scan_out_of_the_mutant_test_set() -> None:
+    """PE-R1-S1-01: with IT-01-13 in the set, mutmut 3.8 stops at 'failed to collect stats'."""
+    mutation_runs = "\n".join(s.get("run", "") for s in wf()["jobs"]["mutation"]["steps"])
+    assert "--ignore tests/unit/sports/pickleball/test_rules_static.py" in mutation_runs
+    assert "--tests tests/unit/sports" in mutation_runs
 
 
 def test_publish_writes_the_sprint_status_file_and_skips_ci() -> None:

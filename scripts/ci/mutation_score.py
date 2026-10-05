@@ -6,7 +6,13 @@ Run mode (nightly): writes a temporary ``setup.cfg`` [mutmut] section in ``--pro
 PATH (the workflow uses ``uv run --with mutmut==<pin>``).
 
     mutation_score.py --project backend --target src/racket/sports/pickleball/rules \
-        --tests tests/unit/sports --out reports/mutation.json
+        --tests tests/unit/sports \
+        --ignore tests/unit/sports/pickleball/test_rules_static.py --out reports/mutation.json
+
+``--ignore PATH`` keeps a test file out of every mutmut pytest run (``pytest --ignore``). Use it
+for tests that scan the source text, such as the IT-01-13 import check: mutmut 3 adds a
+``mutmut`` import to every mutated file, so such a test fails on the instrumented copy and mutmut
+stops at "failed to collect stats" (PE-R1-S1-01). Those tests still run in the normal suite.
 
 ``--from-stats FILE`` scores an existing ``mutmut-cicd-stats.json`` instead (tests, reruns).
 
@@ -59,7 +65,9 @@ def score(stats: dict[str, Any], target: str) -> dict[str, Any]:
     return {**report, "status": "measured", "score": round((killed + timeout) / base, 4)}
 
 
-def run_mutmut(project: Path, target: str, tests: list[str]) -> dict[str, Any] | None:
+def run_mutmut(
+    project: Path, target: str, tests: list[str], ignore: list[str] | None = None
+) -> dict[str, Any] | None:
     cfg = project / "setup.cfg"
     if cfg.exists():
         print(f"mutation_score: {cfg} exists; refusing to overwrite it", file=sys.stderr)
@@ -71,18 +79,23 @@ def run_mutmut(project: Path, target: str, tests: list[str]) -> dict[str, Any] |
     def as_list(items: list[str]) -> str:
         return "".join(f"\n    {item.rstrip('/')}/" for item in items)
 
-    cfg.write_text(
+    text = (
         "[mutmut]\n"
         f"source_paths ={as_list([target])}\n"
         f"pytest_add_cli_args_test_selection ={as_list(tests)}\n"
         f"also_copy ={as_list(['src'])}\n"
     )
+    if ignore:
+        text += "pytest_add_cli_args =" + "".join(f"\n    --ignore={p}" for p in ignore) + "\n"
+    cfg.write_text(text)
+    stats = project / STATS_FILE
+    # A stats file from an earlier run must never be read as this run's result (QA-V1-03).
+    stats.unlink(missing_ok=True)
     try:
         subprocess.run(["mutmut", "run"], cwd=project, check=False)
         subprocess.run(["mutmut", "export-cicd-stats"], cwd=project, check=False)
     finally:
         cfg.unlink(missing_ok=True)
-    stats = project / STATS_FILE
     return json.loads(stats.read_text()) if stats.is_file() else None
 
 
@@ -91,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--project", type=Path, default=Path())
     p.add_argument("--target", required=True)
     p.add_argument("--tests", action="append", default=[])
+    p.add_argument("--ignore", action="append", default=[])
     p.add_argument("--from-stats", type=Path)
     p.add_argument("--min-score", type=float)
     p.add_argument("--out", type=Path, required=True)
@@ -109,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(report))
         return 1
     else:
-        stats = run_mutmut(a.project, a.target, a.tests or ["tests"])
+        stats = run_mutmut(a.project, a.target, a.tests or ["tests"], a.ignore)
 
     if stats is None:
         report = {

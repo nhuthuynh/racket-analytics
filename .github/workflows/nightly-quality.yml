@@ -88,7 +88,9 @@ jobs:
         run: |
           uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
             --project . --target src/racket/sports/pickleball/rules \
-            --tests tests/unit/sports --out ../reports/mutation.json
+            --tests tests/unit/sports \
+            --ignore tests/unit/sports/pickleball/test_rules_static.py \
+            --out ../reports/mutation.json
       - name: Report as job output
         id: report
         if: always()

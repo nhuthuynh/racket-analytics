@@ -206,8 +206,11 @@ python3 scripts/measure/junit_rate.py --include '.' --require 'SOD|sod' --requir
 cd backend
 env -u APP_ENV uv run python -m tests.oracle.differential --sequences 100000 --json "$GOAL/oracle.json"; echo rc=$?
 env -u APP_ENV uv run --with mutmut==3.8.0 python ../scripts/ci/mutation_score.py --project . \
-  --target src/racket/sports/pickleball/rules --tests tests/unit/sports --out "$GOAL/mutation.json"; echo rc=$?
+  --target src/racket/sports/pickleball/rules --tests tests/unit/sports \
+  --ignore tests/unit/sports/pickleball/test_rules_static.py --out "$GOAL/mutation.json"; echo rc=$?
 ```
+
+- `--ignore` keeps the IT-01-13 static import scan out of the mutant runs only (mutmut 3 adds a `mutmut` import to every mutated file, so the scan would stop the run; QA-V1-03). The scan still runs in G01-02 and the normal suite.
 
 - **Actual:** the sequences and disagreements from `oracle.json`, and `score` from `mutation.json`.
 - **Optional:** the GitHub nightly run (`nightly-quality.yml`) is extra evidence when one exists (retro 1 A1).
