@@ -218,3 +218,65 @@ def refused(ctx: dict[str, Any], message: str) -> None:
     for result in results:
         assert isinstance(result, error_type), f"expected {error_type.__name__}, got {result!r}"
         assert message in result.message.lower(), result.message
+
+
+# ------------------------------------------------------------------ configuration validation
+
+_FIELDS = {"target": "points_to_win", "margin": "win_by"}
+
+
+@given(parsers.parse("a game configuration with {field} set to {value:d}"))
+def configuration_with(ctx: dict[str, Any], field: str, value: int) -> None:
+    values = {"points_to_win": 11, "win_by": 2}
+    values[_FIELDS[field]] = value
+    ctx["values"] = values
+
+
+@when("the configuration is loaded")
+def load_configuration(ctx: dict[str, Any]) -> None:
+    error_type = contract.INVALID_RULES_CONFIG.load()
+    values = ctx["values"]
+    try:
+        ctx["config"] = sc.mechanics_config(values["points_to_win"], values["win_by"])
+    except error_type as exc:
+        ctx["error"] = exc
+
+
+@then(parsers.parse("it is refused with a message naming {field}"))
+def refused_naming(ctx: dict[str, Any], field: str) -> None:
+    assert "error" in ctx, f"configuration was accepted: {ctx.get('config')!r}"
+    error = ctx["error"]
+    assert error.field == _FIELDS[field]
+    assert _FIELDS[field] in str(error)
+
+
+# ------------------------------------------------------------------ replay determinism
+
+
+@given(parsers.parse("a game with {count:d} recorded rally outcomes"))
+def recorded_outcomes(ctx: dict[str, Any], count: int) -> None:
+    config = ctx["config"] = sc.mechanics_config(50, 2)  # high target: 30 rallies cannot end it
+    ctx["start"] = contract.NEW_GAME.load()(config, sc.side("A"))
+    rng = random.Random(20261019)  # noqa: S311  (seeded test data, not security)
+    ctx["outcomes"] = [sc.to_outcome(r) for r in sc.random_sequence(rng, count)]
+    assert len(ctx["outcomes"]) == count
+
+
+@when("the score sheet is rebuilt from those outcomes")
+def rebuild(ctx: dict[str, Any]) -> None:
+    fold = contract.RULES_FOLD.load()
+    outcomes = ctx["outcomes"]
+    ctx["rebuilt"] = [
+        fold(outcomes[:k], ctx["config"], ctx["start"]) for k in range(len(outcomes) + 1)
+    ]
+
+
+@then("it is identical to the score sheet computed rally by rally")
+def identical_sheet(ctx: dict[str, Any]) -> None:
+    sheet = [ctx["start"]]
+    for outcome in ctx["outcomes"]:
+        nxt = sc.apply(sheet[-1], outcome, ctx["config"])
+        assert not sc.is_domain_error(nxt), nxt
+        sheet.append(nxt)
+    assert ctx["rebuilt"] == sheet
+
