@@ -10,8 +10,10 @@ export const FIXTURE_CLIP = path.resolve(
   '../../../fixtures/clips/synthetic-60s/clip.mp4',
 );
 
-// Dev players (ST-006 picker). Ivy and Carlos accumulate matches across specs; empty states are
-// checked with a fresh magic-link account instead (helpers/sprint-01.ts uniqueEmail).
+// Dev players (ST-006 picker). They are shared by every run on a stack, so they are used only
+// for journeys that never start an upload: an unfinished upload counts toward the per-owner
+// quota (T-UV-7) and a reused stack would reach 429 (PD-R2-03). Empty states and uploads use a
+// fresh magic-link account instead (helpers/sprint-01.ts signInByLink, uniqueEmail).
 export async function signInAs(page: Page, name: 'Ivy' | 'Carlos' | 'Dana'): Promise<void> {
   // Since ST-013 the sign-in page sends a signed-in visitor to their matches, so switching
   // player in one context must sign the previous one out first, or the next steps run as them.

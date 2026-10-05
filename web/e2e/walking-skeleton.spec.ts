@@ -1,10 +1,10 @@
 // E2E-00-01 walking skeleton (sprint-00 §6; tests/features/walking_skeleton.feature, UI level).
-// dev sign-in -> new match -> upload the synthetic fixture -> match page shows
+// magic-link sign-in -> new match -> upload the synthetic fixture -> match page shows
 // "Duration 1:00 · 60 fps · 1920×1080", with axe on every page (NFR-027).
 // Written first by QA (ST-012): RED until ST-010 (with ST-008, ST-009) lands.
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from './helpers/axe';
-import { FIXTURE_CLIP, createMatch, signInAs } from './helpers/journey';
+import { FIXTURE_CLIP, createMatch } from './helpers/journey';
 import { signInByLink } from './helpers/sprint-01';
 
 test.describe('@M0 @story-ST-010 walking skeleton', () => {
@@ -26,7 +26,10 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
     await page.getByRole('link', { name: 'Record your first match' }).click();
     await expectNoBlockingA11yViolations(page, testInfo, 'new-match');
 
-    await signInAs(page, 'Ivy');
+    // The upload runs as the same fresh account, not as a shared dev player (PD-R2-03): every
+    // unfinished upload counts toward the per-owner quota (T-UV-7), so a player shared across
+    // runs reaches 429 on a reused stack after a few interrupted runs.
+    await page.goto('/matches');
     // Slow the first chunk so the uploading state is observable on a fast local stack.
     let slowed = false;
     await page.route('**/uploads/**', async (route) => {
@@ -56,7 +59,11 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
     page,
   }) => {
     test.slow(); // the resumed upload is followed by the probe
-    await signInAs(page, 'Ivy');
+    // A fresh magic-link account (PD-R2-03; testing-strategy rule 10): if this journey stops
+    // between the held PATCH and the resume, its unfinished upload must not use up a shared
+    // player's quota and fail later runs with 429.
+    await signInByLink(page);
+    await page.goto('/matches');
 
     // Deterministic "mid-upload" (QA-R1-05): wait for the creation to commit, then hold the
     // first PATCH in the browser so the reload happens while its bytes are in flight. Since
