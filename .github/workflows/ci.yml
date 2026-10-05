@@ -127,6 +127,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}"
       - run: uv sync --locked
+      # Unbudgeted: compile bytecode for deps, src and rewritten tests, so the budgets below
+      # measure test time, not a cold cache (run 37298471332: 11.1 s cold vs 6.8 s warm).
+      - name: Warm the bytecode cache (collect only, not budgeted)
+        run: uv run --no-sync pytest -q --collect-only -m unit
       - name: Domain unit suite < 10 s (NFR-073)
         run: |
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
@@ -160,6 +164,11 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}" "diff-cover==10.6.0"
+      - name: Install ffprobe (probe stage and probe tests need the real binary)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ffmpeg
+          ffprobe -version | head -1
       - name: Start backing services (same as production; never SQLite, AQS/OPS-05)
         # `up --wait` fails on a one-shot that exits (even 0), so the bucket init runs after.
         run: |
@@ -177,6 +186,8 @@ jobs:
             echo "S3_BUCKET_MEDIA=${S3_BUCKET_MEDIA}"
             echo "SMTP_HOST=127.0.0.1"
             echo "SMTP_PORT=${MAILPIT_SMTP_HOST_PORT}"
+            echo "MAIL_SMTP_URL=smtp://127.0.0.1:${MAILPIT_SMTP_HOST_PORT}"
+            echo "MAILPIT_API_URL=http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
             echo "APP_ENV=test"
           } >> "$GITHUB_ENV"
       - name: Object store parity IT-00-16 (ADR 0008 part C)
@@ -436,6 +447,11 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}"
+      - name: Install ffprobe (probe stage and probe tests need the real binary)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ffmpeg
+          ffprobe -version | head -1
       - run: |
           $COMPOSE up -d --wait postgres objectstore mailpit tracing
           $COMPOSE run --rm objectstore-init
@@ -445,6 +461,8 @@ jobs:
           set -a; . ../infra/env.example; set +a
           export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_HOST_PORT}/${POSTGRES_DB}"
           export S3_ENDPOINT_URL="http://127.0.0.1:${S3_HOST_PORT}" APP_ENV=test
+          export MAIL_SMTP_URL="smtp://127.0.0.1:${MAILPIT_SMTP_HOST_PORT}"
+          export MAILPIT_API_URL="http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
           uv sync --locked
           for i in 1 2 3; do
             uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
