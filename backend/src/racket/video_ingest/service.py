@@ -249,6 +249,9 @@ class UploadService:
         # 400 before quota and rate (PE-R3-01).
         validate_metadata(upload_metadata)
         file = UploadFile.from_metadata(upload_metadata)
+        # The quota is read under the owner's lock, held to the commit, so parallel creations
+        # see each other's sessions (C-02, PE-R3R-01; READ COMMITTED reads after the lock).
+        self.uploads.lock_owner(owner_id)
         self._check_quota(owner_id, length, now)
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
             f"upload:create:{owner_id}",

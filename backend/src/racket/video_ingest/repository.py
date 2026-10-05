@@ -115,6 +115,15 @@ class UploadRepository:
         self.session.delete(upload)
         self.session.flush()
 
+    def lock_owner(self, owner_id: uuid.UUID) -> None:
+        """Serialise upload creations of one owner until this transaction ends (C-02,
+        PE-R3R-01). Same key as the creation rate limit, so one lock covers both checks;
+        advisory transaction locks are re-entrant within a transaction."""
+        self.session.execute(
+            sa.text("SELECT pg_advisory_xact_lock(hashtextextended(:k, 0))"),
+            {"k": f"upload:create:{owner_id}"},
+        )
+
     def open_for_owner(self, owner_id: uuid.UUID, now: datetime) -> tuple[int, int]:
         """(count, declared bytes) of the owner's unexpired receiving sessions (T-UV-7)."""
         count, total = self.session.execute(
