@@ -19,6 +19,7 @@ from racket.sports.pickleball.rules.errors import (
 )
 from racket.sports.pickleball.rules.outcome import RallyOutcome
 from racket.sports.pickleball.rules.presets import PRESETS, PROVISIONAL_UNVERIFIED
+from racket.sports.pickleball.rules.state import GameState, declare_state, new_game
 
 __all__ = [
     "PRESETS",
@@ -26,6 +27,7 @@ __all__ = [
     "DomainError",
     "FaultKind",
     "GameOver",
+    "GameState",
     "IllegalState",
     "InvalidRulesConfig",
     "MatchFormat",
@@ -34,4 +36,6 @@ __all__ = [
     "ScoringSystem",
     "Side",
     "UnknownOutcome",
+    "declare_state",
+    "new_game",
 ]
