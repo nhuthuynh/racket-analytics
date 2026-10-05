@@ -32,6 +32,8 @@ cd web && API_INTERNAL_URL=http://127.0.0.1:8811 pnpm build \
 BASE_URL=http://localhost:3000 PW_PROJECTS=chromium pnpm test:e2e
 ```
 
+This no-Docker recipe serves plain http, which only Chromium accepts for the `Secure` session cookie (it treats `localhost` as secure). WebKit needs https: run the Compose stack (`infra/compose.yaml`), whose `web-tls` proxy serves `https://localhost:3000` (the Playwright default; ADR 0029).
+
 ## Rules this code follows
 
 - Authorisation lives in the API only. Pages map a 401 to sign-in and a 404 to the single not-found page.
