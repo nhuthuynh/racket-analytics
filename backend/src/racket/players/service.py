@@ -281,11 +281,15 @@ class MagicLinkService:
                 "auth.link_refused", "auth.refused", email_key=row.email_key if row else None
             )
             raise LinkRefused("link refused") from None
-        self.session.execute(
+        marked = self.session.execute(
             sa.update(sign_in_links)
-            .where(sign_in_links.c.token_sha256 == digest)
+            .where(sign_in_links.c.token_sha256 == digest, sign_in_links.c.used_at.is_(None))
             .values(used_at=used.used_at, email=None)  # ADR 0032: the address leaves the link
         )
+        if marked.rowcount != 1:  # type: ignore[attr-defined]  # C-28: single use, T-ML-3
+            self.session.rollback()
+            security_event("auth.link_refused", "auth.refused", email_key=row.email_key)
+            raise LinkRefused("link already used")
         if row.email is None:  # a link issued before migration 0008 (ADR 0032 legacy path)
             account, new_account = self._legacy_account_for(used.email_key, now)
         else:
