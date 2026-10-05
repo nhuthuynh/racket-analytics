@@ -15,7 +15,7 @@ import { initialTagging, taggingReducer, type Pending } from '@/lib/tagging/redu
 import { currentCall } from '@/lib/tagging/score';
 import { gameStatus, sideNames, tagLine, winnerWord } from '@/lib/tagging/view';
 import { ENDING_LABELS, ENDINGS, otherSide, type Ending, type ScoreSheet, type Side } from '@/lib/tagging/types';
-import { tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
+import { commandProblem, tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
 import { actionForKey, loadSingleKeys, saveSingleKeys, type KeyAction } from '@/lib/tagging/keymap';
 import { GameStartForm } from './GameStartForm';
 import { KeyMapDialog } from './KeyMapDialog';
@@ -110,6 +110,20 @@ export function QuickTag({
   }, [api, match.id, names.mySide, refresh, state.pending]);
 
   const tagging = !status.matchOver;
+  const undoing = useRef(false);
+  const undo = useCallback(async () => {
+    if (undoing.current || state.pending) return;
+    undoing.current = true;
+    try {
+      const r = await api.undo(match.id, state.version);
+      dispatch({ type: 'confirmed', sheet: r.sheet, version: r.version });
+      setAnnouncement('Last change undone.');
+    } catch (e) {
+      dispatch({ type: 'failed', message: commandProblem(e, 'Undo') });
+    } finally {
+      undoing.current = false;
+    }
+  }, [api, match.id, state.pending, state.version]);
   // Keyboard tagging (ST-028a): document-level, so focus can stay on any control (E2E-02-03).
   const onKey = useRef<(action: KeyAction) => void>(() => {});
   onKey.current = (action: KeyAction) => {
@@ -133,6 +147,9 @@ export function QuickTag({
         v.currentTime = Math.max(0, v.currentTime + (action.endsWith('back') || action === 'back_5s' ? -step : step));
         return;
       }
+      case 'undo':
+        void undo();
+        return;
       default:
     }
     if (!tagging) return;
@@ -282,6 +299,9 @@ export function QuickTag({
       )}
 
       <div className="quick-tag__row">
+        <button type="button" className="button button--secondary" onClick={() => void undo()}>
+          Undo
+        </button>
         <button
           type="button"
           className="button button--secondary"

@@ -1,6 +1,6 @@
 // Display helpers for the tagging screens (ST-027, ST-029, ST-030). Pure.
 import type { Match, ParticipantSlot } from '@/lib/api/types';
-import { sideOfSlot, type ScoreSheet, type SheetRow, type Side } from './types';
+import { ENDING_LABELS, sideOfSlot, type Ending, type HistoryItem, type ScoreSheet, type SheetRow, type Side } from './types';
 
 export interface SideNames {
   mySide: Side;
@@ -73,4 +73,45 @@ export function formatClock(ms: number): string {
   const m = Math.floor((total % 3600) / 60);
   const ss = String(total % 60).padStart(2, '0');
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
+const FIELD_WORDS: Readonly<Record<string, string>> = {
+  winning_side: 'won by',
+  ending: 'ending',
+  responsible_player: 'player',
+  start_ms: 'start',
+  end_ms: 'end',
+  fault_kind: 'fault type',
+};
+
+function valueWords(field: string, value: HistoryItem['old_value'], names: SideNames): string {
+  if (value === null) return field === 'responsible_player' ? 'not tagged' : 'nothing';
+  if (field === 'winning_side') return value === names.mySide ? 'your side' : 'the other side';
+  if (field === 'ending' && typeof value === 'string' && value in ENDING_LABELS) {
+    return ENDING_LABELS[value as Ending].toLowerCase();
+  }
+  if (field === 'responsible_player') return names.players.find((p) => p.slot === value)?.nickname ?? String(value);
+  if ((field === 'start_ms' || field === 'end_ms') && typeof value === 'number') return formatClock(value);
+  return String(value);
+}
+
+/** One line of the correction history H-01 (FR-052: rally, field, old and new value). */
+export function historyText(item: HistoryItem, all: readonly HistoryItem[], names: SideNames): string {
+  const rally = item.rally_number ? `Rally ${item.rally_number}` : 'The match';
+  switch (item.kind) {
+    case 'correction': {
+      const field = item.field ?? 'value';
+      return `${rally}: ${FIELD_WORDS[field] ?? field} changed from ${valueWords(field, item.old_value, names)} to ${valueWords(field, item.new_value, names)}`;
+    }
+    case 'withdrawal':
+      return `${rally} removed`;
+    case 'game_started':
+      return 'A game was started';
+    case 'resolution':
+      return `${rally}: your decision was recorded`;
+    case 'undo': {
+      const target = all.find((i) => i.id === item.undoes);
+      return target && target.kind !== 'undo' ? `Undone: ${historyText(target, all, names)}` : 'Undone: an earlier change';
+    }
+  }
 }

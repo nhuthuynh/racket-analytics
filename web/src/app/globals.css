@@ -906,3 +906,17 @@ main:focus-visible,
     font-weight: var(--font-weight-bold);
   }
 }
+
+/* Correction history H-01 (ST-031) */
+.history-list {
+  margin: 0;
+  padding-inline-start: var(--space-6);
+}
+
+.history-list > li + li {
+  margin-block-start: var(--space-2);
+}
+
+.history-list__time {
+  color: var(--color-text-secondary);
+}

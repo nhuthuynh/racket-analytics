@@ -22,3 +22,15 @@ export function tagFailureMessage(e: unknown): string {
   }
   return 'The rally was not saved. Try again.';
 }
+
+/** What the player is told when a correction or undo is not done (ST-031, ST-032). */
+export function commandProblem(e: unknown, what: string): string {
+  if (e instanceof ApiError) {
+    const ref = e.supportRef ? ` Reference: ${e.supportRef}` : '';
+    if (e.code === 'nothing_to_undo') return 'There is nothing to undo.';
+    if (e.code === 'network_error') return `${what} failed because the connection dropped. Try again.`;
+    if (e.code === 'invalid_outcome') return `${what} was refused: the winner, the ending and the player do not fit together.`;
+    return `${what} failed. Try again.${ref}`;
+  }
+  return `${what} failed. Try again.`;
+}
