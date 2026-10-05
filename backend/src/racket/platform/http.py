@@ -125,13 +125,23 @@ def install_error_handlers(app: FastAPI, mapper: ErrorMapper) -> None:
     app.add_exception_handler(RequestValidationError, on_validation_error)
 
 
+PathHeaders = tuple[tuple["re.Pattern[str]", tuple[tuple[bytes, bytes], ...]], ...]
+
+
 class EdgeMiddleware:
     def __init__(
-        self, app: ASGIApp, mapper: ErrorMapper, allowed_origins: tuple[str, ...] = ()
+        self,
+        app: ASGIApp,
+        mapper: ErrorMapper,
+        allowed_origins: tuple[str, ...] = (),
+        path_headers: PathHeaders = (),
     ) -> None:
         self.app = app
         self.mapper = mapper
         self.allowed_origins = set(allowed_origins)
+        # Headers every response on a path family carries, whoever produced the response
+        # (router 405, global 500): e.g. ``Tus-Resumable`` on tus paths (R3-04).
+        self.path_headers = path_headers
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -145,6 +155,8 @@ class EdgeMiddleware:
         uid_token = user_id_var.set(None)
         started = time.monotonic()
         status_holder = {"status": 500, "started": False}
+        path = str(scope.get("path", ""))
+        forced = [h for pattern, hs in self.path_headers if pattern.match(path) for h in hs]
 
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -154,6 +166,8 @@ class EdgeMiddleware:
                     (k, v) for k, v in message.get("headers", []) if k.lower() not in _OWNED_HEADERS
                 ]
                 raw += [*SECURITY_HEADERS, (b"x-request-id", request_id.encode())]
+                present = {k.lower() for k, _ in raw}
+                raw += [(k, v) for k, v in forced if k not in present]
                 message["headers"] = raw
             await send(message)
 

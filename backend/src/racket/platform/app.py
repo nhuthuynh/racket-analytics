@@ -9,6 +9,7 @@ never reads the environment.
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from functools import cache
@@ -28,6 +29,8 @@ from racket.platform.storage import ObjectStore
 from racket.platform.tracing import configure_tracing
 
 log = logging.getLogger("racket.platform")
+# Every response on a tus path carries Tus-Resumable, 405 and 500 included (R3-04).
+TUS_PATHS = re.compile(r"^/(uploads(/|$)|matches/[^/]+/uploads/?$)")
 
 
 def _startup(app: FastAPI) -> None:
@@ -70,7 +73,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     mapper = ErrorMapper()
     install_error_handlers(app, mapper)
-    app.add_middleware(EdgeMiddleware, mapper=mapper, allowed_origins=settings.allowed_origins)
+    app.add_middleware(
+        EdgeMiddleware,
+        mapper=mapper,
+        allowed_origins=settings.allowed_origins,
+        path_headers=((TUS_PATHS, ((b"tus-resumable", b"1.0.0"),)),),
+    )
     app.add_middleware(HttpMetricsMiddleware)  # outermost: NFR-041 availability SLI (ST-024)
 
     from racket.matches.api import router as matches_router
