@@ -231,3 +231,42 @@ def test_it_01_03_auth_log_lines_are_attributable_and_hold_no_address_or_token(
     assert email not in joined
     assert token not in joined
     assert scan(lines) == []
+
+
+# ------------------------------------------------------------------ T-ML-12 (login CSRF)
+FOREIGN_ORIGIN = "https://evil.example"
+
+
+@pytest.fixture
+def _origin_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Staging/prod shape: an Origin allowlist (requested before ``api`` builds the app)."""
+    monkeypatch.setenv("ALLOWED_ORIGINS", WEB_ORIGIN)
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        (contract.AUTH_LINKS, {"email": "ivy@example.test"}),
+        (contract.AUTH_EXCHANGE, {"token": "x" * 43}),
+    ],
+    ids=["links", "exchange"],
+)
+@pytest.mark.usefixtures("_origin_allowlist")
+def test_t_ml_12_a_foreign_origin_cannot_request_a_link_or_sign_in(
+    api: ApiDriver, path: str, body: dict[str, str]
+) -> None:
+    """T-ML-12: login CSRF. A cross-site POST is refused before the route runs: 403
+    ``forbidden_origin`` and no session cookie. Positive control: the web origin gets the
+    route's own answer (202 for links, 401 for an unknown token), never 403."""
+    client = auth.new_client(api)
+    try:
+        refused = api.run(client.post(path, json=body, headers={"Origin": FOREIGN_ORIGIN}))
+        assert refused.status_code == 403
+        assert refused.json()["error"]["code"] == "forbidden_origin"
+        assert "set-cookie" not in refused.headers
+        assert contract.SESSION_COOKIE_TEST not in client.cookies
+
+        allowed = api.run(client.post(path, json=body, headers={"Origin": WEB_ORIGIN}))
+        assert allowed.status_code in (202, 401), allowed.text
+    finally:
+        api.run(client.aclose())
