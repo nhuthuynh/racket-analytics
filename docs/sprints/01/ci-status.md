@@ -36,3 +36,18 @@ Conclusion: **failure**. <https://github.com/nhuthuynh/racket-analytics/actions/
 
 Not verifiable in the sandbox: the SBOM action and the outcome of pip-audit/licence gate once they
 can actually run. They are confirmed by the next CI run on `main` (the EM pushes; agents never push).
+
+## Run 37298471332: `workflow_dispatch` on `sprint-01` (head 2390e9a, 2026-10-05 10:44-11:05 UTC)
+
+Conclusion: **failure**. <https://github.com/nhuthuynh/racket-analytics/actions/runs/37298471332>. Green: actionlint, Ruff, mypy, fixtures, web, infra tests, secret scan and pip-audit, SBOM and licence gate, flaky report. Red:
+
+| Job | Failing step | Cause | Lane / owner | Action |
+|---|---|---|---|---|
+| Python unit suites | Domain unit suite < 10 s | killed at the 10 s budget on a cold bytecode cache (11.1 s cold vs 6.8 s warm locally) | SRE | Fixed `a4dfd43`: unbudgeted collect-only warm-up; budget unchanged |
+| Integration on Compose | Backend suites: 44 failed, 980 passed, 14 errors | (1) no `ffprobe` on the runner: probe stage fails, so upload, walking-skeleton, worker-crash and probe tests fail; (2) `MAILPIT_API_URL` not set: 7 IT-01-01 and 3 sign-in feature tests; (3) `test_nightly_quality::test_nightly_run_completes`: no nightly run yet; (4) tus/upload test defects (TCR rows, now decided in `71da707`) and ST-025 phone fixtures (blocker) | SRE for (1)-(3); BE/QA for (4); PO for ST-025 | (1), (2) fixed `a4dfd43`; (3) needs the first nightly run, see blockers.md (push needed) |
+| E2E | Playwright: 74 passed, 14 failed | no WebKit sign-in failure (ADR 0029 cookie fix holds); remaining are spec drift and WebKit-only UI issues, see blockers.md | QA, FE | QA-R1-01/02 E2E fixes in `71da707` |
+| ci-gate | aggregate | — | — | re-check on the next run |
+
+Evidence for `a4dfd43`: `cd infra && uv run pytest -q tests/test_workflows_ci_run2.py` → `6 failed` before the `ci.yml` change (per guard, red first), `6 passed` after; `GITHUB_ACTIONS=true CI=true uv run pytest -q -m "unit or integration"` → `245 passed`; `actionlint .github/workflows/ci.yml` → clean.
+
+**Next run: not dispatched.** GitHub `sprint-01` is at `6ba9b28`, behind the local head; a dispatch would test stale code. Waiting for the EM push (blockers.md), then dispatch `ci.yml` and `nightly-quality.yml` and record both IDs here and in `status.json`.
