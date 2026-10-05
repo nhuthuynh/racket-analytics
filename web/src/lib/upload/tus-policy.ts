@@ -26,16 +26,54 @@ export type UploadProblem =
   | 'expired'
   | 'conflict'
   | 'quota'
+  | 'rate_limited'
   | 'not_found'
   | 'server';
 
-export function uploadProblemFor(status: number): UploadProblem {
+/** What the API's error envelope said about a failed tus request (api-sprint-00 §5). */
+export interface UploadErrorDetail {
+  code: string | null;
+  /** RFC 3339; only on 429, null when waiting does not help (quota). */
+  retryAt: string | null;
+  supportRef: string | null;
+}
+
+const CODE_RE = /^[a-z][a-z_]{0,63}$/;
+const RETRY_AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const SUPPORT_REF_RE = /^ref_[0-9a-f]{16}$/;
+
+/** Reads `{"error": {code, retry_at, support_ref}}` from a response body; anything else is null. */
+export function uploadErrorDetail(body: string | null | undefined): UploadErrorDetail {
+  const detail: UploadErrorDetail = { code: null, retryAt: null, supportRef: null };
+  try {
+    const error = (JSON.parse(body ?? '') as { error?: Record<string, unknown> } | null)?.error;
+    if (typeof error?.code === 'string' && CODE_RE.test(error.code)) detail.code = error.code;
+    if (typeof error?.retry_at === 'string' && RETRY_AT_RE.test(error.retry_at)) detail.retryAt = error.retry_at;
+    if (typeof error?.support_ref === 'string' && SUPPORT_REF_RE.test(error.support_ref)) {
+      detail.supportRef = error.support_ref;
+    }
+  } catch {
+    // Not JSON (a proxy page, an empty body): nothing is known beyond the status.
+  }
+  return detail;
+}
+
+/**
+ * The problem for a final failure. A 429 at creation is either the unfinished-upload quota
+ * (`upload_quota_exceeded`, `retry_at: null`) or the creation rate (`rate_limited`, `retry_at`
+ * set): api-sprint-01 §6.3 checks 5 and 6 (PE-R3-03).
+ */
+export function uploadProblemFor(status: number, detail?: Partial<UploadErrorDetail>): UploadProblem {
   if (status === 0) return 'network';
   if (status === 415) return 'not_a_video';
   if (status === 413) return 'too_large';
   if (status === 410) return 'expired';
   if (status === 409) return 'conflict';
-  if (status === 429) return 'quota';
+  if (status === 429) {
+    if (detail?.code === 'rate_limited') return 'rate_limited';
+    if (detail?.code !== 'upload_quota_exceeded' && detail?.retryAt) return 'rate_limited';
+    return 'quota';
+  }
   if (status === 404 || status === 401) return 'not_found';
   return 'server';
 }

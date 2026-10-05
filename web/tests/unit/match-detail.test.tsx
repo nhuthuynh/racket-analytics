@@ -112,6 +112,32 @@ describe('MatchDetail', () => {
     expect(api.getMatch.mock.calls.length).toBe(calls);
   });
 
+  // PD-R1-01: once the probe has decided, M-02 shows the facts only; the upload panel does not
+  // stay behind saying "Checking video…" next to "Video received".
+  it('PD-R1-01: removes the upload panel once the facts arrive after the upload', async () => {
+    let finish: (() => void) | null = null;
+    const startTransfer = vi.fn((o: { callbacks: { onSuccess(): void } }) => {
+      finish = () => o.callbacks.onSuccess();
+      return { pause: vi.fn(), resume: vi.fn(), abort: vi.fn() };
+    });
+    const api = { getMatch: vi.fn().mockResolvedValue({ ...base, media, upload: null, rejection: null }) };
+    render(
+      <MatchDetail
+        initialMatch={{ ...base, status: 'awaiting_upload', upload: null, rejection: null }}
+        api={api}
+        pollMs={1_000}
+        initialFile={new File(['x'], 'clip.mp4', { type: 'video/mp4' })}
+        startTransfer={startTransfer}
+      />,
+    );
+    act(() => finish!());
+    expect(screen.getByText('Checking video…')).toBeVisible();
+    await tick(1_000);
+    expect(screen.getByText('Video received')).toBeVisible();
+    expect(screen.queryByText('Checking video…')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Video upload' })).toBeNull();
+  });
+
   it('shows the title as a heading, as text only', () => {
     render(
       <MatchDetail

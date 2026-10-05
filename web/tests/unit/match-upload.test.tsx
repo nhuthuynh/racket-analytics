@@ -147,6 +147,58 @@ describe('MatchUpload', () => {
     expect(screen.getByText('Stopped')).toBeVisible();
   });
 
+  // PD-R3-03: tus-js-client reports bytes SENT while a PATCH is in flight, also when the server
+  // then answers 500. Only an accepted chunk proves progress, so "trouble" shows after 3 failed
+  // retries even though every retry sent bytes again (flows §6 U-01).
+  it('PD-R3-03: says it is having trouble when PATCHes keep failing after sending bytes', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    for (let i = 0; i < 3; i += 1) {
+      act(() => t.cb().onProgress(0, 1000));
+      act(() => t.cb().onProgress(1000, 1000));
+      act(() => t.cb().onRetrying!(500));
+    }
+    expect(screen.getByText("Paused: we're having trouble sending your video. Retrying…")).toBeVisible();
+  });
+
+  it('PD-R3-03: an accepted chunk ends the trouble state and starts the retry count again', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    for (let i = 0; i < 3; i += 1) act(() => t.cb().onRetrying!(500));
+    expect(screen.getByText(/having trouble/)).toBeVisible();
+    act(() => t.cb().onChunkAccepted!(500));
+    act(() => t.cb().onProgress(600, 1000));
+    expect(screen.getByText('Uploading', { exact: true })).toBeVisible();
+    act(() => t.cb().onRetrying!(500));
+    expect(screen.getByText('Uploading', { exact: true })).toBeVisible();
+  });
+
+  it('PD-R3-03: does not say progress is saved when the server kept nothing', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onProgress(1000, 1000));
+    act(() => t.cb().onError(500));
+    expect(screen.getByText('Stopped')).toBeVisible();
+    expect(screen.queryByText(/Your progress is saved/)).toBeNull();
+    expect(screen.getByRole('link', { name: /problem on our side/ })).toBeVisible();
+  });
+
+  it('PD-R3-03: says progress is saved when the server kept part of the video', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onChunkAccepted!(500));
+    act(() => t.cb().onProgress(500, 1000));
+    act(() => t.cb().onError(500));
+    expect(screen.getByRole('link', { name: /Your progress is saved\. Try again\./ })).toBeVisible();
+  });
+
+  it('PE-R3-03 / PD-R3-02: a creation-rate limit is not called a quota and gives the time to try again', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onError(429, { code: 'rate_limited', retryAt: '2026-10-05T14:32:00Z', supportRef: null }));
+    expect(screen.queryByText(/too many unfinished uploads/)).toBeNull();
+    const link = screen.getByRole('link', { name: /^You have started too many uploads in a short time\. You can try again at \d{2}:\d{2}\.$/ });
+    expect(link).toHaveAttribute('href', '#video-file');
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveFocus();
+    expect(screen.getByLabelText('Choose video')).toBeInTheDocument();
+  });
+
   it('reports completion and then checks the video', () => {
     const { t, onUploaded } = renderPanel({ initialFile: video() });
     act(() => t.cb().onSuccess());
@@ -182,6 +234,16 @@ describe('MatchUpload, resume on return (U-04)', () => {
     await userEvent.upload(screen.getByLabelText('Choose video'), video(1000, 'clip.mp4'));
     expect(await screen.findByRole('link', { name: /This is not the same video/ })).toBeVisible();
     expect(t.start).not.toHaveBeenCalled();
+  });
+
+  it('PD-R3-01: choosing a different video again moves focus back to the error summary', async () => {
+    renderPanel({ match: await receiving() });
+    await userEvent.upload(screen.getByLabelText('Choose video'), video(1000, 'clip.mp4'));
+    const first = await screen.findByRole('alert');
+    await vi.waitFor(() => expect(first).toHaveFocus());
+    await userEvent.upload(screen.getByLabelText('Choose video'), video(1000, 'clip.mp4'));
+    expect(screen.getByLabelText('Choose video')).not.toHaveFocus();
+    await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveFocus());
   });
 
   it('continues the server upload with the same video', async () => {

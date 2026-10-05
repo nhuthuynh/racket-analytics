@@ -119,6 +119,28 @@ describe('startTransfer', () => {
     expect(cb.onError).toHaveBeenCalledWith(415);
   });
 
+  it('PE-R3-03: passes the error code and retry time of a refused creation to the panel', async () => {
+    const cb = callbacks();
+    startTransfer({ file, matchId: MATCH_ID, policy: POLICY, callbacks: cb });
+    await flush();
+    const { options } = created[0]!;
+    const body = JSON.stringify({ error: { code: 'rate_limited', retry_at: '2026-10-05T14:32:00Z', support_ref: null } });
+    options.onError({
+      originalRequest: { getMethod: () => 'POST' },
+      originalResponse: { getStatus: () => 429, getBody: () => body },
+    });
+    expect(cb.onError).toHaveBeenCalledWith(429, { code: 'rate_limited', retryAt: '2026-10-05T14:32:00Z', supportRef: null });
+  });
+
+  it('PD-R3-03: tells the panel when the server accepted a chunk, apart from bytes merely sent', async () => {
+    const cb = { ...callbacks(), onChunkAccepted: vi.fn() };
+    startTransfer({ file, matchId: MATCH_ID, policy: POLICY, callbacks: cb });
+    await flush();
+    const { options } = created[0]!;
+    options.onChunkComplete(5, 5, 10);
+    expect(cb.onChunkAccepted).toHaveBeenCalledWith(5);
+  });
+
   it('pauses without terminating and resumes from the server offset', async () => {
     const handle = startTransfer({ file, matchId: MATCH_ID, policy: POLICY, callbacks: callbacks() });
     await flush();

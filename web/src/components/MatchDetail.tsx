@@ -81,9 +81,11 @@ export function MatchDetail({
 
   const onUploaded = useCallback(() => setChecking(true), []);
 
+  // The handed-over file is not a reason to show the panel: once the probe has decided, M-02
+  // shows the facts only, never "Video received" next to "Checking video…" (PD-R1-01; flows §6
+  // U-02 → M-02). A refusal brings the match back to awaiting_upload, which shows it again.
   const showUpload =
     checking ||
-    !!file ||
     match.status === 'awaiting_upload' ||
     match.status === 'uploading' ||
     (match.upload !== null && match.upload !== undefined);

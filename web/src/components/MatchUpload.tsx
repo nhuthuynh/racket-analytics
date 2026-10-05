@@ -12,7 +12,7 @@ import type { Match, UploadPolicy } from '@/lib/api/types';
 import { formatBytes, formatDurationCap, formatProgressAmount, formatSizeCap } from '@/lib/format';
 import { setActiveUpload } from '@/lib/upload/activity';
 import { createEstimate, estimateText, recordProgress, remainingMs, type Estimate } from '@/lib/upload/estimate';
-import { NOT_A_VIDEO, NOTHING_SAVED, rejectionMessage } from '@/lib/upload/messages';
+import { NOT_A_VIDEO, NOTHING_SAVED, rejectionMessage, uploadRateLimitMessage } from '@/lib/upload/messages';
 import { checkSameVideo } from '@/lib/upload/same-file';
 import { uploadProblemFor } from '@/lib/upload/tus-policy';
 import { startTransfer as defaultStartTransfer, type StartTransfer, type TransferHandle } from '@/lib/upload/transfer';
@@ -75,7 +75,13 @@ export function MatchUpload({
   onProblem: (shown: boolean) => void;
 }) {
   const [view, setView] = useState<View>({ kind: 'idle' });
-  const [problem, setProblem] = useState<Problem | null>(null);
+  const [problem, setProblemState] = useState<Problem | null>(null);
+  // Counts every reported problem, so a repeated identical one moves focus again (PD-R3-01).
+  const [attempt, setAttempt] = useState(0);
+  const setProblem = useCallback((next: Problem | null) => {
+    setProblemState(next);
+    if (next) setAttempt((n) => n + 1);
+  }, []);
   const [announcement, setAnnouncement] = useState('');
   const [tipHidden, setTipHidden] = useState(false);
   const [, setEstimateTick] = useState(0);
@@ -86,6 +92,8 @@ export function MatchUpload({
   const lastTen = useRef(0);
   const started = useRef(false);
   const progressed = useRef(false);
+  /** Bytes the server has stored (resume offset or last accepted chunk), not merely sent. */
+  const accepted = useRef(0);
   const viewRef = useRef(view);
   viewRef.current = view;
 
@@ -121,6 +129,7 @@ export function MatchUpload({
       lastTen.current = 0;
       progressed.current = false;
       const offset = from.offset ?? 0;
+      accepted.current = offset;
       estimate.current = createEstimate(performance.now(), offset);
       setView({ kind: 'transfer', mode: 'uploading', sent: offset, total: file.size });
       const h = startTransfer({
@@ -129,13 +138,14 @@ export function MatchUpload({
         policy,
         callbacks: {
           onProgress: (sent, total) => {
-            retries.current = 0;
+            // Bytes sent are not progress the server kept: a PATCH can send every byte and then
+            // fail with 500. Only onChunkAccepted resets the retry count (PD-R3-03).
             progressed.current = true;
             if (estimate.current) estimate.current = recordProgress(estimate.current, performance.now(), sent);
             setEstimateTick((n) => n + 1);
             setView((v) => {
               if (v.kind !== 'transfer') return v;
-              const mode = v.mode === 'resuming' || v.mode === 'trouble' ? 'uploading' : v.mode;
+              const mode = v.mode === 'resuming' ? 'uploading' : v.mode;
               return { ...v, mode, sent: Math.max(v.sent, sent), total };
             });
             const ten = Math.floor(percent(sent, total) / 10);
@@ -144,6 +154,11 @@ export function MatchUpload({
               setAnnouncement(`Upload ${ten * 10}% done`);
             }
             setActiveUpload({ title: match.title, percent: percent(sent, total), stop: () => transfer.current?.abort() });
+          },
+          onChunkAccepted: (bytesAccepted) => {
+            retries.current = 0;
+            accepted.current = Math.max(accepted.current, bytesAccepted);
+            setView((v) => (v.kind === 'transfer' && v.mode === 'trouble' ? { ...v, mode: 'uploading' } : v));
           },
           onSuccess: () => {
             transfer.current = null;
@@ -158,8 +173,8 @@ export function MatchUpload({
               setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'trouble' } : v));
             }
           },
-          onError: (status) => {
-            const reason = uploadProblemFor(status);
+          onError: (status, detail) => {
+            const reason = uploadProblemFor(status, detail);
             if (reason === 'network' && typeof navigator !== 'undefined' && navigator.onLine === false) {
               setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'paused-offline' } : v));
               return;
@@ -171,9 +186,10 @@ export function MatchUpload({
               setProblem({ message: reason === 'too_large' ? rejectionMessage('too_large', policy) : NOT_A_VIDEO, nothingSaved: true });
               return;
             }
-            // Refused before any byte was sent (quota, or another upload already open): nothing
-            // was started, so no progress or "leaving" copy, just the chooser (PD-R2-02).
-            if (reason === 'quota' || (reason === 'conflict' && !progressed.current)) {
+            // Refused before any byte was sent (quota, creation rate, or another upload already
+            // open): nothing was started, so no progress or "leaving" copy, just the chooser
+            // (PD-R2-02).
+            if (reason === 'quota' || reason === 'rate_limited' || (reason === 'conflict' && !progressed.current)) {
               setView({ kind: 'idle' });
             } else {
               setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'stopped' } : v));
@@ -188,9 +204,15 @@ export function MatchUpload({
                     ? 'This match already has an unfinished upload. Reload the page to continue it.'
                     : reason === 'quota'
                       ? 'You have too many unfinished uploads. Finish one of them from Your matches, then try again.'
-                      : reason === 'network'
-                        ? 'The upload stopped. Check your connection, then try again. It continues where it stopped.'
-                        : 'Sorry, the upload stopped because of a problem on our side. Your progress is saved. Try again.',
+                      : reason === 'rate_limited'
+                        ? `${uploadRateLimitMessage(detail?.retryAt ?? null)}${
+                            detail?.supportRef ? ` Reference: ${detail.supportRef}` : ''
+                          }`
+                        : reason === 'network'
+                          ? 'The upload stopped. Check your connection, then try again. It continues where it stopped.'
+                          : accepted.current > 0
+                            ? 'Sorry, the upload stopped because of a problem on our side. Your progress is saved. Try again.'
+                            : 'Sorry, the upload stopped because of a problem on our side. Try again.',
             });
           },
         },
@@ -198,7 +220,7 @@ export function MatchUpload({
       transfer.current = h;
       setActiveUpload({ title: match.title, percent: percent(offset, file.size), stop: () => h.abort() });
     },
-    [match.id, match.title, onUploaded, policy, startTransfer, stopTracking],
+    [match.id, match.title, onUploaded, policy, setProblem, startTransfer, stopTracking],
   );
 
   // The file handed over from setup starts at once ("Create match and upload").
@@ -282,7 +304,10 @@ export function MatchUpload({
     <section aria-labelledby="upload-title" className="stack panel">
       <h2 id="upload-title">Video upload</h2>
       {shownProblem ? (
-        <ErrorSummary errors={[{ field: FILE_INPUT, message: shownProblem.message, href: shownProblem.href }]}>
+        <ErrorSummary
+          errors={[{ field: FILE_INPUT, message: shownProblem.message, href: shownProblem.href }]}
+          attempt={attempt}
+        >
           {shownProblem.nothingSaved ? <p>{NOTHING_SAVED}</p> : null}
         </ErrorSummary>
       ) : null}

@@ -21,3 +21,22 @@ export function rejectionMessage(
       return NOT_A_VIDEO;
   }
 }
+
+/**
+ * 429 `rate_limited` at upload creation (api-sprint-01 §6.3 check 6; PE-R3-03, PD-R3-02). Gives
+ * the retry time like A-01 does (sign-in `rateLimitMessage`). Interim copy until the designer's
+ * flows §6 rate-limit state (PD-R3-05); see decision-log.
+ */
+export function uploadRateLimitMessage(retryAt: string | null, timeZone?: string): string {
+  const at = retryAt ? new Date(retryAt) : null;
+  if (!at || Number.isNaN(at.getTime())) {
+    return 'You have started too many uploads in a short time. Try again in a few minutes.';
+  }
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    ...(timeZone ? { timeZone } : {}),
+  }).format(at);
+  return `You have started too many uploads in a short time. You can try again at ${time}.`;
+}
