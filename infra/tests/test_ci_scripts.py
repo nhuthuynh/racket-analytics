@@ -205,6 +205,54 @@ def test_stable_runs_report_zero_flaky(tmp_path: Path) -> None:
     assert "0 flaky" in out.read_text()
 
 
+def repeat_junit(tmp: Path, name: str, cases: list[tuple[str, str]]) -> Path:
+    """One JUnit file holding several testcases with the same id (``--repeat-each``)."""
+    body = {"pass": "", "fail": "<failure message='boom'/>", "skip": "<skipped/>"}
+    xml = "".join(
+        f'<testcase classname="{t.rsplit("::", 1)[0]}" name="{t.rsplit("::", 1)[1]}">'
+        f"{body[o]}</testcase>"
+        for t, o in cases
+    )
+    p = tmp / name
+    p.write_text(
+        f'<?xml version="1.0"?><testsuites><testsuite name="e2e">{xml}</testsuite></testsuites>'
+    )
+    return p
+
+
+def test_fail_then_pass_inside_one_repeat_file_is_flaky(tmp_path: Path) -> None:
+    """QA-V1-01: Playwright ``--repeat-each=3`` writes three testcases with the same
+    classname::name. A fail followed by two passes must count as flaky, not collapse to the
+    last outcome (a false green on the NFR-074 gate)."""
+    t = "resumable.spec.ts::Resumable upload > A different file is chosen to resume"
+    stable = junit(tmp_path, "e2e.xml", {t: "pass", "s::ok": "pass"})
+    rep = repeat_junit(
+        tmp_path,
+        "e2e-repeat.xml",
+        [(t, "fail"), (t, "pass"), (t, "pass"), ("s::ok", "pass"), ("s::ok", "pass")],
+    )
+    out = tmp_path / "flaky.md"
+    res = run("flaky_report.py", "--fail-on-flaky", "--out", str(out), str(stable), str(rep))
+    assert res.returncode == 1, res.stdout
+    text = out.read_text()
+    assert "2 runs, 2 tests, 1 flaky." in text
+    assert f"`{t}`" in text
+
+
+def test_fail_then_pass_in_a_single_repeat_file_alone_is_flaky(tmp_path: Path) -> None:
+    rep = repeat_junit(tmp_path, "r.xml", [("t::x", "pass"), ("t::x", "fail"), ("t::x", "pass")])
+    out = tmp_path / "o.md"
+    assert run("flaky_report.py", "--fail-on-flaky", "--out", str(out), str(rep)).returncode == 1
+    assert "1 flaky" in out.read_text()
+
+
+def test_repeats_that_always_fail_are_broken_not_flaky(tmp_path: Path) -> None:
+    rep = repeat_junit(tmp_path, "r.xml", [("t::x", "fail")] * 3 + [("t::y", "pass")] * 3)
+    out = tmp_path / "o.md"
+    assert run("flaky_report.py", "--fail-on-flaky", "--out", str(out), str(rep)).returncode == 0
+    assert "1 runs, 2 tests, 0 flaky." in out.read_text()
+
+
 # ================================================================ check_pr_size (EP/ENG-04)
 def git(repo: Path, *args: str) -> None:
     subprocess.run(
