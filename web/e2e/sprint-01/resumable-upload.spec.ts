@@ -8,6 +8,12 @@ import { answerSetup, createAndUpload, LONG_CLIP, paddedClip, signInByLink, uplo
 test.describe('Resumable upload', () => {
   test('Connection drops mid-upload (E2E-01-02)', async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);
+    // A local stack takes the 48 MiB in about a second, so the 40% point could pass unseen.
+    // 400 ms per chunk makes it observable; the transfer itself is unchanged (TCR row 21).
+    await page.route('**/uploads/**', async (route) => {
+      if (route.request().method() === 'PATCH') await new Promise((r) => setTimeout(r, 400));
+      await route.fallback();
+    });
     await signInByLink(page);
     await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy', file });
     await createAndUpload(page);
@@ -42,15 +48,23 @@ test.describe('Resumable upload', () => {
 
   test('A damaged chunk is not kept', async ({ page }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 16);
+    // The first chunk reaches the server with an Upload-Checksum that does not match its bytes,
+    // exactly what the server sees when bytes are damaged on the way. Only the header is
+    // rewritten: WebKit's route interception does not expose a Blob/File request body, so the
+    // earlier "flip a byte of the body" version never fired there (QA-R1-05, TCR row of this date).
+    // The real server must refuse the chunk (460, nothing kept) and the client must resend it.
+    const WRONG_SHA256 = `sha256 ${Buffer.alloc(32, 0xab).toString('base64')}`;
     let corrupted = false;
+    const patchStatuses: number[] = [];
+    page.on('response', (r) => {
+      if (r.request().method() === 'PATCH' && /\/uploads\//.test(r.url())) patchStatuses.push(r.status());
+    });
     await page.route('**/uploads/**', async (route) => {
       const request = route.request();
-      const body = request.postDataBuffer();
-      if (!corrupted && request.method() === 'PATCH' && body && body.length > 0) {
+      const headers = request.headers();
+      if (!corrupted && request.method() === 'PATCH' && headers['upload-checksum']) {
         corrupted = true;
-        const damaged = Buffer.from(body);
-        damaged.writeUInt8((damaged.readUInt8(damaged.length - 1) ^ 0xff) & 0xff, damaged.length - 1); // the Upload-Checksum header still names the original
-        await route.continue({ postData: damaged });
+        await route.continue({ headers: { ...headers, 'upload-checksum': WRONG_SHA256 } });
         return;
       }
       await route.continue();
@@ -60,6 +74,8 @@ test.describe('Resumable upload', () => {
     await createAndUpload(page);
     await expect(page.getByText('Video received')).toBeVisible({ timeout: 120_000 });
     expect(corrupted).toBe(true);
+    expect(patchStatuses[0]).toBe(460); // checksum mismatch: the damaged chunk was not kept
+    expect(patchStatuses.slice(1).every((s) => s === 204)).toBe(true);
   });
 
   test('Time estimate appears only after measuring', async ({ page }, testInfo) => {

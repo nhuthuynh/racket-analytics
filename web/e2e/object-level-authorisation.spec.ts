@@ -7,7 +7,8 @@ import { createMatch, signInAs } from './helpers/journey';
 test('@M0 @story-ST-006 Carlos cannot open Ivy\'s match', async ({ browser }, testInfo) => {
   const ivy = await (await browser.newContext()).newPage();
   await signInAs(ivy, 'Ivy');
-  const ivysMatch = await createMatch(ivy, 'Ivy private match');
+  // Distinctive player names: the match has no title since ST-016 (TCR: journey.ts::createMatch).
+  const ivysMatch = await createMatch(ivy, ['Ivy', 'Zephyrine']);
 
   const carlos = await (await browser.newContext()).newPage();
   await signInAs(carlos, 'Carlos');
@@ -19,6 +20,6 @@ test('@M0 @story-ST-006 Carlos cannot open Ivy\'s match', async ({ browser }, te
 
   expect(notYours).toMatch(/not found/i);
   expect(notYours).toEqual(missing);
-  expect(notYours).not.toContain('Ivy private match');
+  expect(notYours).not.toContain('Zephyrine');
   await expectNoBlockingA11yViolations(carlos, testInfo, 'not-found');
 });

@@ -39,8 +39,10 @@ test.describe('Upload validation', () => {
     await signInByLink(page);
     await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy', file: LONG_CLIP });
     await page.getByRole('button', { name: 'Create match and upload' }).click();
-    await expect(page.getByRole('alert').filter({ hasText: 'There is a problem' })).toBeVisible({ timeout: 120_000 });
-    await expect(page.getByRole('alert')).toContainText('Videos must be 2 hours 30 minutes or shorter');
+    const summary = page.getByRole('alert').filter({ hasText: 'There is a problem' });
+    await expect(summary).toBeVisible({ timeout: 120_000 });
+    // Filtered: Next's route announcer is a second role=alert (TCR: upload-validation.spec.ts:43).
+    await expect(summary).toContainText('Videos must be 2 hours 30 minutes or shorter');
   });
 
   test('A valid phone video is accepted', async ({ page }) => {

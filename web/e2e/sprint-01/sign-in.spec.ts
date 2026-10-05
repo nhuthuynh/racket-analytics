@@ -3,7 +3,14 @@
 // (red until it lands). Needs the stack with Mailpit (MAILPIT_API_URL).
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from '../helpers/axe';
-import { expectErrorSummary, latestSignInLink, requestLink, signInByLink, uniqueEmail } from '../helpers/sprint-01';
+import {
+  expectErrorSummary,
+  latestSignInLink,
+  openSignInLink,
+  requestLink,
+  signInByLink,
+  uniqueEmail,
+} from '../helpers/sprint-01';
 
 test.describe('Sign in without a memorised password', () => {
   test('Sign up with an email sign-in link', async ({ page }, testInfo) => {
@@ -18,16 +25,17 @@ test.describe('Sign in without a memorised password', () => {
     const email = uniqueEmail();
     await requestLink(page, email);
     const link = new URL(await latestSignInLink(email));
-    await page.goto(`${link.pathname}${link.hash}`);
-    await expect(page).not.toHaveURL(/token=/);
+    await openSignInLink(page, link); // the first page has spent the link (QA-R1-01)
 
-    const other = await browser.newPage();
+    // axe needs a page from browser.newContext() (TCR: sign-in.spec.ts:29).
+    const otherContext = await browser.newContext();
+    const other = await otherContext.newPage();
     await other.goto(`${link.pathname}${link.hash}`);
     await expect(other.getByRole('heading', { level: 1, name: 'This link has expired' })).toBeVisible();
     await expect(other.getByRole('button', { name: 'Send a new link' })).toBeVisible();
     await expect(other.getByLabel('Email address')).toHaveValue(''); // never from the URL (A-04)
     await expectNoBlockingA11yViolations(other, testInfo, 'A-04');
-    await other.close();
+    await otherContext.close();
   });
 
   test('A link that can no longer be used: is 16 minutes old', async () => {

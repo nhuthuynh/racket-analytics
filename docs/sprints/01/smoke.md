@@ -71,3 +71,15 @@ Result: `rc=0` in 1m42s. Healthy: postgres, objectstore, mailpit, tracing, api, 
 | S-09 | senior-frontend-engineer, sre-devops-engineer | WebKit-only E2E failures (guide video text track, PATCH body never seen in `resumable-upload.spec.ts:43`, sign-out during upload) cannot be reproduced here | CI job 111725272519 | blockers.md row "E2E job still red…", Open |
 
 No wiring defect was found in the SRE lane, so no infra change was made.
+
+## 5. Rerun after the QA round 1 fixes (2026-10-05, senior-qa-engineer)
+
+Same stack (`racket-smoke01`, web-tls, raised per-IP limits). E2E only: no backend change in the QA lane.
+
+| Suite | Command | Result |
+|---|---|---|
+| Playwright (Chromium, https) | `cd web && PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers BASE_URL=https://localhost:3000 PW_PROJECTS=chromium pnpm exec playwright test --workers=1` | **44 passed, 6 skipped, 0 failed** (2.6 min). S-01, S-02, S-03 and S-06 are fixed |
+| Flake check (S-06) | `… playwright test e2e/sprint-01/sign-in.spec.ts --repeat-each=10 --workers=1` | 50 passed, 10 skipped, 0 failed |
+
+S-04 and S-05 (backend) are decided (TCR rows 4-10 approved) and routed to senior-backend-engineer to apply. S-09: the damaged-chunk test no longer depends on reading a request body (QA-R1-05); WebKit still needs CI.
+

@@ -5,6 +5,7 @@
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from './helpers/axe';
 import { FIXTURE_CLIP, createMatch, signInAs } from './helpers/journey';
+import { signInByLink } from './helpers/sprint-01';
 
 test.describe('@M0 @story-ST-010 walking skeleton', () => {
   test('upload the fixture clip and see its facts', async ({ page }, testInfo) => {
@@ -13,21 +14,33 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
     await page.goto('/');
     await expectNoBlockingA11yViolations(page, testInfo, 'sign-in');
 
-    // Empty state as Dana, who never owns a match, so spec order does not matter (QA-R1-04).
-    await signInAs(page, 'Dana');
+    // Empty state as a fresh magic-link account, which owns nothing whatever ran before
+    // (QA-R1-04; testing-strategy rule 10). A shared dev player such as Dana can be given a
+    // match by any earlier run, so the empty state is no longer checked with one.
+    await signInByLink(page);
+    await page.goto('/matches');
     await expect(page.getByText(/no matches yet/i)).toBeVisible(); // empty state (DoD UI)
     await expectNoBlockingA11yViolations(page, testInfo, 'matches-empty');
 
-    await page.getByRole('link', { name: /new match/i }).click();
+    // Sprint 1 first-run copy (ST-015): the empty state links to Q-01 as "Record your first match".
+    await page.getByRole('link', { name: 'Record your first match' }).click();
     await expectNoBlockingA11yViolations(page, testInfo, 'new-match');
 
     await signInAs(page, 'Ivy');
-    await createMatch(page, 'Skeleton test');
-    await page.getByLabel(/match video/i).setInputFiles(FIXTURE_CLIP);
+    // Slow the first chunk so the uploading state is observable on a fast local stack.
+    let slowed = false;
+    await page.route('**/uploads/**', async (route) => {
+      if (route.request().method() === 'PATCH' && !slowed) {
+        slowed = true;
+        await new Promise((r) => setTimeout(r, 1_500));
+      }
+      await route.fallback();
+    });
+    await createMatch(page); // ST-016: setup with the clip, then "Create match and upload"
 
     const progress = page.getByRole('progressbar', { name: /upload/i });
     await expect(progress).toBeVisible();
-    await expect(page.getByText(/\d+(\.\d+)? of \d+(\.\d+)? MB/)).toBeVisible(); // % and MB
+    await expect(page.getByText(/\d{1,3}% · [\d.]+ [KMG]?B of [\d.]+ [KMG]B/)).toBeVisible(); // % and MB
     await expectNoBlockingA11yViolations(page, testInfo, 'uploading');
 
     await expect(page.getByText('Video received')).toBeVisible({
@@ -44,10 +57,11 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
   }) => {
     test.slow(); // the resumed upload is followed by the probe
     await signInAs(page, 'Ivy');
-    await createMatch(page, 'Reload test');
 
     // Deterministic "mid-upload" (QA-R1-05): wait for the creation to commit, then hold the
-    // first PATCH in the browser so the reload happens while its bytes are in flight.
+    // first PATCH in the browser so the reload happens while its bytes are in flight. Since
+    // ST-016 the upload starts from setup ("Create match and upload"), so the route and the
+    // response wait are set up before the match is created.
     let patchHeld!: () => void;
     const firstPatch = new Promise<void>((resolve) => (patchHeld = resolve));
     let held = false;
@@ -62,7 +76,7 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
     const created = page.waitForResponse(
       (r) => r.request().method() === 'POST' && /\/uploads$/.test(new URL(r.url()).pathname),
     );
-    await page.getByLabel(/match video/i).setInputFiles(FIXTURE_CLIP);
+    await createMatch(page);
     const creation = await created;
     expect(creation.status()).toBe(201);
     const location = creation.headers()['location'];
@@ -78,7 +92,8 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
 
     await page.reload();
     await page.unroute('**/uploads/**');
-    await expect(page.getByText(/uploading/i).first()).toBeVisible();
+    // U-04: the match page offers to continue with the same video (no URL kept on the device).
+    await expect(page.getByText(/To continue, choose the same video/)).toBeVisible();
 
     // Resume: choosing the same file again asks the server for its offset (HEAD on the same
     // upload URL) and continues there; no second upload is created.
@@ -86,7 +101,7 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
     page.on('request', (r) => {
       if (/\/uploads/.test(r.url())) seen.push(`${r.method()} ${new URL(r.url()).pathname}`);
     });
-    await page.getByLabel(/match video/i).setInputFiles(FIXTURE_CLIP);
+    await page.getByLabel('Choose video').setInputFiles(FIXTURE_CLIP);
     await expect(page.getByText('Video received')).toBeVisible({
       timeout: 120_000,
     });

@@ -44,13 +44,23 @@ export async function requestLink(page: Page, email: string): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: 'Check your email' })).toBeVisible();
 }
 
+// Where A-03 sends a visitor once the exchange has set the session cookie (flows A-03).
+export const SIGNED_IN_URL = /\/(welcome|matches)(\?|#|$)/;
+
+// Opens a sign-in link and returns once sign-in has FINISHED. A-03 removes the token from the
+// address bar before it calls the exchange, so "no token in the URL" is not enough: the helper
+// waits for the navigation the exchange triggers, i.e. after Set-Cookie (QA-R1-01).
+export async function openSignInLink(page: Page, link: URL): Promise<void> {
+  await page.goto(`${link.pathname}${link.hash}`);
+  await expect(page).toHaveURL(SIGNED_IN_URL, { timeout: 15_000 });
+  await expect(page).not.toHaveURL(/token=/);
+}
+
 // Full magic-link sign-in. The link's origin is the configured PUBLIC_WEB_ORIGIN, so only the
 // path and fragment are reused against the test base URL.
 export async function signInByLink(page: Page, email = uniqueEmail()): Promise<string> {
   await requestLink(page, email);
-  const link = new URL(await latestSignInLink(email));
-  await page.goto(`${link.pathname}${link.hash}`);
-  await expect(page).not.toHaveURL(/token=/);
+  await openSignInLink(page, new URL(await latestSignInLink(email)));
   return email;
 }
 
