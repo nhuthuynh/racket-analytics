@@ -25,6 +25,7 @@ from hypothesis import HealthCheck, settings
 from tests.support import contract
 from tests.support.api import ApiDriver, async_client, lifespan
 from tests.support.db import database_url, make_engine, rolled_back_session
+from tests.support.written_keys import WrittenKeys
 
 # ----------------------------------------------------------------- environment
 # The suite always runs as APP_ENV=test, whatever the shell exports (QA-R1-06). Tests that
@@ -179,6 +180,12 @@ def api(committed_app: Any) -> Iterator[ApiDriver]:
     driver = ApiDriver(committed_app)
     yield driver
     driver.close()
+
+
+@pytest.fixture
+def written_keys(monkeypatch: pytest.MonkeyPatch) -> WrittenKeys:
+    """Object keys this test's in-process server wrote (no whole-bucket diffs, QA-R3-02)."""
+    return WrittenKeys(monkeypatch)
 
 
 # ----------------------------------------------------------------- tracing

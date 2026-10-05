@@ -16,6 +16,7 @@ from tests.support.api import ApiDriver
 from tests.support.copy import ERROR_COPY
 from tests.support.flows import create_match
 from tests.support.worker import jobs_for_match, media_facts_count
+from tests.support.written_keys import WrittenKeys
 
 pytestmark = [pytest.mark.red_until(story="ST-018"), pytest.mark.slow]
 
@@ -36,15 +37,15 @@ def ctx() -> dict[str, Any]:
     return {}
 
 
-def _keys() -> set[str]:
-    return set(contract.OBJECT_STORE.load().from_settings().list_keys())
-
-
-def _start_upload(api: ApiDriver, ctx: dict[str, Any], file: str) -> None:
+def _start_upload(
+    api: ApiDriver, ctx: dict[str, Any], file: str, written_keys: WrittenKeys
+) -> None:
+    # Recording starts before the first write; the Then steps read it from ctx, so a step
+    # order that skipped this could never pass vacuously (QA-R3-02).
+    ctx["written_keys"] = written_keys
     make, filename, declared = FILES[file]
     data = make()
     ivy = api.as_user("ivy")
-    ctx["keys_before"] = _keys()
     ctx["match_id"] = api.run(create_match(ivy, "Sat doubles"))
     created = api.run(
         tus_ext.create(ivy, ctx["match_id"], data, filename=filename, length=declared)
@@ -70,8 +71,8 @@ def selects(ctx: dict[str, Any], file: str) -> None:
 
 @when("she starts the upload")
 @when("the upload completes")
-def starts_upload(api: ApiDriver, ctx: dict[str, Any]) -> None:
-    _start_upload(api, ctx, ctx["file"])
+def starts_upload(api: ApiDriver, ctx: dict[str, Any], written_keys: WrittenKeys) -> None:
+    _start_upload(api, ctx, ctx["file"], written_keys)
 
 
 @then(parsers.parse('she sees "There is a problem" with "{message}"'))
@@ -85,7 +86,7 @@ def sees_problem(api: ApiDriver, ctx: dict[str, Any], message: str) -> None:
 def nothing_stored(api: ApiDriver, committed_db: Any, ctx: dict[str, Any]) -> None:
     match = _match(api, ctx)
     assert match["media"] is None
-    assert _keys() - ctx["keys_before"] == set()
+    assert ctx["written_keys"].stored() == set()
     assert media_facts_count(committed_db, ctx["match_id"]) == 0
 
 
@@ -101,8 +102,8 @@ def declares(ctx: dict[str, Any], size: int) -> None:
 
 
 @when("the server receives the upload request")
-def server_receives(api: ApiDriver, ctx: dict[str, Any]) -> None:
-    _start_upload(api, ctx, ctx["file"])
+def server_receives(api: ApiDriver, ctx: dict[str, Any], written_keys: WrittenKeys) -> None:
+    _start_upload(api, ctx, ctx["file"], written_keys)
 
 
 @then(parsers.parse('the upload is refused with "{message}"'))
@@ -114,12 +115,14 @@ def refused_with(ctx: dict[str, Any], message: str) -> None:
 
 @then("no bytes of that file are stored")
 def no_bytes(ctx: dict[str, Any]) -> None:
-    assert _keys() - ctx["keys_before"] == set()
+    assert ctx["written_keys"].stored() == set()
 
 
 @given(parsers.parse('Ivy\'s file was refused as "{message}"'))
-def file_refused(api: ApiDriver, ctx: dict[str, Any], message: str) -> None:
-    _start_upload(api, ctx, "a PDF renamed to match.mp4")
+def file_refused(
+    api: ApiDriver, ctx: dict[str, Any], message: str, written_keys: WrittenKeys
+) -> None:
+    _start_upload(api, ctx, "a PDF renamed to match.mp4", written_keys)
     assert ctx["response"].status_code == 415
     assert ERROR_COPY[ctx["response"].json()["error"]["code"]] == message
 

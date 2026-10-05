@@ -8,10 +8,11 @@ from typing import Any
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from tests.support import contract, tus
+from tests.support import tus
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match, percent
 from tests.support.paths import SYNTHETIC_CLIP
+from tests.support.written_keys import WrittenKeys
 
 scenarios("upload_resume_core.feature")
 
@@ -79,9 +80,10 @@ def still_40(api: ApiDriver, ctx: dict[str, Any]) -> None:
 
 
 @given(parsers.parse('Ivy uploads a file named "{filename}"'))
-def upload_named(api: ApiDriver, ctx: dict[str, Any], filename: str) -> None:
-    store = contract.OBJECT_STORE.load().from_settings()
-    ctx["keys_before"] = set(store.list_keys())
+def upload_named(
+    api: ApiDriver, ctx: dict[str, Any], filename: str, written_keys: WrittenKeys
+) -> None:
+    ctx["written_keys"] = written_keys  # recording starts before the first write (QA-R3-02)
     ctx["filename"] = filename
     _start(api, ctx, filename=filename)
 
@@ -93,9 +95,8 @@ def completes(api: ApiDriver, ctx: dict[str, Any]) -> None:
 
 @then("the stored object name contains none of the original file name")
 def key_is_generated(ctx: dict[str, Any]) -> None:
-    store = contract.OBJECT_STORE.load().from_settings()
-    new_keys = set(store.list_keys()) - ctx["keys_before"]
-    assert new_keys, "no object was stored"
+    written_keys: WrittenKeys = ctx["written_keys"]
+    assert written_keys.stored(), "no object was stored"
     fragments = {"..", "etc", "passwd", "passwd.mp4", ctx["filename"]}
-    for key in new_keys:
+    for key in written_keys.written:  # every key written, staging included
         assert not any(f in key for f in fragments), key

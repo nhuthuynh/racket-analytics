@@ -17,14 +17,11 @@ from tests.support import contract, media, tus, tus_ext
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match
 from tests.support.worker import jobs_for_match, media_facts_count
+from tests.support.written_keys import WrittenKeys
 
 pytestmark = [pytest.mark.red_until(story="ST-018"), pytest.mark.slow]
 
 TWELVE_GB = 12 * 1000**3
-
-
-def _keys() -> set[str]:
-    return set(contract.OBJECT_STORE.load().from_settings().list_keys())
 
 
 def _match(api: ApiDriver, match_id: str) -> dict[str, Any]:
@@ -43,14 +40,14 @@ def _send_whole_file(api: ApiDriver, data: bytes, filename: str) -> tuple[str, A
 
 
 def _assert_refused_and_nothing_kept(
-    api: ApiDriver, committed_db: Any, match_id: str, code: str, before: set[str]
+    api: ApiDriver, committed_db: Any, match_id: str, code: str, written_keys: WrittenKeys
 ) -> None:
     match = _match(api, match_id)
     assert match["rejection"]["code"] == code
     assert match["status"] == "awaiting_upload"
     assert match["upload"] is None
     assert match["media"] is None
-    assert _keys() - before == set(), "an object from a refused file was kept"
+    assert written_keys.stored() == set(), "an object from a refused file was kept"
     assert media_facts_count(committed_db, match_id) == 0
 
 
@@ -61,15 +58,14 @@ def _assert_refused_and_nothing_kept(
     ids=["pdf-renamed-mp4", "program-renamed-mov"],
 )
 def test_it_01_09_non_video_content_is_refused_on_the_first_chunk(
-    api: ApiDriver, committed_db: Any, data: bytes, filename: str
+    api: ApiDriver, committed_db: Any, data: bytes, filename: str, written_keys: WrittenKeys
 ) -> None:
-    before = _keys()
     match_id, upload, response = _send_whole_file(api, data, filename)
 
     assert response.status_code == 415
     assert response.json()["error"]["code"] == "not_a_video"
     assert api.run(tus.head(api.as_user("ivy"), upload)).status_code == 404  # session deleted
-    _assert_refused_and_nothing_kept(api, committed_db, match_id, "not_a_video", before)
+    _assert_refused_and_nothing_kept(api, committed_db, match_id, "not_a_video", written_keys)
     assert jobs_for_match(committed_db, match_id) == []  # NFR-060
 
 
@@ -88,9 +84,8 @@ def test_positive_control_a_real_mp4_passes_the_same_first_chunk_check(
 
 # ------------------------------------------------------------------ T-UV-2: declared size
 def test_it_01_09_declared_12_gb_is_refused_before_any_byte_is_stored(
-    api: ApiDriver, committed_db: Any
+    api: ApiDriver, committed_db: Any, written_keys: WrittenKeys
 ) -> None:
-    before = _keys()
     ivy = api.as_user("ivy")
     match_id = api.run(create_match(ivy, "IT-01-09 12 GB"))
 
@@ -99,7 +94,7 @@ def test_it_01_09_declared_12_gb_is_refused_before_any_byte_is_stored(
     assert response.status_code == 413
     assert response.json()["error"]["code"] == "video_too_large"
     assert "Location" not in response.headers
-    _assert_refused_and_nothing_kept(api, committed_db, match_id, "too_large", before)
+    _assert_refused_and_nothing_kept(api, committed_db, match_id, "too_large", written_keys)
     assert jobs_for_match(committed_db, match_id) == []
 
 
@@ -124,15 +119,15 @@ def test_size_cap_boundary_cap_is_accepted_and_cap_plus_one_is_not(
 
 # ------------------------------------------------------------------ T-UV-3: duration from probe
 def test_it_01_09_a_4_hour_video_is_refused_after_the_probe_and_deleted(
-    api: ApiDriver, committed_db: Any
+    api: ApiDriver, committed_db: Any, written_keys: WrittenKeys
 ) -> None:
-    before = _keys()
     match_id, _, response = _send_whole_file(api, media.long_clip_bytes(), "match.mp4")
     assert response.status_code == 204  # real MP4: the magic bytes pass
+    assert written_keys.stored(), "the received video was never stored; 'deleted' is vacuous"
 
     contract.WORKER_RUN_UNTIL_IDLE.load()()
 
-    _assert_refused_and_nothing_kept(api, committed_db, match_id, "too_long", before)
+    _assert_refused_and_nothing_kept(api, committed_db, match_id, "too_long", written_keys)
     stages = [job.key.stage for job in jobs_for_match(committed_db, match_id)]
     assert stages == [contract.PROBE_STAGE_NAME], "no job beyond the probe (NFR-060)"
 

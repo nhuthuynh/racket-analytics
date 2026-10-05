@@ -12,15 +12,17 @@ from tests.support import contract, tus
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match
 from tests.support.paths import SYNTHETIC_CLIP
+from tests.support.written_keys import WrittenKeys
 
 pytestmark = pytest.mark.slow
 
 
-def test_three_chunk_upload_stores_identical_bytes(api: ApiDriver) -> None:
+def test_three_chunk_upload_stores_identical_bytes(
+    api: ApiDriver, written_keys: WrittenKeys
+) -> None:
     data = SYNTHETIC_CLIP.read_bytes()
     ivy = api.as_user("ivy")
     store = contract.OBJECT_STORE.load().from_settings()
-    before = set(store.list_keys())
     match_id = api.run(create_match(ivy, "IT-00-06"))
 
     upload = api.run(tus.start(ivy, match_id, len(data)))
@@ -28,7 +30,7 @@ def test_three_chunk_upload_stores_identical_bytes(api: ApiDriver) -> None:
     api.run(tus.send_all(ivy, upload, data, chunks=3))
     assert api.run(tus.offset(ivy, upload)) == len(data)
 
-    new_keys = set(store.list_keys()) - before
+    new_keys = written_keys.stored()
     assert len(new_keys) == 1, new_keys
     stored: Any = store.get_bytes(new_keys.pop())
     assert hashlib.sha256(stored).hexdigest() == hashlib.sha256(data).hexdigest()

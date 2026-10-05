@@ -19,6 +19,7 @@ from tests.support import contract, tus, tus_ext
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match
 from tests.support.paths import SYNTHETIC_CLIP
+from tests.support.written_keys import WrittenKeys
 
 pytestmark = [pytest.mark.red_until(story="ST-017"), pytest.mark.slow]
 
@@ -184,10 +185,11 @@ def test_last_modified_out_of_bigint_range_is_a_400_and_stores_nothing(
 
 
 # ------------------------------------------------------------------ IT-01-08 (D-3)
-def test_it_01_08_a_restarted_client_resumes_from_the_server_offset(api: ApiDriver) -> None:
+def test_it_01_08_a_restarted_client_resumes_from_the_server_offset(
+    api: ApiDriver, written_keys: WrittenKeys
+) -> None:
     ivy = api.as_user("ivy")
     store = contract.OBJECT_STORE.load().from_settings()
-    before = set(store.list_keys())
     match_id = api.run(create_match(ivy, "IT-01-08"))
     upload = api.run(tus_ext.start(ivy, match_id, DATA))
     first = tus_ext.first_chunk_size(DATA)
@@ -206,7 +208,7 @@ def test_it_01_08_a_restarted_client_resumes_from_the_server_offset(api: ApiDriv
     assert at == first
     assert api.run(tus_ext.patch(ivy, resumed, at, DATA[at:])).status_code == 204
 
-    new_keys = set(store.list_keys()) - before
+    new_keys = written_keys.stored()
     assert len(new_keys) == 1, new_keys
     assert hashlib.sha256(store.get_bytes(new_keys.pop())).digest() == hashlib.sha256(DATA).digest()
     after = api.request("ivy", "GET", contract.MATCH.format(match_id=match_id)).json()

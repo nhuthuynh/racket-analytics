@@ -24,6 +24,7 @@ from racket.video_ingest.repository import UploadRepository
 from tests.support import tus
 from tests.support.api import ApiDriver, async_client, lifespan, sign_in
 from tests.support.flows import create_match
+from tests.support.written_keys import WrittenKeys
 
 MIB = 1024 * 1024
 
@@ -71,10 +72,9 @@ def _count(db_session: Any, sql: str, **params: Any) -> int:
 
 # ---------------------------------------------------------------- R1-01
 async def test_an_empty_patch_then_data_stores_each_byte_exactly_once(
-    ivy: httpx.AsyncClient, spy: SpyStore
+    ivy: httpx.AsyncClient, spy: SpyStore, written_keys: WrittenKeys
 ) -> None:
     data = tus.video_bytes(6 * MIB, random=True)  # TCR row 16
-    before = set(spy.real.list_keys())
     upload = await tus.start(ivy, await create_match(ivy, "Empty first"), len(data))
 
     empty = await tus.patch(ivy, upload, 0, b"")
@@ -84,7 +84,7 @@ async def test_an_empty_patch_then_data_stores_each_byte_exactly_once(
     assert (empty.status_code, empty.headers["Upload-Offset"]) == (204, "0")
     assert (first.status_code, first.headers["Upload-Offset"]) == (204, str(2 * MIB))
     assert (rest.status_code, rest.headers["Upload-Offset"]) == (204, str(len(data)))
-    new_keys = set(spy.real.list_keys()) - before
+    new_keys = written_keys.stored()
     assert len(new_keys) == 1, new_keys
     stored = spy.real.get_bytes(new_keys.pop())
     assert len(stored) == len(data)

@@ -21,6 +21,7 @@ from racket.platform.storage import ObjectStore
 from tests.support import tus
 from tests.support.api import async_client, lifespan, sign_in
 from tests.support.flows import create_match
+from tests.support.written_keys import WrittenKeys
 
 MIB = 1024 * 1024
 
@@ -147,12 +148,11 @@ async def test_head_and_patch_answer_with_tus_resumable(ivy: httpx.AsyncClient) 
 
 
 async def test_mixed_staged_and_multipart_parts_store_identical_bytes(
-    ivy: httpx.AsyncClient,
+    ivy: httpx.AsyncClient, written_keys: WrittenKeys
 ) -> None:
     """2 MiB chunks are staged until a >= 5 MiB part can be written; the last part is short."""
     data = tus.video_bytes(13 * MIB + 123, random=True)  # TCR row 16
     store = ObjectStore.from_settings()
-    before = set(store.list_keys())
     upload = await tus.start(ivy, await create_match(ivy, "Parts"), len(data))
 
     at = 0
@@ -161,7 +161,7 @@ async def test_mixed_staged_and_multipart_parts_store_identical_bytes(
         assert response.status_code == 204, response.text
         at = int(response.headers["Upload-Offset"])
 
-    new_keys = set(store.list_keys()) - before
+    new_keys = written_keys.stored()
     assert len(new_keys) == 1, new_keys  # staging objects are gone; one original remains
     stored = store.get_bytes(new_keys.pop())
     assert hashlib.sha256(stored).digest() == hashlib.sha256(data).digest()
