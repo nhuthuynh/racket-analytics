@@ -1,0 +1,35 @@
+{
+  "id": "long-4h",
+  "version": 1,
+  "created": "2026-10-05",
+  "description": "A real 4-hour (14,400 s) 64x64 1 fps H.264 MP4, no audio, black frames, ~200 KB. Above the provisional 150-minute upload cap: the 'a 4-hour video' row of sprint-01 §7.5 and IT-01-09 (ST-018). No people.",
+  "licence": "CC0-1.0",
+  "licence_note": "Generated entirely by scripts/fixtures/generate_long_4h.sh from the FFmpeg lavfi color source; no third-party content.",
+  "consent_status": "synthetic",
+  "split": "fixture",
+  "rules_version": null,
+  "metric_dict_version": null,
+  "labellers": [],
+  "generator": {
+    "script": "scripts/fixtures/generate_long_4h.sh",
+    "ffmpeg": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers"
+  },
+  "expected_media_facts": {
+    "container": "mp4",
+    "video_codec": "h264",
+    "audio_codec": null,
+    "duration_ms": 14400000,
+    "fps": 1,
+    "vfr": false,
+    "width": 64,
+    "height": 64,
+    "has_audio": false
+  },
+  "files": [
+    {
+      "path": "clip.mp4",
+      "sha256": "1fdf19f5aabe29f75a7766de9379d22ccf009df5c4972ce17ce45bf5e9ce289f",
+      "bytes": 203534
+    }
+  ]
+}
