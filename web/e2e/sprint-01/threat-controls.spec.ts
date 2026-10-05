@@ -14,6 +14,11 @@ import {
   uniqueEmail,
 } from '../helpers/sprint-01';
 
+// page.route does not see requests of a service-worker-controlled page in WebKit; routing
+// specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
+// coverage in security-headers.spec.ts and the unit tests.
+test.use({ serviceWorkers: 'block' });
+
 // Fires on any script run from markup: an alert dialog or a global set by the handler.
 const XSS = '<img src=x onerror=alert(document.domain)>';
 const NICK_XSS = '<img src=x onerror=alert(1)>'; // nicknames are at most 30 characters

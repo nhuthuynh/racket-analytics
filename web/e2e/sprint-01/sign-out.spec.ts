@@ -43,21 +43,28 @@ test.describe('Signing out leaves nothing behind', () => {
     await context.setOffline(false);
   });
 
-  test('Upload in progress', async ({ page }) => {
-    await signInByLink(page);
-    await page.route('**/uploads/**', async (route) => {
-      if (route.request().method() === 'PATCH') return; // hold the upload mid-way
-      await route.continue();
-    });
-    await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy' });
-    await page.getByRole('button', { name: 'Create match and upload' }).click();
-    await expect(page.getByText('Uploading', { exact: true })).toBeVisible();
+  // Only this test routes: page.route does not see requests of a service-worker-controlled
+  // page in WebKit, so it blocks the worker (TCR 2026-10-05, W-01 WebKit family). The other
+  // two tests check what the worker caches, so they keep it.
+  test.describe('routed upload', () => {
+    test.use({ serviceWorkers: 'block' });
 
-    await signOut(page);
-    await expect(page.getByRole('heading', { level: 1, name: 'Your upload will stop' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Keep uploading' })).toBeFocused();
-    await page.getByRole('button', { name: 'Keep uploading' }).click();
-    await expect(page.getByText('Uploading', { exact: true })).toBeVisible();
+    test('Upload in progress', async ({ page }) => {
+      await signInByLink(page);
+      await page.route('**/uploads/**', async (route) => {
+        if (route.request().method() === 'PATCH') return; // hold the upload mid-way
+        await route.continue();
+      });
+      await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy' });
+      await page.getByRole('button', { name: 'Create match and upload' }).click();
+      await expect(page.getByText('Uploading', { exact: true })).toBeVisible();
+
+      await signOut(page);
+      await expect(page.getByRole('heading', { level: 1, name: 'Your upload will stop' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Keep uploading' })).toBeFocused();
+      await page.getByRole('button', { name: 'Keep uploading' }).click();
+      await expect(page.getByText('Uploading', { exact: true })).toBeVisible();
+    });
   });
 
   test('Video watched, then signed out', async ({ page }) => {

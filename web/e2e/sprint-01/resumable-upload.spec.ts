@@ -5,6 +5,11 @@
 import { expect, test } from '@playwright/test';
 import { answerSetup, createAndUpload, LONG_CLIP, paddedClip, signInByLink, uploadPercent } from '../helpers/sprint-01';
 
+// page.route does not see requests of a service-worker-controlled page in WebKit; routing
+// specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
+// coverage in security-headers.spec.ts and the unit tests.
+test.use({ serviceWorkers: 'block' });
+
 test.describe('Resumable upload', () => {
   test('Connection drops mid-upload (E2E-01-02)', async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);

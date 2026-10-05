@@ -7,6 +7,11 @@ import { expectNoBlockingA11yViolations } from './helpers/axe';
 import { FIXTURE_CLIP, createMatch } from './helpers/journey';
 import { signInByLink } from './helpers/sprint-01';
 
+// page.route does not see requests of a service-worker-controlled page in WebKit; routing
+// specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
+// coverage in security-headers.spec.ts and the unit tests.
+test.use({ serviceWorkers: 'block' });
+
 test.describe('@M0 @story-ST-010 walking skeleton', () => {
   test('upload the fixture clip and see its facts', async ({ page }, testInfo) => {
     test.slow(); // upload plus probe of a 60 s clip

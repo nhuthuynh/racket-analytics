@@ -5,6 +5,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from '../helpers/axe';
 import { signInByLink } from '../helpers/sprint-01';
 
+// page.route does not see requests of a service-worker-controlled page in WebKit; routing
+// specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
+// coverage in security-headers.spec.ts and the unit tests.
+test.use({ serviceWorkers: 'block' });
+
 async function openGuide(page: Page): Promise<void> {
   await signInByLink(page);
   await page.getByRole('link', { name: 'Show me how to film' }).or(page.getByRole('button', { name: 'Show me how to film' })).first().click();

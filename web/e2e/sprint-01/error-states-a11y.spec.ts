@@ -19,6 +19,11 @@ import {
   writeBytes,
 } from '../helpers/sprint-01';
 
+// page.route does not see requests of a service-worker-controlled page in WebKit; routing
+// specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
+// coverage in security-headers.spec.ts and the unit tests.
+test.use({ serviceWorkers: 'block' });
+
 async function measure(page: Page, testInfo: TestInfo, label: string): Promise<void> {
   await expectNoBlockingA11yViolations(page, testInfo, label);
   await expectTargetsAtLeast24(page, testInfo, label);
@@ -83,6 +88,7 @@ test.describe('Accessibility of error and transient states (G01-10)', () => {
       await route.continue();
     });
     await page.goto(`${link.pathname}${link.hash}`);
+    await page.waitForLoadState('load'); // axe must not race A-03's own navigation (W-01)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await measure(page, testInfo, 'A-03');
     release();
