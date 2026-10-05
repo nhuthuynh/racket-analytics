@@ -144,6 +144,16 @@ export const API_ERROR_CODES = [
   'not_a_video',
   'upload_quota_exceeded',
   'checksum_mismatch',
+  // Sprint 2 (tagcontract.py STALE, NOT_READY, INVALID_OUTCOME; match-aggregate §3 refusals).
+  // Assumed until api-sprint-02.md exists (decision-log 2026-10-05).
+  'stale_match',
+  'match_not_ready',
+  'invalid_outcome',
+  'invalid_rally',
+  'game_over',
+  'match_over',
+  'nothing_to_undo',
+  'illegal_start',
 ] as const;
 export type ServerErrorCode = (typeof API_ERROR_CODES)[number];
 export type ApiErrorCode = ServerErrorCode | 'network_error' | 'invalid_response' | 'unknown';

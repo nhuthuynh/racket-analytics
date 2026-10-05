@@ -12,6 +12,22 @@ import {
   ResponseShapeError,
 } from './parse';
 import {
+  parseHistory,
+  parseRallyMedia,
+  parseSheetResponse,
+  parseTagged,
+  parseVersioned,
+} from '@/lib/tagging/parse';
+import type {
+  CorrectableField,
+  HistoryItem,
+  RallyMedia,
+  ScoreSheet,
+  Side,
+  TagInput,
+  Versioned,
+} from '@/lib/tagging/types';
+import {
   API_ERROR_CODES,
   FIELD_ERROR_CODES,
   isLinkToken,
@@ -83,11 +99,11 @@ async function toApiError(response: Response): Promise<ApiError> {
   let retryAt: string | null = null;
   try {
     const body: unknown = await response.json();
-    const error = (
-      body as {
-        error?: { code?: unknown; support_ref?: unknown; fields?: unknown; retry_at?: unknown };
-      } | null
-    )?.error;
+    type Envelope = { code?: unknown; support_ref?: unknown; fields?: unknown; retry_at?: unknown };
+    // api-sprint-00 §3 envelope {"error": {...}}; the Sprint 2 harness also reads a top-level
+    // {"code": ...} (tagcontract.py), so both are accepted until api-sprint-02.md decides.
+    const outer = body as ({ error?: Envelope } & Envelope) | null;
+    const error = outer?.error ?? outer;
     if (typeof error?.code === 'string' && (API_ERROR_CODES as readonly string[]).includes(error.code)) {
       code = error.code as ApiErrorCode;
     }
@@ -108,8 +124,14 @@ export function createApiClient(options: ApiClientOptions) {
   const fetchFn = options.fetch ?? globalThis.fetch.bind(globalThis);
   const base = options.baseUrl.replace(/\/+$/, '');
 
-  async function request(method: string, path: string, body?: unknown): Promise<Response> {
+  async function request(
+    method: string,
+    path: string,
+    body?: unknown,
+    extra: Record<string, string> = {},
+  ): Promise<Response> {
     const headers = new Headers(options.headers);
+    for (const [k, v] of Object.entries(extra)) headers.set(k, v);
     headers.set('accept', 'application/json');
     if (body !== undefined) headers.set('content-type', 'application/json');
     let response: Response;
@@ -138,6 +160,15 @@ export function createApiClient(options: ApiClientOptions) {
       }
       throw e;
     }
+  }
+
+  function ifMatch(version: number): Record<string, string> {
+    return { 'if-match': String(version) };
+  }
+
+  function rallyPath(id: string): string {
+    if (!isPublicId(id)) throw new ApiError(404, 'not_found');
+    return id;
   }
 
   function matchPath(id: string): string {
@@ -183,6 +214,41 @@ export function createApiClient(options: ApiClientOptions) {
     },
     async getMatch(id: string): Promise<Match> {
       return parsed(await request('GET', matchPath(id)), parseMatch);
+    },
+    // Sprint 2 (ST-027..ST-037). Routes from tagcontract.py until api-sprint-02.md exists.
+    async getScoreSheet(id: string): Promise<{ version: number | null; sheet: ScoreSheet }> {
+      const response = await request('GET', `${matchPath(id)}/score-sheet`);
+      const etag = response.headers.get('etag');
+      return parsed(response, (v) => parseSheetResponse(v, etag));
+    },
+    async startGame(
+      id: string,
+      version: number,
+      start: { first_serving_side: Side; ends_switched: boolean },
+    ): Promise<Versioned> {
+      return parsed(await request('POST', `${matchPath(id)}/games`, start, ifMatch(version)), parseVersioned);
+    },
+    async tagRally(id: string, version: number, tag: TagInput): Promise<Versioned & { rallyId: string }> {
+      return parsed(await request('POST', `${matchPath(id)}/rallies`, tag, ifMatch(version)), parseTagged);
+    },
+    async correctRally(
+      id: string,
+      version: number,
+      rallyId: string,
+      field: CorrectableField,
+      value: string | number | null,
+    ): Promise<Versioned> {
+      const path = `${matchPath(id)}/rallies/${rallyPath(rallyId)}`;
+      return parsed(await request('PATCH', path, { field, value }, ifMatch(version)), parseVersioned);
+    },
+    async undo(id: string, version: number): Promise<Versioned> {
+      return parsed(await request('POST', `${matchPath(id)}/undo`, undefined, ifMatch(version)), parseVersioned);
+    },
+    async corrections(id: string): Promise<HistoryItem[]> {
+      return parsed(await request('GET', `${matchPath(id)}/corrections`), parseHistory);
+    },
+    async rallyMedia(id: string, rallyId: string): Promise<RallyMedia> {
+      return parsed(await request('GET', `${matchPath(id)}/rallies/${rallyPath(rallyId)}/media`), parseRallyMedia);
     },
   };
 }

@@ -72,3 +72,37 @@ export function otherSide(side: Side): Side {
 export function sideOfSlot(slot: ParticipantSlot): Side {
   return slot[0] as Side;
 }
+
+export const HISTORY_KINDS = ['game_started', 'correction', 'withdrawal', 'undo', 'resolution'] as const;
+export type HistoryKind = (typeof HISTORY_KINDS)[number];
+
+/** One audit row of GET /matches/{id}/corrections (FR-052; match-aggregate §2 `Correction`). */
+export interface HistoryItem {
+  id: string;
+  kind: HistoryKind;
+  rally_id: string | null;
+  rally_number: number | null;
+  field: string | null;
+  /** Tag values only (sides, slots, enums, integers): never names or free text (§6). */
+  old_value: string | number | boolean | null;
+  new_value: string | number | boolean | null;
+  undoes: string | null;
+  at: string;
+}
+
+/** GET /matches/{id}/rallies/{rally_id}/media (ST-037; NFR-055 TTL ≤ 15 min). */
+export interface RallyMedia {
+  url: string;
+  expiresInS: number;
+  startMs: number;
+}
+
+export const MAX_MEDIA_TTL_S = 900;
+
+/** Correctable fields (ST-031/ST-032; match-aggregate §4 `correct_rally`). */
+export type CorrectableField = 'winning_side' | 'ending' | 'responsible_player' | 'start_ms' | 'end_ms' | 'fault_kind';
+
+export interface Versioned {
+  version: number;
+  sheet: ScoreSheet;
+}
