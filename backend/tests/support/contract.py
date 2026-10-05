@@ -256,3 +256,30 @@ SLI_AVAILABILITY = Seam("racket.platform.slis:availability", "ST-024")
 #  "shows_people": bool, "consent_record": str | null}. racket-manifest-check fails, naming the
 # file, when "shows_people" is true and "consent_record" is null (OQ-06).
 PHONES_V1_DIR = "clips/phones-v1"
+
+# ================================================================== Sprint 2 (sprint-02 §5)
+# Seams QA uses for the Sprint 2 golden tables (ST-041). Scorebook names follow the code the BE
+# lane committed for ST-026..ST-032 (`racket.matches.scorebook.domain`); the singles preset
+# seam is a QA proposal for ST-035 (BE-D1-05: presets keyed by rules version and format).
+#   Scorebook.new(*, rules_version, format, best_of) -> Scorebook          (pure, versioned)
+#   book.start_game(*, first_serving_side, ends_switched, ready, expected_version, ctx)
+#   book.tag(times, outcome, *, ready, expected_version, ctx) -> (Scorebook, Rally)
+#   book.correct(rally_id, field, value, *, expected_version, ctx) -> Scorebook
+#   book.undo(*, expected_version, ctx) -> Scorebook
+#   project(book) -> dict (the score sheet; rows carry "marker": "needs_decision" for C-02/C-03)
+#   canonical_bytes(sheet) -> bytes (sorted keys, no spaces: the C-04 / NFR-075 comparison)
+#   preset_for(rules_version, format) -> RulesConfig | None   (ST-035; singles preset)
+#   score_call(state) -> str   ("S-R-n" in doubles, "S-R" in singles; FR-048 provisional)
+SCOREBOOK = Seam("racket.matches.scorebook.domain:Scorebook", "ST-026")
+SCOREBOOK_CONTEXT = Seam("racket.matches.scorebook.domain:CommandContext", "ST-026")
+OUTCOME_INPUT = Seam("racket.matches.scorebook.domain:OutcomeInput", "ST-027")
+RALLY_TIMES = Seam("racket.matches.scorebook.domain:RallyTimes", "ST-027")
+PROJECT = Seam("racket.matches.scorebook.domain:project", "ST-026")
+CANONICAL_BYTES = Seam("racket.matches.scorebook.domain:canonical_bytes", "ST-026")
+NEEDS_DECISION = "needs_decision"
+SCORE_CALL = Seam("racket.sports.pickleball.rules:score_call", "ST-029")
+PRESET_FOR = Seam(
+    "racket.sports.pickleball.rules:preset_for",
+    "ST-035",
+    "preset_for(rules_version, format) -> RulesConfig | None; singles under the provisional preset",
+)
