@@ -50,6 +50,7 @@ _DIR_MARKERS = {
     "regression": ("regression", "integration"),
     "features": ("scenario",),
     "e2e_api": ("integration",),
+    "oracle": ("unit",),  # the independent P9 engine and its self-tests (ST-022)
 }
 _TESTS_ROOT = Path(__file__).parent
 
@@ -76,6 +77,10 @@ def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
         marker = pytest.mark.needs_verification
     elif tag == "slow":
         marker = pytest.mark.slow
+    elif tag == "nightly":
+        marker = pytest.mark.nightly
+    elif tag == "scoring":
+        marker = pytest.mark.scoring
     elif m := _STORY.fullmatch(tag):
         marker = pytest.mark.story(id=m.group(1))
     elif m := _NFR.fullmatch(tag):
