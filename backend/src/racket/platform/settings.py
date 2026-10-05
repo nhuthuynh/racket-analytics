@@ -155,6 +155,9 @@ class Settings:
         parts = urlsplit(web_origin)
         if parts.scheme not in ("http", "https") or not parts.hostname:
             raise ConfigurationError("PUBLIC_WEB_ORIGIN must be an http(s) origin")
+        if deployed and parts.scheme != "https":
+            # The link carries a sign-in token and the session cookie is Secure (ADR 0029).
+            raise ConfigurationError("PUBLIC_WEB_ORIGIN must be https outside dev and test")
         if deployed and len(email_secret or "") < EMAIL_KEY_MIN:
             raise ConfigurationError(
                 f"AUTH_EMAIL_KEY must have at least {EMAIL_KEY_MIN} characters"
