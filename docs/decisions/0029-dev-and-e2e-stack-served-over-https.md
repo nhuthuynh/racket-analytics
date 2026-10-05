@@ -64,3 +64,7 @@ Chosen option: **(a)**. Implementation:
 - Positive: production cookie parity on every browser. Sign-in links use an https origin. The dev stack no longer trusts a client's `X-Forwarded-For`.
 - Negative: one more service. Manual browsing to `https://localhost:3000` shows a certificate warning unless the developer chooses to trust the dev root. Developers with an old `infra/.env` must update `PUBLIC_WEB_ORIGIN` to https (Compose still starts, but links point at http).
 - Follow-ups: the deployment ADR must state how the edge sets `X-Forwarded-For` and how many hops the API trusts (T-ML-8).
+
+## Note 2026-10-05: CI evidence (WebKit)
+
+CI run 37298471332 (workflow_dispatch on `sprint-01`, head `2390e9a`), job E2E 111725272519. The step "Trust the dev CA" passed: `curl --fail https://localhost:3000/` with the runner's trust store, no `-k`. Playwright: 74 passed, 14 failed, 12 skipped, in 18.4 min. No WebKit test fails at sign-in any more. The 3 tests from CI run 37277549983 now sign in on WebKit and fail later at the "New match" link, as they do on Chromium (ST-015 copy change, tracked in test-change-requests.md). The remaining failures are not about cookies or TLS (blockers.md row "E2E job still red after the WebKit cookie fix").
