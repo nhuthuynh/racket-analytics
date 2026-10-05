@@ -19,6 +19,15 @@ x-required-app-env: &app-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tracing:4318
   OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
 
+# Sign-in by email link (ST-013, ADR 0025, ADR 0027; api-sprint-01 §8). The API builds the link
+# from PUBLIC_WEB_ORIGIN; the mailer sends it through Mailpit. AUTH_EMAIL_KEY is the HMAC key for
+# email pseudonyms: a dev placeholder in env.example, the secret store in staging/prod.
+x-sign-in-env: &sign-in-env
+  PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?set PUBLIC_WEB_ORIGIN (see infra/env.example)}
+  MAIL_SMTP_URL: smtp://mailpit:1025
+  MAIL_FROM: ${MAIL_FROM:?set MAIL_FROM}
+  AUTH_EMAIL_KEY: ${AUTH_EMAIL_KEY:?set AUTH_EMAIL_KEY}
+
 services:
   postgres:
     image: ${DOCKERHUB_REGISTRY:-docker.io}/library/postgres:16-alpine
@@ -125,8 +134,15 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
       target: api
     environment:
-      <<: *app-env
+      <<: [*app-env, *sign-in-env]
       OTEL_SERVICE_NAME: racket-api
+      # The browser reaches the API through the web's /api rewrite: one proxy hop, so per-IP
+      # sign-in rate limits key on the client address, not the web container (ST-013).
+      TRUSTED_PROXY_HOPS: "1"
+      # Per-IP sign-in limits (api-sprint-01 §2.4). Contract defaults; the E2E stack raises them
+      # because every Playwright test signs in from one host IP (smoke 2026-10-05).
+      AUTH_LINK_LIMIT_PER_IP: ${AUTH_LINK_LIMIT_PER_IP:-20}
+      AUTH_EXCHANGE_LIMIT_PER_IP: ${AUTH_EXCHANGE_LIMIT_PER_IP:-30}
       # tus Location prefix: the browser reaches the API through the web's /api rewrite, so
       # Location must be /api/uploads/{id} (R1-02, QA-R1-01; ADR 0011, ADR 0019).
       API_PUBLIC_PATH_PREFIX: ${API_PUBLIC_PATH_PREFIX:?set API_PUBLIC_PATH_PREFIX (see infra/env.example)}
@@ -157,6 +173,9 @@ services:
     environment:
       <<: *app-env
       OTEL_SERVICE_NAME: racket-worker
+      # Media stages only: this network has no route to Mailpit, so sign-in email jobs belong
+      # to the mailer (ADR 0027).
+      WORKER_STAGES: probe
     # Back after a crash; the loop itself survives database errors (R1-06).
     restart: unless-stopped
     # Sandbox (ST-009, NFR-054): only the internal network, so no route to the internet;
@@ -189,6 +208,40 @@ services:
       timeout: 3s
       retries: 12
     # SIGTERM returns the in-flight job to the queue within 10 s (NFR-046b).
+    stop_signal: SIGTERM
+    stop_grace_period: 12s
+
+  mailer:
+    # Job worker for the sign-in email (ST-013, ADR 0027): API image (no ffprobe), edge network
+    # (reaches Mailpit), runs `send_sign_in_link` only. Media never reaches this process.
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+      target: api
+    command: ["python", "-m", "racket.worker"]
+    environment:
+      <<: [*app-env, *sign-in-env]
+      OTEL_SERVICE_NAME: racket-mailer
+      WORKER_STAGES: send_sign_in_link
+    restart: unless-stopped
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/worker-heartbeat && test $$(( $$(date +%s) - $$(stat -c %Y /tmp/worker-heartbeat) )) -lt 30"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
     stop_signal: SIGTERM
     stop_grace_period: 12s
 

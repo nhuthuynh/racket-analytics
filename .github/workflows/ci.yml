@@ -291,6 +291,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: corepack enable
       - name: Start the full stack
+        # Every Playwright test signs in from this one runner IP, so the per-IP sign-in limits
+        # are raised here only; the per-email limit keeps its default (sign-in.spec.ts "Too many
+        # link requests"). The per-IP limit itself is tested at API level (IT-01-02).
+        env:
+          AUTH_LINK_LIMIT_PER_IP: "1000"
+          AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
         run: $COMPOSE up -d --build --wait
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
