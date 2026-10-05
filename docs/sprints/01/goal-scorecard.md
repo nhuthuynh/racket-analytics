@@ -221,6 +221,9 @@ env -u APP_ENV uv run --with mutmut==3.8.0 python ../scripts/ci/mutation_score.p
 ```bash
 (cd backend && env -u APP_ENV uv run pytest -q -m "(unit or integration or scenario or regression) and not nightly" \
    --ignore=tests/integration/test_it_00_10_worker_sandbox.py --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
+   --deselect tests/features/test_nightly_quality.py::test_nightly_run_completes \
+   --deselect tests/features/test_phone_fixtures.py::test_coverage_of_the_set \
+   --deselect tests/features/test_phone_fixtures.py::test_probe_every_fixture \
    --cov --cov-branch --cov-report=xml:"$GOAL/coverage-backend.xml" --cov-report=json:"$GOAL/coverage-backend.json"); echo rc=$?
 uvx --from diff-cover==10.6.0 diff-cover "$GOAL/coverage-backend.xml" --compare-branch=main --fail-under=85 \
   --markdown-report "$GOAL/diff-cover.md"; echo rc=$?
@@ -230,6 +233,7 @@ uvx --from diff-cover==10.6.0 diff-cover "$GOAL/coverage-backend.xml" --compare-
 ```
 
 - This uses the same environment as G01-02.
+- The three `--deselect` lines (QA-R2V-04, decision-log 2026-10-05 EM row) leave out exactly the three tests that are red only because the human PO has not yet supplied their input (a GitHub nightly run, S-08; real phone recordings, S-07). They stay in G01-02's full run and in G01-11 as open findings, so they are still counted against the sprint. Remove a `--deselect` line as soon as its test can pass. No other test may be deselected here; any other failure keeps `rc=1` and the row "no".
 - `and not nightly` drops the 100,000-sequence differential scenario (measured in G01-08), which exceeds the 120 s pytest timeout under `--cov` (QA-V1-06). The pytest command must give `rc=0`: coverage from a red run is not evidence, and the row is "no".
 - **Actual:**
   - the diff-cover "Coverage:" percentage;
