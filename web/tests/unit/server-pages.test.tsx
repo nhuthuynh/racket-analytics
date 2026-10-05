@@ -55,19 +55,31 @@ beforeEach(() => {
 });
 
 describe('sign-in page', () => {
+  // Sprint 1 (ST-013): A-01 is the email form; the dev picker is an extra section in dev only.
+  it('sends a signed-in visitor to their matches', async () => {
+    api.me.mockResolvedValue({ id: ID, display_name: null });
+    await expect(SignInPage()).rejects.toMatchObject({ to: '/matches' });
+  });
+
   it('says sign-in is unavailable when the API is down', async () => {
+    api.me.mockRejectedValue(new ApiError(503, 'unavailable'));
     api.listDevUsers.mockRejectedValue(new ApiError(503, 'unavailable'));
     render(await SignInPage());
     expect(screen.getByText(/sign-in is not available right now/i)).toBeVisible();
+    expect(screen.getByLabelText('Email address')).toBeVisible();
   });
 
-  it('shows the empty state when development sign-in is switched off (404)', async () => {
+  it('shows only the email form when development sign-in is switched off (404)', async () => {
+    api.me.mockRejectedValue(new ApiError(401, 'unauthenticated'));
     api.listDevUsers.mockRejectedValue(new ApiError(404, 'not_found'));
     render(await SignInPage());
-    expect(screen.getByText(/no test players are available/i)).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in or create an account' })).toBeVisible();
+    expect(screen.queryByText(/test players/i)).toBeNull();
+    expect(screen.queryAllByRole('button', { name: /^Sign in as/ })).toHaveLength(0);
   });
 
   it('offers one button per development user', async () => {
+    api.me.mockRejectedValue(new ApiError(401, 'unauthenticated'));
     api.listDevUsers.mockResolvedValue([{ username: 'ivy', display_name: 'Ivy' }]);
     render(await SignInPage());
     expect(screen.getByRole('button', { name: 'Sign in as Ivy' })).toBeVisible();

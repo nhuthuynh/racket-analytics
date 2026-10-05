@@ -453,3 +453,26 @@ main:focus-visible,
     animation-duration: var(--motion-reduced-motion) !important;
   }
 }
+
+/* A button that reads as a link (A-02 "send a new link"): an action, not a navigation.
+ * Inline, but at least 24px tall (SC 2.5.8; NFR-028). */
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--size-target-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+/* A standalone text link with a 24px-tall target (SC 2.5.8; NFR-028). */
+.inline-target {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--size-target-min);
+}

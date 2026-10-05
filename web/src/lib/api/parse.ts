@@ -104,5 +104,13 @@ export function parseDevUsers(value: unknown): DevUser[] {
 
 export function parseMe(value: unknown): Me {
   const o = obj(value, 'me');
-  return { id: str(o, 'id', 'me'), display_name: str(o, 'display_name', 'me') };
+  return {
+    id: str(o, 'id', 'me'),
+    display_name: o.display_name === null ? null : str(o, 'display_name', 'me'),
+  };
+}
+
+export function parseExchange(value: unknown): { newAccount: boolean } {
+  const o = obj(value, 'exchange');
+  return { newAccount: bool(o, 'new_account', 'exchange') };
 }

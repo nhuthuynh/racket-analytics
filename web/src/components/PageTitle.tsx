@@ -9,6 +9,7 @@ export function pageTitle(name: string): string {
   return `${name} – ${SERVICE_NAME}`;
 }
 
-export function PageTitle({ children }: { children: string }) {
-  return <title>{pageTitle(children)}</title>;
+/** `error` prefixes "Error: " while an error summary is shown (flows §0, checklist §5). */
+export function PageTitle({ children, error = false }: { children: string; error?: boolean }) {
+  return <title>{`${error ? 'Error: ' : ''}${pageTitle(children)}`}</title>;
 }

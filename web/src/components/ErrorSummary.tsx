@@ -2,7 +2,7 @@
 
 // Error summary [DPA/DESIGN-13]; component checklist §5: heading "There is a problem",
 // focus on render, one link per field to its input.
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 export interface FieldError {
   /** id of the input the link moves focus to */
@@ -10,7 +10,16 @@ export interface FieldError {
   message: string;
 }
 
-export function ErrorSummary({ errors, general }: { errors: FieldError[]; general?: string }) {
+export function ErrorSummary({
+  errors,
+  general,
+  children,
+}: {
+  errors: FieldError[];
+  general?: string;
+  /** Extra lines under the list, e.g. U-03's "Nothing from this file was saved." */
+  children?: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,7 +29,13 @@ export function ErrorSummary({ errors, general }: { errors: FieldError[]; genera
   if (errors.length === 0 && !general) return null;
 
   return (
-    <div className="error-summary" ref={ref} tabIndex={-1} aria-labelledby="error-summary-title">
+    <div
+      className="error-summary"
+      ref={ref}
+      tabIndex={-1}
+      role="alert"
+      aria-labelledby="error-summary-title"
+    >
       <h2 id="error-summary-title" className="error-summary__title">
         There is a problem
       </h2>
@@ -42,6 +57,7 @@ export function ErrorSummary({ errors, general }: { errors: FieldError[]; genera
           ))}
         </ul>
       ) : null}
+      {children}
     </div>
   );
 }
