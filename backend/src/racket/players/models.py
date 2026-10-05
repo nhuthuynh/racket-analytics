@@ -12,7 +12,10 @@ accounts = sa.Table(
     sa.Column("id", sa.Uuid(), primary_key=True),
     sa.Column("username", sa.String(64), nullable=True, unique=True),  # dev provider only
     sa.Column("display_name", sa.String(120), nullable=True),
-    sa.Column("email_key", sa.String(64), nullable=True, unique=True),  # HMAC, never the address
+    # ADR 0032: the normalised address is the identity (unique); never logged or returned.
+    sa.Column("email", sa.String(254), nullable=True, unique=True),
+    # Log and rate-limit pseudonym only (ADR 0025); not unique since ADR 0032.
+    sa.Column("email_key", sa.String(64), nullable=True, index=True),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
 
@@ -34,6 +37,8 @@ sign_in_links = sa.Table(
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("used_at", sa.DateTime(timezone=True), nullable=True),
+    # ADR 0032: the address rides the link to the exchange; NULL once used or refused.
+    sa.Column("email", sa.String(254), nullable=True),
 )
 
 sign_in_requests = sa.Table(

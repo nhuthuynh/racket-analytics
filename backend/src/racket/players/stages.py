@@ -45,6 +45,7 @@ class SendSignInLinkStage:
             sa.insert(sign_in_links).values(
                 token_sha256=link.token_sha256,
                 email_key=link.email_key,
+                email=request.email,  # ADR 0032: carried to the exchange, nulled there
                 created_at=link.created_at,
                 expires_at=link.expires_at,
             )

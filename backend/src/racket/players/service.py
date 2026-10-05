@@ -265,9 +265,18 @@ class MagicLinkService:
         try:
             if row is None:
                 raise LinkExpired("unknown link")
-            used = MagicLinkToken(**row._mapping).use(now=now)  # T-ML-2; the row lock: T-ML-3
+            used = MagicLinkToken.from_row(row._mapping).use(now=now)  # T-ML-2; lock: T-ML-3
         except LinkExpired:
-            self.session.rollback()
+            if row is not None and row.email is not None:
+                # ADR 0032: a refused link keeps no address (until the ST-038 sweep exists).
+                self.session.execute(
+                    sa.update(sign_in_links)
+                    .where(sign_in_links.c.token_sha256 == digest)
+                    .values(email=None)
+                )
+                self.session.commit()
+            else:
+                self.session.rollback()
             security_event(
                 "auth.link_refused", "auth.refused", email_key=row.email_key if row else None
             )
@@ -275,9 +284,12 @@ class MagicLinkService:
         self.session.execute(
             sa.update(sign_in_links)
             .where(sign_in_links.c.token_sha256 == digest)
-            .values(used_at=used.used_at)
+            .values(used_at=used.used_at, email=None)  # ADR 0032: the address leaves the link
         )
-        account, new_account = self._account_for(used.email_key, now)
+        if row.email is None:  # a link issued before migration 0008 (ADR 0032 legacy path)
+            account, new_account = self._legacy_account_for(used.email_key, now)
+        else:
+            account, new_account = self._account_for(row.email, used.email_key, now)
         identity = IdentityService(self.session, self.settings, self.clock)
         session_token = identity.start_session(account.id, previous_token)
         self.session.commit()
@@ -288,17 +300,63 @@ class MagicLinkService:
         )  # fmt: skip
         return Exchanged(account, session_token, new_account)
 
-    def _account_for(self, key: str, now: datetime) -> tuple[Account, bool]:
-        """The account for this address key, created at its first successful exchange."""
+    def _account_for(self, email: str, key: str, now: datetime) -> tuple[Account, bool]:
+        """The account for this address, created at its first successful exchange (ADR 0032:
+        the stored normalised address is the identity; ``email_key`` is only a pseudonym)."""
+        found = self._account_by_email(email)
+        if found is not None:
+            return found, False
+        claimed = self.session.execute(
+            sa.update(accounts)
+            .where(
+                accounts.c.id
+                == sa.select(accounts.c.id)
+                .where(accounts.c.email_key == key, accounts.c.email.is_(None))
+                .order_by(accounts.c.created_at)
+                .limit(1)
+                .with_for_update(skip_locked=True)
+                .scalar_subquery()
+            )
+            .values(email=email)
+            .returning(accounts.c.id, accounts.c.display_name)
+        ).one_or_none()
+        if claimed is not None:  # a legacy account (email IS NULL) is claimed once
+            return Account(claimed.id, claimed.display_name), False
         created = self.session.execute(
             insert(accounts)
-            .values(id=uuid.uuid4(), email_key=key, created_at=now)
-            .on_conflict_do_nothing(index_elements=["email_key"])
+            .values(id=uuid.uuid4(), email=email, email_key=key, created_at=now)
+            .on_conflict_do_nothing(index_elements=["email"])
             .returning(accounts.c.id, accounts.c.display_name)
         ).one_or_none()
         if created is not None:
             return Account(created.id, created.display_name), True
-        row = self.session.execute(
-            sa.select(accounts.c.id, accounts.c.display_name).where(accounts.c.email_key == key)
+        raced = self.session.execute(  # a parallel first exchange for the address won
+            sa.select(accounts.c.id, accounts.c.display_name).where(accounts.c.email == email)
         ).one()
-        return Account(row.id, row.display_name), False
+        return Account(raced.id, raced.display_name), False
+
+    def _account_by_email(self, email: str) -> Account | None:
+        row = self.session.execute(
+            sa.select(accounts.c.id, accounts.c.display_name).where(accounts.c.email == email)
+        ).one_or_none()
+        return None if row is None else Account(row.id, row.display_name)
+
+    def _legacy_account_for(self, key: str, now: datetime) -> tuple[Account, bool]:
+        """Sprint 1 behaviour for a link without an address: the account by ``email_key``
+        among accounts not yet claimed by an address. Dev data only; removed one release after
+        migration 0008 (ADR 0032), once no such link or seed (IT-01 session controls) remains."""
+        row = self.session.execute(
+            sa.select(accounts.c.id, accounts.c.display_name)
+            .where(accounts.c.email_key == key, accounts.c.email.is_(None))
+            .order_by(accounts.c.created_at)
+            .limit(1)
+            .with_for_update()
+        ).one_or_none()
+        if row is not None:
+            return Account(row.id, row.display_name), False
+        created = self.session.execute(
+            insert(accounts)
+            .values(id=uuid.uuid4(), email_key=key, created_at=now)
+            .returning(accounts.c.id, accounts.c.display_name)
+        ).one()
+        return Account(created.id, created.display_name), True

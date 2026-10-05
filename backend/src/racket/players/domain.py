@@ -13,9 +13,10 @@ import hmac
 import html
 import ipaddress
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
+from typing import Any
 
 from racket.platform.text import is_plain_line
 
@@ -68,6 +69,14 @@ class MagicLinkToken:
     created_at: datetime
     expires_at: datetime
     used_at: datetime | None = None
+
+    @classmethod
+    def from_row(cls, row: Mapping[Any, Any]) -> MagicLinkToken:
+        """The value from a ``sign_in_links`` row; the address column is not part of it."""
+        return cls(
+            row["token_sha256"], row["email_key"], row["created_at"], row["expires_at"],
+            row["used_at"],
+        )  # fmt: skip
 
     @staticmethod
     def digest_of(token: str) -> str:
