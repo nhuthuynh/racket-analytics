@@ -316,3 +316,58 @@ def test_open_defects_cli_exit_code_follows_count(tmp_path: Path) -> None:
     )
     assert good.returncode == 0, good.stderr
     assert json.loads(good.stdout)["open"] == 0
+
+
+# PE-R2-S1-02: ids that are not XX-R1-01 shaped (S-07, BLK-ASVS-6.3.3) were dropped silently,
+# and a finding named in a combined row and again in a single row was counted twice.
+def test_open_defects_refuses_a_severity_row_without_a_parsable_id() -> None:
+    text = """
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| the upload flake | major | Not fixed: needs input | a | b |
+"""
+    with pytest.raises(ValueError, match="no finding id"):
+        m.open_defects(text)
+
+
+def test_open_defects_counts_short_and_dotted_ids() -> None:
+    text = """
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| S-07 | major | Not fixed: needs phone recordings | none | red |
+| S-08 | major | Not fixed: depends on CI | none | red |
+| BLK-ASVS-6.3.3 | major | Not fixed: needs the PO | none | adr |
+| QA-R2V-01 | blocker | Open, escalated | none | runs |
+| S-09 | blocker | Fixed | none | green |
+"""
+    rows = m.open_defects(text)
+    assert [r["ids"] for r in rows] == [["S-07"], ["S-08"], ["BLK-ASVS-6.3.3"], ["QA-R2V-01"]]
+
+
+def test_open_defects_counts_a_finding_in_a_combined_and_a_single_row_once() -> None:
+    text = """
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| PE-R3-05 / QA-R3-05 | blocker | Open, escalated: no CI | a | b |
+| PE-R3-01 | major | Open | a | b |
+
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| PE-R3-05 | blocker | Not fixed: needs the PO | a | b |
+"""
+    rows = m.open_defects(text)
+    assert len(rows) == 2
+    assert sorted(rows[0]["ids"] + rows[1]["ids"]) == ["PE-R3-01", "PE-R3-05", "QA-R3-05"]
+
+
+def test_open_defects_a_finding_closed_in_one_alias_stays_open_in_the_other() -> None:
+    # Fail closed: QA-R3-05's latest row is open even though PE-R3-05's latest row is fixed.
+    text = """
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| PE-R3-05 / QA-R3-05 | blocker | Open, escalated: no CI | a | b |
+| PE-R3-05 | blocker | Fixed: run 1 green | a | b |
+"""
+    assert len(m.open_defects(text)) == 1
+    closed = text.replace("Open, escalated: no CI", "Fixed: duplicate of PE-R3-05")
+    assert m.open_defects(closed) == []

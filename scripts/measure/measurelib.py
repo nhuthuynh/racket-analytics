@@ -140,7 +140,9 @@ def junit_rate(
     }
 
 
-_FINDING_ID = re.compile(r"\b[A-Z]{2,4}-[RV]\d+(?:-S\d+)?-\d+\b")
+# Any upper-case prefix, optional letter-bearing segments, then a number that may be dotted:
+# PE-R1-S1-02, QA-R2V-01, S-07, BLK-ASVS-6.3.3 (PE-R2-S1-02: the old pattern dropped the last two).
+_FINDING_ID = re.compile(r"\b[A-Z]{1,5}(?:-(?=[A-Z0-9]*[A-Z])[A-Z0-9]+)*-\d+(?:\.\d+)*\b")
 _OPEN_SEVERITY = re.compile(r"\b(blocker|blocking|major)\b")
 _OPEN_DISPOSITION = re.compile(r"^(open|not re-verified|not fixed|partly)")
 
@@ -165,7 +167,10 @@ def open_defects(text: str) -> list[dict[str, Any]]:
     disposition column (``Disposition`` first, else ``Fix…``, ``State…`` or ``Status``).
     The last row naming a finding id wins. A row is open when its disposition starts with
     "Open", "Not re-verified", "Not fixed" or "Partly" (fail closed, ADR 0014, ADR 0030).
-    A text without any such table is refused, so a wrong file never reads as 0.
+    Ids named in one row are aliases of one finding (``PE-R3-05 / QA-R3-05``); a finding is
+    open when the latest row of any of its ids is open, and it is reported once, with all
+    its ids. A text without any such table, or a severity row without a finding id, is
+    refused, so a wrong file never reads as 0 and no row is skipped silently.
     """
     rows: list[dict[str, Any]] = []
     latest: dict[str, int] = {}
@@ -188,9 +193,11 @@ def open_defects(text: str) -> list[dict[str, Any]]:
             continue
         if sev_col is None or disp_col is None or set("".join(cells)) <= set("-: "):
             continue
-        ids = _FINDING_ID.findall(cells[0])
-        if not ids or len(cells) <= max(sev_col, disp_col):
+        if len(cells) <= max(sev_col, disp_col):
             continue
+        ids = list(dict.fromkeys(_FINDING_ID.findall(cells[0])))
+        if not ids:
+            raise ValueError(f"line {number}: severity row with no finding id: {cells[0]!r}")
         severity = cells[sev_col].replace("*", "").strip().lower()
         disposition = cells[disp_col].replace("*", "").strip()
         rows.append({"ids": ids, "severity": severity, "disposition": disposition, "line": number})
@@ -198,11 +205,31 @@ def open_defects(text: str) -> list[dict[str, Any]]:
             latest[finding] = len(rows) - 1
     if tables == 0:
         raise ValueError("no review table with Severity and Disposition columns")
-    open_rows = []
-    for index in sorted(set(latest.values())):
+    # Union the ids that share a row, so one finding with aliases is counted once.
+    parent: dict[str, str] = {}
+
+    def root(finding: str) -> str:
+        while parent.setdefault(finding, finding) != finding:
+            finding = parent[finding]
+        return finding
+
+    for row in rows:
+        for other in row["ids"][1:]:
+            parent[root(other)] = root(row["ids"][0])
+    groups: dict[str, dict[str, Any]] = {}
+    for finding, index in latest.items():
         row = rows[index]
-        if _OPEN_SEVERITY.search(row["severity"]) and _OPEN_DISPOSITION.match(
-            row["disposition"].lower()
+        if not (
+            _OPEN_SEVERITY.search(row["severity"])
+            and _OPEN_DISPOSITION.match(row["disposition"].lower())
         ):
-            open_rows.append(row)
+            continue
+        group = groups.setdefault(root(finding), {"index": index, "lines": set()})
+        group["index"] = max(group["index"], index)
+        group["lines"].add(row["line"])
+    open_rows = []
+    for key, group in sorted(groups.items(), key=lambda kv: kv[1]["index"]):
+        ids = [f for r in rows for f in r["ids"] if root(f) == key]
+        row = rows[group["index"]]
+        open_rows.append({**row, "ids": list(dict.fromkeys(ids)), "lines": sorted(group["lines"])})
     return open_rows
