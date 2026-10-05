@@ -20,7 +20,7 @@ x-required-app-env: &app-env
 # Object-store key: only the services that read or write media (api, worker). The mailer never
 # touches media, so it does not get it (SEC-R5-S1-01, threat model S1-F3). A separate DB role
 # and S3 key for the sandboxed worker are ST-042 (gate before any non-dev deployment).
-x-media-store-key: &media-store-key
+x-media-store-access: &media-store-access
   S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID}
   S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY}
 
@@ -145,7 +145,7 @@ services:
       args: *backend-build-args
       target: api
     environment:
-      <<: [*app-env, *sign-in-env, *media-store-key]
+      <<: [*app-env, *sign-in-env, *media-store-access]
       OTEL_SERVICE_NAME: racket-api
       # The browser reaches the API through web-tls, which replaces any client X-Forwarded-For
       # with the real peer, and the web's /api rewrite, which forwards it unchanged (measured
@@ -185,7 +185,7 @@ services:
       args: *backend-build-args
       target: worker
     environment:
-      <<: [*app-env, *media-store-key]
+      <<: [*app-env, *media-store-access]
       OTEL_SERVICE_NAME: racket-worker
       # Media stages only: this network has no route to Mailpit, so sign-in email jobs belong
       # to the mailer (ADR 0027).
