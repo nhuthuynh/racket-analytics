@@ -80,7 +80,7 @@ def test_the_api_and_mailer_share_the_sign_in_settings() -> None:
 @pytest.mark.unit
 def test_env_example_documents_the_sprint_1_settings() -> None:
     env = env_example()
-    assert env["PUBLIC_WEB_ORIGIN"] == "http://localhost:3000"
+    assert env["PUBLIC_WEB_ORIGIN"] == "https://localhost:3000"  # ADR 0029
     assert env["MAIL_FROM"]
     # Dev placeholder only; staging/prod need >= 32 characters from the secret store.
     assert len(env["AUTH_EMAIL_KEY"]) >= 32
@@ -92,7 +92,7 @@ def test_compose_config_renders_with_the_example_env() -> None:
     res = compose_config(ENV_EXAMPLE)
     assert res.returncode == 0, res.stderr
     rendered = yaml.safe_load(res.stdout)["services"]
-    assert rendered["mailer"]["environment"]["PUBLIC_WEB_ORIGIN"] == "http://localhost:3000"
+    assert rendered["mailer"]["environment"]["PUBLIC_WEB_ORIGIN"] == "https://localhost:3000"
 
 
 # ---------------------------------------------------------------- E2E rate limits (smoke 2026-10-05)

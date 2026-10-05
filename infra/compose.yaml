@@ -136,8 +136,10 @@ services:
     environment:
       <<: [*app-env, *sign-in-env]
       OTEL_SERVICE_NAME: racket-api
-      # The browser reaches the API through the web's /api rewrite: one proxy hop, so per-IP
-      # sign-in rate limits key on the client address, not the web container (ST-013).
+      # The browser reaches the API through web-tls, which replaces any client X-Forwarded-For
+      # with the real peer, and the web's /api rewrite, which forwards it unchanged (measured
+      # 2026-10-05, ADR 0029). So the right-most entry is the client: per-IP sign-in limits key
+      # on it, not on a proxy container (ST-013, T-ML-8).
       TRUSTED_PROXY_HOPS: "1"
       # Per-IP sign-in limits (api-sprint-01 §2.4). Contract defaults; the E2E stack raises them
       # because every Playwright test signs in from one host IP (smoke 2026-10-05).
@@ -253,8 +255,7 @@ services:
       APP_ENV: ${APP_ENV:?set APP_ENV}
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:?set PUBLIC_API_BASE_URL}
       API_INTERNAL_URL: http://api:8000
-    ports:
-      - 127.0.0.1:${WEB_HOST_PORT:-3000}:3000
+    # No host port: browsers reach the web only through web-tls, over https (ADR 0029).
     networks: [edge]
     depends_on:
       api:
@@ -265,6 +266,33 @@ services:
       timeout: 3s
       retries: 40
 
+  web-tls:
+    # TLS front door (ADR 0029): https://localhost:3000 by default. Outside APP_ENV=test the
+    # session cookie is `__Host-` + Secure, which WebKit drops over plain http. Caddy's internal
+    # CA and leaf key are generated at first start into caddy-data; none is committed.
+    image: ${DOCKERHUB_REGISTRY:-docker.io}/library/caddy:2.10.2-alpine
+    ports:
+      - 127.0.0.1:${WEB_HOST_PORT:-3000}:443
+    volumes:
+      - ./tls/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /config:size=8m
+      - /tmp:size=8m
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
 networks:
   edge: {}
   sandbox:
@@ -273,3 +301,4 @@ networks:
 volumes:
   pgdata: {}
   s3data: {}
+  caddy-data: {}
