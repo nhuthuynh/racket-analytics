@@ -14,8 +14,8 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.regression.bola import MATRIX, Probe, uncovered_routes
-from tests.support import contract, tus
+from tests.regression.bola import MATRIX, Probe, all_routes, id_routes, uncovered_routes
+from tests.support import contract, scorebook, tus
 from tests.support.api import async_client, lifespan, sign_in
 
 
@@ -34,12 +34,23 @@ async def ivy_resources(users: dict[str, httpx.AsyncClient]) -> dict[str, str]:
     assert created.status_code == 201, created.text
     match_id = str(created.json()["id"])
     upload = await tus.start(ivy, match_id, length=1000)
-    return {"match": match_id, "upload_url": upload.url}
+    # A second match with its video received, a game and one tagged rally, for the rally-id
+    # routes (IT-02-05).
+    tagged = await scorebook.create_doubles(ivy, "BOLA tagged")
+    await scorebook.receive_video(ivy, tagged)
+    await scorebook.start_game(ivy, tagged)
+    tags = await scorebook.tag_all(ivy, tagged, list(scorebook.taglib.JOURNEY_TAGS[:1]))
+    rally_id = str(tags[0].json()[scorebook.tagcontract.RALLY_ID_KEY])
+    return {"match": match_id, "upload_url": upload.url, "tagged": tagged, "rally": rally_id}
 
 
 def _url(probe: Probe, resources: dict[str, str], missing: bool) -> str:
     if probe.resource == "match":
         return probe.template.format(match_id=uuid.uuid4() if missing else resources["match"])
+    if probe.resource == "rally":
+        return probe.template.format(
+            match_id=uuid.uuid4() if missing else resources["tagged"], rally_id=resources["rally"]
+        )
     url = resources["upload_url"]
     return url.rsplit("/", 1)[0] + f"/{uuid.uuid4().hex}" if missing else url
 
@@ -83,6 +94,23 @@ async def test_anonymous_caller_is_refused_on_every_id_route(
 
 def test_endpoint_inventory_has_no_route_missing_from_the_matrix(app: Any) -> None:
     assert uncovered_routes(app) == []
+
+
+def test_endpoint_inventory_sees_every_route_of_the_app(app: Any) -> None:
+    """Positive control for the inventory (BE-QA-01): it is not empty, it finds routes of
+    included routers, and it finds every route the matrix probes, so a vacuous inventory can
+    never pass the test above."""
+    found = all_routes(app)
+    assert ("POST", contract.MATCHES) in found
+    assert ("GET", "/healthz") in found
+    assert set(MATRIX) <= id_routes(app), sorted(set(MATRIX) - id_routes(app))
+
+
+def test_a_route_without_a_probe_is_reported(app: Any) -> None:
+    """Mutant check: dropping one probe from the matrix makes the inventory test fail."""
+    dropped = ("GET", "/matches/{match_id}/score-sheet")
+    matrix = {k: v for k, v in MATRIX.items() if k != dropped}
+    assert uncovered_routes(app, matrix=matrix) == ["GET /matches/{match_id}/score-sheet"]
 
 
 async def test_match_ids_are_random_uuid4(users: dict[str, httpx.AsyncClient]) -> None:

@@ -25,7 +25,7 @@ class Probe:
 
     method: str
     template: str
-    resource: str  # which of Ivy's resources the route addresses: "match" | "upload"
+    resource: str  # which of Ivy's resources the route addresses: "match" | "upload" | "rally"
     kwargs: Callable[[], Mapping[str, Any]] = lambda: {}
 
 
@@ -52,24 +52,69 @@ _PROBES = [
         },
     ),
 ]
+# Sprint 2 scorebook routes (IT-02-05; BE-QA-01). A command without ``If-Match`` is a 409 for
+# the owner (stale version), which is the positive control; the attacker must get the 404.
+MATCH_ID_ROUTES_02 = {
+    ("GET", "/matches/{match_id}/score-sheet"): lambda: {},
+    ("POST", "/matches/{match_id}/games"): lambda: {
+        "json": {"first_serving_side": "A", "ends_switched": False}
+    },
+    ("POST", "/matches/{match_id}/rallies"): lambda: {
+        "json": {"start_ms": 0, "end_ms": 1000, "winning_side": "A", "ending": "winner"}
+    },
+    ("POST", "/matches/{match_id}/undo"): lambda: {},
+    ("GET", "/matches/{match_id}/corrections"): lambda: {},
+    ("GET", "/matches/{match_id}/video"): lambda: {},
+}
+RALLY_ID_ROUTES_02 = {
+    ("PATCH", "/matches/{match_id}/rallies/{rally_id}"): lambda: {
+        "json": {"field": "ending", "value": "winner"}
+    },
+    ("POST", "/matches/{match_id}/rallies/{rally_id}/resolution"): lambda: {
+        "json": {"decision": "withdraw"}
+    },
+    ("GET", "/matches/{match_id}/rallies/{rally_id}/media"): lambda: {},
+}
+_PROBES += [Probe(m, t, "match", k) for (m, t), k in MATCH_ID_ROUTES_02.items()]
+_PROBES += [Probe(m, t, "rally", k) for (m, t), k in RALLY_ID_ROUTES_02.items()]
 MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
 # Routes with a path parameter that is not an owned resource ID. Each needs a reason.
 EXEMPT: dict[RouteKey, str] = {}
 
 
+def all_routes(app: Any) -> set[RouteKey]:
+    """(METHOD, path) for every route of ``app``, including routes of included routers.
+
+    FastAPI 0.142 keeps an included router as one ``_IncludedRouter`` entry without a ``path``
+    (BE-QA-01); its routes sit on ``original_router`` with the include prefix in
+    ``include_context.prefix``. Walked recursively, so a nested include is not missed."""
+    keys: set[RouteKey] = set()
+
+    def walk(routes: Iterable[Any], prefix: str) -> None:
+        for route in routes:
+            inner = getattr(route, "original_router", None)
+            if inner is not None:
+                context = getattr(route, "include_context", None)
+                walk(inner.routes, prefix + (getattr(context, "prefix", "") or ""))
+                continue
+            path = getattr(route, "path", None)
+            if path is None:
+                raise AssertionError(f"route without a path in the inventory: {route!r}")
+            for method in getattr(route, "methods", None) or ():
+                keys.add((method.upper(), prefix + path))
+
+    walk(getattr(app, "routes", []), "")
+    return keys
+
+
 def id_routes(app: Any) -> set[RouteKey]:
     """(METHOD, path) for every route of ``app`` whose path takes a parameter."""
-    keys: set[RouteKey] = set()
-    for route in getattr(app, "routes", []):
-        path = getattr(route, "path", "")
-        methods: Iterable[str] = getattr(route, "methods", None) or ()
-        if not PATH_PARAM.search(path):
-            continue
-        for method in methods:
-            if method not in IGNORED_METHODS:
-                keys.add((method.upper(), path))
-    return keys
+    return {
+        (method, path)
+        for method, path in all_routes(app)
+        if PATH_PARAM.search(path) and method not in IGNORED_METHODS
+    }
 
 
 def uncovered_routes(
