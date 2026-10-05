@@ -120,7 +120,7 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0016 | [Design tokens are a JSON source of truth with an executable contrast proof](0016-design-tokens-and-contrast-proof.md) | Proposed | 2026-10-03 |
 | 0017 | [Job runtime: a hand-written `SKIP LOCKED` queue with leases, not procrastinate](0017-job-runtime-skip-locked-queue-with-leases.md) | Proposed | 2026-10-03 |
 | 0018 | [Web CSP: per-request nonce in middleware, no inline-script allowance](0018-web-csp-per-request-nonce.md) | Proposed | 2026-10-03 |
-| 0019 | [The Next.js `/api` rewrite is for dev and CI only; uploads use 8 MiB chunks](0019-web-api-rewrite-limits.md) | Proposed | 2026-10-03 |
+| 0019 | [The Next.js `/api` rewrite is for dev and CI only; uploads use 8 MiB chunks](0019-web-api-rewrite-limits.md) | Accepted (amended 2026-10-05) | 2026-10-03 |
 | 0020 | [Probe stage sandbox: a pinned LGPL ffprobe, per-process limits inside an internal-network container](0020-probe-sandbox-and-lgpl-ffprobe.md) | Proposed | 2026-10-03 |
 | 0021 | [ffprobe may demux only the MP4/MOV family (input-format allowlist)](0021-probe-input-format-allowlist.md) | Proposed | 2026-10-03 |
 | 0022 | [Review loop: route findings to their owner role, smoke-test the integrated stack before review, one story per commit](0022-review-loop-routing-and-integration-smoke.md) | Accepted (PO 2026-10-05) | 2026-10-03 |

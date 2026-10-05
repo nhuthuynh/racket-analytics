@@ -1,6 +1,6 @@
 # 0019. The Next.js `/api` rewrite is for dev and CI only; uploads use 8 MiB chunks
 
-- **Status:** Proposed (the principal-engineer confirms, per api-sprint-00 §8)
+- **Status:** Accepted (principal-engineer, 2026-10-05, with the amendment in Notes)
 - **Date:** 2026-10-03
 - **Deciders:** senior-frontend-engineer
 - **Consulted:** principal-engineer (contract owner), sre-devops-engineer (Compose and ingress)
@@ -60,3 +60,11 @@ Chosen option: **1**. It meets the contract as written for the client's 8 MiB ch
 Walking-skeleton E2E in the CI e2e job, and `tests/unit/tus-policy.test.ts` ("is 8 MiB per the contract").
 
 ## Notes
+
+- **2026-10-05, principal-engineer (R3-03, retro 0 action A5): Accepted, amended.**
+  1. Option 1 is accepted as written for **dev and CI**: the `/api` rewrite is not an upload path above 10 MB, and the client chunk there is at most 8 MiB.
+  2. **Amendment: the client chunk bound becomes configuration, not a constant.** ST-017 (NFR-016) needs adaptive chunks of 5-50 MB in production. A fixed `CHUNK_SIZE = 8 MiB` would cap production at the dev limit. From Sprint 1 the client reads `chunk_min_bytes` and `chunk_max_bytes` from `GET /upload-policy` (api-sprint-01 §6.1). The API takes them from `UPLOAD_CLIENT_CHUNK_MIN_BYTES` (default 5 MiB) and `UPLOAD_CLIENT_CHUNK_MAX_BYTES` (default **8 MiB**, the dev/CI value; staging and production set **50 MiB**, which stays below both `UPLOAD_MAX_CHUNK_BYTES` = 64 MiB and the ingress limit). Reading it at runtime from the API also removes the build-time problem of finding 3 for this value.
+  3. The unit test that pins `CHUNK_SIZE` to 8 MiB stays valid as the **fallback** value used when the policy request fails; replacing the constant needs a row in `docs/sprints/01/test-change-requests.md` (FE proposes, QA approves).
+  4. The ingress body limit in staging and production must be ≥ `UPLOAD_MAX_CHUNK_BYTES` (SRE, first deploy). This is now stated in api-sprint-00 §1 and §9.
+  5. Evidence for the amendment: `web/src/lib/upload/tus-policy.ts` line 7 `CHUNK_SIZE = 8 * 1024 * 1024` (read 2026-10-05); NFR-016 "chunks adapt between 5 and 50 MB" (sprint-01 §14.1 ST-017). Option 3 stays the fallback if dev or CI ever need larger chunks.
+

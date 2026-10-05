@@ -1,6 +1,6 @@
 # API contract: Sprint 0 (walking skeleton)
 
-- **Status:** Accepted for Sprint 0 (principal-engineer, 2026-10-03). Changes go through a PR on this file, reviewed by BE, FE and QA. The test seams in `backend/tests/support/contract.py` (ADR 0012) must change in the same PR.
+- **Status:** Accepted for Sprint 0 (principal-engineer, 2026-10-03). Amended 2026-10-05 (principal-engineer, R3-03/R3-04/R3-05): §1 base path and media type, §6 `Tus-Resumable` on 405/500, §8 chunk size, §9 `UPLOAD_MAX_CHUNK_BYTES`. The §5.2 `/media` 204 amendment (R1-07) is confirmed. Sprint 1 additions live in `api-sprint-01.md`. Changes go through a PR on this file, reviewed by BE, FE and QA. The test seams in `backend/tests/support/contract.py` (ADR 0012) must change in the same PR.
 - **Owner:** principal-engineer. **Security review:** security-privacy-engineer (`docs/security/threat-model-v0.md`).
 - **Stories:** ST-005, ST-006, ST-007 (no HTTP), ST-008, ST-009 (facts), ST-010 (client).
 - **Decisions this rests on:** ADR 0008 (stack), ADR 0011 (tus core in FastAPI), ADR 0012 (test seams).
@@ -11,8 +11,8 @@ This contract matches the QA red-first tests as they stand on 2026-10-03. Where 
 
 | Topic | Rule |
 |---|---|
-| Base path | The API serves at the **root** (`/matches`, `/uploads/...`). Browsers reach it through the web origin under **`/api`**: Next.js rewrites `/api/:path*` → `http://api:8000/:path*` in dev, and the ingress does the same in production. The API never assumes the prefix, except in the tus `Location` header, which uses `API_PUBLIC_PATH_PREFIX` (§6.2). Same-origin routing removes CORS and keeps the session cookie first-party (judgment). |
-| Media type | JSON requests and responses use `application/json; charset=utf-8`. tus PATCH bodies use `application/offset+octet-stream`. Every response with a body has a matching `Content-Type` (ASVS 4.1.1). |
+| Base path | The API serves at the **root** (`/matches`, `/uploads/...`). Browsers reach it through the web origin under **`/api`**. In **dev and CI** the Next.js rewrite proxies `/api/:path*` → `API_INTERNAL_URL` (default `http://api:8000`, fixed at `next build`); that rewrite caps request bodies at 10 MB, so dev and CI clients send chunks of **at most 8 MiB** (ADR 0019). In **staging and production** the ingress routes `/api` to the API directly and Next.js never proxies `/api`; the ingress body limit must be ≥ `UPLOAD_MAX_CHUNK_BYTES` (amended 2026-10-05, R3-03). The API never assumes the prefix, except in the tus `Location` header, which uses `API_PUBLIC_PATH_PREFIX` (§6.2). Same-origin routing removes CORS and keeps the session cookie first-party (judgment). |
+| Media type | JSON requests and responses use `application/json`, encoded as UTF-8. No `charset` parameter is sent or required: the `application/json` registration defines none (judgment; RFC 8259 §11, not in our verified research). Clients must not depend on one (amended 2026-10-05, R3-05: the code sends `application/json`). tus PATCH bodies use `application/offset+octet-stream`. Every response with a body has a matching `Content-Type` (ASVS 4.1.1). |
 | IDs | Public IDs are UUIDv4 in canonical lowercase form [AQS/SEC-09]. A path ID that is not a UUID returns **404 `not_found`**, never 422, so a malformed ID and a foreign ID look alike (judgment). |
 | Timestamps | RFC 3339, UTC, with `Z`, e.g. `2026-10-05T09:12:44.123Z`. |
 | Unknown fields | Request bodies are closed schemas (`extra="forbid"`). An unknown field gives **422** (NFR-052) [AQS/SEC-03 8.2.3]. |
@@ -176,7 +176,7 @@ Every route with `{match_id}` loads the match through one ownership dependency (
 
 ## 6. Uploads: tus 1.0.0 core (ST-008; ADR 0011)
 
-The client is tus-js-client. Endpoint: `/api/matches/{match_id}/uploads`, `chunkSize: 8 * 1024 * 1024`, and `retryDelays` as the FE chooses. Every tus request except `OPTIONS` must carry `Tus-Resumable: 1.0.0`. Every tus response carries `Tus-Resumable: 1.0.0` and `Cache-Control: no-store`. This includes error responses from 401 onwards (enforced 2026-10-03, SEC-R2-01).
+The client is tus-js-client. Endpoint: `/api/matches/{match_id}/uploads`, `chunkSize: 8 * 1024 * 1024`, and `retryDelays` as the FE chooses. Every tus request except `OPTIONS` must carry `Tus-Resumable: 1.0.0`. Every tus response carries `Tus-Resumable: 1.0.0` and `Cache-Control: no-store`. This includes error responses from 401 onwards (enforced 2026-10-03, SEC-R2-01), and also the 405 and the global-fallback 500 on a tus path (`/uploads`, `/uploads/{id}`, `/matches/{id}/uploads`), which today leave it out (amended 2026-10-05, R3-04/QA-R3-10: `DELETE /uploads/{uuid}` → 405 without `Tus-Resumable`; fix routed to senior-backend-engineer, test to senior-qa-engineer, api-sprint-01 §9).
 
 ### 6.1 `OPTIONS /uploads`
 
@@ -282,14 +282,14 @@ Routes without a path ID: `GET /healthz`, `GET /readyz`, `GET /dev/users`, `POST
 - The service worker must not cache `/api/*` responses or media (NFR-067; `web/e2e/security-headers.spec.ts`).
 - tus-js-client may store the upload URL in `localStorage` to resume after a reload. That URL holds no credential: access still needs the cookie, and it contains no personal data (ASVS 14.3.3 allows it; judgment). Clear the stored URLs on sign-out (ASVS 14.3.1).
 - Render `title` as text only (ASVS 3.2.2).
-- The FE must confirm in ST-010 that the Next.js `/api` rewrite streams a PATCH body of at least 64 MiB without buffering problems. If it cannot, raise it with the principal-engineer. The fallback is direct cross-origin calls with a CORS allowlist, which would amend §1 and §2.
+- ~~The FE must confirm in ST-010 that the Next.js `/api` rewrite streams a PATCH body of at least 64 MiB.~~ Resolved by ADR 0019 (Accepted 2026-10-05, R3-03): the rewrite caps bodies at 10 MB, so **dev and CI clients send chunks of at most 8 MiB**. A PATCH of up to `UPLOAD_MAX_CHUNK_BYTES` (64 MiB) through the web origin is a **production-ingress property**, not a dev-rewrite property. From Sprint 1 the client reads its chunk bounds from `GET /upload-policy` (api-sprint-01 §6.1), so dev and production differ only in configuration. If dev or CI ever need chunks above 10 MB, the fallback is ADR 0019 option 3 (a streaming route handler), not CORS.
 
 ## 9. Configuration this contract adds (SRE to add to `infra/env.example`)
 
 | Variable | Default | Notes |
 |---|---|---|
 | `UPLOAD_MAX_BYTES` | `10000000000` | NFR-053 provisional cap |
-| `UPLOAD_MAX_CHUNK_BYTES` | `67108864` | Upper bound for one PATCH body |
+| `UPLOAD_MAX_CHUNK_BYTES` | `67108864` | Upper bound for one PATCH body that the **API** accepts (413 above it). Reached only through the production ingress, whose body limit must be at least this value (SRE). Through the dev/CI rewrite the effective limit is 10 MB (ADR 0019) |
 | `UPLOAD_PART_MIN_BYTES` | `5242880` | S3 multipart minimum for every part but the last |
 | `API_PUBLIC_PATH_PREFIX` | `""` | `/api` behind the web rewrite or ingress; empty in tests |
 | `ALLOWED_ORIGINS` | unset | Comma-separated; required in `staging`/`prod` |
