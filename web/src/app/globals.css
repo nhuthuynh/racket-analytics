@@ -753,3 +753,69 @@ main:focus-visible,
   margin: 0;
   padding-inline-start: var(--space-6);
 }
+
+/* Quick Tag T-01 (ST-027; DES FR-UX-60): 48px controls with 8px gaps (NFR-028), no dragging. */
+.quick-tag__player {
+  display: block;
+  inline-size: 100%;
+  max-block-size: 50vh;
+  background: var(--color-scrim);
+}
+
+.quick-tag__score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-6);
+}
+
+.quick-tag__call {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.quick-tag__label,
+.quick-tag__saving {
+  color: var(--color-text-secondary);
+}
+
+.quick-tag__bar {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.quick-tag__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-target-gap);
+}
+
+.tag-button {
+  min-block-size: var(--size-target-touch);
+  min-inline-size: var(--size-target-touch);
+  padding-inline: var(--space-4);
+}
+
+/* Chosen state: filled and a check mark, not colour alone (NFR-034). */
+.tag-button[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.tag-button[aria-pressed='true']::before {
+  content: '✓ ' / '';
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--size-target-touch);
+}
+
+.choice input {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+}
