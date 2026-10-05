@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from pytest_bdd import given, parsers, scenario, scenarios, then, when
+from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.support import contract, media, tus_ext
 from tests.support.api import ApiDriver
@@ -139,6 +139,3 @@ def no_video_yet(ctx: dict[str, Any]) -> None:
 @then("no video check was started for that file")
 def no_check(committed_db: Any, ctx: dict[str, Any]) -> None:
     assert jobs_for_match(committed_db, ctx["match_id"]) == []
-
-
-_ = scenario  # explicit per-scenario binding is not needed: every scenario here is [API]
