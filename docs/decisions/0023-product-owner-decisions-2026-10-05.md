@@ -103,3 +103,8 @@ Not decided by this ADR: technical ADRs awaiting peer review rather than the PO 
 - `docs/sprints/01/status.json` lists the residual PO items as open.
 
 ## Notes
+
+- **2026-10-05, later the same day (engineering-manager, folding `docs/requirements/po-input-2026-10-05.md`).** The decision above is not rewritten; this note adds the PO's later inputs.
+  - **OQ-05:** the PO named the beta jurisdictions: **United States (US) and Australia (AU)**. The recommendation was one jurisdiction; the PO chose two. The "jurisdiction not yet named" part of the OQ-05 row is closed. Still open: the legal/privacy review before any real-user beta (NFR-070). It must cover both the US (including state privacy laws relevant to video and biometrics) and AU (Privacy Act 1988 / APPs). This also bounds the legal adequacy checks for OQ-06 and OQ-07 (ADR 0006).
+  - **OQ-01:** the PO will upload the rulebook PDFs later. Unchanged: presets stay `PROVISIONAL-UNVERIFIED` and rows stay `@needs-verification` (ADR 0009). The need-by stays Sprint 3 planning, 2026-11-16.
+  - **WebKit cookie fix (addendum to the PO input):** the PO directed https for the dev stack and ruled out an insecure-cookie flag. This is recorded in ADR 0029 (Accepted).

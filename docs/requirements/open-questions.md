@@ -1,6 +1,6 @@
 # Open Questions for the Human Product Owner
 
-- **Status:** Answered 2026-10-05. The human product owner replied "accept all recommendations"; every recommendation below is accepted and recorded in [ADR 0023](../decisions/0023-product-owner-decisions-2026-10-05.md). Residual items that need a PO input (rulebook files, jurisdiction, budget amount, recruitment, legal review) stay open in the "Still open" column. Answers are recorded as ADRs, either a new ADR or a dated note on the Proposed ADR named in the row [docs/decisions/README.md "Escalations"].
+- **Status:** Answered 2026-10-05. The human product owner replied "accept all recommendations"; every recommendation below is accepted and recorded in [ADR 0023](../decisions/0023-product-owner-decisions-2026-10-05.md). The PO's later input of the same day ([`po-input-2026-10-05.md`](po-input-2026-10-05.md): US and AU jurisdictions; rulebook later) is folded in. Residual items that need a PO input (rulebook files, budget amount, recruitment, legal review) stay open in the "Still open" column. Answers are recorded as ADRs, either a new ADR or a dated note on the Proposed ADR named in the row [docs/decisions/README.md "Escalations"].
 - **Date:** 2026-10-03
 - **Author:** business-analyst, consolidating the open-question lists of all four brainstorms (PROD §13, ENG §10, DES §12, QD §11) and the spec's §9. Duplicates are merged.
 - **How to answer:** reply with the OQ number and "accept the recommendation" or your alternative. Questions marked **Blocking** stop the named work until answered.
@@ -13,7 +13,7 @@
 | OQ-02 | Approve the R1/R2 MVP slicing | Sprint planning | Accept ADR 0002 | Accepted; ADRs 0002, 0007 Accepted | — |
 | OQ-03 | Which federations' rules? | Rules presets | USAP only for v1 | Accepted | — |
 | OQ-04 | Rally scoring in R1? | FR-043 | No, R2 after verification | Accepted | Rule verification via OQ-01 |
-| OQ-05 | Age, minors, jurisdictions, legal review | Real-user beta | 18+, no minors, one jurisdiction, legal pass first | Accepted | **Jurisdiction to be named** (PO); **legal review before any real-user beta** (PO, security) |
+| OQ-05 | Age, minors, jurisdictions, legal review | Real-user beta | 18+, no minors, one jurisdiction, legal pass first | Accepted; jurisdictions named 2026-10-05: **US and AU** (PO chose two; ADR 0023 note) | **Legal review before any real-user beta, covering US (incl. state video/biometric privacy laws) and AU (Privacy Act 1988 / APPs)** (PO, security) |
 | OQ-06 | Third-party footage in gold sets; training consent | Gold sets, FR-009, FR-150 | Opt-in consent; legal pass first | Accepted | Legal pass (with OQ-05) |
 | OQ-07 | Retention and deletion windows | FR-006/008/024, NFR-066 | Accept ADR 0006 | Accepted; ADR 0006 Accepted (interim) | Legal adequacy (OQ-05 review) |
 | OQ-08 | Weakness unit: rallies lost per game | FR-120 | Accept ADR 0003 | Accepted; ADR 0003 Accepted | Coach verifies the rule after OQ-01 |
@@ -57,7 +57,7 @@
 ### OQ-03 Which rulebook editions must v1 support?
 - **Why:** Pickleball Canada and the GPF publish their own 2026 documents [DOM/DOMAIN-04, DOM/DOMAIN-05, unverified].
 - **Recommendation:** USAP only for v1. Other federations become extra `RulesConfig` presets later, with no engine change.
-- **Answer (2026-10-05, human product owner):** recommendation accepted (ADR 0023). Still open: nothing.
+- **Answer (2026-10-05, human product owner):** recommendation accepted (ADR 0023). The PO will upload the PDFs later ([`po-input-2026-10-05.md`](po-input-2026-10-05.md)). Still open: **rulebook PDFs to be supplied** (PO), need-by Sprint 3 planning, 2026-11-16. Until then presets stay `PROVISIONAL-UNVERIFIED` and rows stay `@needs-verification` (ADR 0009).
 - **Raised by:** PROD Q3, QD Q2.
 
 ### OQ-04 Should rally scoring be in R1?
@@ -73,7 +73,7 @@
   - The capture guide asks users not to upload matches with minors.
   - The beta runs in a single jurisdiction that you choose.
   - No real-user beta happens until a verified privacy/legal review is recorded as an ADR (NFR-070).
-- **Answer (2026-10-05, human product owner):** recommendation accepted (ADR 0023). Still open: **Jurisdiction to be named** (PO); **legal review before any real-user beta** (PO, security).
+- **Answer (2026-10-05, human product owner):** recommendation accepted (ADR 0023). Later the same day the PO named the beta jurisdictions: **United States and Australia** ([`po-input-2026-10-05.md`](po-input-2026-10-05.md); ADR 0023 note). The recommendation was one jurisdiction; the PO chose two. Still open: **legal review before any real-user beta** (PO, security). It must cover the US (including state privacy laws relevant to video and biometrics) and AU (Privacy Act 1988 / APPs).
 - **Raised by:** PROD Q4, ENG Q4/Q8.
 
 ### OQ-06 Third-party footage in gold sets, and training use of user video
