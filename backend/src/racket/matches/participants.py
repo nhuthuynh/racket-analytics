@@ -170,7 +170,7 @@ class MatchSetup:
         match_format: str | None = None
         if raw_format is None:
             problems.append(FieldError("format", "format_required"))
-        elif raw_format in SLOTS:
+        elif isinstance(raw_format, str) and raw_format in SLOTS:  # never hash JSON (IT-02-10)
             match_format = raw_format
         else:
             problems.append(FieldError("format", "format_invalid"))

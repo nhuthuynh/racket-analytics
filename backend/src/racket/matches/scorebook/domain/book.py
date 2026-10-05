@@ -198,7 +198,7 @@ class Scorebook:
         rallies are re-scored by the projection in the same step (FR-053, C-01)."""
         if expected_version != self.version:
             raise StaleMatch("version changed")
-        if field not in CORRECTABLE:
+        if not isinstance(field, str) or field not in CORRECTABLE:
             raise ValidationFailed(
                 "field cannot be corrected", [FieldError("field", "field_invalid")]
             )
@@ -297,7 +297,7 @@ class Scorebook:
         or moved to the next game. Audited as a ``resolution``; undo reverses it."""
         if expected_version != self.version:
             raise StaleMatch("version changed")
-        if decision not in DECISIONS:
+        if not isinstance(decision, str) or decision not in DECISIONS:
             raise ValidationFailed("unknown decision", [FieldError("decision", "decision_invalid")])
         rally = self._rally(rally_id)
         marked = {row["rally_id"] for row in play(self).rows if row["marker"] is not None}

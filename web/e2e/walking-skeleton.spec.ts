@@ -30,30 +30,21 @@ test.describe('@M0 @story-ST-010 walking skeleton', () => {
     // unfinished upload counts toward the per-owner quota (T-UV-7), so a player shared across
     // runs reaches 429 on a reused stack after a few interrupted runs.
     await page.goto('/matches');
-    // Hold the first chunk until the uploading state has been checked (C-04, QA-R3-E2E-01):
-    // a fixed delay made this a race on a fast stack (the upload could finish inside it).
-    // The held PATCH is continued afterwards, so the upload completes normally.
-    let releasePatch!: () => void;
-    const released = new Promise<void>((resolve) => (releasePatch = resolve));
-    let patchHeld!: () => void;
-    const firstPatch = new Promise<void>((resolve) => (patchHeld = resolve));
-    let held = false;
+    // Slow the first chunk so the uploading state is observable on a fast local stack.
+    let slowed = false;
     await page.route('**/uploads/**', async (route) => {
-      if (route.request().method() === 'PATCH' && !held) {
-        held = true;
-        patchHeld();
-        await released;
+      if (route.request().method() === 'PATCH' && !slowed) {
+        slowed = true;
+        await new Promise((r) => setTimeout(r, 1_500));
       }
       await route.fallback();
     });
     await createMatch(page); // ST-016: setup with the clip, then "Create match and upload"
-    await firstPatch;
 
     const progress = page.getByRole('progressbar', { name: /upload/i });
     await expect(progress).toBeVisible();
     await expect(page.getByText(/\d{1,3}% · [\d.]+ [KMG]?B of [\d.]+ [KMG]B/)).toBeVisible(); // % and MB
     await expectNoBlockingA11yViolations(page, testInfo, 'uploading');
-    releasePatch();
 
     await expect(page.getByText('Video received')).toBeVisible({
       timeout: 120_000,

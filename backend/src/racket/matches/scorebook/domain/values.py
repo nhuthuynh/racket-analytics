@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, TypeGuard
 
 from racket.platform.errors import FieldError, ValidationFailed
 from racket.sports.pickleball.rules import FaultKind, RallyOutcome, Side
@@ -71,6 +71,15 @@ class RallyTimes:
             raise InvalidRally("overlaps a rally", [FieldError("start_ms", "overlaps_rally")])
 
 
+def _one_of(value: object, allowed: frozenset[str]) -> TypeGuard[str]:
+    """Membership for untrusted JSON: a list or object is never hashed (IT-02-10)."""
+    return isinstance(value, str) and value in allowed
+
+
+ENDINGS = frozenset(e.value for e in Ending)
+FAULT_KINDS = frozenset(k.value for k in FaultKind)
+
+
 def _side(value: object) -> Side | None:
     return Side(value) if value in ("A", "B") else None
 
@@ -92,7 +101,7 @@ class OutcomeInput:
         if any(key not in OUTCOME_KEYS for key in body):
             problems.append(FieldError(None, "unknown_field"))
         raw_ending = body.get("ending")
-        ending = Ending(raw_ending) if raw_ending in {e.value for e in Ending} else None
+        ending = Ending(raw_ending) if _one_of(raw_ending, ENDINGS) else None
         if ending is None:
             problems.append(FieldError("ending", "ending_invalid"))
         raw_side = body.get("winning_side")
@@ -116,7 +125,7 @@ class OutcomeInput:
                 elif ending is not Ending.WINNER and on_winning:
                     problems.append(FieldError("responsible_player", "must_be_on_losing_side"))
         raw_kind = body.get("fault_kind")
-        kind = FaultKind(raw_kind) if raw_kind in {k.value for k in FaultKind} else None
+        kind = FaultKind(raw_kind) if _one_of(raw_kind, FAULT_KINDS) else None
         if raw_kind is not None:
             if kind is None:
                 problems.append(FieldError("fault_kind", "fault_kind_invalid"))

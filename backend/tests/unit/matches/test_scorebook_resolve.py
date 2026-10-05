@@ -59,7 +59,11 @@ def test_withdraw_keeps_the_rally_stored_audited_and_undoable() -> None:
     assert len(b.b.rallies) == 14
     change = b.b.changes[-1]
     assert (change.kind, change.field, change.old_value, change.new_value) == (
-        "resolution", "withdrawn", False, True)
+        "resolution",
+        "withdrawn",
+        False,
+        True,
+    )
     b.undo()
     assert b.bytes() == before
 
