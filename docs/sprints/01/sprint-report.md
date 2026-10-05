@@ -50,6 +50,8 @@ Units come from ADR 0010. **Implemented** means: committed, reviewed (3 rounds),
 
 **Ratio:** 25 / 32 = 0.78 implemented; 0.00 DoD-done. Sprint 0 was 19 / 28 = 0.68 and 0.00.
 
+> **Dated note, 2026-10-05 (engineering-manager, sprint-close review round 2: PE-R2-S1-03, QA-R2V-09).** Recount after the round-1 fixes, from an isolated run at `351488e` (`status.json` `counting_rule`): **29 / 32 implemented** (ST-017 BE counted: TCR 32 decided, 157/157 upload tests green; ST-022 counted: mutation baseline 0.8654, 28/28 property and oracle tests green). **DoD-done stays 0 / 32: no story is Done.** Every story's DoD needs a green `ci-gate` run whose head includes its commits, and none exists (PE-R3-05 family, QA-R2V-01). ST-025 stays blocked and SPIKE-06 partial. The table above is the sprint-close snapshot; `status.json` is current.
+
 ## 3. Quality gates (sprint-00 §8 per-PR gates plus sprint-01 §8)
 
 "Local" means this sandbox on real services. "CI" means GitHub Actions; no CI run includes the Sprint 1 fixes.
