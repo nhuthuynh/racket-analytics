@@ -3,6 +3,7 @@
 Published Language (context map R5). Pure stdlib: no I/O, clock or randomness (QD-TR-01).
 """
 
+from racket.sports.pickleball.rules.call import score_call
 from racket.sports.pickleball.rules.config import (
     FaultKind,
     InvalidRulesConfig,
@@ -41,4 +42,5 @@ __all__ = [
     "declare_state",
     "fold",
     "new_game",
+    "score_call",
 ]
