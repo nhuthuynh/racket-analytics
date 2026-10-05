@@ -11,15 +11,27 @@ from racket.sports.pickleball.rules.config import (
     ScoringSystem,
     Side,
 )
+from racket.sports.pickleball.rules.errors import (
+    DomainError,
+    GameOver,
+    IllegalState,
+    UnknownOutcome,
+)
+from racket.sports.pickleball.rules.outcome import RallyOutcome
 from racket.sports.pickleball.rules.presets import PRESETS, PROVISIONAL_UNVERIFIED
 
 __all__ = [
     "PRESETS",
     "PROVISIONAL_UNVERIFIED",
+    "DomainError",
     "FaultKind",
+    "GameOver",
+    "IllegalState",
     "InvalidRulesConfig",
     "MatchFormat",
+    "RallyOutcome",
     "RulesConfig",
     "ScoringSystem",
     "Side",
+    "UnknownOutcome",
 ]
