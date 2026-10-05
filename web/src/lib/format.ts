@@ -48,6 +48,15 @@ export function formatProgressBytes(sent: number, total: number): string {
   return `${scaledIn(shown, index)} of ${scaledIn(total, index)} ${UNITS[index]}`;
 }
 
+/** `(1900000000, 3000000000)` → `"1.9 GB of 3.0 GB"` (flows U-01 progress text). */
+export function formatProgressAmount(sent: number, total: number): string {
+  requireNonNegative(sent, 'sent');
+  requireNonNegative(total, 'total');
+  const index = unitIndexFor(total);
+  const shown = Math.min(sent, total);
+  return `${scaledIn(shown, index)} ${UNITS[index]} of ${scaledIn(total, index)} ${UNITS[index]}`;
+}
+
 /** `60000` → `"1:00"`; `3725000` → `"1:02:05"`. Rounds to the nearest second. */
 export function formatDuration(ms: number): string {
   requireNonNegative(ms, 'duration');

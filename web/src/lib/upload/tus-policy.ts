@@ -1,10 +1,44 @@
 // tus 1.0.0 client policy (api-sprint-00 §6, §8; AQS/STACK-06). Pure: no tus-js-client import,
 // so the rules are unit-testable without a network.
 import { isPublicId } from '@/lib/api/types';
-import type { UploadFailure } from './progress';
 
-/** api-sprint-00 §6: `chunkSize: 8 * 1024 * 1024`. */
+/** api-sprint-00 §6: `chunkSize: 8 * 1024 * 1024`. Since Sprint 1 only the fallback when
+ * GET /upload-policy cannot be read; the bounds come from the policy (api-sprint-01 §6.1). */
 export const CHUNK_SIZE = 8 * 1024 * 1024;
+
+/** Each chunk should take about this long at the measured rate (NFR-016, judgment). */
+export const TARGET_CHUNK_MS = 10_000;
+
+/**
+ * The next chunk size from the last chunk's measured rate, within the policy bounds
+ * (NFR-016: 5-50 MB). `ms` 0 means nothing was measured: keep the size.
+ */
+export function nextChunkSize(lastBytes: number, ms: number, bounds: { min: number; max: number }): number {
+  const target = ms > 0 ? Math.round((lastBytes / ms) * TARGET_CHUNK_MS) : lastBytes;
+  return Math.min(bounds.max, Math.max(bounds.min, target));
+}
+
+/** Why an upload stopped, in the terms the panel explains (flows U-01, U-03, U-04). */
+export type UploadProblem =
+  | 'network'
+  | 'not_a_video'
+  | 'too_large'
+  | 'expired'
+  | 'conflict'
+  | 'quota'
+  | 'not_found'
+  | 'server';
+
+export function uploadProblemFor(status: number): UploadProblem {
+  if (status === 0) return 'network';
+  if (status === 415) return 'not_a_video';
+  if (status === 413) return 'too_large';
+  if (status === 410) return 'expired';
+  if (status === 409) return 'conflict';
+  if (status === 429) return 'quota';
+  if (status === 404 || status === 401) return 'not_found';
+  return 'server';
+}
 
 /** Back-off between retries in ms (FE choice, api-sprint-00 §6). */
 export const RETRY_DELAYS = [0, 1_000, 3_000, 5_000, 10_000, 20_000];
@@ -27,33 +61,14 @@ export interface RetryInput {
 export function shouldRetryUpload({ method, status, online }: RetryInput): boolean {
   if (!online) return false;
   if (status === 0 || status >= 500 || status === 423) return true;
+  // 460 checksum_mismatch: the chunk was damaged on the way and nothing was stored; tus-js-client
+  // asks HEAD for the offset and sends it again (api-sprint-01 §6.5, IT-01-06).
+  if (status === 460) return method.toUpperCase() === 'PATCH';
   // 409 on PATCH is an offset mismatch: retrying makes tus-js-client HEAD for the offset and
   // continue from there. 409 on creation means the match already has an upload (Sprint 0
   // allows one), so retrying cannot help.
   if (status === 409) return method.toUpperCase() !== 'POST';
   return false;
-}
-
-export function failureFor(status: number): UploadFailure {
-  if (status === 0) return 'network';
-  if (status === 409) return 'conflict';
-  if (status >= 400 && status < 500) return 'rejected';
-  return 'unknown';
-}
-
-export interface FileIdentity {
-  name: string;
-  size: number;
-  lastModified: number;
-  type: string;
-}
-
-/**
- * Identifies "this file for this match" for resuming. Deliberately excludes the file name,
- * which may contain personal data, so browser storage holds none (api-sprint-00 §8).
- */
-export function uploadFingerprint(file: FileIdentity, matchId: string): string {
-  return ['ra1', matchId, file.size, file.lastModified, file.type || 'unknown'].join('-');
 }
 
 export interface MinimalStorage {

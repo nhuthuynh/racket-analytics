@@ -13,3 +13,8 @@ export function takeHandOff(matchId: string): File | null {
   pending.delete(matchId);
   return file;
 }
+
+/** Read without taking: React may run state initialisers twice in development. */
+export function peekHandOff(matchId: string): File | null {
+  return pending.get(matchId) ?? null;
+}

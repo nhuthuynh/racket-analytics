@@ -717,3 +717,22 @@ main:focus-visible,
 .block {
   display: block;
 }
+
+/* Upload panel (ST-017, U-01..U-04) */
+.upload-progress__text {
+  font-weight: var(--font-weight-bold);
+}
+
+.upload-progress__state {
+  font-weight: var(--font-weight-bold);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.banner > * + * {
+  margin-block-start: var(--space-3);
+}

@@ -40,7 +40,7 @@ describe('MatchDetail', () => {
     render(<MatchDetail initialMatch={{ ...base, status: 'awaiting_upload' }} api={api} />);
     await tick(10_000);
     expect(api.getMatch).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/match video/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Choose video')).toBeInTheDocument();
   });
 
   it('keeps showing the last known state when a refresh fails', async () => {
@@ -76,6 +76,40 @@ describe('MatchDetail', () => {
     expect(screen.getByText('We could not read this video')).toBeVisible();
     await tick(10_000);
     expect(api.getMatch).toHaveBeenCalledTimes(1);
+  });
+
+  // Sprint 1 (ST-017, ST-018): after the last byte the page checks the video until the probe
+  // decides, and a refusal comes back as U-03 with "Error: " in the title.
+  it('checks the video after the upload and shows a probe refusal (too long)', async () => {
+    let finish: (() => void) | null = null;
+    const startTransfer = vi.fn((o: { callbacks: { onSuccess(): void } }) => {
+      finish = () => o.callbacks.onSuccess();
+      return { pause: vi.fn(), resume: vi.fn(), abort: vi.fn() };
+    });
+    const api = {
+      getMatch: vi
+        .fn()
+        .mockResolvedValueOnce({ ...base, status: 'uploading' })
+        .mockResolvedValue({ ...base, status: 'awaiting_upload', rejection: { code: 'too_long', at: 'x' } }),
+    };
+    render(
+      <MatchDetail
+        initialMatch={{ ...base, status: 'awaiting_upload' }}
+        api={api}
+        pollMs={1_000}
+        initialFile={new File(['x'], 'long.mp4', { type: 'video/mp4' })}
+        startTransfer={startTransfer}
+      />,
+    );
+    act(() => finish!());
+    expect(screen.getByText('Checking video…')).toBeVisible();
+    await tick(1_000);
+    await tick(1_000);
+    expect(screen.getByRole('link', { name: 'Videos must be 2 hours 30 minutes or shorter' })).toBeVisible();
+    expect(document.title).toMatch(/^Error: /);
+    const calls = api.getMatch.mock.calls.length;
+    await tick(10_000);
+    expect(api.getMatch.mock.calls.length).toBe(calls);
   });
 
   it('shows the title as a heading, as text only', () => {

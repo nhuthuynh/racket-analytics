@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PageTitle } from '@/components/PageTitle';
+import { ResumeBanner } from '@/components/ResumeBanner';
 import { ApiError } from '@/lib/api/client';
 import { serverApi } from '@/lib/api/server';
 import { FORMAT_LABELS, STATUS_LABELS, type Match } from '@/lib/api/types';
@@ -29,6 +30,7 @@ export default async function MatchesPage() {
     <div className="stack">
       <PageTitle>Your matches</PageTitle>
       <h1>Your matches</h1>
+      <ResumeBanner matches={matches} />
       {matches.length === 0 ? (
         <div className="empty-state">
           {/* Not a heading: the page has one h1 and the empty state is a message (flows M-01). */}
@@ -59,7 +61,11 @@ export default async function MatchesPage() {
                 {m.title}
               </Link>
               <p className="match-list__meta">
-                {FORMAT_LABELS[m.format]} · {STATUS_LABELS[m.status]} · Created{' '}
+                {FORMAT_LABELS[m.format]} ·{' '}
+                {m.upload?.state === 'receiving'
+                  ? `Upload ${Math.floor((m.upload.offset / Math.max(1, m.upload.length)) * 100)}% done`
+                  : STATUS_LABELS[m.status]}{' '}
+                · Created{' '}
                 {dateFormat.format(new Date(m.created_at))}
               </p>
             </li>
