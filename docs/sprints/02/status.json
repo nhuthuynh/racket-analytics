@@ -1,0 +1,615 @@
+{
+  "sprint": "02",
+  "goal": "Quick Tag to an unofficial score sheet, with undo, corrections that keep conflicting rallies, and the rally video; the Sprint 1 blockers and majors fixed first (docs/sprints/sprint-02.md \u00a71)",
+  "goal_scorecard": "docs/sprints/02/goal-scorecard.md",
+  "dates": {
+    "planned_start": "2026-11-02",
+    "planned_review": "2026-11-13",
+    "work_started": "2026-10-05",
+    "status_written": "2026-10-05 (planning, engineering-manager)"
+  },
+  "owner": "engineering-manager",
+  "branch": "sprint-02",
+  "based_on": "sprint-01@2b97fa0",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. implemented_units and dod_done_units tracked separately (retro 0). Status: not_started | in_progress | implemented | done | partial | blocked. Lanes update their stories; the EM keeps totals consistent.",
+  "capacity": {
+    "load_factor": 0.8,
+    "capacity_units_per_lane": 12.8,
+    "committed_units_per_lane": {
+      "BE": 12.5,
+      "FE": 12,
+      "QA": 11.5,
+      "SRE": 8.0,
+      "ML": 2
+    },
+    "committed_units": 46.0,
+    "stretch_units": 8.0
+  },
+  "goal_metrics": {
+    "G02-01": {
+      "met": null
+    },
+    "G02-02": {
+      "met": null
+    },
+    "G02-03": {
+      "met": null
+    },
+    "G02-04": {
+      "met": null
+    },
+    "G02-05": {
+      "met": null
+    },
+    "G02-06": {
+      "met": null
+    },
+    "G02-07": {
+      "met": null
+    },
+    "G02-08": {
+      "met": null
+    },
+    "G02-09": {
+      "met": null
+    },
+    "G02-10": {
+      "met": null
+    },
+    "G02-11": {
+      "met": null
+    },
+    "G02-12": {
+      "met": null
+    }
+  },
+  "open_defects": {
+    "count": 17,
+    "command": "python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md",
+    "measured": "2026-10-05 planning"
+  },
+  "preconditions": {
+    "adr_0009_ratified": "met (ADR 0023)",
+    "match_aggregate_design_approved": "not met (Proposed; review D1)",
+    "api_sprint_02_contract": "not met (D2)",
+    "flows_sprint_02": "not met (D2)",
+    "dr_01_sprint_1_p7_review": "not met (D1, hard date 2026-11-02)"
+  },
+  "po_items_open": [
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6",
+    "P7",
+    "P8",
+    "P9"
+  ],
+  "stories": [
+    {
+      "id": "C-01",
+      "kind": "story",
+      "title": "Control characters refused at the API boundary (SEC-R6-S1-01)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "red first: unit + IT-02-10"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "C-02",
+      "kind": "story",
+      "title": "Upload quota holds under parallel creations (PE-R3R-01)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "red first: IT-02-11"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "C-03",
+      "kind": "story",
+      "title": "Upload server error offers recovery (PD-R3V-01, with C-35)",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C-04",
+      "kind": "story",
+      "title": "walking-skeleton.spec.ts flake; repeat root specs (QA-R3-E2E-01)",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "TCR row first"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "C-05",
+      "kind": "story",
+      "title": "Evidence E2E runs: --output and lock (QA-R3-E2E-02)",
+      "units": {
+        "SRE": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C-06",
+      "kind": "story",
+      "title": "Manual screen-reader pass NFR-027b (QA-R3-GATE-01)",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "PO item P6: human tester with devices; due 2026-11-13"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "ST-013b",
+      "kind": "story",
+      "title": "Account identity is the stored address (ADR 0032)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "ADR 0032 red tests 1-5 first"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "ST-026",
+      "kind": "story",
+      "title": "Match aggregate persistence; score as a projection",
+      "units": {
+        "BE": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "R3 design review D1"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-027",
+      "kind": "story",
+      "title": "Quick Tag a rally",
+      "units": {
+        "BE": 2,
+        "FE": 4
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-026",
+        "R4 api-sprint-02 D2",
+        "R6 flows-sprint-02 D2",
+        "R7 DR-01"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-028a",
+      "kind": "story",
+      "title": "Keyboard tagging, key map, shortcuts can be turned off",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-027"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-029",
+      "kind": "story",
+      "title": "Score call and polite announcement (call format @needs-verification)",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-027"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-030",
+      "kind": "story",
+      "title": "Score sheet with the unofficial label",
+      "units": {
+        "BE": 0.5,
+        "FE": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-026"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-031",
+      "kind": "story",
+      "title": "Undo and correction audit",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-026"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-032",
+      "kind": "story",
+      "title": "Corrections replay; conflicting rallies kept (a)",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-031",
+        "ST-041",
+        "R5 coach Q1"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-037",
+      "kind": "story",
+      "title": "Jump to the video moment; short-lived media URLs",
+      "units": {
+        "BE": 1,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-027",
+        "SRE-MEDIA"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-039",
+      "kind": "story",
+      "title": "E2E journey v1, timing spec and performance baseline",
+      "units": {
+        "QA": 2,
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-030"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-040",
+      "kind": "story",
+      "title": "Gold-set label schema, manifest v1, capture protocol",
+      "units": {
+        "ML": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-041",
+      "kind": "story",
+      "title": "Golden tables written first",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-ACC",
+      "kind": "task",
+      "title": "Acceptance steps and Playwright specs written red first",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "R4",
+        "R6"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-FUZZ",
+      "kind": "task",
+      "title": "Testing-strategy rule L11; IT-02-10 and IT-02-11",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-MINORS",
+      "kind": "carry-over",
+      "title": "C-22, C-31, C-32, C-34",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-DRYRUN",
+      "kind": "task",
+      "title": "Goal-scorecard method dry-runs (ADR 0033 rule 2)",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "W-01",
+      "kind": "task",
+      "title": "CI triage, WebKit first; nightly once on main",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "PO item P1"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "SRE-MEDIA",
+      "kind": "task",
+      "title": "Media serving: presigned GET, range, TTL, CORS",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "SRE-SMOKE",
+      "kind": "task",
+      "title": "Integration smoke before review round 1",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "SRE-CARRY",
+      "kind": "carry-over",
+      "title": "C-11, C-12, C-13, C-15, C-18, C-23, C-29",
+      "units": {
+        "SRE": 3.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "C-15 needs PO item P5 for other rounds' images"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "DR-01",
+      "kind": "design",
+      "title": "Finish the Sprint 1 DoR P7 flows design review",
+      "units": {},
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "hard date 2026-11-02"
+      ],
+      "evidence": []
+    }
+  ],
+  "stretch": [
+    {
+      "id": "ST-035",
+      "title": "Side-out singles (a)",
+      "units": {
+        "BE": 1
+      },
+      "order": 1
+    },
+    {
+      "id": "ST-034",
+      "title": "Start the score sheet mid-game (a)",
+      "units": {
+        "BE": 1,
+        "FE": 0.5
+      },
+      "order": 2
+    },
+    {
+      "id": "ST-038",
+      "title": "Abandoned uploads expire",
+      "units": {
+        "BE": 1
+      },
+      "order": 3
+    },
+    {
+      "id": "ST-028b",
+      "title": "Remap tagging keys",
+      "units": {
+        "FE": 1
+      },
+      "order": 4
+    },
+    {
+      "id": "ST-025",
+      "title": "Phone-file fixture set (carried)",
+      "units": {
+        "ML": 1
+      },
+      "order": 5,
+      "open": [
+        "PO item P3"
+      ]
+    },
+    {
+      "id": "ST-033",
+      "title": "Correction consequences",
+      "units": {
+        "FE": 1,
+        "BE": 0.5
+      },
+      "order": 6
+    },
+    {
+      "id": "ST-036",
+      "title": "Gaps and resync",
+      "units": {
+        "BE": 0.5,
+        "FE": 0.5
+      },
+      "order": 7
+    }
+  ],
+  "moved_to_sprint_03": [
+    "ST-042"
+  ],
+  "totals": {
+    "planned_units": 46.0,
+    "implemented_units": 0,
+    "dod_done_units": 0
+  }
+}
