@@ -1,4 +1,4 @@
-# Sprint 1 §7.6 (ST-019, stretch). Owner: senior-qa-engineer. Binding: web/e2e (when pulled in).
+# Sprint 1 §7.6 (ST-019, stretch). Owner: senior-qa-engineer. Binding: web/e2e/sprint-01/footage-quality-report.spec.ts.
 @M0 @story-ST-019
 Feature: Footage quality report
   Rule: The report explains consequences and never blocks

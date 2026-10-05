@@ -2,7 +2,7 @@
 
 - **Owner:** senior-qa-engineer. **Date:** 2026-10-05 (Sprint 1 D1). **Branch:** `sprint-01`.
 - **Rule (unchanged from Sprint 0):** every test below was written **before** its code and fails on its own for the right reason. Red-first tests carry `red_until(story=…)`, which the Stop hook deselects (`scripts/test-unit.sh`) and CI runs. The implementing story turns them green **without editing them**; a needed change is a row in `test-change-requests.md` for QA. Seams (names the tests call) live in one QA-owned file, `backend/tests/support/contract.py` (ADR 0012); the engine seams match `docs/architecture/scoring-engine.md`, the HTTP seams `docs/architecture/api-sprint-01.md`.
-- **DoR item P2 (sprint-01 §14.5):** QA agrees that every criterion in §7 and §14.3 is testable; the level of each is named in §2 below. **Closed** for ST-013..ST-025 (ST-019 stretch: feature file only).
+- **DoR item P2 (sprint-01 §14.5):** QA agrees that every criterion in §7 and §14.3 is testable; the level of each is named in §2 below. **Closed** for ST-013..ST-025 (ST-019 stretch: bound in the browser since QA-R2-03).
 
 ## 1. How to run
 
@@ -36,7 +36,7 @@ Counts are test cases. "Green now" are regression guards or positive controls th
 | ST-023 | `side_out_doubles_provisional.feature` (§7.8), `faults_provisional.feature` (§7.9), M rows in `match_structure.feature` | Scenario: `test_side_out_doubles_provisional.py`, `test_faults_provisional.py` | 13 + 8 | — | `RED until ST-020: seam 'racket.sports.pickleball.rules:PRESETS'` |
 | ST-024 | `nightly_quality.feature` (§14.3.8) | Scenario: `test_nightly_quality.py` (SLI arithmetic + the `nightly` key of `status.json`) | 1 | 4 (SLI rows, green since `595e5a5`) | `status.json` has no `nightly` result until the first nightly run on GitHub (needs ST-020 for the oracle) |
 | ST-025 | `phone_fixtures.feature` (§14.3.9) | Scenario: `test_phone_fixtures.py` | 3 | — | `fixtures/clips/phones-v1/manifest.json` does not exist |
-| ST-019 (stretch) | `footage_quality_report.feature` (§7.6) | not bound until the story is pulled in | — | — | — |
+| ST-019 (stretch) | `footage_quality_report.feature` (§7.6) | Bound after ST-019 was pulled in (`6cc2259`; QA-R2-03). E2E '30 fps video': `web/e2e/sprint-01/footage-quality-report.spec.ts` (fixture `fixtures/clips/phone-profiles-v1/h264-mp4-1080p30.mp4`); wording: Vitest `web/tests/unit/quality-report.test.tsx` | — (written after the story landed; negative control: the same spec with the 1080p60 clip fails at `Recorded at 30 fps`) | 1 + 5 (Vitest) | — |
 
 Backend totals for the Sprint 1 red-first set: `env -u APP_ENV uv run pytest -q -m red_until tests` → `113 failed, 9 passed, 1 skipped, 8 errors` (the 8 errors are the P1-P8 property tests failing in their fixture before Hypothesis starts). Browser: `playwright test e2e/sprint-01` against the Sprint 0 web image → `37 failed, 6 skipped` (36 at the A-01 "Email address" field, 1 at its field count); Sprint 0 journeys on the same stack `7 passed`.
 
