@@ -18,7 +18,7 @@ from pytest_bdd import given, parsers, scenario, then, when
 from tests.support import contract, tus, tus_ext
 from tests.support.api import ApiDriver
 from tests.support.copy import ERROR_COPY, error_code
-from tests.support.flows import create_match, percent_of
+from tests.support.flows import create_match, percent_of, percent_up
 from tests.support.paths import SYNTHETIC_CLIP
 
 pytestmark = [pytest.mark.red_until(story="ST-017"), pytest.mark.slow]
@@ -62,7 +62,7 @@ def _upload_to(api: ApiDriver, ctx: dict[str, Any], pct: int) -> None:
     ivy = api.as_user("ivy")
     ctx["match_id"] = api.run(create_match(ivy, "Sat doubles"))
     ctx["upload"] = api.run(tus_ext.start(ivy, ctx["match_id"], DATA, with_head=False))
-    sent = len(DATA) * pct // 100
+    sent = percent_up(pct, len(DATA))  # lands on pct%, not 0.0001% below it (TCR row 32)
     assert api.run(tus_ext.patch(ivy, ctx["upload"], 0, DATA[:sent])).status_code == 204
     ctx["sent"] = sent
 

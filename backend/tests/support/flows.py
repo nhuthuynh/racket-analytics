@@ -29,8 +29,13 @@ def percent(n: int, of: int) -> int:
 
 
 def percent_of(n: int, of: int) -> int:
-    """What percent ``n`` is of ``of``, to the nearest whole percent (TCR row 15).
-
-    Nearest, not floor: a slice of ``percent(40, of)`` bytes is 39.99..% of ``of``.
+    """What whole percent ``n`` is of ``of``, rounded down as the UI shows it (U-04 banner,
+    ``Math.floor``). TCR row 15 as approved; row 32(a) (round to nearest) was rejected
+    because it hides 63% vs 64%. Fixtures send ``percent_up`` bytes so they land on the percent.
     """
-    return (n * 200 + of) // (2 * of)
+    return n * 100 // of
+
+
+def percent_up(n: int, of: int) -> int:
+    """The fewest bytes that are at least ``n`` percent of ``of`` (so ``percent_of`` gives n)."""
+    return -(-of * n // 100)
