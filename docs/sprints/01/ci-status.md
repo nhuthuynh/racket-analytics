@@ -51,3 +51,10 @@ Conclusion: **failure**. <https://github.com/nhuthuynh/racket-analytics/actions/
 Evidence for `a4dfd43`: `cd infra && uv run pytest -q tests/test_workflows_ci_run2.py` → red first per guard (`2 failed` for the warm-up guards, then `4 failed` for the ffprobe and Mailpit guards, each before its `ci.yml` change), `6 passed` after; `GITHUB_ACTIONS=true CI=true uv run pytest -q -m "unit or integration"` → `245 passed`; `actionlint .github/workflows/ci.yml` → clean.
 
 **Next run: not dispatched.** GitHub `sprint-01` is at `6ba9b28`, behind the local head; a dispatch would test stale code. Waiting for the EM push (blockers.md), then dispatch `ci.yml` and `nightly-quality.yml` and record both IDs here and in `status.json`.
+
+## PE-R2-02 check, 2026-10-05 (engineering-manager): no CI run covers the round-1 fixes yet
+
+- `mcp__github__actions_list list_workflow_runs` on branch `sprint-01` → `total_count=1`: run 37298471332, head `2390e9a`, conclusion failure. No run exists for any later commit, and no `nightly-quality.yml` run exists.
+- `mcp__github__list_branches` → GitHub `sprint-01` is now at `961648e75a0e` (the push asked for in blockers.md has happened). That head includes `71da707` (QA-R1-01/02/05 E2E fixes, including the WebKit damaged-chunk rewrite), `4f10ba2` and `a4dfd43`.
+- Consequence: the ADR 0029 WebKit cookie fix is verified only at `2390e9a`. No WebKit sign-in or E2E claim for code after `71da707` has evidence. S-09 (smoke.md) stays **Open**. ST-013, ST-014, ST-015 and ST-017 carry this in `status.json` `open` and are not DoD-done. `ci-gate` stays red.
+- **Next step (human product owner):** dispatch `ci.yml` and `nightly-quality.yml` (`workflow_dispatch`, ref `sprint-01`) at `961648e` or later. Agents have not dispatched them. The finding routes the dispatch to the human. The SRE then records both run IDs here and in `status.json` `ci_runs.runs`, and closes S-09 or reopens it with the WebKit job logs.

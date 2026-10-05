@@ -68,7 +68,7 @@ Result: `rc=0` in 1m42s. Healthy: postgres, objectstore, mailpit, tracing, api, 
 | S-06 | senior-qa-engineer | **New flake:** `sign-in.spec.ts:46` "Link requested for an unknown address" fails 1 in 3 over https. `page.goto('/')` is interrupted by the client redirect to `/welcome` | `Navigation to "https://localhost:3000/" is interrupted by another navigation to "https://localhost:3000/welcome"` | blockers.md row "E2E job still red…" (recorded as 1 in 3 there) |
 | S-07 | senior-ml-cv-engineer, human product owner | `test_phone_fixtures` (2 tests) stay red until real phone clips exist | `RED until ST-025: fixtures/clips/phones-v1/manifest.json does not exist` | blockers.md ST-025 row, Open |
 | S-08 | sre-devops-engineer, human product owner | `test_nightly_quality::test_nightly_run_completes` needs a nightly CI result | `no nightly result in docs/sprints/01/status.json` | retro 0 A1 (nightly streak) |
-| S-09 | senior-frontend-engineer, sre-devops-engineer | WebKit-only E2E failures (guide video text track, PATCH body never seen in `resumable-upload.spec.ts:43`, sign-out during upload) cannot be reproduced here | CI job 111725272519 | blockers.md row "E2E job still red…", Open |
+| S-09 | senior-frontend-engineer, sre-devops-engineer | WebKit-only E2E failures (guide video text track, PATCH body never seen in `resumable-upload.spec.ts:43`, sign-out during upload) cannot be reproduced here | CI job 111725272519 | blockers.md row "E2E job still red…", Open. 2026-10-05 (EM, PE-R2-02): no CI run exists after `2390e9a`, so the QA-R1-05 rewrite has never run on WebKit. Close only with a green WebKit E2E job at `961648e` or later, or reopen with its logs |
 
 No wiring defect was found in the SRE lane, so no infra change was made.
 

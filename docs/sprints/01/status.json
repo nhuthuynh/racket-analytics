@@ -111,12 +111,13 @@
       "evidence": [
         "BE deea4e3 (+93993af, 625cf0b): IT-01-01..03 green in the backend run",
         "FE e845c22: sign-in.spec.ts 3 passed, 2 failed (smoke.md S-02, S-06)",
-        "WebKit cookie issue fixed (ADR 0029; 93993af, 3fbfc32, 6358c6d, 2390e9a): CI run 37298471332 job 111725272519, no WebKit test fails at sign-in; smoke.md §1 Set-Cookie __Host-racket_session ... Secure over https",
+        "WebKit cookie issue fixed (ADR 0029; 93993af, 3fbfc32, 6358c6d, 2390e9a): CI run 37298471332 job 111725272519 (head 2390e9a, before the round-1 fixes), no WebKit test fails at sign-in; smoke.md §1 Set-Cookie __Host-racket_session ... Secure over https",
         "Review round 1 held 2026-10-05 (review-rounds.md)"
       ],
       "open": [
         "FE lane not counted: sign-in.spec.ts:17 (axe context, TCR row 20 Pending) and :46 (flake 1 in 3, S-06) red locally",
-        "Design review P7 not yet held (PD-R1-06; scheduled 2026-10-06)"
+        "Design review P7 not yet held (PD-R1-06; scheduled 2026-10-06)",
+        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs"
       ]
     },
     {
@@ -163,7 +164,8 @@
         "Review round 1 held 2026-10-05 (review-rounds.md)"
       ],
       "open": [
-        "WebKit-only CI failure sign-out.spec.ts:46 'Your upload will stop' (blockers.md, senior-frontend-engineer)"
+        "WebKit-only CI failure sign-out.spec.ts:46 'Your upload will stop' (blockers.md, senior-frontend-engineer)",
+        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs"
       ]
     },
     {
@@ -219,7 +221,9 @@
       ],
       "open": [
         "WebKit-only CI failures first-run-and-guide.spec.ts:42, :63 (blockers.md, senior-frontend-engineer)",
-        "Design review P7 not yet held (PD-R1-06)"
+        "Design review P7 not yet held (PD-R1-06)",
+        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs",
+        "Coach wording sign-off (D3) outstanding (PD-R2-04): docs/domain/capture-guide-wording.md status is still `draft`; routed to pickleball-domain-coach at the 2026-10-06 design review. Stays open until the wording doc's sign-off row says `signed-off`"
       ]
     },
     {
@@ -349,7 +353,8 @@
       "open": [
         "BE lane not counted: its own scenarios test_resumable_upload 'a damaged chunk is not kept' and 'return after closing the tab' are red (TCR, smoke S-05, Pending QA decision)",
         "WebKit-only CI failure resumable-upload.spec.ts:43 (blockers.md)",
-        "U-04 copy deviations await the design review (PD-R1-06)"
+        "U-04 copy deviations await the design review (PD-R1-06)",
+        "WebKit unverified after 71da707 (PE-R2-02): the only CI run on sprint-01 is 37298471332 at head 2390e9a, which predates every round-1 fix; GitHub sprint-01 is at 961648e (list_branches, 2026-10-05) but no CI or nightly run exists for it yet. Not done until a WebKit E2E job on 961648e or later is green or S-09 is reopened with its logs"
       ]
     },
     {
@@ -870,5 +875,38 @@
       "need_by": "2026-10-14"
     }
   ],
-  "counting_rule": "2026-10-05 (EM, QA-R1-03): a lane's units count as implemented when its code is committed, review round 1 has been held, and that story's own tests for the lane are green in the latest local run (backend: 2026-10-05 EM re-run at 094a344: cd backend && env -u APP_ENV uv run pytest -q (dev Postgres + object store) -> 18 failed, 1020 passed, 16 skipped, 9 errors; every red test is a Pending test-change row or an open blocker (smoke.md S-04, S-05, S-07, S-08); web: 2026-10-05 EM re-run at 094a344: cd web && pnpm exec vitest run -> 30 files, 244 passed; browser: smoke.md §3 (tree 6ba9b28): Playwright chromium over https -> 38 passed, 6 failed, 6 skipped). A lane with any of its own tests red locally counts 0 until the fix or the test-change decision lands. WebKit-only CI failures stay in 'open' and block DoD, not 'implemented'. dod_done_units stay 0: ci-gate is red (blockers.md) and external evidence is open."
+  "counting_rule": "2026-10-05 (EM, QA-R1-03): a lane's units count as implemented when its code is committed, review round 1 has been held, and that story's own tests for the lane are green in the latest local run (backend: 2026-10-05 EM re-run at 094a344: cd backend && env -u APP_ENV uv run pytest -q (dev Postgres + object store) -> 18 failed, 1020 passed, 16 skipped, 9 errors; every red test is a Pending test-change row or an open blocker (smoke.md S-04, S-05, S-07, S-08); web: 2026-10-05 EM re-run at 094a344: cd web && pnpm exec vitest run -> 30 files, 244 passed; browser: smoke.md §3 (tree 6ba9b28): Playwright chromium over https -> 38 passed, 6 failed, 6 skipped). A lane with any of its own tests red locally counts 0 until the fix or the test-change decision lands. WebKit-only CI failures stay in 'open' and block DoD, not 'implemented'. dod_done_units stay 0: ci-gate is red (blockers.md) and external evidence is open.",
+  "ci_runs": {
+    "note": "CI and nightly runs on GitHub for sprint-01 (PE-R2-02). Recorded by the EM/SRE from mcp__github__actions_list list_workflow_runs; a story is DoD-done only against a green run whose head includes its commits.",
+    "runs": [
+      {
+        "workflow": "ci.yml",
+        "run_id": 37298471332,
+        "event": "workflow_dispatch",
+        "head_sha": "2390e9a",
+        "conclusion": "failure",
+        "url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/37298471332",
+        "includes_round_1_fixes": false
+      }
+    ],
+    "pending": [
+      {
+        "workflow": "ci.yml",
+        "head_required": "961648e or later",
+        "status": "not dispatched",
+        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)"
+      },
+      {
+        "workflow": "nightly-quality.yml",
+        "head_required": "961648e or later",
+        "status": "not dispatched",
+        "owner": "human product owner (dispatch), sre-devops-engineer (record and triage)"
+      }
+    ],
+    "github_branch_head": {
+      "sha": "961648e",
+      "checked": "2026-10-05",
+      "evidence": "mcp__github__list_branches: sprint-01 sha 961648e75a0e00f2050e261d38cf965d4c745f14"
+    }
+  }
 }
