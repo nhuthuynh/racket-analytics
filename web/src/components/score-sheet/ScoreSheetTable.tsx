@@ -64,7 +64,7 @@ export function ScoreSheetTable({
           const winner = sheet.games?.find((g) => g.number === game)?.winner ?? null;
           return (
             <table key={game} role="table" className="score-sheet">
-              <caption role="caption" className="score-sheet__caption">
+              <caption className="score-sheet__caption">
                 {winner ? `Game ${game}, won by ${sideWord(winner, names).toLowerCase()}` : `Game ${game}`}
               </caption>
               <thead role="rowgroup">
