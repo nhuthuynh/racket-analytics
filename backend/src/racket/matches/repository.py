@@ -32,6 +32,9 @@ matches = sa.Table(
     sa.Column("played_on", sa.Date(), nullable=True),
     sa.Column("rejection_code", sa.String(32), nullable=True),
     sa.Column("rejected_at", sa.DateTime(timezone=True), nullable=True),
+    # The scorebook's optimistic lock and match length (ST-026; read by its repository only).
+    sa.Column("best_of", sa.SmallInteger(), nullable=False, server_default="3"),
+    sa.Column("version", sa.Integer(), nullable=False, server_default="0"),
 )
 
 match_participants = sa.Table(
@@ -45,7 +48,9 @@ match_participants = sa.Table(
 )  # fmt: skip
 
 # ``participants`` is a value of the aggregate, not a column: the repository saves and loads it.
-mapper_registry.map_imperatively(Match, matches, exclude_properties=["participants"])
+mapper_registry.map_imperatively(
+    Match, matches, exclude_properties=["participants", "best_of", "version"]
+)
 
 
 class MatchRepository:
