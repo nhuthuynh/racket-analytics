@@ -10,10 +10,11 @@ import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
 import { commandProblem } from '@/lib/tagging/messages';
 import type { Match } from '@/lib/api/types';
-import type { CorrectableField, HistoryItem, ScoreSheet, SheetRow, Versioned } from '@/lib/tagging/types';
+import type { CorrectableField, HistoryItem, RallyMedia, ScoreSheet, SheetRow, Versioned } from '@/lib/tagging/types';
 import { sideNames } from '@/lib/tagging/view';
 import { CorrectionHistory } from './CorrectionHistory';
 import { RallyCorrections } from './RallyCorrections';
+import { RallyVideo } from './RallyVideo';
 import { ScoreSheetTable } from './ScoreSheetTable';
 
 export type SheetApi = Pick<ApiClient, 'undo' | 'corrections' | 'correctRally' | 'getScoreSheet' | 'rallyMedia'>;
@@ -36,6 +37,7 @@ export function ScoreSheetView({
   const [problem, setProblem] = useState<string | null>(null);
   const [said, setSaid] = useState('');
   const [busy, setBusy] = useState(false);
+  const [playing, setPlaying] = useState<{ number: number; media: RallyMedia } | null>(null);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -84,6 +86,20 @@ export function ScoreSheetView({
   );
 
   const names = sideNames(match);
+
+  async function watch(row: SheetRow) {
+    setProblem(null);
+    try {
+      // A fresh short-lived link every time (NFR-055): an old one may have expired.
+      const media = await api.rallyMedia(match.id, row.rally_id);
+      setPlaying({ number: row.number, media });
+    } catch (e) {
+      const ref = e instanceof ApiError && e.supportRef ? ` Reference: ${e.supportRef}` : '';
+      setPlaying(null);
+      setProblem(`The video for rally ${row.number} could not be opened. Try again.${ref}`);
+    }
+  }
+
   function correct(row: SheetRow, field: CorrectableField, value: string | null) {
     void run(
       'Correction',
@@ -100,10 +116,28 @@ export function ScoreSheetView({
         </p>
       ) : null}
       <ScoreAnnouncer message={said} />
+      {playing ? (
+        <RallyVideo
+          number={playing.number}
+          media={playing.media}
+          onBroken={() => {
+            const n = playing.number;
+            setPlaying(null);
+            setProblem(`This video link no longer works. Choose 'Watch rally ${n}' again.`);
+          }}
+        />
+      ) : null}
       <ScoreSheetTable
         match={match}
         sheet={sheet}
-        rowActions={(row) => <RallyCorrections row={row} names={names} onCorrect={correct} />}
+        rowActions={(row) => (
+          <>
+            <button type="button" className="button button--secondary rally-fix__button" onClick={() => void watch(row)}>
+              {`Watch rally ${row.number}`}
+            </button>
+            <RallyCorrections row={row} names={names} onCorrect={correct} />
+          </>
+        )}
       />
       <p>
         <button
