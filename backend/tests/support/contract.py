@@ -235,3 +235,24 @@ UPLOAD_POLICY_DOMAIN = Seam(
     "ST-018",
     "UploadPolicy(max_bytes, max_duration_ms, ...).check(facts) -> None | rejection code",
 )
+
+# ------------------------------------------------------------------ Sprint 1 operations (ST-024)
+# Nightly results in docs/sprints/01/status.json under "nightly" (QA proposal, SRE confirms):
+#   {"run_date": "YYYY-MM-DD", "run_url": str,
+#    "oracle": {"sequences": int, "disagreements": int, "passed": bool},
+#    "mutation": {"score": float (0..1), "scope": "sports/pickleball/rules"}}
+STATUS_NIGHTLY_KEY = "nightly"
+# SLI arithmetic (api-sprint-01 §10), pure functions so the dashboard formula is unit-tested:
+#   upload_completion(events) -> (good, base): events are per-upload lifecycles such as
+#     ("created", "completed"), ("created", "rejected"), ("created", "cancelled");
+#     good = completed; base = created - rejected - cancelled (cancel ships with DELETE, ST-038).
+#   availability(status_codes) -> float: non-5xx / all, 429 excluded from both (NFR-041).
+SLI_UPLOAD_COMPLETION = Seam("racket.platform.slis:upload_completion", "ST-024")
+SLI_AVAILABILITY = Seam("racket.platform.slis:availability", "ST-024")
+
+# ------------------------------------------------------------------ phone fixtures (ST-025)
+# fixtures/clips/phones-v1/manifest.json: the ST-011 manifest plus one "clips" entry per video
+# (QA proposal, ML confirms): {"path", "device_model", "fps", "vfr": bool,
+#  "shows_people": bool, "consent_record": str | null}. racket-manifest-check fails, naming the
+# file, when "shows_people" is true and "consent_record" is null (OQ-06).
+PHONES_V1_DIR = "clips/phones-v1"
