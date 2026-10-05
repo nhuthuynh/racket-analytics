@@ -71,6 +71,12 @@ ST-042 is a **gate before any non-dev deployment**, like S1-F2 and ST-038. ST-01
 
 Until ST-025 lands, ST-018 keeps the provisional 10 GB / 150 min caps and the device-specific 60 fps menu paths stay hidden. If the recordings are not in hand at planning, ST-025 stays out of the committed load (it cannot start without them) and the blocker row stays Open.
 
+**Design carry-over from Sprint 1 (proposed 2026-10-05 by principal-designer, sprint-close review round 2, PD-R1-06 / QA-R2V-12; applies only if the asynchronous review is not complete by end of 2026-10-06, flows §10.2; the EM confirms at planning):**
+
+| Story | Title | FR / NFR | Owner (R) | Required reviewers | Size | Depends on |
+|---|---|---|---|---|---|---|
+| DR-01 (carried) | Finish the DoR P7 flows design review of `docs/design/flows-sprint-01.md` §10.1: the remaining "Decision at review" cells, then the chair records the outcome in §10, amends U-04 (R-2a, R-2b) and adds the §6 quota, conflict and rate-limit states (R-5). **Hard date: 2026-11-02 (planning).** No Sprint 2 UI story starts before it | DoR P7; NFR-030..NFR-037 | principal-designer (chair) | pickleball-domain-coach, senior-frontend-engineer, business-analyst, security-privacy-engineer, product-manager | XS | Participants' decisions |
+
 **Stretch:** ST-033 Correction consequences (FR-054; FE S + BE XS); ST-036 Gaps and resync (FR-047; BE XS + FE XS, sized S overall).
 
 ### 3.1 Acceptance notes per story
