@@ -70,7 +70,7 @@ New actors and abuse cases: **A7** email-bomber (makes us mail a victim repeated
 |---|---|---|---|---|
 | S1-F1 | **Should-fix before any real-user beta** | ASVS 6.3.3: magic link is single-factor at L2 (T-ML-13) | PO accepts the residual risk in an ADR, or passkeys move into R1. Escalated 2026-10-05 as ADR 0031 (Proposed; decider: human PO) | human product owner (via EM) |
 | S1-F2 | Should-fix before non-dev deployment | Expired sessions' staged bytes are not deleted until ST-038 (T-UV-7) | Keep ST-038 in Sprint 2; no non-dev deployment before it | BE (Sprint 2) |
-| S1-F3 | Should-fix (Sprint 1) | v0 F-1 (shared DB role and S3 key for api and worker) still open; Sprint 1 adds email addresses to the same database | Separate roles before any non-dev deployment (v0 F-1) | SRE, BE |
+| S1-F3 | Should-fix (Sprint 1) | v0 F-1 (shared DB role and S3 key for api and worker) still open; Sprint 1 adds email addresses to the same database | Separate roles before any non-dev deployment (v0 F-1). **2026-10-05 (SEC-R5-S1-01):** the mailer's S3 key was removed in Sprint 1. The worker's own DB role and S3 key are deferred to Sprint 2 ST-042 (decision-log 2026-10-05), as a gate before any non-dev deployment | SRE, BE |
 | S1-F4 | Nit | Rate-limit rows keep IP addresses; retention unstated | Delete windows older than 24 h in the same job as the counter update | BE |
 
 No Blocking finding for Sprint 1 dev use.

@@ -54,6 +54,14 @@ Load factor: the lower of 85% and the median completed ratio of Sprints 0-1. Pla
 | ST-040 | Gold-set label schema, manifest v1 and footage capture protocol | FR-151 (prep for QD-GD-03/-04/-07) | ML | QA, security-privacy-engineer (consent), pickleball-domain-coach | M | OQ-06 |
 | ST-041 | Golden tables written first: SOS rows, declared starts SOD-13..15, corrections C-01..C-04 | NFR-001 (provisional rows) | QA | pickleball-domain-coach, principal-engineer | M | — |
 
+**Security carry-over from Sprint 1 (proposed 2026-10-05 by sre-devops-engineer, review round 2, SEC-R5-S1-01; EM confirms at planning):**
+
+| Story | Title | FR / NFR | Owner (R) | Required reviewers | Size | Depends on |
+|---|---|---|---|---|---|---|
+| ST-042 | Least-privilege credentials for the media sandbox worker (threat model S1-F3, v0 F-1). The worker gets its own Postgres role with SELECT/UPDATE only on the job, media and upload tables, and no access to `sessions`, `sign_in_*` or `accounts`; the worker also gets its own S3 key. Then a test shows that a worker-uid process reading `/proc/1/environ` can no longer read `sessions` | NFR-054; ASVS 14.x (judgment) | BE (grants migration, S) + SRE (Compose roles, SeaweedFS identity, S) | security-privacy-engineer, principal-engineer | S+S | — |
+
+ST-042 is a **gate before any non-dev deployment**, like S1-F2 and ST-038. The Sprint 1 part is already done: the mailer no longer holds the S3 key.
+
 **Stretch:** ST-033 Correction consequences (FR-054; FE S + BE XS); ST-036 Gaps and resync (FR-047; BE XS + FE XS, sized S overall).
 
 ### 3.1 Acceptance notes per story
