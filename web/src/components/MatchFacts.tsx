@@ -1,4 +1,5 @@
 // Match status and media facts (ST-010 with ST-009). Facts appear only after the probe.
+import { QualityReport } from '@/components/QualityReport';
 import { formatMediaSummary } from '@/lib/format';
 import { FORMAT_LABELS, STATUS_LABELS, type Match } from '@/lib/api/types';
 
@@ -51,6 +52,7 @@ export function MatchFacts({ match }: { match: Match }) {
           </dl>
         </section>
       ) : null}
+      {match.media ? <QualityReport media={match.media} /> : null}
     </>
   );
 }

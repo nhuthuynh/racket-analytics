@@ -736,3 +736,8 @@ main:focus-visible,
 .banner > * + * {
   margin-block-start: var(--space-3);
 }
+
+.quality-list {
+  margin: 0;
+  padding-inline-start: var(--space-6);
+}
