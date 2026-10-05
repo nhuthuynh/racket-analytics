@@ -35,7 +35,8 @@ class RateLimited(AppError):
 
     def __init__(self, retry_at: datetime, now: datetime) -> None:
         super().__init__("rate limited")
-        self.retry_at: str | None = retry_at.isoformat(timespec="seconds").replace("+00:00", "Z")
+        utc = retry_at.astimezone(UTC)  # the DB session's zone may not be UTC (C-08)
+        self.retry_at: str | None = utc.isoformat(timespec="seconds").replace("+00:00", "Z")
         wait = max(1, int((retry_at - now).total_seconds() + 0.999))
         self.response_headers = {"Retry-After": str(wait)}
 

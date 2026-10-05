@@ -33,7 +33,8 @@ class MatchNotFound(NotFound):
 
 
 def _rfc3339(value: datetime) -> str:
-    return value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    """UTC with ``Z`` whatever zone the DB session returned (C-08, PE-R3R-03)."""
+    return value.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 class MatchService:
