@@ -30,6 +30,8 @@ interface Problem {
   nothingSaved: boolean;
   /** The summary link goes to this page instead of the file input. */
   href?: string;
+  /** The summary link moves focus to this control instead of the file input (C-03: "Try again"). */
+  field?: string;
 }
 
 const STATE_TEXT: Record<Mode, string> = {
@@ -42,6 +44,7 @@ const STATE_TEXT: Record<Mode, string> = {
 };
 
 const FILE_INPUT = 'video-file';
+const TRY_AGAIN = 'upload-try-again';
 const TROUBLE_AFTER_RETRIES = 3;
 const LARGE_FILE_BYTES = 1_000_000_000;
 
@@ -180,6 +183,25 @@ export function MatchUpload({
               return;
             }
             stopTracking();
+            // C-03 (PD-R3V-01): a server error or a dropped connection can be retried. The
+            // transfer is kept, so "Try again" continues it from the server's offset (HEAD, then
+            // PATCH; tus [AQS/STACK-06]) instead of starting a new upload, and the panel shows the
+            // stopped progress rather than "No video yet" (flows-sprint-01 §6 "Upload states").
+            if (reason === 'server' || reason === 'network') {
+              setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'stopped' } : v));
+              const ref = detail?.supportRef ? ` Reference: ${detail.supportRef}` : '';
+              setProblem({
+                nothingSaved: false,
+                field: TRY_AGAIN,
+                message:
+                  reason === 'network'
+                    ? 'The upload stopped. Check your connection, then try again. It continues where it stopped.'
+                    : `Sorry, the upload stopped because of a problem on our side.${
+                        accepted.current > 0 ? ' Your progress is saved.' : ''
+                      } Try again.${ref}`,
+              });
+              return;
+            }
             transfer.current = null;
             if (reason === 'not_a_video' || reason === 'too_large') {
               setView({ kind: 'idle' });
@@ -194,6 +216,8 @@ export function MatchUpload({
             } else {
               setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'stopped' } : v));
             }
+            // C-35 (PD-R3-04): every refusal that carries a support reference shows it.
+            const ref = detail?.supportRef ? ` Reference: ${detail.supportRef}` : '';
             setProblem({
               nothingSaved: false,
               ...(reason === 'quota' ? { href: '/matches' } : {}),
@@ -205,14 +229,8 @@ export function MatchUpload({
                     : reason === 'quota'
                       ? 'You have too many unfinished uploads. Finish one of them from Your matches, then try again.'
                       : reason === 'rate_limited'
-                        ? `${uploadRateLimitMessage(detail?.retryAt ?? null)}${
-                            detail?.supportRef ? ` Reference: ${detail.supportRef}` : ''
-                          }`
-                        : reason === 'network'
-                          ? 'The upload stopped. Check your connection, then try again. It continues where it stopped.'
-                          : accepted.current > 0
-                            ? 'Sorry, the upload stopped because of a problem on our side. Your progress is saved. Try again.'
-                            : 'Sorry, the upload stopped because of a problem on our side. Try again.',
+                        ? `${uploadRateLimitMessage(detail?.retryAt ?? null)}${ref}`
+                        : `Sorry, the upload stopped. Reload the page, then choose the same video to continue.${ref}`,
             });
           },
         },
@@ -285,12 +303,14 @@ export function MatchUpload({
 
   function tryAgain() {
     const v = viewRef.current;
-    if (v.kind !== 'transfer') return;
+    const h = transfer.current;
+    if (v.kind !== 'transfer' || !h) return;
     setProblem(null);
-    if (transfer.current) {
-      setView({ ...v, mode: 'resuming' });
-      transfer.current.resume();
-    }
+    retries.current = 0;
+    estimate.current = createEstimate(performance.now(), v.sent);
+    setView({ ...v, mode: 'resuming' });
+    setActiveUpload({ title: match.title, percent: percent(v.sent, v.total), stop: () => h.abort() });
+    h.resume();
   }
 
   const pending = match.upload ?? null;
@@ -305,7 +325,7 @@ export function MatchUpload({
       <h2 id="upload-title">Video upload</h2>
       {shownProblem ? (
         <ErrorSummary
-          errors={[{ field: FILE_INPUT, message: shownProblem.message, href: shownProblem.href }]}
+          errors={[{ field: shownProblem.field ?? FILE_INPUT, message: shownProblem.message, href: shownProblem.href }]}
           attempt={attempt}
         >
           {shownProblem.nothingSaved ? <p>{NOTHING_SAVED}</p> : null}
@@ -341,7 +361,7 @@ export function MatchUpload({
             </div>
           ) : transfer.current ? (
             <div className="button-row">
-              <button type="button" className="button" onClick={tryAgain}>
+              <button id={TRY_AGAIN} type="button" className="button" onClick={tryAgain}>
                 Try again
               </button>
             </div>

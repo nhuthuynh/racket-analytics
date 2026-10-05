@@ -261,3 +261,82 @@ describe('MatchUpload, resume on return (U-04)', () => {
     expect(t.options().matchId).toBe(ID);
   });
 });
+
+// C-03 (PD-R3V-01, major) with C-35 (PD-R3-04): after a server error the panel offers recovery
+// per flows-sprint-01 §6 "Upload states summary": "Try again" keeps the transfer (resumes from the
+// server offset, no new upload), no contradictory "No video yet", and the support_ref is shown.
+describe('MatchUpload, recovery after a server error (C-03, C-35)', () => {
+  const REF = 'ref_0123456789abcdef';
+
+  it('C-03: does not show "No video yet" or the file chooser while a stopped transfer can continue', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onChunkAccepted!(400));
+    act(() => t.cb().onProgress(400, 1000));
+    act(() => t.cb().onError(500, { code: 'internal_error', retryAt: null, supportRef: REF }));
+    expect(screen.queryByText('No video yet')).toBeNull();
+    expect(screen.queryByLabelText('Choose video')).toBeNull();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '40');
+  });
+
+  it('C-03 / C-35: shows the flows §6 server-error copy with the support reference, and a "Try again" button', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onChunkAccepted!(400));
+    act(() => t.cb().onProgress(400, 1000));
+    act(() => t.cb().onError(500, { code: 'internal_error', retryAt: null, supportRef: REF }));
+    const link = screen.getByRole('link', {
+      name: `Sorry, the upload stopped because of a problem on our side. Your progress is saved. Try again. Reference: ${REF}`,
+    });
+    expect(link).toHaveAttribute('href', '#upload-try-again');
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible();
+  });
+
+  it('C-03: the summary link moves focus to "Try again"', async () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onError(503));
+    await userEvent.click(screen.getByRole('link', { name: /problem on our side/ }));
+    expect(screen.getByRole('button', { name: 'Try again' })).toHaveFocus();
+  });
+
+  it('C-03: "Try again" continues the same transfer from the server offset, never a new upload', async () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onChunkAccepted!(400));
+    act(() => t.cb().onProgress(400, 1000));
+    act(() => t.cb().onError(500, { code: 'internal_error', retryAt: null, supportRef: REF }));
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(t.handle.resume).toHaveBeenCalledOnce();
+    expect(t.start).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('Resuming')).toBeVisible();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '40');
+    act(() => t.cb().onProgress(700, 1000));
+    expect(screen.getByText('Uploading', { exact: true })).toBeVisible();
+    act(() => t.cb().onSuccess());
+    expect(screen.getByText('Checking video…')).toBeVisible();
+  });
+
+  it('C-03: a second failure after "Try again" offers "Try again" again and moves focus to the summary', async () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onError(500));
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    act(() => t.cb().onError(500));
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible();
+    await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveFocus());
+  });
+
+  it('C-03: a dropped connection while online also offers "Try again" and keeps the transfer', async () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onError(0));
+    expect(screen.getByRole('link', { name: /Check your connection, then try again/ })).toBeVisible();
+    expect(screen.queryByText('No video yet')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(t.handle.resume).toHaveBeenCalledOnce();
+  });
+
+  it('C-03: refusals that cannot be retried still end the transfer and show the chooser (expired)', () => {
+    const { t } = renderPanel({ initialFile: video(1000) });
+    act(() => t.cb().onProgress(400, 1000));
+    act(() => t.cb().onError(410));
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    expect(screen.getByLabelText('Choose video')).toBeInTheDocument();
+  });
+});
