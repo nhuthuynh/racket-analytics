@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
     return [
       { source: '/:path*', headers: securityHeaders },
       {
+        // Caption files must carry their type: nosniff makes browsers refuse anything else.
+        source: '/guide/capture-guide.en.vtt',
+        headers: [{ key: 'Content-Type', value: 'text/vtt; charset=utf-8' }],
+      },
+      {
         // The service worker itself must always be revalidated so a fix reaches users.
         source: '/sw.js',
         headers: [

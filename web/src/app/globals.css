@@ -530,3 +530,91 @@ main:focus-visible,
   flex-wrap: wrap;
   gap: var(--space-4);
 }
+
+/* Capture guide (ST-015, G-01) */
+.guide-list {
+  margin: 0;
+  padding-inline-start: var(--space-6);
+  display: grid;
+  gap: var(--space-6);
+}
+
+.guide-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+@media (min-width: 480px) {
+  .guide-list__item {
+    grid-template-columns: 120px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.guide-list__text > * + * {
+  margin-block-start: var(--space-2);
+}
+
+.guide-list__instruction {
+  font-weight: var(--font-weight-bold);
+}
+
+.guide-illustration {
+  inline-size: 120px;
+  block-size: 100px;
+  background: var(--color-bg);
+}
+
+.ill-court {
+  fill: var(--color-surface);
+  stroke: var(--color-border-control);
+  stroke-width: 2;
+}
+
+.ill-line {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 2;
+}
+
+.ill-line--thick {
+  stroke-width: 4;
+}
+
+.ill-dash {
+  fill: none;
+  stroke: var(--color-text-secondary);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.ill-accent {
+  fill: var(--color-primary);
+}
+
+.ill-label {
+  fill: var(--color-on-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.disclosure summary {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--size-target-touch);
+  color: var(--color-link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.guide-video {
+  margin: 0;
+}
+
+.guide-video__player {
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 16 / 9;
+  background: var(--color-text);
+}
