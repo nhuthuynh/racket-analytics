@@ -3,14 +3,14 @@ through the one ownership dependency ``owned_match`` [AQS/SEC-09; AQS/STACK-01 G
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Body, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from racket.matches.domain import Match, OwnerId
-from racket.matches.schemas import CreateMatchRequest, MatchList, MatchOut, MediaOut
+from racket.matches.schemas import MatchList, MatchOut, MediaOut
 from racket.matches.service import MatchService
 from racket.platform.db import get_session
 from racket.players.api import CurrentAccount
@@ -38,9 +38,11 @@ OwnedMatch = Annotated[Match, Depends(owned_match)]
 
 @router.post("/matches", status_code=201)
 def create_match(
-    body: CreateMatchRequest, account: CurrentAccount, service: Service, response: Response
+    body: Annotated[Any, Body()], account: CurrentAccount, service: Service, response: Response
 ) -> MatchOut:
-    match = service.create(OwnerId(account.id), body.title, body.format)
+    """The body is validated by the domain (``MatchSetup``), so every field problem gets its
+    code from api-sprint-01 §4.2 in form order (§5.3), never pydantic's first error."""
+    match = service.create(OwnerId(account.id), body)
     response.headers["Location"] = f"/matches/{match.id}"
     return service.view(match)
 

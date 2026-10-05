@@ -8,9 +8,9 @@ message per code (docs/architecture/api-sprint-00.md §3). Exception text is nev
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import Any, ClassVar
 
 # status -> (code, fixed message); api-sprint-00 §3
 STATUS_TABLE: dict[int, tuple[str, str]] = {
@@ -84,8 +84,21 @@ class UnsupportedMediaType(AppError):
     status, code = 415, "unsupported_media_type"
 
 
+@dataclass(frozen=True)
+class FieldError:
+    """One entry of ``fields`` on a 422 (api-sprint-01 §1.1): a path from the route's closed
+    list (or ``None``) and a code from the closed table §4.2. Never an input value."""
+
+    field: str | None
+    code: str
+
+
 class ValidationFailed(AppError):
     status, code = 422, "validation_failed"
+
+    def __init__(self, message: str = "validation failed", fields: Iterable[FieldError] = ()):
+        super().__init__(message)
+        self.fields: tuple[FieldError, ...] = tuple(fields)
 
 
 class Unavailable(AppError):
@@ -103,11 +116,21 @@ class ErrorResponse:
     message: str
     support_ref: str
     headers: Mapping[str, str] = field(default_factory=dict)
+    fields: tuple[FieldError, ...] = ()
+    retry_at: str | None = None
 
-    def body(self) -> dict[str, dict[str, str]]:
-        return {
-            "error": {"code": self.code, "message": self.message, "support_ref": self.support_ref}
+    def body(self) -> dict[str, dict[str, Any]]:
+        """api-sprint-01 §1.1: ``fields`` only on 422 (always a list), ``retry_at`` only on 429."""
+        error: dict[str, Any] = {
+            "code": self.code,
+            "message": self.message,
+            "support_ref": self.support_ref,
         }
+        if self.status == 422:
+            error["fields"] = [{"field": f.field, "code": f.code} for f in self.fields]
+        if self.status == 429:
+            error["retry_at"] = self.retry_at
+        return {"error": error}
 
 
 class ErrorMapper:
@@ -124,6 +147,8 @@ class ErrorMapper:
                 message=CODE_MESSAGES[exc.code],
                 support_ref=self._new_ref(),
                 headers=dict(exc.headers),
+                fields=getattr(exc, "fields", ()),
+                retry_at=getattr(exc, "retry_at", None),
             )
         return self.for_status(500)
 

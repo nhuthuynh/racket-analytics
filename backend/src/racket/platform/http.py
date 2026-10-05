@@ -16,7 +16,7 @@ import logging
 import re
 import time
 import uuid
-from collections.abc import Awaitable, Callable, MutableMapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping, MutableMapping
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -25,7 +25,14 @@ from fastapi.responses import JSONResponse, Response
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from racket.platform.errors import AppError, ErrorMapper, ErrorResponse, ForbiddenOrigin
+from racket.platform.errors import (
+    AppError,
+    ErrorMapper,
+    ErrorResponse,
+    FieldError,
+    ForbiddenOrigin,
+    ValidationFailed,
+)
 from racket.platform.logs import request_id_var, user_id_var
 from racket.platform.tracing import extract_context, tracer
 
@@ -76,6 +83,24 @@ def log_error(error: ErrorResponse, exc: BaseException | None) -> None:
         log.info("request refused", extra=extra)
 
 
+def schema_field_errors(problems: Iterable[Mapping[str, Any]]) -> list[FieldError]:
+    """Pydantic errors -> ``fields`` (api-sprint-01 §1.1). An unknown key is reported as
+    ``field: null`` so its name is never echoed (T-MS-3); a known field gets ``invalid``.
+    Routes that need a specific code (e.g. ``email_invalid``) validate it themselves."""
+    found: list[FieldError] = []
+    for problem in problems:
+        loc = list(problem.get("loc", ()))[1:]  # drop the source: body, query, path, header
+        if problem.get("type") == "extra_forbidden":
+            item = FieldError(None, "unknown_field")
+        elif loc and isinstance(loc[0], str):
+            item = FieldError(loc[0], "invalid")
+        else:
+            item = FieldError(None, "invalid")
+        if item not in found:
+            found.append(item)
+    return found
+
+
 def install_error_handlers(app: FastAPI, mapper: ErrorMapper) -> None:
     async def on_app_error(request: Request, exc: Exception) -> Response:
         error = mapper.map(exc)
@@ -89,7 +114,9 @@ def install_error_handlers(app: FastAPI, mapper: ErrorMapper) -> None:
         return error_response(error, request.method, route_error_headers(request))
 
     async def on_validation_error(request: Request, exc: Exception) -> Response:
-        error = mapper.for_status(422)  # never echo the input (NFR-058)
+        # Never echo the input (NFR-058); paths and closed codes only (api-sprint-01 §1.1).
+        problems = exc.errors() if isinstance(exc, RequestValidationError) else []
+        error = mapper.map(ValidationFailed("request validation", schema_field_errors(problems)))
         log_error(error, None)
         return error_response(error, request.method, route_error_headers(request))
 

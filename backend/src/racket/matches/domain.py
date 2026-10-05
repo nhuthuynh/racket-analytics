@@ -9,13 +9,29 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Self
 
+from racket.matches.participants import (  # ST-016 setup values (ADR 0024)
+    InvalidParticipants,
+    InvalidSetup,
+    MatchParticipant,
+    MatchSetup,
+    Participants,
+)
 from racket.platform.errors import Conflict, ValidationFailed
 
+__all__ = [
+    "InvalidParticipants",
+    "InvalidSetup",
+    "MatchParticipant",
+    "MatchSetup",
+    "Participants",
+]
+
 TITLE_MAX = 120
+DEFAULT_RULES_VERSION = "PROVISIONAL-UNVERIFIED"  # ADR 0009: the only shipped preset
 
 
 class InvalidId(ValueError):
@@ -88,6 +104,21 @@ class Match:
     media_asset_id: uuid.UUID | None = None
     created_at: datetime = field(default_factory=_now)
     updated_at: datetime = field(default_factory=_now)
+    scoring_system: str = "side_out"
+    # Set by the server, never by the client (T-MS-1); the only preset is ADR 0009's.
+    rules_version: str = DEFAULT_RULES_VERSION
+    played_on: date | None = None
+    # Child values of the aggregate (ADR 0024); loaded and saved by the repository.
+    participants: Participants | None = None
+
+    @classmethod
+    def set_up(cls, *, owner_id: OwnerId, setup: MatchSetup) -> Match:
+        """A match from the validated setup answers (ST-016; api-sprint-01 §5.1)."""
+        match = cls.create(owner_id=owner_id, title=setup.title, format=setup.format)
+        match.scoring_system = setup.scoring_system
+        match.played_on = setup.played_on
+        match.participants = setup.participants
+        return match
 
     @classmethod
     def create(cls, *, owner_id: OwnerId, title: str, format: str) -> Match:

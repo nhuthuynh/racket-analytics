@@ -7,13 +7,13 @@ Capture & Media's ``media_summary`` port (context map R2; api-sprint-00 §5.1).
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy.orm import Session
 
-from racket.matches.domain import InvalidId, Match, MatchId, MatchStatus, OwnerId
+from racket.matches.domain import InvalidId, Match, MatchId, MatchSetup, MatchStatus, OwnerId
 from racket.matches.repository import MatchRepository
-from racket.matches.schemas import MatchOut, MediaOut
+from racket.matches.schemas import MatchOut, MediaOut, ParticipantOut
 from racket.platform.errors import NotFound
 from racket.platform.logs import SECURITY_LOGGER
 from racket.video_ingest.public import UploadStatus, media_summary
@@ -35,8 +35,10 @@ class MatchService:
         self.session = session
         self.matches = MatchRepository(session)
 
-    def create(self, owner: OwnerId, title: str, format: str) -> Match:
-        match = Match.create(owner_id=owner, title=title, format=format)
+    def create(self, owner: OwnerId, body: object, *, today: date | None = None) -> Match:
+        """``POST /matches`` (api-sprint-01 §5.1): every field problem is reported at once."""
+        setup = MatchSetup.parse(body, today=today or datetime.now(UTC).date())
+        match = Match.set_up(owner_id=owner, setup=setup)
         self.matches.add(match)
         self.session.commit()
         log.info("match created", extra={"event": "match.created", "match_id": str(match.id)})
@@ -79,6 +81,13 @@ class MatchService:
             title=match.title,
             format=match.format.value,
             status=status,  # type: ignore[arg-type]
+            scoring_system=match.scoring_system,
+            rules_version=match.rules_version,
+            played_on=None if match.played_on is None else match.played_on.isoformat(),
+            participants=[
+                ParticipantOut(slot=m.slot, nickname=m.nickname, is_me=m.is_me)
+                for m in (match.participants.members if match.participants else ())
+            ],
             media=media,
             created_at=_rfc3339(match.created_at),
             updated_at=_rfc3339(match.updated_at),
