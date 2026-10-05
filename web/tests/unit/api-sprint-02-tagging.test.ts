@@ -151,3 +151,15 @@ describe('correction history and rally media', () => {
     });
   });
 });
+
+describe('match video for the tagging screen', () => {
+  it('GET /matches/{id}/media with the same safety checks as a rally link', async () => {
+    const { client, fetchFn } = clientWith(
+      json(200, { url: 'data:video/mp4;base64,AAAA', expires_in_s: 600, start_ms: 0 }),
+      json(200, { url: '/media/racket-media/x?sig=1', expires_in_s: 600, start_ms: 0 }),
+    );
+    await expect(client.matchMedia(ID)).rejects.toMatchObject({ code: 'invalid_response' });
+    expect(fetchFn.mock.calls[0]![0]).toBe(`/api/matches/${ID}/media`);
+    expect((await client.matchMedia(ID)).url).toBe('/media/racket-media/x?sig=1');
+  });
+});

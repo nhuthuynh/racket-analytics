@@ -3,6 +3,7 @@
 // Match page M-02 (ST-010; Sprint 1: ST-017, ST-018). Status and facts, plus the upload panel
 // (U-01..U-04). After the last byte the page checks the video: it refreshes the match until the
 // probe decides (facts, probe failure, or a refusal such as "too long"), then stops.
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { MatchFacts } from '@/components/MatchFacts';
 import { MatchUpload } from '@/components/MatchUpload';
@@ -95,6 +96,20 @@ export function MatchDetail({
       <PageTitle error={problemShown}>{match.title}</PageTitle>
       <h1>{match.title}</h1>
       <MatchFacts match={match} />
+      {match.status === 'video_received' && match.media !== null ? (
+        <ul className="button-list match-actions">
+          <li>
+            <Link href={`/matches/${match.id}/tag`} className="button">
+              Tag rallies
+            </Link>
+          </li>
+          <li>
+            <Link href={`/matches/${match.id}/sheet`} className="button button--secondary">
+              Score sheet
+            </Link>
+          </li>
+        </ul>
+      ) : null}
       {showUpload ? (
         <MatchUpload
           // A refusal decided after the upload resets the panel to "choose a video".

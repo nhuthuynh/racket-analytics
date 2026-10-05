@@ -151,3 +151,16 @@ describe('MatchDetail', () => {
     expect(document.querySelector('img')).toBeNull();
   });
 });
+
+describe('MatchDetail, Sprint 2 entry points (ST-027, ST-030)', () => {
+  it('offers no tagging before the video is received', () => {
+    render(<MatchDetail initialMatch={{ ...base, status: 'awaiting_upload' }} api={{ getMatch: vi.fn() }} />);
+    expect(screen.queryByRole('link', { name: 'Tag rallies' })).toBeNull();
+  });
+
+  it('links to Quick Tag and the score sheet once the video is received', () => {
+    render(<MatchDetail initialMatch={{ ...base, media }} api={{ getMatch: vi.fn() }} />);
+    expect(screen.getByRole('link', { name: 'Tag rallies' })).toHaveAttribute('href', `/matches/${base.id}/tag`);
+    expect(screen.getByRole('link', { name: 'Score sheet' })).toHaveAttribute('href', `/matches/${base.id}/sheet`);
+  });
+});
