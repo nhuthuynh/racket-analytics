@@ -45,6 +45,21 @@ CODE_MESSAGES.update(
         "checksum_mismatch": "Part of the upload was damaged. Please send it again.",
     }
 )
+# Sprint 2 (ST-026..ST-032; match-aggregate §3 refusals), fixed messages.
+CODE_MESSAGES.update(
+    {
+        "invalid_rally": "These rally times are not possible.",
+        "invalid_outcome": "This rally outcome is not possible.",
+        "match_not_ready": "Tagging starts once the video is received.",
+        "stale_match": "This match changed on another device. Showing the latest score.",
+        "game_not_started": "Start a game before tagging rallies.",
+        "game_not_over": "The current game is not over yet.",
+        "game_over": "This game is over. Start the next game.",
+        "match_over": "This match is over.",
+        "decision_needed": "Some rallies need your decision first.",
+        "nothing_to_undo": "There is nothing to undo.",
+    }
+)
 
 
 class AppError(Exception):

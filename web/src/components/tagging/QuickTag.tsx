@@ -19,6 +19,7 @@ import { tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
 import { actionForKey, loadSingleKeys, saveSingleKeys, type KeyAction } from '@/lib/tagging/keymap';
 import { GameStartForm } from './GameStartForm';
 import { KeyMapDialog } from './KeyMapDialog';
+import { ScoreAnnouncer } from './ScoreAnnouncer';
 
 export type QuickTagApi = Pick<ApiClient, 'tagRally' | 'startGame' | 'getScoreSheet' | 'undo'>;
 
@@ -54,6 +55,7 @@ export function QuickTag({
   const [gameOverSeen, setGameOverSeen] = useState(false);
   const [singleKeys, setSingleKeys] = useState(true);
   const [keysOpen, setKeysOpen] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const opener = useRef<HTMLElement | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -83,6 +85,8 @@ export function QuickTag({
       try {
         const r = await api.tagRally(match.id, pending.baseVersion, pending.tag);
         dispatch({ type: 'confirmed', sheet: r.sheet, version: r.version });
+        const saved = r.sheet.rows[r.sheet.rows.length - 1];
+        if (saved) setAnnouncement(tagLine(saved, names.mySide));
       } catch (e) {
         if (e instanceof ApiError && (e.code === 'stale_match' || e.code === 'game_over')) {
           try {
@@ -103,7 +107,7 @@ export function QuickTag({
         dispatch({ type: 'failed', message: failureMessage(e) });
       }
     })();
-  }, [api, match.id, refresh, state.pending]);
+  }, [api, match.id, names.mySide, refresh, state.pending]);
 
   const tagging = !status.matchOver;
   // Keyboard tagging (ST-028a): document-level, so focus can stay on any control (E2E-02-03).
@@ -215,7 +219,7 @@ export function QuickTag({
         {busy ? <p className="quick-tag__saving">Saving…</p> : null}
         <p className="quick-tag__label">{state.sheet.label}</p>
       </div>
-      {lastLine ? <p className="quick-tag__last">{lastLine}</p> : null}
+      <ScoreAnnouncer message={announcement || lastLine || ''} />
 
       {state.notice ? (
         <p role="alert" className="notice notice--error">
