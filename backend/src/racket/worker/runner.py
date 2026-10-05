@@ -35,6 +35,7 @@ from racket.platform.storage import ObjectStore
 from racket.platform.tracing import extract_context, tracer
 
 log = logging.getLogger("racket.worker")
+AFTER_COMMIT_ATTEMPTS = 3
 
 
 @dataclass
@@ -135,13 +136,14 @@ class Runner:
             span.set_attribute("job.id", str(job_id))
             span.set_attribute("job.attempt", attempt)
             session = self.factory()
+            ctx = self._context(session, key, attempt)
             try:
                 with LeaseHeartbeat(self.factory, job_id, self.worker_id, self.lease):
                     self.shutdown.in_stage = True
                     try:
                         if self.shutdown.stop:
                             raise ShutdownRequested
-                        stage.run(self._context(session, key, attempt))
+                        stage.run(ctx)
                     finally:
                         self.shutdown.in_stage = False
                 job = JobQueue(session, self.lease).lock_running(job_id, self.worker_id)
@@ -154,6 +156,7 @@ class Runner:
                 job.complete()
                 session.commit()
                 log.info("job done", extra={"event": "job.done", "job_id": str(job_id)})
+                self._after_commit(job_id, ctx)
             except ShutdownRequested:
                 self._rollback(session)
                 self._settle(job_id, key, attempt, requeue=True, stage=stage)
@@ -168,6 +171,22 @@ class Runner:
                                                "exc_type": type(exc).__name__})  # fmt: skip
             finally:
                 session.close()
+
+    @staticmethod
+    def _after_commit(job_id: uuid.UUID, ctx: StageContext) -> None:
+        """Run the stage's post-commit side effects. The job is already done, so a failure is
+        logged, never raised; each callback must be idempotent (it is retried)."""
+        for callback in ctx.after_commit:
+            for attempt in range(1, AFTER_COMMIT_ATTEMPTS + 1):
+                try:
+                    callback()
+                    break
+                except Exception as exc:  # noqa: BLE001 - retried, then logged
+                    if attempt == AFTER_COMMIT_ATTEMPTS:
+                        log.error("after-commit step failed",
+                                  extra={"event": "job.after_commit_failed",
+                                         "job_id": str(job_id),
+                                         "exc_type": type(exc).__name__})  # fmt: skip
 
     def _settle(self, job_id: uuid.UUID, key: JobKey, attempt: int, *, requeue: bool,
                 stage: Stage) -> None:  # fmt: skip
