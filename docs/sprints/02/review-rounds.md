@@ -94,3 +94,11 @@ Reviewer findings on the Proposed design (sprint-02 §0.1, R3), written as the b
 | Finding | Severity | Disposition | Owner | Evidence |
 |---|---|---|---|---|
 | QA-R3-E2E-01 / PD-R3V-02 | major | Fixed (C-04), pending the sre-devops-engineer's re-check (C-04 reviewer) and the G02-05 verifier run. `walking-skeleton.spec.ts` holds the first PATCH until the progress bar, the "% · MB of MB" text and the `uploading` axe check have run, then continues it (no fixed delay). The G02-05 method repeats every spec, root specs included (`playwright test --repeat-each=3` over the whole `e2e/` folder, scorecard §4) | senior-qa-engineer | TCR row 2026-10-05 (C-04). `MAILPIT_API_URL=… BASE_URL=http://localhost:3021 PW_PROJECTS=chromium pnpm exec playwright test e2e/walking-skeleton.spec.ts --repeat-each=5 --workers=1` on the QA native stack (production `next build`, own database and Mailpit) → `10 passed (1.3m)`. Native http, Chromium only; the https Compose run is the verifier's |
+
+## Owner dispositions: senior-backend-engineer (after the QA rows above)
+
+Rows placed after the reviewer's Open row so the latest row wins (`open_defects.py` reads in file order).
+
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| QA-S2-FUZZ-01 | major | Fixed in `2300dde`, pending the senior-qa-engineer's re-check (same text as the row in the senior-backend-engineer table above): every enum membership test on untrusted JSON requires a string first (`format`, `ending`, `fault_kind`, correction `field` and `value`, resolution `decision`) | `backend/src/racket/matches/scorebook/domain/values.py`, `backend/src/racket/matches/participants.py`, `backend/src/racket/matches/scorebook/domain/book.py`; test `backend/tests/unit/matches/test_any_json_value.py` | Red `17 failed, 20 passed` → green `37 passed`; `tests/integration/test_it_02_10_json_string_fuzz.py` on dev-postgres: `7 failed, 161 passed` → `168 passed` |
