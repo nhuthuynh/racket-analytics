@@ -37,3 +37,12 @@ describe('QualityReport', () => {
     expect(screen.getByText('Good: 1080p or better at 50 fps or more.')).toBeVisible();
   });
 });
+
+// C-20 (PD-R2R-05): "You can still tag this match." answers a consequence finding; with good
+// footage there is nothing to reassure about, so the line is not shown.
+describe('QualityReport, C-20', () => {
+  it('good footage does not say "You can still tag this match."', () => {
+    render(<QualityReport media={media} />);
+    expect(screen.queryByText('You can still tag this match.')).toBeNull();
+  });
+});
