@@ -938,3 +938,11 @@ main:focus-visible,
   inline-size: auto;
   max-inline-size: 100%;
 }
+
+/* M-01 loading (C-30): skeleton rows with reserved height. */
+.skeleton-row {
+  block-size: 4.5rem;
+  margin-block-start: var(--space-4);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+}

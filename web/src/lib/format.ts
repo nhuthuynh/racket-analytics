@@ -117,3 +117,21 @@ export function formatDurationCap(ms: number): string {
   if (minutes > 0 || hours === 0) parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`);
   return parts.join(' ');
 }
+
+/** M-01 card status (flows-sprint-01 §5): an unfinished upload reads "Upload stopped at 64%". */
+export function matchStatusLine(m: {
+  status: keyof typeof STATUS_LINE;
+  upload?: { state: string; offset: number; length: number } | null;
+}): string {
+  if (m.upload?.state === 'receiving') {
+    return `Upload stopped at ${Math.floor((m.upload.offset / Math.max(1, m.upload.length)) * 100)}%`;
+  }
+  return STATUS_LINE[m.status];
+}
+
+const STATUS_LINE = {
+  awaiting_upload: 'Awaiting upload',
+  uploading: 'Uploading',
+  video_received: 'Video received',
+  probe_failed: 'We could not read this video',
+} as const;

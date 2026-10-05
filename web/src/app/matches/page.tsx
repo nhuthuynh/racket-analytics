@@ -6,20 +6,17 @@ import { PageTitle } from '@/components/PageTitle';
 import { ResumeBanner } from '@/components/ResumeBanner';
 import { ApiError } from '@/lib/api/client';
 import { serverApi } from '@/lib/api/server';
-import { FORMAT_LABELS, STATUS_LABELS, type Match } from '@/lib/api/types';
-
-const dateFormat = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
+import { LocalDateLine } from '@/components/LocalDate';
+import { FORMAT_LABELS, type Match } from '@/lib/api/types';
+import { matchStatusLine } from '@/lib/format';
 
 async function loadMatches(): Promise<Match[]> {
   try {
     return await (await serverApi()).listMatches();
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) redirect('/');
+    // The error page shows the API's support reference (C-30): Next keeps an existing digest.
+    if (e instanceof ApiError && e.supportRef) Object.assign(e, { digest: e.supportRef });
     throw e;
   }
 }
@@ -60,14 +57,11 @@ export default async function MatchesPage() {
               <Link href={`/matches/${m.id}`} className="match-list__link">
                 {m.title}
               </Link>
-              <p className="match-list__meta">
-                {FORMAT_LABELS[m.format]} ·{' '}
-                {m.upload?.state === 'receiving'
-                  ? `Upload ${Math.floor((m.upload.offset / Math.max(1, m.upload.length)) * 100)}% done`
-                  : STATUS_LABELS[m.status]}{' '}
-                · Created{' '}
-                {dateFormat.format(new Date(m.created_at))}
-              </p>
+              <LocalDateLine
+                className="match-list__meta"
+                prefix={`${FORMAT_LABELS[m.format]} · ${matchStatusLine(m)} · Created `}
+                iso={m.created_at}
+              />
             </li>
           ))}
         </ul>
