@@ -34,9 +34,6 @@ def test_a_disagreement_is_reported_usefully() -> None:
 
 
 scenarios("property_and_oracle.feature")  # the remaining scenarios
-for _name, _obj in list(globals().items()):
-    if _name.startswith("test_") and _name != "test_a_disagreement_is_reported_usefully":
-        pytest.mark.red_until(story="ST-020")(_obj)
 
 
 @pytest.fixture

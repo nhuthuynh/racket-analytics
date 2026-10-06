@@ -17,7 +17,7 @@ from tests.features.scoring_steps import match_config, play_match
 from tests.support import contract
 from tests.support import scoring as sc
 
-pytestmark = [pytest.mark.red_until(story="ST-021"), pytest.mark.scoring]
+pytestmark = [pytest.mark.scoring]
 
 scenarios("match_structure.feature")
 

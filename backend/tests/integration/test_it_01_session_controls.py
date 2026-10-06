@@ -24,7 +24,7 @@ from racket.players.models import sessions, sign_in_links
 from tests.support import auth, contract
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-013"), pytest.mark.slow]
+pytestmark = [pytest.mark.slow]
 
 IDLE = timedelta(seconds=604_800)  # SESSION_IDLE_SECONDS default (7 days)
 CAP = 10  # SESSION_MAX_PER_ACCOUNT default

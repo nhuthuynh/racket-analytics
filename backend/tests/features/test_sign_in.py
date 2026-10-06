@@ -19,7 +19,7 @@ from tests.support import auth
 from tests.support.api import ApiDriver
 from tests.support.copy import ACCEPTED_LINK_REQUEST, ERROR_COPY, error_code
 
-pytestmark = [pytest.mark.red_until(story="ST-013"), pytest.mark.slow]
+pytestmark = [pytest.mark.slow]
 
 TTL_S = 2  # MAGIC_LINK_TTL_SECONDS for this module: "16 minutes old" = older than the TTL
 FEATURE = "sign_in.feature"

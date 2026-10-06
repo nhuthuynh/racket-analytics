@@ -14,8 +14,6 @@ import pytest
 from tests.support import contract
 from tests.support.api import ApiDriver
 
-pytestmark = pytest.mark.red_until(story="ST-016")
-
 
 def people(*slots: str, me: tuple[str, ...] = ("A1",)) -> list[dict[str, Any]]:
     names = {"A1": "Ivy", "A2": "Dana", "B1": "Carlos", "B2": "Sam"}

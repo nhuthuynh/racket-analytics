@@ -11,6 +11,6 @@ from pytest_bdd import scenarios
 
 from tests.features.scoring_steps import *  # noqa: F403  (shared step fixtures)
 
-pytestmark = [pytest.mark.red_until(story="ST-020"), pytest.mark.scoring]
+pytestmark = [pytest.mark.scoring]
 
 scenarios("side_out_doubles_provisional.feature")

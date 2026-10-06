@@ -19,7 +19,7 @@ from hypothesis import strategies as st
 
 from tests.support import scoring as sc
 
-pytestmark = [pytest.mark.red_until(story="ST-020"), pytest.mark.scoring]
+pytestmark = [pytest.mark.scoring]
 
 _side = st.sampled_from("AB")
 _raw_outcome = st.one_of(

@@ -18,7 +18,7 @@ from tests.support.flows import create_match
 from tests.support.worker import jobs_for_match, media_facts_count
 from tests.support.written_keys import WrittenKeys
 
-pytestmark = [pytest.mark.red_until(story="ST-018"), pytest.mark.slow]
+pytestmark = [pytest.mark.slow]
 
 TWELVE_GB = 12 * 1000**3
 FILES = {

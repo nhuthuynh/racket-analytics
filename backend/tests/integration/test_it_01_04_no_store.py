@@ -7,13 +7,9 @@ Positive control (testing-strategy rule 8): the same session works before sign-o
 
 from __future__ import annotations
 
-import pytest
-
 from tests.support import contract
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match
-
-pytestmark = pytest.mark.red_until(story="ST-014")
 
 
 def test_it_01_04_authenticated_json_is_never_cached(api: ApiDriver) -> None:

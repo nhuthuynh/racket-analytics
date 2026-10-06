@@ -116,7 +116,6 @@ def test_positive_control_a_wrong_engine_is_caught_with_the_shortest_sequence() 
     assert shortest.expected != shortest.actual
 
 
-@pytest.mark.red_until(story="ST-020")
 def test_differential_production_engine_agrees_with_the_oracle() -> None:
     """NFR-002a/b: 1,000 sequences per CI run; the nightly job sets ORACLE_SEQUENCES=100000."""
     count = int(os.environ.get("ORACLE_SEQUENCES", "1000"))

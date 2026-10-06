@@ -21,7 +21,7 @@ from tests.support.copy import ERROR_COPY, error_code
 from tests.support.flows import create_match, percent_of, percent_up
 from tests.support.paths import SYNTHETIC_CLIP
 
-pytestmark = [pytest.mark.red_until(story="ST-017"), pytest.mark.slow]
+pytestmark = [pytest.mark.slow]
 
 FEATURE = "resumable_upload.feature"
 DATA = SYNTHETIC_CLIP.read_bytes()

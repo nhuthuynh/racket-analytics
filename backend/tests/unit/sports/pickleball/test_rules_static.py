@@ -113,19 +113,16 @@ def test_literal_scanner_flags_rule_values_but_not_presets_or_named_servers(tmp_
 
 
 # ------------------------------------------------------------------ the real package
-@pytest.mark.red_until(story="ST-020")
 def test_it_01_13_rules_engine_imports_nothing_but_the_allowed_stdlib() -> None:
     problems = {str(p.relative_to(BACKEND)): forbidden_imports(p) for p in rules_files()}
     assert {k: v for k, v in problems.items() if v} == {}
 
 
-@pytest.mark.red_until(story="ST-020")
 def test_it_01_12_no_rule_literal_outside_presets() -> None:
     found = [hit for p in rules_files() for hit in rule_literals(p)]
     assert found == []
 
 
-@pytest.mark.red_until(story="ST-020")
 def test_presets_hold_the_provisional_preset() -> None:
     files = {p.name for p in rules_files()}
     assert "presets.py" in files or RULES.with_suffix(".py").is_file()

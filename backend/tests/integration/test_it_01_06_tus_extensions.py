@@ -21,7 +21,7 @@ from tests.support.flows import create_match
 from tests.support.paths import SYNTHETIC_CLIP
 from tests.support.written_keys import WrittenKeys
 
-pytestmark = [pytest.mark.red_until(story="ST-017"), pytest.mark.slow]
+pytestmark = [pytest.mark.slow]
 
 DATA = SYNTHETIC_CLIP.read_bytes()
 

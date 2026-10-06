@@ -21,7 +21,7 @@ from tests.support import auth, contract, mailpit
 from tests.support.api import ApiDriver
 from tests.support.logscan import scan
 
-pytestmark = [pytest.mark.red_until(story="ST-013"), pytest.mark.slow]
+pytestmark = [pytest.mark.slow]
 
 WEB_ORIGIN = "https://app.racket.test"
 
