@@ -1,12 +1,26 @@
 # Design: the `Match` aggregate (games, rallies, outcome inputs, corrections, score as a projection)
 
-- **Status:** Proposed, for design review as a PR before Sprint 2 starts (sprint-01 §4 principal-engineer task, DoR P4; [DPA/DESIGN-15]). The PR is opened when `sprint-01` reaches GitHub (blocked by PE-R3-05; agents do not push). Reviewers: senior-backend-engineer (builds ST-026..ST-035), senior-qa-engineer (ST-041 golden rows), pickleball-domain-coach (game-end and conflict rules), security-privacy-engineer (audit trail, ST-031).
+- **Status:** Accepted, 2026-10-06, after design review D1 (outcome in §0). Proposed 2026-10-05 for review before Sprint 2 (sprint-01 §4 principal-engineer task, DoR P4; [DPA/DESIGN-15]). The review was held in the repository (review-rounds.md "Design review D1", reviewer senior-backend-engineer) because `sprint-01` was not on GitHub (PE-R3-05). The HTTP contract is `api-sprint-02.md`.
 - **Date:** 2026-10-05
 - **Author:** principal-engineer
 - **Stories it unblocks:** Sprint 2 ST-026, ST-027, ST-030, ST-031, ST-032, ST-034, ST-035 (stretch ST-033, ST-036).
 - **Requirements:** FR-045..FR-055, NFR-012, NFR-013, NFR-060, NFR-075, NFR-079.
 - **Builds on (code at `17c850d`):** `racket.matches.domain.Match` (lifecycle, setup, participants), `racket.matches.match_state.MatchState` (ST-021: best of 1/3, explicit first server and ends per game, `MatchOver`), `racket.sports.pickleball.rules` (ST-020: `apply`, `fold`, `new_game`, `declare_state`, `RallyOutcome`, `PRESETS`).
 - **Rules (ddd-guidelines §4):** one command, one aggregate, one transaction (4.1); the root guards invariants (4.2); keep aggregates small (4.4); pure domain logic (4.5); version what changes interpretation (4.7); user corrections win (4.8); ownership in the aggregate (4.9).
+
+## 0. Design review D1: outcome (principal-engineer, chair, 2026-10-06)
+
+Held late: the BE built ST-026..ST-032 on this doc while it was Proposed (blockers.md 2026-10-05; the EM decision on that start is still open there), so the review compared the doc with the code at `40de20a` as well as with the requirements. Outcome: **accepted with the answers below**; §4 is corrected (no `keep_in_game`). Nothing in §2-§6 changes the built code. Open coach questions (§8 Q1, Q2) stay `@needs-verification` and do not block acceptance (ADR 0009).
+
+| Finding | Answer | Where |
+|---|---|---|
+| BE-D1-01 error body | Keep the api-sprint-00 §3 envelope; the harness reads `error.code`. Fixed in `scripts/measure/live_tagging.py` `_code()` with a regression test | api-sprint-02 §1.1 |
+| BE-D1-02 `If-Match` | Accept `3`, `"3"`, `W/"3"`; missing or malformed is 409 `stale_match` (no 428); `ETag: "<version>"` on every command and the sheet | api-sprint-02 §1.2 |
+| BE-D1-03 row `number` | 1-based position among kept rallies of the match, ordered by `start_ms`, then `seq` | api-sprint-02 §2.1 |
+| BE-D1-04 version outside the sheet | Commands answer `{version, sheet}`; the sheet has no version, timestamp or correction id (C-04 byte-identical) | api-sprint-02 §1.3 |
+| BE-D1-05 §8 Q3 | Agreed: a preset per (`rules_version`, `format`); no silent default: an unknown pair is not scored and its commands get 409 `rules_unavailable` (PE-S2-R1-05, BE) | api-sprint-02 §2.1; ST-035 |
+| BE-D1-06 append-only and cascade | Agreed: the trigger allows only a `DELETE` with `pg_trigger_depth() > 1` (the cascade from `matches`), plus the REVOKE; IT-02-03 covers both | api-sprint-02 §5; migration 0010 |
+| As built, not in the Proposed doc | `GET /matches/{id}/video` (T-01 whole video), `GET …/corrections`, `POST …/rallies/{id}/resolution`, the codes `game_not_started`, `game_not_over`, `decision_needed`, `nothing_to_undo` and the field code `time_after_video` (QA-S2-API-02) are accepted into the contract | api-sprint-02 §3, §4 |
 
 ## 1. The decision in one paragraph
 
@@ -77,7 +91,7 @@ I7 is checked against the projection *before* the change, so it is the same code
 | `correct_rally(rally_id, field, new_value)` | changes one field of one rally's input or times | `kind=correction`, old and new value | ST-031, ST-032 |
 | `withdraw_rally(rally_id)` | `withdrawn = true` (the row stays) | `kind=withdrawal` | ST-031 (undo of a tag) |
 | `undo()` | reverses the newest not-yet-undone change by this match (a correction, a withdrawal, a game start, or the newest tag, which becomes a withdrawal) | `kind=undo`, `undoes=<id>` | ST-031, C-04 |
-| `resolve(rally_id, decision)` | for a `needs_decision` rally: `keep_in_game` is not allowed when the game is over; `move_to_next_game` (sets `game_number`); `withdraw` | `kind=resolution` | ST-032 (provisional) |
+| `resolve(rally_id, decision)` | for a `needs_decision` rally only: `move_to_next_game` (sets `game_number`; the next game must be started) or `withdraw`. There is no `keep_in_game`: a rally after the end of its game can never be scored in it | `kind=resolution` | ST-032 (provisional) |
 
 Each command: load the whole aggregate (a 3-game match is about 70 rallies; judgment), check the `version` from the client's `If-Match` (IT-02-04: one wins, the other gets 409 `stale_match` and retries), apply, compute the projection, save, bump `version`, commit. Nothing is written if any step fails (IT-02-02). The response carries the new projection, so the client never computes a score itself beyond the optimistic display (NFR-012a).
 
@@ -125,7 +139,7 @@ The repository loads and saves the whole aggregate; no other module reads these 
 
 | # | Question | Owner | Due |
 |---|---|---|---|
-| Q1 | C-02/C-03 resolution choices (keep, move to next game, withdraw) and which rallies of the next game are marked in C-03 (all of them, or only up to the first point) | pickleball-domain-coach | before ST-032 (rows `@needs-verification`, ADR 0009) |
+| Q1 | C-02/C-03 resolution choices (move to next game, withdraw; D1 removed "keep") and which rallies of the next game are marked in C-03 (all of them, or only up to the first point) | pickleball-domain-coach | before ST-032 (rows `@needs-verification`, ADR 0009) |
 | Q2 | Responsible-player side rules for forced errors (table §2.1) | pickleball-domain-coach | before ST-027 tests are final |
 | Q3 | `PRESETS` is keyed by `rules_version` only and holds a doubles config; singles (ST-035) needs one config per format. Proposal: key by (`rules_version`, `format`) inside `racket.sports.pickleball.rules`, no other change | senior-backend-engineer with QA | ST-035 |
 | Q4 | Undo depth and scope: newest change only, repeated (stack) — proposed; no redo in R1 | principal-designer | ST-031 |

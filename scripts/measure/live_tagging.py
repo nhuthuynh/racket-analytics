@@ -30,8 +30,8 @@ times N correction + undo pairs on it (NFR-013, p95 <= 1.5 s).
         --corrections 50 --json reports/goal/live-tagging.json
 
 Exit 0 only when every step of every run passed and every timing met its target; 2 when it
-refuses to start (disk floor). Route and field names: tagcontract.py (assumptions until
-api-sprint-02.md exists).
+refuses to start (disk floor). Route and field names: tagcontract.py, which mirrors
+docs/architecture/api-sprint-02.md.
 """
 
 from __future__ import annotations
@@ -99,10 +99,14 @@ class Session:
 
 
 def _code(r: Any) -> str | None:
+    """The refusal code from the api-sprint-00 §3 envelope ``{"error": {"code", ...}}``
+    (api-sprint-02 §1.1, BE-D1-01). Any other body shape has no code."""
     try:
-        return r.json().get("code")
+        error = r.json().get("error")
     except (ValueError, AttributeError):
         return None
+    code = error.get("code") if isinstance(error, dict) else None
+    return code if isinstance(code, str) else None
 
 
 def _tag_all(

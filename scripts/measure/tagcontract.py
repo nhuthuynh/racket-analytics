@@ -1,11 +1,9 @@
 """The Sprint 2 API shapes the live harness relies on (goal scorecard §4.0, G02-01..G02-04).
 
-ASSUMPTIONS, NOT YET THE CONTRACT. They follow `docs/architecture/match-aggregate.md` §3-§5
-(commands, If-Match version, projection, 409 `stale_match`). The principal-engineer writes the
-real contract in `docs/architecture/api-sprint-02.md` (sprint-02 §4, due D2). If it differs,
-the principal-engineer changes THIS file in the same commit, and the method author dry-runs
-G02-01..G02-04 again before handover (ADR 0033 rule 2; decision-log row). No other harness
-file hard-codes a Sprint 2 route or field.
+A mirror of `docs/architecture/api-sprint-02.md` (Accepted, design review D1, 2026-10-06).
+The contract is the source of truth: a change there changes THIS file in the same commit, and
+the method author dry-runs G02-01..G02-04 again before handover (ADR 0033 rule 2). No other
+harness file hard-codes a Sprint 2 route or field.
 """
 
 from __future__ import annotations
@@ -18,11 +16,14 @@ ROUTES = {
     "undo": ("POST", "/matches/{match_id}/undo"),
     "history": ("GET", "/matches/{match_id}/corrections"),
     "media": ("GET", "/matches/{match_id}/rallies/{rally_id}/media"),
+    "video": ("GET", "/matches/{match_id}/video"),
+    "resolve": ("POST", "/matches/{match_id}/rallies/{rally_id}/resolution"),
 }
 
 # Body of start_game: the first serving side of the game (ST-021 explicit input, FR-045).
 START_GAME_BODY = {"first_serving_side": "A", "ends_switched": False}
-# Optimistic lock: the client sends the aggregate version it last saw (IT-02-04).
+# Optimistic lock: the client sends the aggregate version it last saw (IT-02-04); the API
+# accepts 3, "3" or W/"3" and answers ETag: "<version>" (api-sprint-02 §1.2).
 VERSION_HEADER = "If-Match"
 # Command responses: {"version": int, "sheet": <sheet>}; tag responses add "rally_id".
 VERSION_KEY, SHEET_KEY, RALLY_ID_KEY = "version", "sheet", "rally_id"
@@ -33,7 +34,7 @@ CORRECTED_KEY = "corrected_by_user"
 HISTORY_ITEMS = "items"
 # Media: {"url": str, "expires_in_s": int, "start_ms": int}
 MEDIA_URL, MEDIA_TTL, MEDIA_START = "url", "expires_in_s", "start_ms"
-# Error codes (409 / 422 bodies carry {"code": ...}).
+# Error codes, read from the api-sprint-00 §3 envelope {"error": {"code", ...}} (§1.1).
 STALE, NOT_READY, INVALID_OUTCOME = "stale_match", "match_not_ready", "invalid_outcome"
 
 
