@@ -6,7 +6,7 @@
     "planned_start": "2026-11-02",
     "planned_review": "2026-11-13",
     "work_started": "2026-10-05",
-    "status_written": "2026-10-06 (review round 1 status step, engineering-manager)"
+    "status_written": "2026-10-06 (review round 2 status step, engineering-manager)"
   },
   "owner": "engineering-manager",
   "branch": "sprint-02",
@@ -27,46 +27,63 @@
   },
   "goal_metrics": {
     "G02-01": {
-      "met": null
+      "met": null,
+      "latest_live": "5/5 rc=0 (EM dry-run 48e1e71)"
     },
     "G02-02": {
-      "met": null
+      "met": null,
+      "latest_live": "(a) p95 28.3 ms n=100 byte-identical; (b) p95 17 ms (EM dry-run)"
     },
     "G02-03": {
-      "met": null
+      "met": null,
+      "latest_live": "IT-02 231/231, IT-01 80/80 (QA dry-run)"
     },
     "G02-04": {
-      "met": null
+      "met": null,
+      "latest_live": "p95 14.5 ms, p99 17.7 ms, 1.0, 50.0 RPS (EM dry-run)"
     },
     "G02-05": {
-      "met": null
+      "met": null,
+      "latest_live": "93 passed, 0 failed, 6 skipped; x3 0 flaky (EM dry-run, CfT, ADR 0036)"
     },
     "G02-06": {
-      "met": null
+      "met": null,
+      "latest_live": "(a) 11.5 (b) 11.8 (c) 740.1 (d) 392.8 ms p95 (EM dry-run, CfT)"
     },
     "G02-07": {
-      "met": null
+      "met": null,
+      "latest_live": "275 passed, 1 skipped (P3); 62 provisional (QA dry-run)"
     },
     "G02-08": {
-      "met": null
+      "met": null,
+      "latest_live": "0 disagreements; mutation 0.8635 (QA dry-run)"
     },
     "G02-09": {
-      "met": null
+      "met": null,
+      "latest_live": "97%; 99.54/98.25%; web 91.02% (QA dry-run)"
     },
     "G02-10": {
-      "met": null
+      "met": null,
+      "latest_live": "37 axe incl. V-01 real video, 0 serious/critical (EM dry-run)"
     },
     "G02-11": {
-      "met": null
+      "met": null,
+      "latest_live": "open 3 (not on target)"
     },
     "G02-12": {
-      "met": null
+      "met": null,
+      "latest_live": "domain rc=124 over 10 s budget (QA dry-run; not on target)"
     }
   },
   "open_defects": {
-    "count": 6,
+    "count": 3,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md",
-    "measured": "2026-10-06 review round 1 (engineering-manager), rc 1"
+    "measured": "2026-10-06 review round 2 (engineering-manager), rc 1",
+    "open_ids": [
+      "BE-D1-01",
+      "QA-R1-06 family",
+      "PD-R1-06 / DR-01 / DR-02 family"
+    ]
   },
   "preconditions": {
     "adr_0009_ratified": "met (ADR 0023)",
@@ -687,5 +704,6 @@
     "dod_done_units": 0
   },
   "po_items_note": "P1-P4 answered 2026-10-06 (po-input-2026-10-05.md addenda); P5-P9 open",
-  "dod_done_note": "dod_done_units stay 0 until review round 1 closes and the goal scorecard is verified on the live stack (PO standing rule)"
+  "dod_done_note": "dod_done_units stay 0 until review round 1 closes and the goal scorecard is verified on the live stack (PO standing rule)",
+  "goal_metrics_note": "'met' is filled only by the independent verifier (goal-scorecard §3). 'latest_live' is the newest dry-run result (sprint-report §1)."
 }

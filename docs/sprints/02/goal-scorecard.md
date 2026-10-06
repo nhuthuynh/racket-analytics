@@ -145,7 +145,8 @@ python3 scripts/measure/tag_latency.py --api http://127.0.0.1:38000 --seed-api "
 
 ```bash
 cd web
-flock ../.local/evidence-e2e.lock env MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
+test -x /opt/google/chrome/chrome && /opt/google/chrome/chrome --version   # ADR 0036: Chrome for Testing 141.0.7390.54
+flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
   BASE_URL=$WEB PW_PROJECTS=chromium \
   PLAYWRIGHT_JUNIT_OUTPUT_NAME="$GOAL/e2e.xml" PLAYWRIGHT_JSON_OUTPUT_NAME="$GOAL/e2e.json" \
   pnpm exec playwright test --workers=1 --output "$GOAL/pw-out" --reporter=line,junit,json; echo rc=$?
@@ -156,12 +157,13 @@ python3 scripts/measure/junit_rate.py --include '.' --allow-skips \
   --require 'Signing out leaves nothing behind' --require 'Upload validation' \
   --json "$GOAL/e2e-rate.json" "$GOAL/e2e.xml"; echo rc=$?
 jq -r '[.. | objects | select(has("annotations")) | .annotations[]? | select(.type=="skip") | .description] | .[]' "$GOAL/e2e.json"
-(cd web && flock ../.local/evidence-e2e.lock env MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
+(cd web && flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
   BASE_URL=$WEB PW_PROJECTS=chromium PLAYWRIGHT_JUNIT_OUTPUT_NAME="$GOAL/e2e-repeat.xml" \
   pnpm exec playwright test --repeat-each=3 --workers=1 --output "$GOAL/pw-out-repeat" --reporter=line,junit)
 python3 scripts/ci/flaky_report.py --fail-on-flaky --out "$GOAL/flaky.md" "$GOAL/e2e.xml" "$GOAL/e2e-repeat.xml"; echo rc=$?
 ```
 
+- **Browser (ADR 0036; decision-log 2026-10-06, EM, review round 2):** the `chromium` project runs in Chrome for Testing at `/opt/google/chrome/chrome` (`PW_CHROMIUM_CHANNEL=chrome`), which decodes the H.264 original. Without the variable Playwright's bundled Chromium runs, E2E-02-04 and the real-video seek fail with "this browser cannot decode the H.264 original", and that run is not the evidence for G02-05, G02-06 (c) or G02-10 (V). If the binary is missing, Playwright stops ("Chromium distribution 'chrome' is not found"): the row is "no" (fail closed).
 - The repeat covers **every** spec, root specs included (C-04, QA-R3-E2E-01); in Sprint 1 it covered `e2e/sprint-01` only.
 - **Skips:** no E2E-02 test may skip. The printed skip reasons (Sprint 1 specs only) must each name their API binding; at most 6.
 - **Actual:** `passed`/`failed`/`skipped`/`rate` from `e2e-rate.json`, then the flaky count. WebKit runs only on CI; a CI WebKit result is supporting evidence and its failures count in G02-11.
@@ -170,7 +172,7 @@ python3 scripts/ci/flaky_report.py --fail-on-flaky --out "$GOAL/flaky.md" "$GOAL
 
 ```bash
 cd web
-flock ../.local/evidence-e2e.lock env MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
+flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
   BASE_URL=$WEB PW_PROJECTS=chromium PLAYWRIGHT_JSON_OUTPUT_NAME="$GOAL/e2e-timing.json" \
   pnpm exec playwright test e2e/sprint-02/timing.spec.ts --repeat-each=20 --workers=1 \
   --output "$GOAL/pw-out-timing" --reporter=line,json; echo rc=$?
@@ -306,3 +308,6 @@ python3 ../scripts/ci/run_with_budget.py 600 -- env -u APP_ENV uv run pytest -q 
 | G02-04 | sre-devops-engineer (method fix by engineering-manager, SRE-S2-02) | 2026-10-06, head `8af0f77` + the `--seed-api` change, own fresh Compose stack `racket-ems2r1` over HTTPS (clean worktree, `evidence.sh up` rc 0, 9 services healthy; `down` rc 0, volumes and images removed). Old method (no `--seed-api`): **rc=1**, `"video": {"ok": false, "status": "uploading"}`, no load sent (reproduces SRE-S2-02). New method `--api http://127.0.0.1:34800 --seed-api https://localhost:34300/api --origin https://localhost:34300 --cacert root.crt --rps 50 --duration 60`: **rc=0**, 3000 requests, p50 11.1 ms, p95 24.1 ms, p99 73.4 ms, availability 1.0, 0 unexpected, 0 5xx, 0 429, achieved 50.0 RPS. A dry-run, not the verifier's measurement |
 | G02-05, G02-06, G02-10 | senior-qa-engineer with sre-devops-engineer | 2026-10-06, head `0609d6a`, Compose `racket-qa02` (https://localhost:43000, SRE-MEDIA in), Chromium 1194. **G02-05** rc=1: `82 passed, 3 failed, 6 skipped` (rate 0.965, every required id present); failures: E2E-02-04 and `seek-first-frame` real link ("this browser cannot decode the H.264 original", blockers.md 2026-10-06) and the stand-in seek (QA-S2-UI-04); 6 skips each name their API binding; `--repeat-each=3` `248 passed`, flaky report rc=1, 1 flaky = the stand-in seek, caused by product defect QA-S2-UI-04 (not a test flake). **G02-06** rc=1: (a) n=160 p95 13.0 ms; (b) n=640 p95 12.6 ms; (c) n=0 (H.264 blocker); (d) n=60 p95 403.1 ms. **G02-10**: 36 axe attachments, 0 serious/critical, 0 target failures; families T, K, S, H, V (V via the stand-in only) and every Sprint 1 family incl. C-22 states |
 | G02-11 | engineering-manager | `open_defects.py docs/sprints/02/review-rounds.md` → rc=1, open 17 (planning, 2026-10-05) |
+| G02-01, G02-02 (update) | engineering-manager | 2026-10-06 (review round 2), head `48e1e71`, own native https stack `.local/em-rv2` (https://localhost:47943, SRE-MEDIA rule in its Caddy edge; Compose refused by the 16 GB build floor at 12-13 GB free). `live_tagging.py --runs 5 --corrections 50` **rc=0**: 5/5 runs, no failing step (step 9 `@needs-verification` passed); tag_to_sheet p95 17 ms (n=30); corrections p95 28.3 ms (n=100), 0 failures, restored byte-identical (76 rallies, 3 games). The row above ("Not yet possible") is superseded (decision-log 2026-10-06, EM) |
+| G02-04 (re-run) | engineering-manager | 2026-10-06, head `48e1e71`, `.local/em-rv2`. `tag_latency.py --api http://127.0.0.1:47911 --seed-api https://localhost:47943/api …` **rc=0**: 3,000 requests, p95 14.5 ms, p99 17.7 ms, availability 1.0, 0 unexpected, 50.0 RPS |
+| G02-05, G02-06, G02-10 (Chrome for Testing, ADR 0036) | engineering-manager | 2026-10-06, head `48e1e71`, `.local/em-rv2`, `PW_CHROMIUM_CHANNEL=chrome` (CfT 141.0.7390.54). **G02-05** rc=0: `93 passed, 0 failed, 6 skipped`, rate 1.0, missing [] (E2E-02-04 passed), 6 skips each name their API binding; ×3 repeat rc=0 `279 passed, 18 skipped`, `flaky_report.py --fail-on-flaky` rc=0, 0 flaky. **G02-06** `pw_timings.py` rc=0: (a) p95 11.5 ms n=160; (b) 11.8 ms n=640; (c) 740.1 ms n=40, real H.264 link, reference profile; (d) 392.8 ms n=60. **G02-10**: 37 axe checks incl. `axe-V-01` (real video), 0 serious/critical, 0 target failures; E2E-02-02, E2E-02-03, sheet at 320/360 px passed |

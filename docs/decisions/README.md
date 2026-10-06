@@ -135,5 +135,8 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0031 | [ASVS 6.3.3: residual risk of the single-factor magic link, or passkeys in R1](0031-asvs-6-3-3-single-factor-magic-link-residual-risk.md) | Accepted (human PO, 2026-10-06: option 1, re-review before any real-user beta) | 2026-10-05 |
 | 0032 | [Account identity is the normalised address, not the HMAC `email_key` (amends 0025)](0032-account-identity-is-the-address-not-the-email-key.md) | Accepted (security-privacy-engineer sign-off recorded 2026-10-05; code is ST-013b, gate before any non-dev deployment) | 2026-10-05 |
 | 0033 | [Reviewers write their own finding rows, goal methods are dry-run, evidence cleans up after itself](0033-reviewer-written-finding-rows-dry-run-methods-and-self-cleaning-evidence.md) | Accepted (EM, retro 1 final close) | 2026-10-05 |
+| 0034 | [Deployment edge acceptance criteria (HSTS, forwarded headers, exposed ports)](0034-deployment-edge-acceptance-criteria.md) | Proposed (sre-devops-engineer; PO accepts before the first non-dev deployment) | 2026-10-06 |
+| 0035 | [Gold-set manifest v1 and Full Tag labels v1, checked by racket-manifest-check](0035-gold-set-manifest-v1-and-full-tag-labels-v1.md) | Proposed (senior-ml-cv-engineer, ST-040) | 2026-10-06 |
+| 0036 | [Local goal evidence runs in Chrome for Testing, a browser that decodes H.264](0036-local-h264-evidence-browser-chrome-for-testing.md) | Accepted (EM, review round 2, SRE-S2-05 / QA-RV1-07) | 2026-10-06 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.
