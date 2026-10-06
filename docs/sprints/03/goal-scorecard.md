@@ -188,6 +188,7 @@ python3 scripts/measure/pw_timings.py "$GOAL/e2e-timing.json" --min-n 20 \
 
 ```bash
 cd backend
+eval "$(bash ../scripts/dev-postgres.sh url)"; eval "$(bash ../scripts/dev-objectstore.sh env)"   # the scenarios run the API on Postgres (QA-RV3-06)
 env -u APP_ENV uv run pytest -q -rs -m "golden_an" --junitxml="$GOAL/golden-an.xml"; echo rc=$?
 env -u APP_ENV uv run pytest -q -rs -m "analytics and scenario" --junitxml="$GOAL/analytics-scenarios.xml"; echo rc=$?
 HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs -m "conservation" --junitxml="$GOAL/conservation.xml"; echo rc=$?
