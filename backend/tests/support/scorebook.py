@@ -186,3 +186,66 @@ def rows_of(body: dict[str, Any]) -> list[dict[str, Any]]:
 def row_diffs(expected: list[dict[str, Any]], body: dict[str, Any]) -> list[str]:
     diffs: list[str] = taglib.compare_rows(expected, rows_of(body))
     return diffs
+
+
+# ------------------------------------------------------------------ scenario helpers (QA-ACC)
+def _plain(winner: str | None, ending: str = "winner", player: str | None = None) -> dict[str, Any]:
+    return {
+        "winning_side": winner,
+        "ending": ending,
+        "responsible_player": player,
+        "fault_kind": None,
+    }
+
+
+# The rallies before the one a scenario names: the 6 journey rallies, then B, A, B, then spare
+# rallies for the named one (12 slots of 4 s each on the 60 s fixture video, no overlap).
+SCENARIO_TAGS: list[dict[str, Any]] = taglib.with_times(
+    [
+        *(
+            {k: v for k, v in t.items() if k not in ("start_ms", "end_ms")}
+            for t in taglib.JOURNEY_TAGS
+        ),
+        _plain("B"),
+        _plain("A"),
+        _plain("B"),
+        _plain("A"),
+        _plain("B"),
+        _plain("A"),
+    ],
+    duration_ms=60_000,
+)
+
+
+def times_of(number: int) -> dict[str, int]:
+    """The start and end of rally ``number`` (1-based) in the scenario layout."""
+    tag = SCENARIO_TAGS[number - 1]
+    return {"start_ms": int(tag["start_ms"]), "end_ms": int(tag["end_ms"])}
+
+
+def tag_before(api: ApiDriver, user: str, match_id: str, number: int) -> None:
+    """Tag rallies 1..number-1 of the scenario layout."""
+    if number > 1:
+        api.run(tag_all(api.as_user(user), match_id, SCENARIO_TAGS[: number - 1]))
+
+
+def tag_one(api: ApiDriver, user: str, match_id: str, body: dict[str, Any]) -> httpx.Response:
+    client = api.as_user(user)
+    version = api.run(version_of(client, match_id))
+    return api.run(command(client, "tag", version=version, body=body, match_id=match_id))
+
+
+def sheet_body(api: ApiDriver, user: str, match_id: str) -> dict[str, Any]:
+    response = api.run(sheet(api.as_user(user), match_id))
+    assert response.status_code == 200, response.text
+    body: dict[str, Any] = response.json()
+    return body
+
+
+def ready_match(api: ApiDriver, user: str, title: str) -> str:
+    """A doubles match with its video received and game 1 started (side A serves first)."""
+    client = api.as_user(user)
+    match_id = api.run(create_doubles(client, title))
+    api.run(receive_video(client, match_id))
+    api.run(start_game(client, match_id))
+    return match_id
