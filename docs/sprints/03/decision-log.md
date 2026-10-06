@@ -1,0 +1,7 @@
+# Sprint 3 decision log
+
+Small decisions, one dated row each (who, decision, evidence, reasoning). Append only; do not rewrite other rows.
+Significant decisions go to `docs/decisions/` as ADRs.
+
+| Date | Who | Decision | Evidence | Reasoning |
+| 2026-10-06 | sre-devops-engineer | **gitleaks: one exact fingerprint in a new `.gitleaksignore`, not a code change.** CI run 37521787513 (first CI on `sprint-03`, `78644f3`) failed the secret scan on `generic-api-key` at `backend/tests/unit/platform/test_settings_sprint03.py:41` (commit `9ca52fe`, SEC-RV3-02). The value is the test's made-up 32-character positive-control key. The ignore entry names the commit, path, rule and line, so the scan still covers that file in any other commit and every other file. `infra/tests/test_gitleaks_ignore.py` allows exact fingerprints in test files only, each with a reason, and runs the full scan when `GITLEAKS_BIN` is set | Reproduced with the CI-pinned gitleaks 8.28.0 (sha256 `a65b5253…` OK): "leaks found: 1". Red: `uv run pytest -q tests/test_gitleaks_ignore.py` → 6 failed (no file); green → 6 passed; full scan → "no leaks found", rc 0 | Rewriting a BE test (string built at run time) would need a TCR and would hide the value from the scanner instead of recording the decision. Senior-backend-engineer, FYI: a future synthetic key could use a `dev-only-` prefix (already allowlisted) where the test allows it; this one cannot, because it must be a non-dev key |
