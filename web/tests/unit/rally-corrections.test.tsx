@@ -39,14 +39,14 @@ describe('rally corrections on the score sheet (ST-032)', () => {
   it('a refused correction says why and leaves the sheet as it was', async () => {
     const api = setup(sheet([row(1), row(2)]));
     api.correctRally.mockRejectedValueOnce(new ApiError(422, 'invalid_outcome'));
-    await userEvent.click(screen.getByRole('button', { name: 'Rally 2: change the winner to the other side' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Switch winner, rally 2, to the other side' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Correction was refused');
     expect(screen.queryByText('corrected by you')).toBeNull();
   });
 
   it('a replay has no winner to switch', () => {
     setup(sheet([row(1, { ending: 'replay', winning_side: null })]));
-    expect(screen.queryByRole('button', { name: /Rally 1: change the winner/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Switch winner, rally 1\b/ })).toBeNull();
   });
 
   it('one tap switches the winner; later rallies come back re-scored from the server', async () => {
@@ -55,7 +55,7 @@ describe('rally corrections on the score sheet (ST-032)', () => {
       version: 8,
       sheet: sheet([row(1), row(2, { winning_side: 'B', score_after: '0-0-1', corrected_by_user: true }), row(3, { score_before: '0-0-1', score_after: '0-0-2' })]),
     });
-    await userEvent.click(screen.getByRole('button', { name: 'Rally 2: change the winner to the other side' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Switch winner, rally 2, to the other side' }));
     expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(2), 'winning_side', 'B');
     const r2 = await screen.findByRole('row', { name: /Rally 2/ });
     expect(within(r2).getByText('corrected by you')).toBeVisible();
@@ -77,7 +77,7 @@ describe('rally corrections on the score sheet (ST-032)', () => {
   it('PD-S2R1-01: switching the winner of a rally with a tagged player also clears the player, in one command', async () => {
     const api = setup(sheet([row(1, { responsible_player: 'A1' })]));
     api.correctRally.mockResolvedValueOnce({ version: 8, sheet: sheet([row(1, { winning_side: 'B', corrected_by_user: true })]) });
-    await userEvent.click(screen.getByRole('button', { name: 'Rally 1: change the winner to the other side' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Switch winner, rally 1, to the other side' }));
     expect(api.correctRally).toHaveBeenCalledTimes(1);
     expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(1), 'outcome', {
       ending: 'winner', winning_side: 'B', responsible_player: null, fault_kind: null,

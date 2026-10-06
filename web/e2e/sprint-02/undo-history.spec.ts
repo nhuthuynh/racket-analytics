@@ -17,7 +17,7 @@ test.describe('@M0 @story-ST-031 Undo and correction history', () => {
     await expectNoBlockingA11yViolations(page, testInfo, 'S-01');
 
     // Rally 2 was won by the other side: switch it to Ivy's side (one tap).
-    await page.getByRole('button', { name: 'Rally 2: change the winner to your side' }).click();
+    await page.getByRole('button', { name: 'Switch winner, rally 2, to your side' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Rally 2 corrected' })).toBeVisible();
     await expect(history.getByText('Rally 2: won by changed from the other side to your side')).toBeVisible();
     await expect(page.getByRole('row', { name: /Rally 2/ }).getByText('corrected by you')).toBeVisible();

@@ -48,7 +48,7 @@ test.describe('@M0 @story-ST-032 Score sheet corrections (review round 1)', () =
     // Rally 1 winner (Ivy), rally 3 forced error (Carlos), rally 4 fault (Sam).
     for (const n of [1, 3, 4]) {
       const before = (await sheetOf(page, matchId)).rows[n - 1]!;
-      await page.getByRole('button', { name: new RegExp(`^Rally ${n}: change the winner`) }).click();
+      await page.getByRole('button', { name: new RegExp(`^Switch winner, rally ${n},`) }).click();
       await expect(page.getByRole('status').filter({ hasText: `Rally ${n} corrected` })).toBeVisible();
       await expect(page.locator('.notice--error')).toHaveCount(0);
       const after = (await sheetOf(page, matchId)).rows[n - 1]!;

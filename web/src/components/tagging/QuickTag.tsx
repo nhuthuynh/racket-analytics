@@ -15,7 +15,8 @@ import { initialTagging, taggingReducer, type Pending } from '@/lib/tagging/redu
 import { currentCall } from '@/lib/tagging/score';
 import { gameStatus, sideNames, tagLine, winnerWord } from '@/lib/tagging/view';
 import { ENDING_LABELS, ENDINGS, otherSide, type Ending, type ScoreSheet, type Side } from '@/lib/tagging/types';
-import { commandProblem, tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
+import { commandProblem, gameStartProblem, tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
+import { classifyVideoFailure, type VideoFailure } from '@/lib/media/playback';
 import {
   actionForKey,
   DEFAULT_KEYMAP,
@@ -31,7 +32,16 @@ import { GameStartForm } from './GameStartForm';
 import { KeyMapDialog } from './KeyMapDialog';
 import { ScoreAnnouncer } from './ScoreAnnouncer';
 
-export type QuickTagApi = Pick<ApiClient, 'tagRally' | 'startGame' | 'getScoreSheet' | 'undo'>;
+export type QuickTagApi = Pick<ApiClient, 'tagRally' | 'startGame' | 'getScoreSheet' | 'undo'> &
+  Partial<Pick<ApiClient, 'matchMedia'>>;
+
+/** flows-sprint-02 §3 "No playable video" (PD-FL2-04 copy): the times will not match the video. */
+const NO_VIDEO_NOTICE: Readonly<Record<VideoFailure | 'none', string>> = {
+  none: 'The video cannot be played here right now. Reload the page to try again. If you tag without it, the rally times will not match the video.',
+  link: 'The video cannot be played here right now. Reload the page to try again. If you tag without it, the rally times will not match the video.',
+  unplayable:
+    'This browser cannot play this video. Try another browser, such as Safari or Chrome. If you tag without it, the rally times will not match the video.',
+};
 
 export function QuickTag({
   match,
@@ -79,6 +89,50 @@ export function QuickTag({
     else keysButton.current?.focus();
   }, [keysOpen, refocusKeys]);
   const video = useRef<HTMLVideoElement>(null);
+  // PD-RV2-01: the link is short-lived (api-sprint-02 §3, 300 s) and the browser may not decode
+  // the codec. A failed link is renewed once; if the fresh one fails before it loads, or the
+  // browser cannot play the video, the player is told (the times then come from the page clock).
+  const [src, setSrc] = useState(videoSrc);
+  const [videoProblem, setVideoProblem] = useState<VideoFailure | 'none' | null>(videoSrc ? null : 'none');
+  const renewed = useRef(false);
+  const resumeAt = useRef<number | null>(null);
+  const onVideoError = useCallback(
+    async (v: HTMLVideoElement) => {
+      const why = classifyVideoFailure(v.error, match.media?.video_codec, (type) => v.canPlayType(type));
+      if (why === 'unplayable' || renewed.current) {
+        setVideoProblem(why);
+        return;
+      }
+      renewed.current = true;
+      resumeAt.current = Number.isFinite(v.currentTime) ? v.currentTime : null;
+      try {
+        const fresh = await (api.matchMedia ?? browserApi.matchMedia)(match.id);
+        // A link signed in the same second can be the same string: load it again explicitly.
+        if (fresh.url === v.getAttribute('src')) v.load();
+        else setSrc(fresh.url);
+      } catch {
+        setVideoProblem('link');
+      }
+    },
+    [api.matchMedia, match.id, match.media?.video_codec],
+  );
+  // The server-rendered <video> starts loading before hydration, so an `error` event can fire
+  // before React listens: read the element's state once when the page becomes interactive.
+  const checkedAtMount = useRef(false);
+  useEffect(() => {
+    const v = video.current;
+    if (checkedAtMount.current || !v) return;
+    checkedAtMount.current = true;
+    if (v.error) void onVideoError(v);
+  }, [onVideoError]);
+  const onVideoLoaded = useCallback((v: HTMLVideoElement) => {
+    renewed.current = false;
+    setVideoProblem(null);
+    if (resumeAt.current !== null) {
+      v.currentTime = resumeAt.current;
+      resumeAt.current = null;
+    }
+  }, []);
   const [keyMap, setKeyMap] = useState<KeyMap>(DEFAULT_KEYMAP);
   useEffect(() => {
     setSingleKeys(loadSingleKeys(typeof window === 'undefined' ? null : window.localStorage));
@@ -219,8 +273,7 @@ export function QuickTag({
       dispatch({ type: 'game_started', sheet: r.sheet, version: r.version, game: nextGame, firstServingSide });
       return null;
     } catch (e) {
-      const ref = e instanceof ApiError && e.supportRef ? ` Reference: ${e.supportRef}` : '';
-      return `Game ${nextGame} could not be started. Try again.${ref}`;
+      return gameStartProblem(e, nextGame);
     }
   }
 
@@ -240,14 +293,27 @@ export function QuickTag({
   return (
     <div className="stack quick-tag">
       <div className="quick-tag__video">
-        {videoSrc ? (
+        {src ? (
           // The match video is the player's own recording; tagging needs the picture only.
-          <video ref={video} src={videoSrc} controls playsInline preload="auto" className="quick-tag__player" />
-        ) : (
-          <p className="notice notice--info">
-            The video cannot be played here right now. Rally times come from this page&apos;s clock.
+          <video
+            ref={video}
+            src={src}
+            controls
+            playsInline
+            preload="auto"
+            className="quick-tag__player"
+            onLoadedMetadata={(e) => onVideoLoaded(e.currentTarget)}
+            onError={(e) => void onVideoError(e.currentTarget)}
+          />
+        ) : null}
+        {videoProblem ? (
+          // A failure while the page is open is announced politely (an info notice: tagging still
+          // works, so it does not interrupt like the error alert below); no link from the start is
+          // page content.
+          <p role={videoProblem === 'none' ? undefined : 'status'} className="notice notice--info">
+            {NO_VIDEO_NOTICE[videoProblem]}
           </p>
-        )}
+        ) : null}
       </div>
 
       <div role="group" aria-label="Score" className="quick-tag__score">

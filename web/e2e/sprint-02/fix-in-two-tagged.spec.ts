@@ -36,7 +36,7 @@ test.describe('@M0 @story-ST-032 Fix a call quickly, rallies with a tagged playe
       const before = (await sheetOf(page, matchId)).rows[n - 1]!;
       const lines = await historyCount(page, matchId);
       let actions = 0;
-      await page.getByRole('button', { name: new RegExp(`^Rally ${n}: change the winner to `) }).click();
+      await page.getByRole('button', { name: new RegExp(`^Switch winner, rally ${n}, to `) }).click();
       actions += 1;
       await expect(page.getByRole('status').filter({ hasText: `Rally ${n} corrected` })).toBeVisible();
       await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);

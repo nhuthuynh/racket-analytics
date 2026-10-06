@@ -15,7 +15,7 @@ test.describe('@M0 @story-ST-032 Fix a call quickly', () => {
     let actions = 0;
 
     // Winner of rally 6 (a winner with no player): 1 tap.
-    await page.getByRole('button', { name: 'Rally 6: change the winner to the other side' }).click();
+    await page.getByRole('button', { name: 'Switch winner, rally 6, to the other side' }).click();
     actions += 1;
     await expect(page.getByRole('status').filter({ hasText: 'Rally 6 corrected' })).toBeVisible();
     expect(actions).toBeLessThanOrEqual(2);

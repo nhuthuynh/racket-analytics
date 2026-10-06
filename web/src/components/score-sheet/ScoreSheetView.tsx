@@ -6,7 +6,7 @@
 // sheet and tells the player (IT-02-04).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScoreAnnouncer } from '@/components/tagging/ScoreAnnouncer';
-import { ApiError, type ApiClient } from '@/lib/api/client';
+import { ApiError, type ApiClient, type RallyDecision } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
 import { commandProblem } from '@/lib/tagging/messages';
 import type { Match } from '@/lib/api/types';
@@ -97,15 +97,32 @@ export function ScoreSheetView({
 
   const names = sideNames(match);
 
-  function decide(row: SheetRow, decision: 'withdraw' | 'move_to_next_game') {
+  function decide(row: SheetRow, decision: RallyDecision) {
     void run(
       'Decision',
       (v) => (api.resolveRally ?? browserApi.resolveRally)(match.id, v, row.rally_id, decision),
       () =>
         decision === 'withdraw'
           ? `Rally ${row.number} removed. It stays in the correction history.`
-          : `Rally ${row.number} moved to the next game.`,
+          : decision === 'move_to_previous_game'
+            ? `Rally ${row.number} moved back to game ${row.game - 1}.`
+            : `Rally ${row.number} moved to the next game.`,
     );
+  }
+
+  /**
+   * Which move a "needs your decision" row can take (api-sprint-02 §3 Resolution). C-03: while
+   * the game before the row's game is not over, the next game is refused by the server, and only
+   * the earliest kept rally of the row's game may move back; otherwise the rally is past the end
+   * of its game and moves to the next one.
+   */
+  function moveFor(row: SheetRow): RallyDecision | null {
+    const previous = sheet.games?.find((g) => g.number === row.game - 1);
+    if (!previous || previous.winner !== null) return 'move_to_next_game';
+    const first = sheet.rows
+      .filter((r) => r.game === row.game)
+      .reduce<SheetRow | null>((a, r) => (a === null || r.start_ms < a.start_ms ? r : a), null);
+    return first?.rally_id === row.rally_id ? 'move_to_previous_game' : null;
   }
 
   async function watch(row: SheetRow, opener: HTMLElement) {
@@ -162,9 +179,15 @@ export function ScoreSheetView({
           <>
             {row.marker === 'needs_decision' ? (
               <span className="rally-fix">
-                <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_next_game')}>
-                  {`Move rally ${row.number} to the next game`}
-                </button>
+                {moveFor(row) === 'move_to_next_game' ? (
+                  <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_next_game')}>
+                    {`Move rally ${row.number} to the next game`}
+                  </button>
+                ) : moveFor(row) === 'move_to_previous_game' ? (
+                  <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_previous_game')}>
+                    {`Move rally ${row.number} back to game ${row.game - 1}`}
+                  </button>
+                ) : null}
                 <button type="button" className="button button--secondary rally-fix__button" onClick={() => decide(row, 'withdraw')}>
                   {`Remove rally ${row.number}`}
                 </button>

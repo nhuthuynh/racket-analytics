@@ -76,7 +76,8 @@ export function RallyCorrections({
         <button
           type="button"
           className="button button--secondary rally-fix__button"
-          aria-label={`Rally ${row.number}: change the winner to ${otherSide(row.winning_side) === names.mySide ? 'your side' : 'the other side'}`}
+          // SC 2.5.3 Label in Name: the name starts with the visible words (flows-sprint-02 §5, PD-FL2-01).
+          aria-label={`Switch winner, rally ${row.number}, to ${otherSide(row.winning_side) === names.mySide ? 'your side' : 'the other side'}`}
           onClick={() => onCorrect(row, winnerFix.field, winnerFix.value)}
         >
           Switch winner
