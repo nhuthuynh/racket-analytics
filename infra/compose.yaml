@@ -152,6 +152,8 @@ services:
       # 2026-10-05, ADR 0029). So the right-most entry is the client: per-IP sign-in limits key
       # on it, not on a proxy container (ST-013, T-ML-8).
       TRUSTED_PROXY_HOPS: "1"
+      # Origin check on state-changing requests (C-18, SEC-R5-S1-03): empty would allow all.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS (see infra/env.example)}
       # Per-IP sign-in limits (api-sprint-01 §2.4). Contract defaults; the E2E stack raises them
       # because every Playwright test signs in from one host IP (smoke 2026-10-05).
       AUTH_LINK_LIMIT_PER_IP: ${AUTH_LINK_LIMIT_PER_IP:-20}

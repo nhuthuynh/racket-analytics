@@ -66,3 +66,39 @@ def test_rendered_api_port_binds_loopback() -> None:
     assert res.returncode == 0, res.stderr
     ports = yaml.safe_load(res.stdout)["services"]["api"]["ports"]
     assert [p["host_ip"] for p in ports] == ["127.0.0.1"]
+
+
+# ---------------------------------------------------------------- C-18 (SEC-R5-S1-03)
+# Without ALLOWED_ORIGINS the API's origin check is off (empty set = allow all), so the dev
+# and CI E2E stacks never exercised it. env.example is also the CI E2E env (ci.yml COMPOSE).
+@pytest.mark.unit
+def test_env_example_allows_exactly_the_web_origin() -> None:
+    assert env_example()["ALLOWED_ORIGINS"] == "${PUBLIC_WEB_ORIGIN}"
+
+
+@pytest.mark.unit
+def test_compose_requires_allowed_origins_for_the_api() -> None:
+    env = services()["api"]["environment"]
+    assert env.get("ALLOWED_ORIGINS", "").startswith("${ALLOWED_ORIGINS:?"), env
+
+
+@pytest.mark.unit
+@needs_docker
+def test_rendered_api_allows_the_https_web_origin_only() -> None:
+    res = compose_config(ENV_EXAMPLE)
+    assert res.returncode == 0, res.stderr
+    env = yaml.safe_load(res.stdout)["services"]["api"]["environment"]
+    assert env["ALLOWED_ORIGINS"] == "https://localhost:3000"
+    assert env["ALLOWED_ORIGINS"] == env["PUBLIC_WEB_ORIGIN"]
+
+
+@pytest.mark.unit
+@needs_docker
+def test_a_remapped_web_origin_carries_the_allowed_origin_with_it(tmp_path) -> None:
+    # goal-scorecard §4.0 rewrites https://localhost:3000 to the remapped port with one sed.
+    remapped = tmp_path / "goal.env"
+    remapped.write_text(ENV_EXAMPLE.read_text().replace("https://localhost:3000", "https://localhost:33000"))
+    res = compose_config(remapped)
+    assert res.returncode == 0, res.stderr
+    env = yaml.safe_load(res.stdout)["services"]["api"]["environment"]
+    assert env["ALLOWED_ORIGINS"] == "https://localhost:33000"
