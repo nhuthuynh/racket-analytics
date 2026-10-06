@@ -181,8 +181,22 @@ def _truncate_all(engine: Any) -> None:
             .scalars()
             .all()
         )
+        # Append-only tables refuse TRUNCATE with a statement trigger (SEC-S2-TM-02); the
+        # harness, as the owner, turns those triggers off inside this cleanup transaction only.
+        guards = conn.execute(
+            text(
+                "SELECT quote_ident(c.relname), quote_ident(t.tgname) FROM pg_trigger t "
+                "JOIN pg_class c ON c.oid = t.tgrelid "
+                "WHERE NOT t.tgisinternal AND t.tgtype & 32 <> 0 "
+                "AND c.relnamespace = current_schema()::regnamespace"
+            )
+        ).all()
+        for table, trigger in guards:
+            conn.execute(text(f"ALTER TABLE {table} DISABLE TRIGGER {trigger}"))
         if tables:
             conn.execute(text(f"TRUNCATE {', '.join(tables)} RESTART IDENTITY CASCADE"))
+        for table, trigger in guards:
+            conn.execute(text(f"ALTER TABLE {table} ENABLE TRIGGER {trigger}"))
 
 
 @pytest.fixture

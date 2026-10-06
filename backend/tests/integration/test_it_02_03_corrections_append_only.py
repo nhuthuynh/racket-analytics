@@ -83,3 +83,68 @@ def test_it_02_03_deleting_the_match_cascades_to_its_audit_rows(
     with committed_db.begin() as conn:
         conn.execute(sa.text("DELETE FROM matches WHERE id = :m"), {"m": audited_match})
     assert _count(committed_db, audited_match) == 0
+
+
+def test_it_02_03_truncate_by_the_owning_app_role_is_refused(
+    committed_db: Any, audited_match: str
+) -> None:
+    """SEC-S2-TM-02 / QA-RV2-09 (T-SB-7): the app role owns the table, so the REVOKE from
+    PUBLIC does not stop TRUNCATE and no row trigger fires on it; a statement trigger does."""
+    before = _count(committed_db, audited_match)
+    with pytest.raises(DBAPIError, match="append-only"), committed_db.begin() as conn:
+        conn.execute(sa.text("TRUNCATE match_corrections"))
+    assert _count(committed_db, audited_match) == before
+
+
+def _delete_from_another_trigger(conn: Any, match_id: str) -> None:
+    """Arms an AFTER INSERT trigger on a temp table that deletes the match's audit rows, then
+    fires it (probe E1 of threat-model-sprint-02 §8)."""
+    conn.execute(sa.text("CREATE TEMP TABLE it_02_03_probe (match_id uuid)"))
+    conn.execute(
+        sa.text(
+            "CREATE FUNCTION pg_temp.it_02_03_wipe() RETURNS trigger LANGUAGE plpgsql AS $$ "
+            "BEGIN DELETE FROM public.match_corrections WHERE match_id = NEW.match_id; "
+            "RETURN NEW; END $$"
+        )
+    )
+    conn.execute(
+        sa.text(
+            "CREATE TRIGGER it_02_03_wipe AFTER INSERT ON it_02_03_probe "
+            "FOR EACH ROW EXECUTE FUNCTION pg_temp.it_02_03_wipe()"
+        )
+    )
+    with pytest.raises(DBAPIError, match="append-only"):
+        conn.execute(sa.text("INSERT INTO it_02_03_probe VALUES (:m)"), {"m": match_id})
+
+
+def test_it_02_03_a_delete_from_another_trigger_is_refused_while_the_match_exists(
+    committed_db: Any, audited_match: str
+) -> None:
+    """SEC-S2-TM-01 (T-SB-6): ``pg_trigger_depth() > 1`` alone let any trigger-nested DELETE
+    through. Only the cascade from deleting the match may remove audit rows (the cascade
+    control above stays green). Rolled back."""
+    before = _count(committed_db, audited_match)
+    with committed_db.connect() as conn:
+        trans = conn.begin()
+        try:
+            _delete_from_another_trigger(conn, audited_match)
+        finally:
+            trans.rollback()
+    assert _count(committed_db, audited_match) == before
+
+
+def test_it_02_03_a_temp_table_named_matches_does_not_open_the_cascade_path(
+    committed_db: Any, audited_match: str
+) -> None:
+    """SEC-S2-TM-01 hardening: an empty temporary ``matches`` is searched before ``public``;
+    the trigger reads ``public.matches`` with a pinned ``search_path``, so it is not fooled."""
+    before = _count(committed_db, audited_match)
+    with committed_db.connect() as conn:
+        trans = conn.begin()
+        try:
+            conn.execute(sa.text("CREATE TEMP TABLE matches (id uuid)"))
+            conn.execute(sa.text("DISCARD PLANS"))  # a pooled session may hold an older plan
+            _delete_from_another_trigger(conn, audited_match)
+        finally:
+            trans.rollback()
+    assert _count(committed_db, audited_match) == before
