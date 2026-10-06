@@ -1,0 +1,64 @@
+{
+  "schema": "full-tag-labels/v1",
+  "clip": "clips/c1.mp4",
+  "fps": 60,
+  "frame_count": 120,
+  "players": [
+    "A1",
+    "A2",
+    "B1",
+    "B2"
+  ],
+  "rallies": [
+    {
+      "id": "r1",
+      "start_frame": 6,
+      "end_frame": 70,
+      "outcome": {
+        "ending": "unforced_error",
+        "winning_side": "A",
+        "responsible_player": "B2",
+        "fault_kind": null
+      },
+      "events": [
+        {
+          "type": "hit",
+          "frame": 10,
+          "hitter": "A1",
+          "facets": {}
+        },
+        {
+          "type": "bounce",
+          "frame": 34,
+          "visible": true,
+          "court_xy_m": null
+        },
+        {
+          "type": "hit",
+          "frame": 52,
+          "hitter": "B2",
+          "facets": {}
+        }
+      ]
+    },
+    {
+      "id": "r2",
+      "start_frame": 80,
+      "end_frame": 110,
+      "outcome": {
+        "ending": "replay",
+        "winning_side": null,
+        "responsible_player": null,
+        "fault_kind": null
+      },
+      "events": [
+        {
+          "type": "hit",
+          "frame": 84,
+          "hitter": "B1",
+          "facets": {}
+        }
+      ]
+    }
+  ]
+}

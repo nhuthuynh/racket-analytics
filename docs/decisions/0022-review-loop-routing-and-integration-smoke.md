@@ -1,6 +1,6 @@
 # 0022. Review loop: route findings to their owner role, smoke-test the integrated stack before review, one story per commit
 
-- **Status:** Accepted for Sprint 1 (engineering-manager is R/A for sprint process). The human product owner may veto it at the Sprint 0 review on 2026-10-16.
+- **Status:** Accepted (engineering-manager R/A for sprint process). The human product owner did not veto it and accepted it on 2026-10-05 (ADR 0023); it applies from Sprint 1 onward.
 - **Date:** 2026-10-03
 - **Deciders:** engineering-manager
 - **Consulted:** findings and lane reports from senior-qa-engineer, senior-backend-engineer, sre-devops-engineer and security-privacy-engineer (review rounds 1-3)
@@ -85,3 +85,4 @@ Chosen option: **2**, because it removes the root causes M1, M2, M3 and M6 witho
 - `git log --shortstat` for Sprint 1 shows no commit over 400 changed lines without a logged waiver.
 
 ## Notes
+- **2026-10-05 (product-manager, recording the human product owner):** PO accepted ("accept all recommendations"); the "Sprint 1 only / may veto" qualifier is removed. Previous status line: "Accepted for Sprint 1 (engineering-manager is R/A for sprint process). The human product owner may veto it at the Sprint 0 review on 2026-10-16.". See ADR 0023.

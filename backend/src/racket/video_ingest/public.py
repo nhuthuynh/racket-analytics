@@ -7,16 +7,43 @@ Match & Scoring composes its status/media read model from ``media_summary`` and 
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from racket.video_ingest.domain import MediaFacts, UploadStatus
+from racket.platform.settings import Settings
+from racket.platform.storage import ObjectStore
+from racket.video_ingest.domain import MediaFacts, MediaUrlPolicy, UploadStatus
+from racket.video_ingest.domain.uploads import ORIGINAL_CONTENT_TYPE
 from racket.video_ingest.repository import PROBE_FAILED, MediaRepository, UploadRepository
 
 # Part of the port: other contexts name upload states through here, never through the domain
 # package (context map rule 1, R2-02).
-__all__ = ["MediaFacts", "MediaSummary", "UploadStatus", "media_summary"]
+__all__ = [
+    "MediaFacts",
+    "MediaLink",
+    "MediaSummary",
+    "PendingUpload",
+    "UploadStatus",
+    "media_link",
+    "media_summary",
+]
+
+
+@dataclass(frozen=True)
+class PendingUpload:
+    """An upload session that is not complete: the resume source of truth (flows D-3, U-04).
+    Only ever shown in its owner's match read model (T-UV-8)."""
+
+    upload_id: uuid.UUID
+    state: str  # "receiving" | "expired"
+    offset: int
+    length: int
+    expires_at: datetime | None
+    file_name: str | None
+    file_last_modified_ms: int | None
+    head_sha256: str | None
 
 
 @dataclass(frozen=True)
@@ -24,6 +51,7 @@ class MediaSummary:
     upload_state: UploadStatus | None  # None: no upload session yet
     facts: MediaFacts | None
     probe_failed: bool
+    pending: PendingUpload | None = None
 
 
 def media_summary(session: Session, match_id: uuid.UUID) -> MediaSummary:
@@ -42,8 +70,57 @@ def media_summary(session: Session, match_id: uuid.UUID) -> MediaSummary:
             height=int(row.height),
             has_audio=bool(row.has_audio),
         )
+    upload = UploadRepository(session).for_match(match_id)
+    pending = None
+    state = None if upload is None else upload.status
+    if upload is not None and upload.status is not UploadStatus.COMPLETE:
+        expired = upload.is_expired(datetime.now(UTC))
+        state = UploadStatus.EXPIRED if expired else upload.status
+        pending = PendingUpload(
+            upload_id=upload.id,
+            state=state.value,
+            offset=upload.offset,
+            length=upload.length,
+            expires_at=upload.expires_at,
+            file_name=None if expired else upload.file_name,
+            file_last_modified_ms=None if expired else upload.file_last_modified_ms,
+            head_sha256=None if expired else upload.head_sha256,
+        )
     return MediaSummary(
-        upload_state=UploadRepository(session).state_for_match(match_id),
+        upload_state=state,
         facts=facts,
         probe_failed=asset is not None and asset.probe_status == PROBE_FAILED,
+        pending=pending,
     )
+
+
+@dataclass(frozen=True)
+class MediaLink:
+    """A short-lived GET link to the match's original video (ST-037; NFR-055). ``repr`` hides
+    the URL: it is a bearer secret and never reaches a log line (NFR-069)."""
+
+    url: str = field(repr=False)
+    expires_in_s: int
+
+
+def media_link(
+    session: Session,
+    store: ObjectStore,
+    settings: Settings,
+    match_id: uuid.UUID,
+    *,
+    session_token: str | None,
+) -> MediaLink | None:
+    """The link to the received video of ``match_id``, or ``None`` while there is none. The
+    caller has already checked that the match is the requester's (I9)."""
+    asset = MediaRepository(session).asset_for_match(match_id)
+    if asset is None:
+        return None
+    policy = MediaUrlPolicy(ttl_seconds=settings.media_url_ttl_seconds)
+    url = store.presigned_get(
+        asset.object_key,
+        policy.ttl_seconds,
+        public_endpoint=settings.s3_public_endpoint_url,
+        content_type=ORIGINAL_CONTENT_TYPE,  # QA-RV1-05: also for originals stored before
+    )
+    return MediaLink(policy.check(url, session_token=session_token), policy.ttl_seconds)

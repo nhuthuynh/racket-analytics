@@ -9,13 +9,35 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Self
 
+from racket.matches.match_state import GameRecord, MatchOver, MatchState  # ST-021 score
+from racket.matches.participants import (  # ST-016 setup values (ADR 0024)
+    InvalidParticipants,
+    InvalidSetup,
+    MatchParticipant,
+    MatchSetup,
+    Participants,
+)
 from racket.platform.errors import Conflict, ValidationFailed
+from racket.platform.text import is_plain_line
+
+__all__ = [
+    "GameRecord",
+    "InvalidParticipants",
+    "InvalidSetup",
+    "MatchOver",
+    "MatchParticipant",
+    "MatchSetup",
+    "MatchState",
+    "Participants",
+]
 
 TITLE_MAX = 120
+DEFAULT_RULES_VERSION = "PROVISIONAL-UNVERIFIED"  # ADR 0009: the only shipped preset
+REJECTION_CODES = ("not_a_video", "too_large", "too_long", "unsupported_video")  # §5.2
 
 
 class InvalidId(ValueError):
@@ -88,13 +110,31 @@ class Match:
     media_asset_id: uuid.UUID | None = None
     created_at: datetime = field(default_factory=_now)
     updated_at: datetime = field(default_factory=_now)
+    scoring_system: str = "side_out"
+    # Set by the server, never by the client (T-MS-1); the only preset is ADR 0009's.
+    rules_version: str = DEFAULT_RULES_VERSION
+    played_on: date | None = None
+    # Child values of the aggregate (ADR 0024); loaded and saved by the repository.
+    participants: Participants | None = None
+    # The last refusal of a file for this match (ST-018; api-sprint-01 §5.2 ``rejection``).
+    rejection_code: str | None = None
+    rejected_at: datetime | None = None
+
+    @classmethod
+    def set_up(cls, *, owner_id: OwnerId, setup: MatchSetup) -> Match:
+        """A match from the validated setup answers (ST-016; api-sprint-01 §5.1)."""
+        match = cls.create(owner_id=owner_id, title=setup.title, format=setup.format)
+        match.scoring_system = setup.scoring_system
+        match.played_on = setup.played_on
+        match.participants = setup.participants
+        return match
 
     @classmethod
     def create(cls, *, owner_id: OwnerId, title: str, format: str) -> Match:
         if not isinstance(owner_id, OwnerId):
             raise InvalidMatch("a match needs an owner")
         clean_title = (title or "").strip()
-        if not 1 <= len(clean_title) <= TITLE_MAX:
+        if not 1 <= len(clean_title) <= TITLE_MAX or not is_plain_line(clean_title):
             raise InvalidMatch("title must have 1 to 120 characters")
         try:
             match_format = MatchFormat(format)
@@ -116,6 +156,30 @@ class Match:
         self.media_asset_id = media_asset_id
         self.status = MatchStatus.VIDEO_RECEIVED
         self.updated_at = _now()
+
+    def reject_video(self, code: str, *, at: datetime) -> None:
+        """A refused file: back to "No video yet", with the reason (api-sprint-01 §6.6)."""
+        if code not in REJECTION_CODES:
+            raise InvalidMatch("unknown rejection code")
+        self.status = MatchStatus.AWAITING_UPLOAD
+        self.media_asset_id = None
+        self.rejection_code = code
+        self.rejected_at = at
+        self.updated_at = at
+
+    def refuse_upload(self, code: str, *, at: datetime) -> None:
+        """A file refused before it was received (§6.3 size cap, first-chunk content check).
+
+        Only a match still waiting for its video can record such a refusal: a received video
+        is never undone by a later creation request (PE-R1-01)."""
+        if self.status is not MatchStatus.AWAITING_UPLOAD:
+            raise MatchAlreadyUploaded("match already has its video")
+        self.reject_video(code, at=at)
+
+    def clear_rejection(self) -> None:
+        """A new upload starts: the last refusal is no longer shown (§5.2)."""
+        self.rejection_code = None
+        self.rejected_at = None
 
     def can_be_read_by(self, owner_id: OwnerId) -> bool:
         return self.owner_id == owner_id

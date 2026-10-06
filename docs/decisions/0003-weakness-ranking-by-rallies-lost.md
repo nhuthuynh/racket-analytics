@@ -1,6 +1,6 @@
 # 0003. Rank weaknesses by rallies lost per game (split serve/receive), not points lost per match
 
-- **Status:** Proposed. It depends on an unverified rule and needs confirmation from the human product owner (OQ-08) and verification by the domain coach.
+- **Status:** Accepted by the human product owner on 2026-10-05 (OQ-08, ADR 0023). The underlying side-out rule is still unverified; the pickleball-domain-coach verifies it once the rulebook is supplied (OQ-01).
 - **Date:** 2026-10-03
 - **Deciders:** business-analyst (proposer); pickleball-domain-coach (verifies); human product owner (approver)
 - **Consulted:** senior-qa-engineer and pickleball-domain-coach (QD X1); product-manager (PROD US-601)
@@ -66,3 +66,4 @@ Chosen option: **Option 2.**
 - The PO answers OQ-08.
 
 ## Notes
+- **2026-10-05 (product-manager, recording the human product owner):** PO accepted OQ-08. Coach verification of the side-out rule [DOM G1 R2] remains open and depends on OQ-01 (rulebook PDFs not yet supplied). Previous status line: "Proposed. It depends on an unverified rule and needs confirmation from the human product owner (OQ-08) and verification by the domain coach.". See ADR 0023.

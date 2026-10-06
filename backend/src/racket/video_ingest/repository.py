@@ -29,6 +29,10 @@ upload_sessions = sa.Table(
     sa.Column("media_asset_id", sa.Uuid(), nullable=True),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("file_name", sa.String(255), nullable=True),
+    sa.Column("file_last_modified_ms", sa.BigInteger(), nullable=True),
+    sa.Column("head_sha256", sa.String(64), nullable=True),
 )
 
 media_assets = sa.Table(
@@ -96,6 +100,43 @@ class UploadRepository:
         query = sa.select(sa.literal(1)).where(upload_sessions.c.match_id == match_id)
         return self.session.execute(query).first() is not None
 
+    def for_match(self, match_id: uuid.UUID, *, for_update: bool = False) -> UploadSession | None:
+        query = sa.select(UploadSession).where(upload_sessions.c.match_id == match_id)
+        if for_update:
+            query = query.with_for_update()
+        return self.session.execute(query).scalar_one_or_none()
+
+    def delete_for_match(self, match_id: uuid.UUID) -> None:
+        self.session.execute(
+            sa.delete(upload_sessions).where(upload_sessions.c.match_id == match_id)
+        )
+
+    def delete(self, upload: UploadSession) -> None:
+        self.session.delete(upload)
+        self.session.flush()
+
+    def lock_owner(self, owner_id: uuid.UUID) -> None:
+        """Serialise upload creations of one owner until this transaction ends (C-02,
+        PE-R3R-01). Same key as the creation rate limit, so one lock covers both checks;
+        advisory transaction locks are re-entrant within a transaction."""
+        self.session.execute(
+            sa.text("SELECT pg_advisory_xact_lock(hashtextextended(:k, 0))"),
+            {"k": f"upload:create:{owner_id}"},
+        )
+
+    def open_for_owner(self, owner_id: uuid.UUID, now: datetime) -> tuple[int, int]:
+        """(count, declared bytes) of the owner's unexpired receiving sessions (T-UV-7)."""
+        count, total = self.session.execute(
+            sa.select(
+                sa.func.count(), sa.func.coalesce(sa.func.sum(upload_sessions.c.length), 0)
+            ).where(
+                upload_sessions.c.owner_id == owner_id,
+                upload_sessions.c.status == UploadStatus.RECEIVING,
+                upload_sessions.c.expires_at > now,
+            )
+        ).one()
+        return int(count), int(total)
+
     def state_for_match(self, match_id: uuid.UUID) -> UploadStatus | None:
         query = sa.select(upload_sessions.c.status).where(upload_sessions.c.match_id == match_id)
         status: UploadStatus | None = self.session.execute(query).scalar_one_or_none()
@@ -124,6 +165,10 @@ class MediaRepository:
             )
         )
         return asset_id
+
+    def delete_asset(self, asset_id: uuid.UUID) -> None:
+        self.session.execute(sa.delete(media_facts).where(media_facts.c.media_asset_id == asset_id))
+        self.session.execute(sa.delete(media_assets).where(media_assets.c.id == asset_id))
 
     def asset_for_match(self, match_id: uuid.UUID) -> Any:
         return self.session.execute(

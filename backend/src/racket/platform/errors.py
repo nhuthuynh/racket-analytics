@@ -8,9 +8,9 @@ message per code (docs/architecture/api-sprint-00.md §3). Exception text is nev
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import Any, ClassVar
 
 # status -> (code, fixed message); api-sprint-00 §3
 STATUS_TABLE: dict[int, tuple[str, str]] = {
@@ -32,6 +32,36 @@ STATUS_TABLE: dict[int, tuple[str, str]] = {
 CODE_MESSAGES: dict[str, str] = dict(STATUS_TABLE.values())
 CODE_MESSAGES["upload_offset_mismatch"] = (
     "Upload offset does not match. Ask the server for the current offset."
+)
+# api-sprint-01 §4.1: codes added in Sprint 1, with fixed messages.
+CODE_MESSAGES.update(
+    {
+        "checksum_invalid": "The upload checksum is not valid.",
+        "link_expired": "This sign-in link can no longer be used.",
+        "upload_expired": "This upload has expired. Please start again.",
+        "video_too_large": "This video is larger than allowed.",
+        "not_a_video": "This file is not a video we can read.",
+        "upload_quota_exceeded": "You have too many unfinished uploads.",
+        "checksum_mismatch": "Part of the upload was damaged. Please send it again.",
+    }
+)
+# Sprint 2 (ST-026..ST-032; match-aggregate §3 refusals), fixed messages.
+CODE_MESSAGES.update(
+    {
+        "invalid_rally": "These rally times are not possible.",
+        "invalid_outcome": "This rally outcome is not possible.",
+        "match_not_ready": "Tagging starts once the video is received.",
+        "stale_match": "This match changed on another device. Showing the latest score.",
+        "game_not_started": "Start a game before tagging rallies.",
+        "game_not_over": "The current game is not over yet.",
+        "game_over": "This game is over. Start the next game.",
+        "match_over": "This match is over.",
+        "decision_needed": "Some rallies need your decision first.",
+        "nothing_to_undo": "There is nothing to undo.",
+        "rules_unavailable": "Scoring for this match format is not available yet.",
+        "scorebook_full": "This match cannot hold more rallies or changes.",
+        "client_closed_request": "The connection closed before the request was complete.",
+    }
 )
 
 
@@ -84,8 +114,28 @@ class UnsupportedMediaType(AppError):
     status, code = 415, "unsupported_media_type"
 
 
+@dataclass(frozen=True)
+class FieldError:
+    """One entry of ``fields`` on a 422 (api-sprint-01 §1.1): a path from the route's closed
+    list (or ``None``) and a code from the closed table §4.2. Never an input value."""
+
+    field: str | None
+    code: str
+
+
 class ValidationFailed(AppError):
     status, code = 422, "validation_failed"
+
+    def __init__(self, message: str = "validation failed", fields: Iterable[FieldError] = ()):
+        super().__init__(message)
+        self.fields: tuple[FieldError, ...] = tuple(fields)
+
+
+class ClientClosedRequest(AppError):
+    """The client went away mid-request (C-14, SRE-G2-02): a 400 nobody reads, logged at
+    INFO, so an abandoned tab never counts against the availability SLI (NFR-041)."""
+
+    status, code = 400, "client_closed_request"
 
 
 class Unavailable(AppError):
@@ -103,11 +153,21 @@ class ErrorResponse:
     message: str
     support_ref: str
     headers: Mapping[str, str] = field(default_factory=dict)
+    fields: tuple[FieldError, ...] = ()
+    retry_at: str | None = None
 
-    def body(self) -> dict[str, dict[str, str]]:
-        return {
-            "error": {"code": self.code, "message": self.message, "support_ref": self.support_ref}
+    def body(self) -> dict[str, dict[str, Any]]:
+        """api-sprint-01 §1.1: ``fields`` only on 422 (always a list), ``retry_at`` only on 429."""
+        error: dict[str, Any] = {
+            "code": self.code,
+            "message": self.message,
+            "support_ref": self.support_ref,
         }
+        if self.status == 422:
+            error["fields"] = [{"field": f.field, "code": f.code} for f in self.fields]
+        if self.status == 429:
+            error["retry_at"] = self.retry_at
+        return {"error": error}
 
 
 class ErrorMapper:
@@ -123,7 +183,9 @@ class ErrorMapper:
                 code=exc.code,
                 message=CODE_MESSAGES[exc.code],
                 support_ref=self._new_ref(),
-                headers=dict(exc.headers),
+                headers={**exc.headers, **getattr(exc, "response_headers", {})},
+                fields=getattr(exc, "fields", ()),
+                retry_at=getattr(exc, "retry_at", None),
             )
         return self.for_status(500)
 

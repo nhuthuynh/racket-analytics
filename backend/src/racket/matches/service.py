@@ -7,13 +7,19 @@ Capture & Media's ``media_summary`` port (context map R2; api-sprint-00 §5.1).
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy.orm import Session
 
-from racket.matches.domain import InvalidId, Match, MatchId, MatchStatus, OwnerId
+from racket.matches.domain import InvalidId, Match, MatchId, MatchSetup, MatchStatus, OwnerId
 from racket.matches.repository import MatchRepository
-from racket.matches.schemas import MatchOut, MediaOut
+from racket.matches.schemas import (
+    MatchOut,
+    MediaOut,
+    ParticipantOut,
+    RejectionOut,
+    UploadOut,
+)
 from racket.platform.errors import NotFound
 from racket.platform.logs import SECURITY_LOGGER
 from racket.video_ingest.public import UploadStatus, media_summary
@@ -27,16 +33,20 @@ class MatchNotFound(NotFound):
 
 
 def _rfc3339(value: datetime) -> str:
-    return value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    """UTC with ``Z`` whatever zone the DB session returned (C-08, PE-R3R-03)."""
+    return value.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 class MatchService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, api_path_prefix: str = "") -> None:
         self.session = session
         self.matches = MatchRepository(session)
+        self.api_path_prefix = api_path_prefix  # resume_url like the tus Location (§5.2)
 
-    def create(self, owner: OwnerId, title: str, format: str) -> Match:
-        match = Match.create(owner_id=owner, title=title, format=format)
+    def create(self, owner: OwnerId, body: object, *, today: date | None = None) -> Match:
+        """``POST /matches`` (api-sprint-01 §5.1): every field problem is reported at once."""
+        setup = MatchSetup.parse(body, today=today or datetime.now(UTC).date())
+        match = Match.set_up(owner_id=owner, setup=setup)
         self.matches.add(match)
         self.session.commit()
         log.info("match created", extra={"event": "match.created", "match_id": str(match.id)})
@@ -74,11 +84,35 @@ class MatchService:
             status = "awaiting_upload"
         facts = summary.facts
         media = None if facts is None else MediaOut(**vars(facts))
+        pending = summary.pending
+        upload = None
+        if pending is not None:
+            upload = UploadOut(
+                state=pending.state,  # type: ignore[arg-type]
+                offset=pending.offset,
+                length=pending.length,
+                expires_at=None if pending.expires_at is None else _rfc3339(pending.expires_at),
+                resume_url=f"{self.api_path_prefix}/uploads/{pending.upload_id}",
+                file_name=pending.file_name,
+                file_last_modified_ms=pending.file_last_modified_ms,
+                head_sha256=pending.head_sha256,
+            )
         return MatchOut(
             id=str(match.id),
             title=match.title,
             format=match.format.value,
             status=status,  # type: ignore[arg-type]
+            scoring_system=match.scoring_system,
+            rules_version=match.rules_version,
+            played_on=None if match.played_on is None else match.played_on.isoformat(),
+            participants=[
+                ParticipantOut(slot=m.slot, nickname=m.nickname, is_me=m.is_me)
+                for m in (match.participants.members if match.participants else ())
+            ],
+            upload=upload,
+            rejection=None
+            if match.rejection_code is None or match.rejected_at is None
+            else RejectionOut(code=match.rejection_code, at=_rfc3339(match.rejected_at)),  # type: ignore[arg-type]
             media=media,
             created_at=_rfc3339(match.created_at),
             updated_at=_rfc3339(match.updated_at),

@@ -40,7 +40,7 @@ describe('MatchDetail', () => {
     render(<MatchDetail initialMatch={{ ...base, status: 'awaiting_upload' }} api={api} />);
     await tick(10_000);
     expect(api.getMatch).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/match video/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Choose video')).toBeInTheDocument();
   });
 
   it('keeps showing the last known state when a refresh fails', async () => {
@@ -78,6 +78,66 @@ describe('MatchDetail', () => {
     expect(api.getMatch).toHaveBeenCalledTimes(1);
   });
 
+  // Sprint 1 (ST-017, ST-018): after the last byte the page checks the video until the probe
+  // decides, and a refusal comes back as U-03 with "Error: " in the title.
+  it('checks the video after the upload and shows a probe refusal (too long)', async () => {
+    let finish: (() => void) | null = null;
+    const startTransfer = vi.fn((o: { callbacks: { onSuccess(): void } }) => {
+      finish = () => o.callbacks.onSuccess();
+      return { pause: vi.fn(), resume: vi.fn(), abort: vi.fn() };
+    });
+    const api = {
+      getMatch: vi
+        .fn()
+        .mockResolvedValueOnce({ ...base, status: 'uploading' })
+        .mockResolvedValue({ ...base, status: 'awaiting_upload', rejection: { code: 'too_long', at: 'x' } }),
+    };
+    render(
+      <MatchDetail
+        initialMatch={{ ...base, status: 'awaiting_upload' }}
+        api={api}
+        pollMs={1_000}
+        initialFile={new File(['x'], 'long.mp4', { type: 'video/mp4' })}
+        startTransfer={startTransfer}
+      />,
+    );
+    act(() => finish!());
+    expect(screen.getByText('Checking video…')).toBeVisible();
+    await tick(1_000);
+    await tick(1_000);
+    expect(screen.getByRole('link', { name: 'Videos must be 2 hours 30 minutes or shorter' })).toBeVisible();
+    expect(document.title).toMatch(/^Error: /);
+    const calls = api.getMatch.mock.calls.length;
+    await tick(10_000);
+    expect(api.getMatch.mock.calls.length).toBe(calls);
+  });
+
+  // PD-R1-01: once the probe has decided, M-02 shows the facts only; the upload panel does not
+  // stay behind saying "Checking video…" next to "Video received".
+  it('PD-R1-01: removes the upload panel once the facts arrive after the upload', async () => {
+    let finish: (() => void) | null = null;
+    const startTransfer = vi.fn((o: { callbacks: { onSuccess(): void } }) => {
+      finish = () => o.callbacks.onSuccess();
+      return { pause: vi.fn(), resume: vi.fn(), abort: vi.fn() };
+    });
+    const api = { getMatch: vi.fn().mockResolvedValue({ ...base, media, upload: null, rejection: null }) };
+    render(
+      <MatchDetail
+        initialMatch={{ ...base, status: 'awaiting_upload', upload: null, rejection: null }}
+        api={api}
+        pollMs={1_000}
+        initialFile={new File(['x'], 'clip.mp4', { type: 'video/mp4' })}
+        startTransfer={startTransfer}
+      />,
+    );
+    act(() => finish!());
+    expect(screen.getByText('Checking video…')).toBeVisible();
+    await tick(1_000);
+    expect(screen.getByText('Video received')).toBeVisible();
+    expect(screen.queryByText('Checking video…')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Video upload' })).toBeNull();
+  });
+
   it('shows the title as a heading, as text only', () => {
     render(
       <MatchDetail
@@ -89,5 +149,18 @@ describe('MatchDetail', () => {
       screen.getByRole('heading', { level: 1, name: '<img src=x onerror=alert(1)>' }),
     ).toBeVisible();
     expect(document.querySelector('img')).toBeNull();
+  });
+});
+
+describe('MatchDetail, Sprint 2 entry points (ST-027, ST-030)', () => {
+  it('offers no tagging before the video is received', () => {
+    render(<MatchDetail initialMatch={{ ...base, status: 'awaiting_upload' }} api={{ getMatch: vi.fn() }} />);
+    expect(screen.queryByRole('link', { name: 'Tag rallies' })).toBeNull();
+  });
+
+  it('links to Quick Tag and the score sheet once the video is received', () => {
+    render(<MatchDetail initialMatch={{ ...base, media }} api={{ getMatch: vi.fn() }} />);
+    expect(screen.getByRole('link', { name: 'Tag rallies' })).toHaveAttribute('href', `/matches/${base.id}/tag`);
+    expect(screen.getByRole('link', { name: 'Score sheet' })).toHaveAttribute('href', `/matches/${base.id}/sheet`);
   });
 });

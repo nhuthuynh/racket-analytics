@@ -24,7 +24,16 @@ from hypothesis import HealthCheck, settings
 
 from tests.support import contract
 from tests.support.api import ApiDriver, async_client, lifespan
-from tests.support.db import database_url, make_engine, rolled_back_session
+from tests.support.db import (
+    BASE_URL_ENV,
+    ISOLATION_ENV,
+    create_session_database,
+    database_url,
+    drop_session_database,
+    make_engine,
+    rolled_back_session,
+)
+from tests.support.written_keys import WrittenKeys
 
 # ----------------------------------------------------------------- environment
 # The suite always runs as APP_ENV=test, whatever the shell exports (QA-R1-06). Tests that
@@ -42,6 +51,47 @@ settings.register_profile(
 )
 settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "dev"))
 
+# ----------------------------------------------------------------- one database per session
+# C-32 (PE-R3-06) / C-31 (PE-R2-04): see tests/support/db.py. Done when the first test asks for
+# the database (`raw_db_engine`, which every DB fixture uses), before that test builds the app or
+# starts a worker, so they all read the session's own DATABASE_URL. A run that never asks (the
+# unit suite, G02-12) creates nothing.
+_ISOLATED: dict[str, str] = {}
+
+
+def _isolate_session_database(config: pytest.Config) -> None:
+    base = os.environ.get("DATABASE_URL", "").strip()
+    if _ISOLATED or not base.startswith("postgresql"):
+        return
+    if os.environ.get(ISOLATION_ENV, "").lower() == "off":
+        return
+    try:
+        url = create_session_database(base)
+    except Exception as exc:  # noqa: BLE001 - reported, and the shared database is used
+        config.issue_config_time_warning(
+            pytest.PytestWarning(f"per-session test database not created, shared DB used: {exc}"),
+            stacklevel=2,
+        )
+        return
+    _ISOLATED.update(base=base, url=url)
+    os.environ[BASE_URL_ENV] = base
+    os.environ["DATABASE_URL"] = url
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    if not _ISOLATED:
+        return
+    from sqlalchemy.orm import close_all_sessions
+
+    close_all_sessions()
+    try:
+        drop_session_database(_ISOLATED["url"], _ISOLATED["base"])
+    finally:
+        os.environ["DATABASE_URL"] = _ISOLATED["base"]
+        os.environ.pop(BASE_URL_ENV, None)
+        _ISOLATED.clear()
+
+
 # ----------------------------------------------------------------- markers by directory
 _DIR_MARKERS = {
     "unit": ("unit",),
@@ -50,6 +100,7 @@ _DIR_MARKERS = {
     "regression": ("regression", "integration"),
     "features": ("scenario",),
     "e2e_api": ("integration",),
+    "oracle": ("unit",),  # the independent P9 engine and its self-tests (ST-022)
 }
 _TESTS_ROOT = Path(__file__).parent
 
@@ -76,6 +127,10 @@ def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
         marker = pytest.mark.needs_verification
     elif tag == "slow":
         marker = pytest.mark.slow
+    elif tag == "nightly":
+        marker = pytest.mark.nightly
+    elif tag == "scoring":
+        marker = pytest.mark.scoring
     elif m := _STORY.fullmatch(tag):
         marker = pytest.mark.story(id=m.group(1))
     elif m := _NFR.fullmatch(tag):
@@ -90,8 +145,9 @@ def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
 
 # ----------------------------------------------------------------- database
 @pytest.fixture(scope="session")
-def raw_db_engine() -> Iterator[Any]:
-    """Engine on DATABASE_URL without migrations (harness self-tests)."""
+def raw_db_engine(pytestconfig: pytest.Config) -> Iterator[Any]:
+    """Engine on the session's own database (C-32), without migrations (harness self-tests)."""
+    _isolate_session_database(pytestconfig)
     engine = make_engine(database_url())
     yield engine
     engine.dispose()
@@ -125,8 +181,22 @@ def _truncate_all(engine: Any) -> None:
             .scalars()
             .all()
         )
+        # Append-only tables refuse TRUNCATE with a statement trigger (SEC-S2-TM-02); the
+        # harness, as the owner, turns those triggers off inside this cleanup transaction only.
+        guards = conn.execute(
+            text(
+                "SELECT quote_ident(c.relname), quote_ident(t.tgname) FROM pg_trigger t "
+                "JOIN pg_class c ON c.oid = t.tgrelid "
+                "WHERE NOT t.tgisinternal AND t.tgtype & 32 <> 0 "
+                "AND c.relnamespace = current_schema()::regnamespace"
+            )
+        ).all()
+        for table, trigger in guards:
+            conn.execute(text(f"ALTER TABLE {table} DISABLE TRIGGER {trigger}"))
         if tables:
             conn.execute(text(f"TRUNCATE {', '.join(tables)} RESTART IDENTITY CASCADE"))
+        for table, trigger in guards:
+            conn.execute(text(f"ALTER TABLE {table} ENABLE TRIGGER {trigger}"))
 
 
 @pytest.fixture
@@ -174,6 +244,12 @@ def api(committed_app: Any) -> Iterator[ApiDriver]:
     driver = ApiDriver(committed_app)
     yield driver
     driver.close()
+
+
+@pytest.fixture
+def written_keys(monkeypatch: pytest.MonkeyPatch) -> WrittenKeys:
+    """Object keys this test's in-process server wrote (no whole-bucket diffs, QA-R3-02)."""
+    return WrittenKeys(monkeypatch)
 
 
 # ----------------------------------------------------------------- tracing

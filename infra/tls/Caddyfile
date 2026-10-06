@@ -1,0 +1,67 @@
+# TLS front door for the dev and E2E stack (ADR 0029). The API sets `__Host-racket_session`
+# with `Secure` outside APP_ENV=test, and WebKit drops Secure cookies set over plain http, so
+# the browser reaches the web only through this proxy, over https, like production.
+#
+# `tls internal`: Caddy generates its own root CA and a leaf certificate for `localhost` in the
+# `caddy-data` volume at first start. No key is committed, nothing is installed into the host
+# trust store, and no public CA is ever contacted. Browsers will warn; Playwright ignores
+# certificate errors for loopback hosts only (web/playwright.config.ts).
+{
+	admin off
+	skip_install_trust
+	auto_https disable_redirects
+	default_sni localhost
+	# No `trusted_proxies`: Caddy replaces any client-supplied X-Forwarded-For with the real
+	# peer address, which the API's per-IP sign-in limits rely on (T-ML-8).
+}
+
+https://localhost {
+	tls internal
+
+	# Media on the web origin (SRE-MEDIA; FR-027, NFR-055). The API presigns GETs for
+	# S3_PUBLIC_ENDPOINT_URL = this origin, so the page CSP `media-src 'self'` allows the video
+	# and no CORS rule is needed. A presigned URL signs host and path: both pass unchanged
+	# (Caddy keeps the incoming Host). Range requests pass through (206).
+	@media path /{$S3_BUCKET_MEDIA}/*
+	handle @media {
+		# Only presigned reads reach the store; listing, writes and unsigned reads stop here.
+		@presigned {
+			method GET HEAD
+			query X-Amz-Signature=*
+		}
+		handle @presigned {
+			reverse_proxy objectstore:8333 {
+				# The session cookie and any credential stay at the edge.
+				header_up -Cookie
+				header_up -Authorization
+				# Same origin only: drop every cross-origin grant the store adds (SeaweedFS sends
+				# them on every GET), and its version banner.
+				header_down -Access-Control-Allow-Origin
+				header_down -Access-Control-Allow-Credentials
+				header_down -Access-Control-Allow-Methods
+				header_down -Access-Control-Allow-Headers
+				header_down -Access-Control-Expose-Headers
+				header_down -Server
+				# SEC-S2-TM-03 (threat model E3): SeaweedFS ignores the signed
+				# `response-content-type`, so the edge makes the object safe on this origin:
+				# no MIME sniffing, a sandbox if the URL is opened as a page, no shared or
+				# disk cache of a signed private object, and no store headers to the browser.
+				header_down X-Content-Type-Options "nosniff"
+				header_down Content-Security-Policy "default-src 'none'; sandbox"
+				header_down Cache-Control "private, no-store"
+				header_down -Seaweed-*
+				header_down -X-Seaweedfs-*
+			}
+		}
+		respond 403
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# Container healthcheck only; not published to the host.
+http://:8080 {
+	respond /healthz 200
+}

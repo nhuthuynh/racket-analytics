@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
-import os
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
@@ -22,6 +21,7 @@ from racket.platform.storage import ObjectStore
 from tests.support import tus
 from tests.support.api import async_client, lifespan, sign_in
 from tests.support.flows import create_match
+from tests.support.written_keys import WrittenKeys
 
 MIB = 1024 * 1024
 
@@ -51,7 +51,8 @@ async def test_discovery_lists_version_extension_and_max_size(ivy: httpx.AsyncCl
 
     assert response.status_code == 204
     assert response.headers["Tus-Version"] == "1.0.0"
-    assert response.headers["Tus-Extension"] == "creation"
+    assert response.headers["Tus-Extension"] == "creation,checksum,expiration"  # TCR row 12
+    assert response.headers["Tus-Checksum-Algorithm"] == "sha256,sha1"
     assert response.headers["Tus-Max-Size"] == str(64 * MIB)
 
 
@@ -135,23 +136,23 @@ async def test_chunk_above_the_chunk_limit_is_413(ivy: httpx.AsyncClient) -> Non
 
 
 async def test_head_and_patch_answer_with_tus_resumable(ivy: httpx.AsyncClient) -> None:
-    upload = await tus.start(ivy, await create_match(ivy, "Headers"), 4)
+    data = tus.video_bytes(12)  # TCR row 16: 4 bytes can never pass the content check
+    upload = await tus.start(ivy, await create_match(ivy, "Headers"), len(data))
 
     head = await tus.head(ivy, upload)
-    patch = await tus.patch(ivy, upload, 0, b"abcd")
+    patch = await tus.patch(ivy, upload, 0, data)
 
     assert head.headers["Tus-Resumable"] == "1.0.0"
     assert patch.headers["Tus-Resumable"] == "1.0.0"
-    assert patch.headers["Upload-Offset"] == "4"
+    assert patch.headers["Upload-Offset"] == str(len(data))
 
 
 async def test_mixed_staged_and_multipart_parts_store_identical_bytes(
-    ivy: httpx.AsyncClient,
+    ivy: httpx.AsyncClient, written_keys: WrittenKeys
 ) -> None:
     """2 MiB chunks are staged until a >= 5 MiB part can be written; the last part is short."""
-    data = os.urandom(13 * MIB + 123)
+    data = tus.video_bytes(13 * MIB + 123, random=True)  # TCR row 16
     store = ObjectStore.from_settings()
-    before = set(store.list_keys())
     upload = await tus.start(ivy, await create_match(ivy, "Parts"), len(data))
 
     at = 0
@@ -160,7 +161,7 @@ async def test_mixed_staged_and_multipart_parts_store_identical_bytes(
         assert response.status_code == 204, response.text
         at = int(response.headers["Upload-Offset"])
 
-    new_keys = set(store.list_keys()) - before
+    new_keys = written_keys.stored()
     assert len(new_keys) == 1, new_keys  # staging objects are gone; one original remains
     stored = store.get_bytes(new_keys.pop())
     assert hashlib.sha256(stored).digest() == hashlib.sha256(data).digest()

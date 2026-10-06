@@ -14,7 +14,7 @@ from tests.support.api import ApiDriver
 from tests.support.flows import create_match, upload_fixture
 from tests.support.logscan import scan
 
-pytestmark = [pytest.mark.red_until(story="ST-005"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
 
 NICKNAMES = ["ivy", "carlos"]
 

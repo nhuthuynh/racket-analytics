@@ -32,7 +32,9 @@ env:
   # Property tests on the Hypothesis `ci` profile (>= 1,000 examples, ST-004). Own budget, so
   # the 10 s domain budget keeps measuring the default profile (QA-R1-07; decision-log).
   PROPERTY_BUDGET_S: "90"
-  DOMAIN_TEST_PATHS: "tests/unit"
+  # NFR-073 "rules + domain unit suite": the rules engine and the bounded contexts' unit tests.
+  # tests/unit as a whole is the backend unit suite with its own 60 s budget (W-01, run 37434214390).
+  DOMAIN_TEST_PATHS: "tests/unit/sports tests/unit/matches tests/unit/players tests/unit/video_ingest"
   COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
   FORCE_COLOR: "1"
 
@@ -127,6 +129,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}"
       - run: uv sync --locked
+      # Unbudgeted: compile bytecode for deps, src and rewritten tests, so the budgets below
+      # measure test time, not a cold cache (run 37298471332: 11.1 s cold vs 6.8 s warm).
+      - name: Warm the bytecode cache (collect only, not budgeted)
+        run: uv run --no-sync pytest -q --collect-only -m unit
       - name: Domain unit suite < 10 s (NFR-073)
         run: |
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
@@ -160,8 +166,16 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}" "diff-cover==10.6.0"
+      - name: Install ffprobe (probe stage and probe tests need the real binary)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ffmpeg
+          ffprobe -version | head -1
       - name: Start backing services (same as production; never SQLite, AQS/OPS-05)
-        run: $COMPOSE up -d --wait postgres objectstore objectstore-init mailpit tracing
+        # `up --wait` fails on a one-shot that exits (even 0), so the bucket init runs after.
+        run: |
+          $COMPOSE up -d --wait postgres objectstore mailpit tracing
+          $COMPOSE run --rm objectstore-init
       - name: Export service endpoints
         run: |
           set -a; . infra/env.example; set +a
@@ -174,6 +188,8 @@ jobs:
             echo "S3_BUCKET_MEDIA=${S3_BUCKET_MEDIA}"
             echo "SMTP_HOST=127.0.0.1"
             echo "SMTP_PORT=${MAILPIT_SMTP_HOST_PORT}"
+            echo "MAIL_SMTP_URL=smtp://127.0.0.1:${MAILPIT_SMTP_HOST_PORT}"
+            echo "MAILPIT_API_URL=http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
             echo "APP_ENV=test"
           } >> "$GITHUB_ENV"
       - name: Object store parity IT-00-16 (ADR 0008 part C)
@@ -184,10 +200,19 @@ jobs:
         run: |
           uv sync --locked
           python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" -- \
-            uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
+      - name: Rows waiting on a story (red_until; listed, not gated; a stale marker fails)
+        # sprint-02 §8: rows red until a story (stretch or PO-blocked) are listed separately.
+        # pytest's own rc is expected to be 1 here; the report decides (W-01).
+        working-directory: backend
+        run: |
+          uv run --no-sync pytest -q -p no:cacheprovider -m "red_until and not nightly" \
+            --junitxml=../reports/red-until.xml || echo "pytest rc=$? (red-until rows are expected to fail)"
+          python3 ../scripts/ci/red_until_report.py --junit ../reports/red-until.xml --root . \
+            --summary "$GITHUB_STEP_SUMMARY"
       - name: Changed-lines coverage >= 85% (testing-strategy §8, NFR-071)
         if: github.event_name == 'pull_request'
         env:
@@ -288,7 +313,22 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: corepack enable
       - name: Start the full stack
+        # Every Playwright test signs in from this one runner IP, so the per-IP sign-in limits
+        # are raised here only; the per-email limit keeps its default (sign-in.spec.ts "Too many
+        # link requests"). The per-IP limit itself is tested at API level (IT-01-02).
+        env:
+          AUTH_LINK_LIMIT_PER_IP: "1000"
+          AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
         run: $COMPOSE up -d --build --wait
+      - name: Trust the dev CA (public root certificate only; ADR 0029)
+        # web-tls (Caddy `tls internal`) generated its CA inside the container. Only the public
+        # root certificate leaves it, so WebKit and service workers see a valid chain on this
+        # throwaway runner; the CA key never leaves the caddy-data volume.
+        run: |
+          $COMPOSE cp web-tls:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/racket-dev-ca.crt"
+          sudo cp "$RUNNER_TEMP/racket-dev-ca.crt" /usr/local/share/ca-certificates/racket-dev-ca.crt
+          sudo update-ca-certificates
+          curl --fail --silent --show-error -o /dev/null https://localhost:3000/
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -302,6 +342,11 @@ jobs:
           uv sync --locked
           uv run --no-sync pytest -q tests/integration/test_it_00_10_worker_sandbox.py \
             tests/integration/test_it_00_10_worker_sandbox_strict.py
+      - name: Install ffmpeg (the rally-video specs build a decodable VP9 stand-in; W-01)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
       - working-directory: web
         run: |
           pnpm install --frozen-lockfile
@@ -309,7 +354,8 @@ jobs:
       - name: Playwright journeys; axe 0 serious/critical (NFR-027)
         working-directory: web
         env:
-          BASE_URL: http://localhost:3000
+          # web-tls (ADR 0029): Secure `__Host-` cookies need https in WebKit.
+          BASE_URL: https://localhost:3000
         run: pnpm exec playwright test --reporter=github,html
       - name: Service logs on failure
         if: failure()
@@ -319,6 +365,57 @@ jobs:
         with:
           name: playwright-report
           path: web/playwright-report/
+          if-no-files-found: warn
+
+  perf-baseline:
+    # ST-039 slice 3: Locust at 50 RPS on the API port, seeded through the https origin.
+    # Gated now: availability >= 99.5% (NFR-041), correction/undo p95 <= 1.5 s (NFR-013),
+    # sheet restored byte-identical (C-04). Read p95 is a baseline until the R1 review (NFR-010).
+    name: Locust baseline 50 RPS (ST-039; NFR-010 baseline, NFR-013, NFR-041)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Start the full stack
+        # One account signs in for the whole run; the per-IP limits are raised as in e2e.
+        env:
+          AUTH_LINK_LIMIT_PER_IP: "1000"
+          AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
+        run: $COMPOSE up -d --build --wait
+      - name: Copy the dev CA root (public certificate only; ADR 0029)
+        run: |
+          mkdir -p reports/perf
+          $COMPOSE cp web-tls:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/racket-dev-ca.crt"
+      - name: Locust, 50 readers at 1 RPS and 1 correction user, 60 s
+        env:
+          RA_ORIGIN: https://localhost:3000
+          RA_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
+          MAILPIT_API_URL: http://127.0.0.1:8025
+          RA_PERF_STATE: reports/perf/perf_state.json
+        run: |
+          pip install "uv==${UV_VERSION}"
+          # Locust exits 1 on any failed request; perf_verdict.py decides the gate.
+          uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_sprint02.py \
+            --headless --host http://127.0.0.1:8000 -u 51 -r 51 -t 60s \
+            --csv reports/perf/perf --only-summary || echo "locust rc=$?"
+      - name: Verdict (gates) and baseline table
+        run: |
+          python3 scripts/ci/perf_verdict.py --stats reports/perf/perf_stats.csv \
+            --state reports/perf/perf_state.json --rps 50 --json reports/perf/verdict.json \
+            --summary "$GITHUB_STEP_SUMMARY"
+      - name: Service logs on failure
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=200
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: perf-baseline
+          path: reports/perf/
           if-no-files-found: warn
 
   # ------------------------------------------------------------------ supply chain
@@ -348,7 +445,8 @@ jobs:
         working-directory: backend
         run: |
           pip install "uv==${UV_VERSION}" "pip-audit==2.10.1"
-          uv export --locked --no-dev --no-emit-project --format requirements-txt > /tmp/req.txt
+          # FORCE_COLOR=1 would put ANSI codes into the file (CI run 37277549983).
+          uv export --color never --locked --no-dev --no-emit-project --format requirements-txt -o /tmp/req.txt
           pip-audit --strict --requirement /tmp/req.txt --disable-pip
       - name: pnpm audit, critical (NFR-062)
         working-directory: web
@@ -372,6 +470,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install the shipped graph only (no dev dependencies)
         run: |
+          mkdir -p reports # sbom-action does not create the output directory
           pip install "uv==${UV_VERSION}"
           (cd backend && uv sync --locked --no-dev)
           corepack enable
@@ -415,16 +514,25 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}"
-      - run: $COMPOSE up -d --wait postgres objectstore objectstore-init mailpit tracing
+      - name: Install ffprobe (probe stage and probe tests need the real binary)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ffmpeg
+          ffprobe -version | head -1
+      - run: |
+          $COMPOSE up -d --wait postgres objectstore mailpit tracing
+          $COMPOSE run --rm objectstore-init
       - name: Run the backend suites three times
         working-directory: backend
         run: |
           set -a; . ../infra/env.example; set +a
           export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_HOST_PORT}/${POSTGRES_DB}"
           export S3_ENDPOINT_URL="http://127.0.0.1:${S3_HOST_PORT}" APP_ENV=test
+          export MAIL_SMTP_URL="smtp://127.0.0.1:${MAILPIT_SMTP_HOST_PORT}"
+          export MAILPIT_API_URL="http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
           uv sync --locked
           for i in 1 2 3; do
-            uv run --no-sync pytest -q -m "unit or integration or scenario or regression" \
+            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --junitxml="../reports/run-$i.xml" || true
@@ -450,6 +558,7 @@ jobs:
       - infra-tests
       - web-checks
       - e2e
+      - perf-baseline
       - secrets-and-audit
       - sbom-licences
     runs-on: ubuntu-24.04

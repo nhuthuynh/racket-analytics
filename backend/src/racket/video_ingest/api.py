@@ -8,15 +8,19 @@ header check passed, and only up to ``Content-Length`` bytes; a short body store
 
 from __future__ import annotations
 
-from typing import Annotated
+import email.utils
+from datetime import UTC, datetime
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
+from starlette.requests import ClientDisconnect
 
 from racket.platform.db import get_session
 from racket.platform.errors import (
     BadRequest,
+    ClientClosedRequest,
     PayloadTooLarge,
     TusVersionUnsupported,
     UnsupportedMediaType,
@@ -24,7 +28,12 @@ from racket.platform.errors import (
 from racket.platform.http import ERROR_HEADERS_STATE
 from racket.platform.settings import Settings
 from racket.players.api import CurrentAccount
-from racket.video_ingest.domain import ChunkBeyondLength, OffsetMismatch, UploadAlreadyComplete
+from racket.video_ingest.domain import (
+    ChunkBeyondLength,
+    OffsetMismatch,
+    UploadAlreadyComplete,
+    UploadChecksum,
+)
 from racket.video_ingest.service import (
     UploadService,
     parse_content_length,
@@ -63,6 +72,32 @@ def _route(request: Request) -> str:
     return getattr(request.scope.get("route"), "path", "")
 
 
+def http_date(value: datetime | None) -> dict[str, str]:
+    """``Upload-Expires`` as an HTTP-date (tus expiration extension, api-sprint-01 §6.4)."""
+    if value is None:
+        return {}
+    return {"Upload-Expires": email.utils.format_datetime(value.astimezone(UTC), usegmt=True)}
+
+
+policy_router = APIRouter()
+
+
+@policy_router.get("/upload-policy")
+def upload_policy(request: Request, account: CurrentAccount) -> dict[str, Any]:
+    """Caps and chunk bounds from configuration (api-sprint-01 §6.1; provisional until R-05)."""
+    s: Settings = request.app.state.settings
+    return {
+        "max_bytes": s.upload_max_bytes,
+        "max_duration_ms": s.upload_max_duration_ms,
+        "containers": ["mp4", "mov"],
+        "video_codecs": ["h264", "hevc"],
+        "chunk_min_bytes": s.upload_client_chunk_min_bytes,
+        "chunk_max_bytes": min(s.upload_client_chunk_max_bytes, s.upload_max_chunk_bytes),
+        "checksum_algorithms": ["sha256", "sha1"],
+        "expires_after_s": s.upload_expiry_seconds,
+    }
+
+
 @router.options("/uploads", status_code=204)
 def discover(request: Request) -> Response:
     settings: Settings = request.app.state.settings
@@ -71,7 +106,8 @@ def discover(request: Request) -> Response:
         headers={
             **TUS_HEADERS,
             "Tus-Version": TUS_VERSION,
-            "Tus-Extension": "creation",
+            "Tus-Extension": "creation,checksum,expiration",
+            "Tus-Checksum-Algorithm": "sha256,sha1",
             "Tus-Max-Size": str(settings.upload_max_bytes),
         },
     )
@@ -92,7 +128,12 @@ def create_upload(
     )
     prefix = service.settings.api_public_path_prefix
     return Response(
-        status_code=201, headers={**TUS_HEADERS, "Location": f"{prefix}/uploads/{upload.id}"}
+        status_code=201,
+        headers={
+            **TUS_HEADERS,
+            "Location": f"{prefix}/uploads/{upload.id}",
+            **http_date(upload.expires_at),
+        },
     )
 
 
@@ -110,6 +151,7 @@ def head_upload(
             **TUS_HEADERS,
             "Upload-Offset": str(upload.offset),
             "Upload-Length": str(upload.length),
+            **http_date(upload.expires_at),
         },
     )
 
@@ -117,11 +159,14 @@ def head_upload(
 async def _read_exactly(request: Request, length: int) -> bytes:
     chunks: list[bytes] = []
     received = 0
-    async for chunk in request.stream():
-        received += len(chunk)
-        if received > length:
-            raise PayloadTooLarge("body longer than Content-Length")
-        chunks.append(chunk)
+    try:
+        async for chunk in request.stream():
+            received += len(chunk)
+            if received > length:
+                raise PayloadTooLarge("body longer than Content-Length")
+            chunks.append(chunk)
+    except ClientDisconnect:
+        raise ClientClosedRequest("client closed the connection mid-body") from None
     if received != length:
         raise BadRequest("body shorter than Content-Length")  # dropped connection: store nothing
     return b"".join(chunks)
@@ -144,6 +189,8 @@ async def patch_upload(
     length = parse_content_length(
         request.headers.get("content-length"), service.settings.upload_max_chunk_bytes
     )
+    raw_checksum = request.headers.get("upload-checksum")
+    checksum = None if raw_checksum is None else UploadChecksum.parse(raw_checksum)  # 400
     if upload.complete:  # a finished upload takes no more bytes (SEC-R1-02; §6.4 check 7a)
         raise UploadAlreadyComplete("upload is complete")
     if offset != upload.offset:
@@ -152,5 +199,12 @@ async def patch_upload(
         raise ChunkBeyondLength("chunk goes past the declared length")
 
     data = await _read_exactly(request, length)
-    new_offset = await run_in_threadpool(service.write_chunk, upload.id, offset, data)
-    return Response(status_code=204, headers={**TUS_HEADERS, "Upload-Offset": str(new_offset)})
+    written = await run_in_threadpool(service.write_chunk, upload.id, offset, data, checksum)
+    return Response(
+        status_code=204,
+        headers={
+            **TUS_HEADERS,
+            "Upload-Offset": str(written.offset),
+            **http_date(written.expires_at),
+        },
+    )

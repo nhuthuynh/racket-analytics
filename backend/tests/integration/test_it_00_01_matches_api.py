@@ -6,13 +6,10 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-import pytest
 
 from tests.support import contract
 from tests.support.api import async_client, sign_in
 from tests.support.builders import a_match
-
-pytestmark = pytest.mark.red_until(story="ST-006")
 
 
 async def test_create_get_and_list(api_client: httpx.AsyncClient, app: Any) -> None:
@@ -49,9 +46,23 @@ async def test_response_is_an_allowlist_without_owner_internals(
 
     created = await api_client.post(contract.MATCHES, json=a_match().as_create_payload())
 
+    # api-sprint-01 §5.2 (TCR row 11): an exact, closed set, so a new internal field fails.
     keys = set(created.json())
-    assert {"id", "title", "format", "status", "media"} <= keys
-    assert keys <= {"id", "title", "format", "status", "media", "created_at", "updated_at"}, keys
+    assert keys == {
+        "id",
+        "title",
+        "format",
+        "status",
+        "scoring_system",
+        "rules_version",
+        "played_on",
+        "participants",
+        "upload",
+        "rejection",
+        "media",
+        "created_at",
+        "updated_at",
+    }, keys
 
 
 async def test_unknown_request_field_is_rejected(api_client: httpx.AsyncClient) -> None:

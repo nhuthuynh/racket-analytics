@@ -25,12 +25,20 @@ import sys
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
 from racket.analysis_jobs.stage import StageContext
-from racket.video_ingest.domain import MediaFacts
-from racket.video_ingest.repository import PROBE_DONE, PROBE_FAILED, MediaRepository
+from racket.matches import public as matches
+from racket.platform.slis import SLIRecorder, UploadEvent
+from racket.video_ingest.domain import MediaFacts, Rejection, UploadPolicy
+from racket.video_ingest.repository import (
+    PROBE_DONE,
+    PROBE_FAILED,
+    MediaRepository,
+    UploadRepository,
+)
 
 log = logging.getLogger(__name__)
 PRESIGN_TTL_S = 15 * 60
@@ -237,9 +245,38 @@ class ProbeStage:
 
         url = ctx.store().presigned_get(asset.object_key, PRESIGN_TTL_S)
         facts = MediaFacts.from_ffprobe(run_ffprobe(url))
+        policy = UploadPolicy(
+            max_bytes=ctx.settings.upload_max_bytes,
+            max_duration_ms=ctx.settings.upload_max_duration_ms,
+            max_frame_pixels=ctx.settings.upload_max_frame_pixels,
+        )
+        rejection = policy.check(facts)
+        if rejection is not None:
+            self._reject(ctx, asset, rejection)
+            return
         media.save_facts(asset.id, match_id, facts)
         media.set_probe_status(asset.id, PROBE_DONE)
         log.info("probe done", extra={"event": "probe.done", "media_asset_id": str(asset.id)})
+
+    @staticmethod
+    def _reject(ctx: StageContext, asset: Any, rejection: Rejection) -> None:
+        """§6.6: facts are not stored; the match is back to "No video yet" with the reason; the
+        asset and session rows go (so a new upload can start) in the job's transaction; the
+        original object is deleted only after that transaction commits (``after_commit``,
+        idempotent, retried by the runner). A rollback (lost lease, commit failure) therefore
+        keeps both the rows and the bytes, and a re-run refuses the file again (PE-R3-02)."""
+        match_id = ctx.key.match_id
+        matches.reject_video(
+            ctx.session, match_id, asset.owner_id, rejection.value, datetime.now(UTC)
+        )
+        UploadRepository(ctx.session).delete_for_match(match_id)
+        MediaRepository(ctx.session).delete_asset(asset.id)
+        ctx.session.flush()
+        object_key = asset.object_key
+        ctx.after_commit.append(lambda: ctx.store().delete(object_key))
+        SLIRecorder().upload_event(UploadEvent.REJECTED, reason=rejection.value)
+        log.info("video refused", extra={"event": "probe.rejected", "reason": rejection.value,
+                                         "media_asset_id": str(asset.id)})  # fmt: skip
 
     def on_failure(self, ctx: StageContext) -> None:
         media = MediaRepository(ctx.session)

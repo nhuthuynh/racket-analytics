@@ -1,0 +1,761 @@
+{
+  "sprint": "02",
+  "goal": "Quick Tag to an unofficial score sheet, with undo, corrections that keep conflicting rallies, and the rally video; the Sprint 1 blockers and majors fixed first (docs/sprints/sprint-02.md §1)",
+  "goal_scorecard": "docs/sprints/02/goal-scorecard.md",
+  "dates": {
+    "planned_start": "2026-11-02",
+    "planned_review": "2026-11-13",
+    "work_started": "2026-10-05",
+    "status_written": "2026-10-06 (sprint close: review and retro, engineering-manager)",
+    "closed": "2026-10-06 (compressed session; review and retro keep the planned date 2026-11-13 with the PO)"
+  },
+  "owner": "engineering-manager",
+  "branch": "sprint-02",
+  "based_on": "sprint-01@2b97fa0",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. implemented_units and dod_done_units tracked separately (retro 0). Status: not_started | in_progress | implemented | done | partial | blocked. Lanes update their stories; the EM keeps totals consistent.",
+  "capacity": {
+    "load_factor": 0.8,
+    "capacity_units_per_lane": 12.8,
+    "committed_units_per_lane": {
+      "BE": 12.5,
+      "FE": 12,
+      "QA": 11.5,
+      "SRE": 8.0,
+      "ML": 2
+    },
+    "committed_units": 46.0,
+    "stretch_units": 8.0
+  },
+  "goal_metrics": {
+    "G02-01": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "5/5 runs, no failing step"
+    },
+    "G02-02": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "(a) p95 35.3 ms n=100, 0 failures, byte-identical; (b) p95 19.0 ms n=30"
+    },
+    "G02-03": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "IT-02 253/253, IT-01 80/80, missing []"
+    },
+    "G02-04": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "p95 16.8 ms, p99 54.6 ms, availability 1.0, 50.0 RPS"
+    },
+    "G02-05": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "93 passed, 0 failed, 6 named skips; x3 279 passed, 0 flaky"
+    },
+    "G02-06": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "(a) 12.8 (b) 12.7 (c) 672.7 (d) 388.5 ms p95"
+    },
+    "G02-07": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "304 passed + 1 P3 skip in 33.2 s; golden 4/4; 70 provisional, 52/52"
+    },
+    "G02-08": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "100,000 / 0; rules 0.8635; projection 0.9196"
+    },
+    "G02-09": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "97%; 99.57% / 98.41%; web 91.7%"
+    },
+    "G02-10": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "0 of 37 axe checks; 0/0 targets; E2E-02-02/03, 320/360 passed"
+    },
+    "G02-11": {
+      "met": false,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "verifier 2 open (DR family, C-06); EM close recount 14 open after writing the missing review-round-3 rows (sprint-report §1.2)"
+    },
+    "G02-12": {
+      "met": true,
+      "verified": "goal verification round 3, e4c24bc, fresh Compose racket-goal02v3 (goal-scorecard §9)",
+      "actual": "domain 7.1/6.8/6.8 s; unit 10.3 s; integration 210.6 s; 0 failed"
+    }
+  },
+  "open_defects": {
+    "count": 14,
+    "command": "python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md",
+    "measured": "2026-10-06 sprint close (engineering-manager), rc 1, after b0e7cbb (PD-R3S2-04) and the EM rows for review round 3",
+    "open_ids": [
+      "PD-R1-06 / DR-01 / DR-02 family",
+      "PD-RV2-DR-FE",
+      "PD-RV2-DR-COACH",
+      "PD-RV2-DR-BA",
+      "PD-RV2-DR-PM",
+      "PD-RV2-DR-SEC",
+      "QA-R3-GATE-01 / C-06",
+      "QA-RV3-02",
+      "PE-S2-R3-01",
+      "PE-S2-R3-02",
+      "PE-S2-R3-03",
+      "SEC-RV3-01",
+      "QA-RV3-04",
+      "BLK-GOLD-01"
+    ],
+    "history": "planning 17; review round 1 status 14 -> 6; review round 2 3; goal round 1 2; close recount 14"
+  },
+  "preconditions": {
+    "adr_0009_ratified": "met (ADR 0023)",
+    "match_aggregate_design_approved": "met (Accepted, D1 closed, 8af0f77)",
+    "api_sprint_02_contract": "met (Accepted, 8af0f77)",
+    "flows_sprint_02": "written (docs/design/flows-sprint-02.md) but its review DR-02 not held",
+    "dr_01_sprint_1_p7_review": "not met (D1, hard date 2026-11-02)"
+  },
+  "po_items_open": 6,
+  "stories": [
+    {
+      "id": "C-01",
+      "kind": "story",
+      "title": "Control characters refused at the API boundary (SEC-R6-S1-01)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "9bf41f0"
+      ]
+    },
+    {
+      "id": "C-02",
+      "kind": "story",
+      "title": "Upload quota holds under parallel creations (PE-R3R-01)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "4ba6f99"
+      ]
+    },
+    {
+      "id": "C-03",
+      "kind": "story",
+      "title": "Upload server error offers recovery (PD-R3V-01, with C-35)",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "5942e09"
+      ]
+    },
+    {
+      "id": "C-04",
+      "kind": "story",
+      "title": "walking-skeleton.spec.ts flake; repeat root specs (QA-R3-E2E-01)",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0.5,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "a79627e",
+        "fd835df"
+      ]
+    },
+    {
+      "id": "C-05",
+      "kind": "story",
+      "title": "Evidence E2E runs: --output and lock (QA-R3-E2E-02)",
+      "units": {
+        "SRE": 0.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0.5,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "2ce84e4"
+      ]
+    },
+    {
+      "id": "C-06",
+      "kind": "story",
+      "title": "Manual screen-reader pass NFR-027b (QA-R3-GATE-01)",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "blocked",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "PO item P6: human tester with VoiceOver/TalkBack devices; due 2026-11-13 (review round 1, QA-R3-GATE-01 deferred to this row)"
+      ],
+      "evidence": [
+        "442f7b3 (plan and 24-row script; 0 of 24 rows run)"
+      ]
+    },
+    {
+      "id": "ST-013b",
+      "kind": "story",
+      "title": "Account identity is the stored address (ADR 0032)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "019c551"
+      ]
+    },
+    {
+      "id": "ST-026",
+      "kind": "story",
+      "title": "Match aggregate persistence; score as a projection",
+      "units": {
+        "BE": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [
+        "R3 design review D1"
+      ],
+      "open": [],
+      "evidence": [
+        "292b417",
+        "e78e161"
+      ]
+    },
+    {
+      "id": "ST-027",
+      "kind": "story",
+      "title": "Quick Tag a rally",
+      "units": {
+        "BE": 2,
+        "FE": 4
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 6,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-026",
+        "R4 api-sprint-02 D2",
+        "R6 flows-sprint-02 D2",
+        "R7 DR-01"
+      ],
+      "open": [
+        "design review DR-02 not held (DoD 'Design review held')"
+      ],
+      "evidence": [
+        "423de28",
+        "54539a5",
+        "477c3bb",
+        "ec619aa..6f0a06c (FE slices)"
+      ]
+    },
+    {
+      "id": "ST-028a",
+      "kind": "story",
+      "title": "Keyboard tagging, key map, shortcuts can be turned off",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-027"
+      ],
+      "open": [
+        "design review DR-02 not held (DoD 'Design review held')"
+      ],
+      "evidence": [
+        "6f0a06c",
+        "586e058"
+      ]
+    },
+    {
+      "id": "ST-029",
+      "kind": "story",
+      "title": "Score call and polite announcement (call format @needs-verification)",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-027"
+      ],
+      "open": [
+        "design review DR-02 not held (DoD 'Design review held')"
+      ],
+      "evidence": [
+        "423de28"
+      ]
+    },
+    {
+      "id": "ST-030",
+      "kind": "story",
+      "title": "Score sheet with the unofficial label",
+      "units": {
+        "BE": 0.5,
+        "FE": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2.5,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-026"
+      ],
+      "open": [
+        "design review DR-02 not held (DoD 'Design review held')"
+      ],
+      "evidence": [
+        "477c3bb",
+        "14dc352",
+        "ae59979"
+      ]
+    },
+    {
+      "id": "ST-031",
+      "kind": "story",
+      "title": "Undo and correction audit",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-026"
+      ],
+      "open": [
+        "design review DR-02 not held (DoD 'Design review held')"
+      ],
+      "evidence": [
+        "af9837f",
+        "072d82f",
+        "fc3f95c"
+      ]
+    },
+    {
+      "id": "ST-032",
+      "kind": "story",
+      "title": "Corrections replay; conflicting rallies kept (a)",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-031",
+        "ST-041",
+        "R5 coach Q1"
+      ],
+      "open": [
+        "design review DR-02 not held (DoD 'Design review held')",
+        "PE-S2-R3-01 (FE offers a move the server refuses)",
+        "PE-S2-R3-02 (contract drift)"
+      ],
+      "evidence": [
+        "af9837f",
+        "9ebb848",
+        "2b46b21",
+        "8c21bc3",
+        "ff9fd60"
+      ]
+    },
+    {
+      "id": "ST-037",
+      "kind": "story",
+      "title": "Jump to the video moment; short-lived media URLs",
+      "units": {
+        "BE": 1,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-027",
+        "SRE-MEDIA"
+      ],
+      "open": [
+        "E2E-02-04 / G02-06 (c): local Chromium has no H.264 (blockers.md 2026-10-06, SRE-S2-05)",
+        "design review DR-02 not held (DoD 'Design review held')"
+      ],
+      "evidence": [
+        "c949d70",
+        "ac5ca2c",
+        "f94a72f",
+        "5820cd0"
+      ]
+    },
+    {
+      "id": "ST-039",
+      "kind": "story",
+      "title": "E2E journey v1, timing spec and performance baseline",
+      "units": {
+        "QA": 2,
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-030"
+      ],
+      "open": [],
+      "evidence": [
+        "1ef2dd7",
+        "0609d6a",
+        "7a1ad00"
+      ]
+    },
+    {
+      "id": "ST-040",
+      "kind": "story",
+      "title": "Gold-set label schema, manifest v1, capture protocol",
+      "units": {
+        "ML": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "ADR 0035 Proposed; private footage bucket (BLK-GOLD-01, P11); 48e1e71 not covered by CI"
+      ],
+      "evidence": [
+        "20febb5"
+      ]
+    },
+    {
+      "id": "ST-041",
+      "kind": "story",
+      "title": "Golden tables written first",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "dc6880b"
+      ]
+    },
+    {
+      "id": "QA-ACC",
+      "kind": "task",
+      "title": "Acceptance steps and Playwright specs written red first",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [
+        "R4",
+        "R6"
+      ],
+      "open": [
+        "TCR rows 24-28 undecided (QA-RV3-02)"
+      ],
+      "evidence": [
+        "5a3be41",
+        "109cc21"
+      ]
+    },
+    {
+      "id": "QA-FUZZ",
+      "kind": "task",
+      "title": "Testing-strategy rule L11; IT-02-10 and IT-02-11",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "c7ea7c4"
+      ]
+    },
+    {
+      "id": "QA-MINORS",
+      "kind": "carry-over",
+      "title": "C-22, C-31, C-32, C-34",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "3608cf9 C-34",
+        "b2a4716",
+        "77a7201 C-32",
+        "74f1ec6 C-31",
+        "b5626fa C-22"
+      ]
+    },
+    {
+      "id": "QA-DRYRUN",
+      "kind": "task",
+      "title": "Goal-scorecard method dry-runs (ADR 0033 rule 2)",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "G02-01/02 dry-run (EM with PE) after BE-D1-01 fix; G02-04 dry-run rc 0 in review round 1 (SRE-S2-02 fix)"
+      ],
+      "evidence": [
+        "66f089e"
+      ]
+    },
+    {
+      "id": "W-01",
+      "kind": "task",
+      "title": "CI triage, WebKit first; nightly once on main",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "no CI run at the close head (PE-S2-R3-03)",
+        "nightly-quality.yml dispatch after PR #1 merges to main (PO P1; S-08, DEMO-07)"
+      ],
+      "evidence": [
+        "ffce41d",
+        "7cff44b",
+        "CI run 37464553177 at fd363fa: ci-gate success"
+      ]
+    },
+    {
+      "id": "SRE-MEDIA",
+      "kind": "task",
+      "title": "Media serving: presigned GET, range, TTL, CORS",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "03ab524"
+      ]
+    },
+    {
+      "id": "SRE-SMOKE",
+      "kind": "task",
+      "title": "Integration smoke before review round 1",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "no smoke at the sprint-close head (smoke.md 'Sprint-close head' empty)"
+      ],
+      "evidence": [
+        "f9150c6",
+        "941bf7f",
+        "40de20a"
+      ]
+    },
+    {
+      "id": "SRE-CARRY",
+      "kind": "carry-over",
+      "title": "C-11, C-12, C-13, C-15, C-18, C-23, C-29",
+      "units": {
+        "SRE": 3.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 3.5,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "C-15 needs PO item P5 for other rounds' images"
+      ],
+      "evidence": [
+        "c869eb9 C-23",
+        "7470a7b C-15",
+        "65e8adc C-11",
+        "7f9a83c C-18",
+        "7bb971f C-29",
+        "d6c92bd C-13",
+        "bddd3c7 C-12"
+      ]
+    },
+    {
+      "id": "DR-01",
+      "kind": "design",
+      "title": "Finish the Sprint 1 DoR P7 flows design review",
+      "units": {},
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [
+        "DR-01 hard date 2026-11-02; DR-02 due end of 2026-10-07; decider cells empty (PD-RV2-DR-FE/-COACH/-BA/-PM/-SEC)"
+      ],
+      "evidence": []
+    }
+  ],
+  "stretch": [
+    {
+      "id": "ST-035",
+      "title": "Side-out singles (a)",
+      "units": {
+        "BE": 1
+      },
+      "order": 1
+    },
+    {
+      "id": "ST-034",
+      "title": "Start the score sheet mid-game (a)",
+      "units": {
+        "BE": 1,
+        "FE": 0.5
+      },
+      "order": 2
+    },
+    {
+      "id": "ST-038",
+      "title": "Abandoned uploads expire",
+      "units": {
+        "BE": 1
+      },
+      "order": 3
+    },
+    {
+      "id": "ST-028b",
+      "title": "Remap tagging keys",
+      "units": {
+        "FE": 1
+      },
+      "order": 4
+    },
+    {
+      "id": "ST-025",
+      "title": "Phone-file fixture set (carried)",
+      "units": {
+        "ML": 1
+      },
+      "order": 5,
+      "open": [
+        "PO item P3"
+      ]
+    },
+    {
+      "id": "ST-033",
+      "title": "Correction consequences",
+      "units": {
+        "FE": 1,
+        "BE": 0.5
+      },
+      "order": 6
+    },
+    {
+      "id": "ST-036",
+      "title": "Gaps and resync",
+      "units": {
+        "BE": 0.5,
+        "FE": 0.5
+      },
+      "order": 7
+    }
+  ],
+  "moved_to_sprint_03": [
+    "ST-042"
+  ],
+  "totals": {
+    "planned_units": 46.0,
+    "implemented_units": 45.0,
+    "dod_done_units": 0,
+    "implemented_ratio": 0.978,
+    "not_implemented": [
+      "C-06 (1.0, P6 human tester)"
+    ]
+  },
+  "po_items_note": "P1-P5 answered (po-input-2026-10-05.md addenda); open: P6 (screen-reader tester, due 2026-11-13), P7 (rulebook, 2026-11-16), P8 (budget, 2026-11-13), P9 (testers, 2026-11-16), P10 (repo visibility: GitHub says public, record says private), P11 (provider of the private footage bucket)",
+  "dod_done_note": "dod_done_units = 0: no story is merged to main (story DoD 'Merged to main'; PR #1 is still open and sprint-02 is not merged), no CI run covers the close head (PE-S2-R3-03), and the goal is not met",
+  "goal_metrics_note": "'met' is the independent verifier's value (goal-scorecard §2/§9, round 3). G02-11's 'actual' adds the EM's close recount, which only raises the count.",
+  "goal_met": false,
+  "goal_verdict": "NOT met: 11 of 12 metrics met (verifier round 3); G02-11 fails (verifier 2 open; EM recount at close 14 open)",
+  "carry_over_to_sprint_03": "docs/sprints/02/sprint-report.md §8"
+}

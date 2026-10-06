@@ -10,9 +10,7 @@ from tests.support import tus
 from tests.support.api import sign_in
 from tests.support.flows import create_match
 
-pytestmark = pytest.mark.red_until(story="ST-008")
-
-DATA = bytes(range(256)) * 400  # 102,400 bytes
+DATA = tus.video_bytes(102_400)  # 102,400 bytes, an MP4 header first (TCR row 16)
 
 
 @pytest.fixture

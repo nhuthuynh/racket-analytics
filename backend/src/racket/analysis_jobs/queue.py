@@ -98,6 +98,27 @@ class JobQueue:
         ).scalar_one()
         return existing
 
+    def enqueue_again(self, key: JobKey) -> uuid.UUID:
+        """Like ``enqueue``, but a finished (done or failed) job for ``key`` is reset to a
+        fresh, queued first attempt: new input for the same key, e.g. a new upload after a
+        refused video (ST-018). A queued or running job is left alone."""
+        job_id = self.enqueue(key)
+        finished = (JobStatus.DONE, JobStatus.FAILED)
+        self.session.execute(
+            sa.update(jobs)
+            .where(jobs.c.id == job_id, jobs.c.status.in_([str(s) for s in finished]))
+            .values(
+                status=JobStatus.QUEUED,
+                attempts=1,
+                failure_reason=None,
+                worker_id=None,
+                lease_expires_at=None,
+                trace_context=inject_current(),
+                updated_at=_now(),
+            )
+        )
+        return job_id
+
     def claim(self, worker_id: str, stages: tuple[str, ...] | None = None) -> Job | None:
         now = _now()
         claimable = sa.or_(

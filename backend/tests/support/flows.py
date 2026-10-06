@@ -24,4 +24,18 @@ async def upload_fixture(client: httpx.AsyncClient, match_id: str, chunks: int =
 
 
 def percent(n: int, of: int) -> int:
+    """``n`` percent of ``of`` (for slicing payloads)."""
     return of * n // 100
+
+
+def percent_of(n: int, of: int) -> int:
+    """What whole percent ``n`` is of ``of``, rounded down as the UI shows it (U-04 banner,
+    ``Math.floor``). TCR row 15 as approved; row 32(a) (round to nearest) was rejected
+    because it hides 63% vs 64%. Fixtures send ``percent_up`` bytes so they land on the percent.
+    """
+    return n * 100 // of
+
+
+def percent_up(n: int, of: int) -> int:
+    """The fewest bytes that are at least ``n`` percent of ``of`` (so ``percent_of`` gives n)."""
+    return -(-of * n // 100)

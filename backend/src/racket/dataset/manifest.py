@@ -6,17 +6,41 @@ files and pass the hashes in as data (see ``racket.dataset.filesystem``).
 Rules (testing-strategy §6, QD §8):
 * every file in a frozen set is listed in its ``manifest.json`` with its sha256;
 * a file whose hash differs from the manifest, an unlisted file or a missing file fails;
-* a manifest may change a hash, add or remove a file only together with a higher version.
+* a manifest may change a hash, add or remove a file only together with a higher version;
+* a clip entry (optional ``clips`` list, ST-025) that shows people must carry a consent record
+  (OQ-06, ADR 0023): ``shows_people: true`` with a null or blank ``consent_record`` fails;
+* a clip that shows people is never stored where git can commit it (``people_in_git``,
+  ``FootageStorageCheck``): the repository is public, the consent form promises private
+  storage (docs/data/gold-capture-protocol.md §2 step 6, §3 item 4; SEC-S2-TM-06).
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-ProblemKind = Literal["changed", "unlisted", "missing", "version_not_bumped", "version_decreased"]
+ProblemKind = Literal[
+    "changed",
+    "unlisted",
+    "missing",
+    "version_not_bumped",
+    "version_decreased",
+    "consent_missing",
+    "clip_not_in_files",
+    "people_in_git",
+    # gold-set manifest v1 (ST-040, racket.dataset.gold_set)
+    "held_out_venues",
+    "unknown_venue",
+    "double_label_share",
+    "kappa_below_gate",
+    "facet_not_admitted",
+    "consent_contradiction",
+    "consent_jurisdiction",
+    "label_not_in_files",
+    "label_invalid",
+]
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _REQUIRED = ("id", "version", "licence", "consent_status", "files")
@@ -42,6 +66,47 @@ def _validate_sha(path: str, sha: object) -> str:
 
 
 @dataclass(frozen=True)
+class ClipEntry:
+    """The consent-relevant facts of one video in a set (ST-025; contract seam phones-v1)."""
+
+    path: str
+    shows_people: bool
+    consent_record: str | None
+
+    @property
+    def consent_missing(self) -> bool:
+        return self.shows_people and not (self.consent_record or "").strip()
+
+    @classmethod
+    def from_dict(cls, data: object) -> ClipEntry:
+        if not isinstance(data, Mapping):
+            raise ManifestFormatError(f"clip entry must be an object, got {data!r}")
+        for key in ("path", "shows_people", "consent_record"):
+            if key not in data:
+                raise ManifestFormatError(f"clip entry is missing required field {key!r}")
+        path = _validate_path(data["path"])
+        shows_people = data["shows_people"]
+        if not isinstance(shows_people, bool):
+            raise ManifestFormatError(f"shows_people for {path!r} must be true or false")
+        consent = data["consent_record"]
+        if consent is not None and not isinstance(consent, str):
+            raise ManifestFormatError(f"consent_record for {path!r} must be a string or null")
+        return cls(path=path, shows_people=shows_people, consent_record=consent)
+
+
+def _parse_clips(raw: object) -> tuple[ClipEntry, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ManifestFormatError("clips must be a list of clip entries")
+    clips = tuple(ClipEntry.from_dict(item) for item in raw)
+    paths = [c.path for c in clips]
+    if len(set(paths)) != len(paths):
+        raise ManifestFormatError("duplicate clip entry path")
+    return clips
+
+
+@dataclass(frozen=True)
 class Manifest:
     id: str
     version: int
@@ -49,6 +114,7 @@ class Manifest:
     consent_status: str
     files: Mapping[str, str]
     extra: Mapping[str, Any] = field(default_factory=dict)
+    clips: tuple[ClipEntry, ...] = ()
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Manifest:
@@ -64,6 +130,7 @@ class Manifest:
             if path in files:
                 raise ManifestFormatError(f"duplicate file path {path!r}")
             files[path] = _validate_sha(path, entry.get("sha256"))
+        clips = _parse_clips(data.get("clips"))
         extra = {k: v for k, v in data.items() if k not in _REQUIRED}
         return cls(
             id=str(data["id"]),
@@ -72,13 +139,20 @@ class Manifest:
             consent_status=str(data["consent_status"]),
             files=files,
             extra=extra,
+            clips=clips,
         )
+
+    @property
+    def people_clip_paths(self) -> tuple[str, ...]:
+        """Paths of the clips that show people (gold-set clips are ``clips`` entries too)."""
+        return tuple(c.path for c in self.clips if c.shows_people)
 
 
 @dataclass(frozen=True)
 class IntegrityProblem:
     kind: ProblemKind
     path: str
+    detail: str = ""
 
     def describe(self) -> str:
         messages = {
@@ -87,9 +161,24 @@ class IntegrityProblem:
             "missing": "file listed in the manifest is missing",
             "version_not_bumped": "manifest entry changed without a version bump",
             "version_decreased": "manifest version went backwards",
+            "consent_missing": "clip shows people but has no consent record (OQ-06)",
+            "clip_not_in_files": "clip entry names a file that is not in the manifest files",
+            "people_in_git": "clip shows people but git tracks it or could commit it; keep it "
+            "in the team's private store or a git-ignored directory (consent form item 4)",
+            "held_out_venues": "vision gold set needs at least 3 held-out (test) venues with clips",
+            "unknown_venue": "clip names a venue that is not in the manifest venues",
+            "double_label_share": "vision gold set needs at least 20% of clips double-labelled",
+            "kappa_below_gate": "facet is admitted but its agreement is below the gate",
+            "facet_not_admitted": "labels carry a shot facet that is not admitted (QD-TX-03)",
+            "consent_contradiction": "set is marked synthetic but a clip shows people",
+            "consent_jurisdiction": "clip shows people but its consent names no covered "
+            "jurisdiction (US or AU, ADR 0023)",
+            "label_not_in_files": "label file is not in the manifest files",
+            "label_invalid": "label file does not follow full-tag-labels/v1",
         }
         where = f"{self.path}: " if self.path else ""
-        return f"{where}{messages[self.kind]} [{self.kind}]"
+        detail = f" ({self.detail})" if self.detail else ""
+        return f"{where}{messages[self.kind]}{detail} [{self.kind}]"
 
 
 @dataclass(frozen=True)
@@ -115,6 +204,11 @@ class ManifestCheck:
                 problems.append(IntegrityProblem("unlisted", path))
             elif actual[path] != manifest.files[path]:
                 problems.append(IntegrityProblem("changed", path))
+        for clip in sorted(manifest.clips, key=lambda c: c.path):
+            if clip.path not in manifest.files:
+                problems.append(IntegrityProblem("clip_not_in_files", clip.path))
+            if clip.consent_missing:
+                problems.append(IntegrityProblem("consent_missing", clip.path))
         return CheckResult(tuple(problems))
 
     @staticmethod
@@ -130,3 +224,21 @@ class ManifestCheck:
             if base.files.get(path) != head.files.get(path)
         )
         return CheckResult(tuple(IntegrityProblem("version_not_bumped", p) for p in changed))
+
+
+class FootageStorageCheck:
+    """Footage that shows people stays out of git (SEC-S2-TM-06, QA-RV2-12).
+
+    ``exposed_to_git`` holds the set paths git tracks or does not ignore; the filesystem
+    adapter (``racket.dataset.filesystem.git_exposed``) finds them.
+    """
+
+    @staticmethod
+    def check(people_paths: Iterable[str], exposed_to_git: Collection[str]) -> CheckResult:
+        return CheckResult(
+            tuple(
+                IntegrityProblem("people_in_git", path)
+                for path in sorted(set(people_paths))
+                if path in exposed_to_git
+            )
+        )

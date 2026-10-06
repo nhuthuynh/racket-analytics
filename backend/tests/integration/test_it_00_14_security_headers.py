@@ -5,12 +5,9 @@ Playwright suite (web/e2e/security-headers.spec.ts) because the API serves no HT
 from __future__ import annotations
 
 import httpx
-import pytest
 
 from tests.support import contract
 from tests.support.api import sign_in
-
-pytestmark = pytest.mark.red_until(story="ST-005")
 
 
 def _assert_baseline(response: httpx.Response) -> None:

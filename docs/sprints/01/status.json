@@ -1,0 +1,1063 @@
+{
+  "sprint": "01",
+  "goal": "Sign in, set up a match, upload safely; the scoring engine, test-first (docs/sprints/sprint-01.md §1)",
+  "dates": {
+    "planned_start": "2026-10-19",
+    "planned_review": "2026-10-30",
+    "work_started": "2026-10-05",
+    "status_written": "2026-10-05 (final sprint close after goal verification round 3, engineering-manager; ADR 0030/0033 status step)"
+  },
+  "owner": "engineering-manager",
+  "branch": "sprint-01",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. Per retro 0 and the ADR 0010 2026-10-03 note, 'implemented_units' (built, reviewed, verified locally with command evidence) and 'dod_done_units' (story DoD fully met, including a green CI run on GitHub and every external-evidence item closed) are tracked separately. Status values: not_started | in_progress | implemented | done | partial | blocked. Stories are updated by their owning lane; the EM keeps totals consistent.",
+  "capacity": {
+    "load_factor": 0.8,
+    "capacity_units_per_lane": 12.8,
+    "committed_units_per_lane": {
+      "BE": 12,
+      "FE": 12,
+      "QA": 4,
+      "SRE": 2,
+      "ML": 2
+    },
+    "committed_units": 32,
+    "stretch_units": 1
+  },
+  "totals": {
+    "planned_units": 32,
+    "implemented_units": 29,
+    "dod_done_units": 0,
+    "implemented_ratio": 0.906,
+    "dod_done_ratio": 0.0,
+    "stretch_implemented_units": 1,
+    "implemented_units_per_lane": {
+      "BE": 12,
+      "FE": 11,
+      "QA": 4,
+      "SRE": 2,
+      "ML": 0
+    }
+  },
+  "preconditions": [
+    {
+      "item": "PO ratified ADR 0002 and ADR 0007 (OQ-02)",
+      "status": "met",
+      "evidence": "ADR 0023, 2026-10-05"
+    },
+    {
+      "item": "PO ratified ADR 0009",
+      "status": "met",
+      "evidence": "ADR 0023, 2026-10-05"
+    },
+    {
+      "item": "Sprint 0 DoD met or carry-over re-sized",
+      "status": "open",
+      "evidence": "sprint-report §8 lists 8 carry-over items; none sized into the 32 committed units"
+    }
+  ],
+  "stories": [
+    {
+      "id": "ST-013",
+      "title": "Passwordless sign-in with an email magic link",
+      "fr_nfr": [
+        "FR-001",
+        "NFR-032",
+        "NFR-055",
+        "NFR-057"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        },
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1,
+          "implemented_units": 1
+        }
+      ],
+      "planned_units": 3,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-005",
+        "ST-006"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Threat-model notes attached (DoR P8)",
+          "owner": "security-privacy-engineer",
+          "due": "Sprint 1 D2"
+        }
+      ],
+      "evidence": [
+        "BE deea4e3 (+93993af, 625cf0b): IT-01-01..03 green in the backend run",
+        "FE e845c22: sign-in.spec.ts 3 passed, 2 failed (smoke.md S-02, S-06)",
+        "WebKit cookie issue fixed (ADR 0029; 93993af, 3fbfc32, 6358c6d, 2390e9a): CI run 37298471332 job 111725272519 (head 2390e9a, before the round-1 fixes), no WebKit test fails at sign-in; smoke.md §1 Set-Cookie __Host-racket_session ... Secure over https",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)",
+        "Review round 1 fixes: SEC-R4-S1-02/03 tests (432c63f, 7fb17fa3) green in the EM isolated run at 351488e; PD-R3-01 fixed in 6dde8b5"
+      ],
+      "open": [
+        "ASVS 6.3.3 single-factor residual risk: ADR 0031 Proposed, awaiting the human PO (SEC-R4-S1-04, BLK-ASVS-6.3.3; PO decision P2); blocks any real-user beta, not dev use",
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "SEC-R4-S1-01 / SEC-R3-S1-01: account identity on the rotatable AUTH_EMAIL_KEY; ADR 0032 Accepted (3194096); code change carried as ST-013b, a gate before any non-dev deployment (PO item P4)",
+        "SEC-R6-S1-01 (blocker, new in sprint-close review round 3): NUL in the address gives 500 on unauthenticated POST /auth/links; reproduced at 6f6e44e (normalise_email accepts it); sprint-02 C-01",
+        "QA-R3-TEST-01 (minor): no regression test for unknown keys / non-object body on POST /auth/links; sprint-02 C-09"
+      ]
+    },
+    {
+      "id": "ST-014",
+      "title": "Sign-out clears local data",
+      "fr_nfr": [
+        "FR-011",
+        "NFR-067"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1,
+          "implemented_units": 1
+        }
+      ],
+      "planned_units": 1,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer"
+      ],
+      "depends_on": [
+        "ST-013"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "FE 673fdc1, BE part in deea4e3: sign-out journey 3 passed (smoke.md); IT-01-04 green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
+      ],
+      "open": [
+        "PD-R1-04 / PE-R1-04 / QA-R1-04 / S-09: WebKit-only failure sign-out.spec.ts:46 'Your upload will stop'; not reproducible without a WebKit CI run",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
+      ]
+    },
+    {
+      "id": "ST-015",
+      "title": "First-run promise and capture guide",
+      "fr_nfr": [
+        "FR-004",
+        "FR-020",
+        "NFR-033",
+        "NFR-035"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-designer",
+        "pickleball-domain-coach"
+      ],
+      "depends_on": [
+        "coach wording"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Coach sign-off on capture-guide wording (DoR P9)",
+          "owner": "pickleball-domain-coach",
+          "due": "Sprint 1 D3",
+          "status": "done 2026-10-05 (capture-guide-wording.md signed-off)"
+        }
+      ],
+      "evidence": [
+        "FE b40db17: first run and capture guide journey 5 passed (smoke.md)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)",
+        "Coach sign-off: docs/domain/capture-guide-wording.md line 3 `signed-off` (PD-R1-05 fixed); PD-R1-02 captions fix a78f583"
+      ],
+      "open": [
+        "PD-R1-02: guide captions fix a78f583 not verified on WebKit; 'cannot load' fallback (first-run-and-guide.spec.ts:63) WebKit-only and not reproduced (S-09)",
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "PD-R2R-03: G-01 consent and minors line not shipped (wording accepted by PM and security); red test then constant (senior-frontend-engineer)"
+      ]
+    },
+    {
+      "id": "ST-016",
+      "title": "Match setup flow with participants by nickname",
+      "fr_nfr": [
+        "FR-021",
+        "FR-005",
+        "NFR-028",
+        "NFR-031",
+        "NFR-034",
+        "NFR-037"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "L",
+          "planned_units": 4,
+          "implemented_units": 4
+        },
+        {
+          "lane": "BE",
+          "size": "S",
+          "planned_units": 1,
+          "implemented_units": 1
+        }
+      ],
+      "planned_units": 5,
+      "status": "implemented",
+      "implemented_units": 5,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-designer",
+        "principal-engineer"
+      ],
+      "depends_on": [
+        "ST-006"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Match aggregate / participant model design doc reviewed (DoR P4)",
+          "owner": "principal-engineer",
+          "due": "Sprint 1 D2"
+        }
+      ],
+      "evidence": [
+        "BE bcdc7d0: IT-01-05 green in the backend run",
+        "FE aa52c48: match setup journey 13 passed, 1 skipped (smoke.md)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)",
+        "PD-R1-03 and PD-R1-07 fixed in 6dde8b5 (24 px / 48 px targets, live probe); T-UV-10 test in 7fb17fa3. Commit-size waivers were recorded late (historical, ADR 0030; no action left)"
+      ],
+      "open": [
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "SEC-R6-S1-01 (blocker): NUL in the match title gives 500 on POST /matches; sprint-02 C-01"
+      ]
+    },
+    {
+      "id": "ST-017",
+      "title": "Resumable upload: checksum and expiration extensions, resume on return",
+      "fr_nfr": [
+        "FR-022",
+        "NFR-016",
+        "NFR-026",
+        "NFR-042"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        },
+        {
+          "lane": "FE",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        }
+      ],
+      "planned_units": 4,
+      "status": "implemented",
+      "implemented_units": 4,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-008",
+        "SPIKE-06"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "WebKit/iOS Safari E2E run (OQ-17 release-blocking browsers)",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "BE 78902e0, FE 722f0c5: upload-with-resume journey 6 passed, 2 skipped (smoke.md)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)",
+        "BE lane counted (review round 2): TCR row 32 decided (a rejected, b approved; 50dba72), PE-R3-01 fixed 8109904, QA-R3-02 fixed (written_keys); EM isolated run at 351488e: junit_rate --include 'resumable_upload|test_upload_resume|test_it_01_0[4-9]|tus' -> 157 selected, 157 passed. FE: PD-R1-01, PE-R3-03/PD-R3-02, PD-R3-03 fixed in 479a905"
+      ],
+      "open": [
+        "WebKit-only CI failure resumable-upload.spec.ts:43 (damaged chunk, rewritten cross-engine by QA-R1-05) never run on WebKit (S-09)",
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96",
+        "PE-R3R-01 (major): parallel upload creations bypass the open-upload quota; sprint-02 C-02",
+        "PD-R3V-01 (major): no recovery in the upload panel after a server error; sprint-02 C-03",
+        "QA-R3-E2E-01 / PD-R3V-02 (major): timing-window flake in walking-skeleton.spec.ts; sprint-02 C-04"
+      ]
+    },
+    {
+      "id": "ST-018",
+      "title": "Upload validation by content, size and duration",
+      "fr_nfr": [
+        "FR-023",
+        "NFR-053",
+        "NFR-054",
+        "NFR-060"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        },
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1,
+          "implemented_units": 1
+        }
+      ],
+      "planned_units": 3,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer"
+      ],
+      "depends_on": [
+        "ST-009",
+        "ST-025"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Caps confirmed by ST-025 measurement (DoR P11)",
+          "owner": "senior-ml-cv-engineer",
+          "due": "Sprint 1 D7"
+        }
+      ],
+      "evidence": [
+        "BE 1d099e5 + review fix 4aaccbb (PE-R1-01): IT-01-09/10 green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)",
+        "PE-R3-02 fixed (StageContext.after_commit, 17c850d)"
+      ],
+      "open": [
+        "Caps provisional until ST-025 R-05 numbers (DoR P11; ST-025 blocked on PO phone recordings)",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
+      ]
+    },
+    {
+      "id": "ST-020",
+      "title": "Scoring engine core (a)",
+      "fr_nfr": [
+        "FR-040 (a)",
+        "FR-041 (a)",
+        "FR-044 (a)",
+        "NFR-079"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "L",
+          "planned_units": 4,
+          "implemented_units": 4
+        }
+      ],
+      "planned_units": 4,
+      "status": "implemented",
+      "implemented_units": 4,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-engineer",
+        "pickleball-domain-coach"
+      ],
+      "depends_on": [
+        "ST-023"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-engineer",
+          "owner": "principal-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "77a5082, 5999097, 52953f0, 131dcb7 + review fix 4f10ba2 (PE-R1-03): rules unit, property and scenario tests green in the backend run (P3 skipped: rally scoring, FR-043/OQ-01)",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
+      ],
+      "open": [
+        "PE-R1-07 (minor, deferred): apply raises ValueError on a game-over state without a winner",
+        "Presets PROVISIONAL-UNVERIFIED, rows @needs-verification (OQ-01)",
+        "principal-engineer has not amended scoring-engine.md §2.2/§2.4 (PE-R1-09 routed)"
+      ],
+      "notes": "ADR 0009 Accepted 2026-10-05 (ADR 0023). Only preset: PROVISIONAL-UNVERIFIED; provisional rows @needs-verification until OQ-01 rulebook files arrive."
+    },
+    {
+      "id": "ST-021",
+      "title": "Match structure (a)",
+      "fr_nfr": [
+        "FR-045 (a)"
+      ],
+      "lanes": [
+        {
+          "lane": "BE",
+          "size": "S",
+          "planned_units": 1,
+          "implemented_units": 1
+        }
+      ],
+      "planned_units": 1,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-engineer",
+        "pickleball-domain-coach"
+      ],
+      "depends_on": [
+        "ST-020"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-engineer",
+          "owner": "principal-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "45eb70d: M-01..M-08 scenarios green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
+      ],
+      "open": [
+        "PE-R1-10 (nit, deferred)"
+      ]
+    },
+    {
+      "id": "ST-022",
+      "title": "Property suite P1-P8, nightly differential oracle P9, mutation baseline",
+      "fr_nfr": [
+        "NFR-002",
+        "NFR-072"
+      ],
+      "lanes": [
+        {
+          "lane": "QA",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "principal-engineer",
+        "senior-backend-engineer"
+      ],
+      "depends_on": [
+        "ST-020"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "First nightly oracle run on GitHub (100,000 sequences)",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "Tests committed: cdbec82 (P1-P8), 45dd859 (oracle P9), 6a10368 (oracle self-tests); green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)",
+        "QA lane counted (review round 2): mutation baseline 0.8654 on sports/pickleball/rules (431 mutants, 373 killed; 33e6146, reports/goal-qar2/mutation.json); EM isolated run at 351488e: junit_rate --include 'test_property_and_oracle|test_oracle' -> 28 selected, 28 passed; P3 skipped (FR-043 / OQ-01, test-plan-status.md)"
+      ],
+      "open": [
+        "First nightly oracle run on GitHub (100,000 sequences) never dispatched: test_nightly_quality::test_nightly_run_completes red (S-08; PO decision P1)",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
+      ]
+    },
+    {
+      "id": "ST-023",
+      "title": "Golden scoring tables as executable scenarios (written before ST-020)",
+      "fr_nfr": [
+        "NFR-001 (provisional rows)"
+      ],
+      "lanes": [
+        {
+          "lane": "QA",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "pickleball-domain-coach",
+        "principal-engineer"
+      ],
+      "depends_on": [],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by pickleball-domain-coach",
+          "owner": "pickleball-domain-coach",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "0c152f9, 47ea499: provisional tables as executable scenarios, green in the backend run",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
+      ],
+      "open": [
+        "Coach review; rows @needs-verification (OQ-01)"
+      ],
+      "notes": "Rows stay @needs-verification (OQ-01 open)."
+    },
+    {
+      "id": "ST-024",
+      "title": "Nightly quality jobs and upload SLIs",
+      "fr_nfr": [
+        "NFR-002",
+        "NFR-042",
+        "NFR-072"
+      ],
+      "lanes": [
+        {
+          "lane": "SRE",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 2
+        }
+      ],
+      "planned_units": 2,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-engineer"
+      ],
+      "depends_on": [
+        "ST-022"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Nightly workflow has run on GitHub",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "cd infra && uv run pytest -q tests/test_nightly_quality.py -> 15 passed (13 failed before scripts/workflow existed)",
+        "cd backend && env -u APP_ENV uv run pytest -q tests/unit/platform/ -> 69 passed (test_slis.py, test_sli_wiring.py red first)",
+        "QA binding tests/features/test_nightly_quality.py -> 4 SLI scenarios passed; 'Nightly run completes' red until the first nightly run on main",
+        "oracle pipeline controls: candidate=oracle_run exit 0; candidate=mutants.receiver_scores exit 1 (1955/2000 disagreements)",
+        "mutation_score.py positive control on src/racket/matches (scratch copy): measured, 239 mutants, score 0.1381",
+        "actionlint .github/workflows/nightly-quality.yml -> no findings",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
+      ],
+      "open": [
+        "Nightly workflow has never run on GitHub: dispatch returns 404 until nightly-quality.yml exists on main (PO item P1); test_nightly_quality::test_nightly_run_completes red",
+        "Upload-completion SLI wiring and metrics backend (Sprint 5)",
+        "Branch-protection bypass for github-actions[bot] if main requires PRs (ADR 0026)"
+      ]
+    },
+    {
+      "id": "ST-025",
+      "title": "Phone-file fixture set and upload-cap measurement (R-05)",
+      "fr_nfr": [
+        "NFR-025",
+        "FR-023"
+      ],
+      "lanes": [
+        {
+          "lane": "ML",
+          "size": "M",
+          "planned_units": 2,
+          "implemented_units": 0
+        }
+      ],
+      "planned_units": 2,
+      "status": "blocked",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "security-privacy-engineer"
+      ],
+      "depends_on": [
+        "OQ-06 (answered 2026-10-05: team footage with written consent, or empty court)"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by security-privacy-engineer",
+          "owner": "security-privacy-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Fixture storage location decided (DoR P6)",
+          "owner": "sre-devops-engineer",
+          "due": "Sprint 1 D1"
+        }
+      ],
+      "evidence": [
+        "30baddc consent rule, 10170c6 synthetic profile set and manifest builder, 281d459 protocol",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
+      ],
+      "open": [
+        "Not counted: real phone clips needed (blockers.md, PO); test_phone_fixtures 2 red; R-05 numbers not measured"
+      ]
+    },
+    {
+      "id": "SPIKE-06",
+      "title": "Upload behaviour on phone browsers: tus client, background tab, 8 GB file",
+      "fr_nfr": [
+        "FR-022",
+        "OQ-18"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1,
+          "implemented_units": 0
+        }
+      ],
+      "planned_units": 1,
+      "status": "partial",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "principal-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-008"
+      ],
+      "external_evidence": [
+        {
+          "item": "Runs on real iOS Safari and Android Chrome devices (sandbox has none)",
+          "owner": "human product owner / senior-frontend-engineer",
+          "due": "Sprint 1 D3"
+        }
+      ],
+      "evidence": [
+        "9c1030d findings and ADR 0028 (Proposed), desktop-Chromium proxy data",
+        "Review round 1 held 2026-10-05 (review-rounds.md)",
+        "Review rounds 1-3 held 2026-10-05; round 3 was the last iteration (working-agreement §7.5), open findings escalated (sprint-report.md §6)"
+      ],
+      "open": [
+        "Not counted: real iOS Safari / Android Chrome runs not possible in the sandbox (blockers.md)"
+      ]
+    },
+    {
+      "id": "ST-019",
+      "title": "Footage quality report, R1 facts",
+      "fr_nfr": [
+        "FR-025"
+      ],
+      "lanes": [
+        {
+          "lane": "FE",
+          "size": "S",
+          "planned_units": 1,
+          "implemented_units": 1
+        }
+      ],
+      "planned_units": 1,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "dod_done": false,
+      "required_reviewers": [
+        "senior-qa-engineer",
+        "principal-designer"
+      ],
+      "depends_on": [
+        "ST-009"
+      ],
+      "external_evidence": [
+        {
+          "item": "Green ci-gate run on GitHub for the story commit",
+          "owner": "sre-devops-engineer",
+          "due": "2026-10-30"
+        },
+        {
+          "item": "Review by principal-designer",
+          "owner": "principal-designer",
+          "due": "2026-10-30"
+        }
+      ],
+      "evidence": [
+        "6cc2259: quality-report.test.tsx in the vitest run (251 passed)",
+        "073d3f3: '30 fps video' scenario bound in web/e2e/sprint-01/footage-quality-report.spec.ts (QA-R2-03); QA round 3 Chromium run green on it",
+        "Review rounds 1-3 held 2026-10-05"
+      ],
+      "open": [
+        "Design review P7 (PD-R1-06) not yet held: flows-sprint-01 §10 'Scheduled, not yet held'; asynchronous review, decisions due end of 2026-10-06, else DR-01 in Sprint 2",
+        "No green ci-gate run on a head with the Sprint 1 fixes: CI run 37372059078 (ci.yml, workflow_dispatch, head e76fb96) queued at close; WebKit unverified; main unprotected (PE-R3-05 family; PO item P1). Checked 2026-10-05 final close: list_workflow_runs total_count 3, list_branches sprint-01=e76fb96"
+      ],
+      "stretch": true
+    }
+  ],
+  "carry_over_from_sprint_00": [
+    {
+      "item": "ST-002 CI evidence: first GitHub run, failing sample PR, 3 nightly runs, WebKit",
+      "owner": "sre-devops-engineer with human PO (repo admin)",
+      "note": "Remote created by PO 2026-10-05 (nhuthuynh/racket-analytics); push is the orchestrator's; branch protection, labels and secret not yet evidenced"
+    },
+    {
+      "item": "ST-010 remainder: WebKit, design/security reviews, manual a11y pass, non-zero-offset reload test",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "item": "SPIKE-01 PE/security reviews (ADR 0015 Accepted by PO; reviews pending)",
+      "owner": "principal-engineer, security-privacy-engineer"
+    },
+    {
+      "item": "QA decisions on 6 Sprint 0 test-change rows; signed test report",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "item": "Contract hygiene: ADR 0019, api-sprint-00 §1/§8/§9, Tus-Resumable on 500/405, charset",
+      "owner": "principal-engineer, senior-backend-engineer"
+    },
+    {
+      "item": "Robustness: R3-06, QA-R3-05, R2-08, R1-09",
+      "owner": "senior-backend-engineer, senior-ml-cv-engineer"
+    },
+    {
+      "item": "Security hardening: F-1, QA-R2-06, SEC-R3-01, SEC-R2-03, HTTPS presign CA",
+      "owner": "sre-devops-engineer, senior-backend-engineer, security-privacy-engineer"
+    },
+    {
+      "item": "Sprint 1 DoR items P1-P12",
+      "owner": "business-analyst, product-manager, human PO"
+    }
+  ],
+  "open_po_items": [
+    {
+      "oq": "OQ-01",
+      "item": "Supply 2026 USAP rulebook and change document PDFs",
+      "effect": "Presets stay PROVISIONAL-UNVERIFIED; rows @needs-verification",
+      "need_by": "2026-11-16 (Sprint 3 planning)"
+    },
+    {
+      "oq": "OQ-05",
+      "item": "Legal/privacy review recorded as an ADR before any real-user beta, covering the PO-named jurisdictions US and AU (po-input-2026-10-05.md; ADR 0023 note)",
+      "effect": "No real-user beta",
+      "need_by": "before any real-user beta"
+    },
+    {
+      "oq": "OQ-13",
+      "item": "Name the monthly beta budget amount",
+      "effect": "NFR-022 alert thresholds have no base",
+      "need_by": "Sprint 2 review"
+    },
+    {
+      "oq": "OQ-20",
+      "item": "Recruit >= 5 testers, >= 8 interviewees, 1 second coach",
+      "effect": "NFR-036, QD-AN-03 untestable",
+      "need_by": "Sprint 3 planning"
+    },
+    {
+      "oq": "retro A1",
+      "item": "Branch protection on ci-gate, 3 labels, ANTHROPIC_API_KEY secret",
+      "effect": "ST-002 DoD; every story's CI evidence",
+      "need_by": "2026-10-14"
+    }
+  ],
+  "counting_rule": "2026-10-05 sprint close (EM, QA-R3-04): a lane counts as implemented when its code is committed, review rounds have been held, and that story's own tests for the lane are green in the latest isolated run without depending on an undecided test-change row. Isolated runs (ADR 0030), review round 2 at 351488e: RA_DEV_STATE=.local/em-r2 (own Postgres, object store, Mailpit container em-r2-mailpit), df -h / -> 13G free: cd backend && env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfEs -> 3 failed, 1075 passed, 6 skipped (failures: test_nightly_run_completes (S-08), test_phone_fixtures x2 (S-07), all PO-blocked); web: pnpm exec vitest run -> 31 files, 269 passed; infra: uv run pytest -q -> 292 passed. Browser E2E: not re-run by the EM; latest is smoke.md §6 (sprint-close head 8e58d4d). Not counted: ST-025 (real phone clips), SPIKE-06 (real devices). dod_done_units stay 0 for every story: no green CI run exists on any head with the Sprint 1 fixes (PE-R3-05 family), and every story's external evidence includes that run (QA-R2V-09). No story is Done.",
+  "ci_runs": {
+    "note": "CI and nightly runs on GitHub for sprint-01 (PE-R2-02). Recorded by the EM/SRE from mcp__github__actions_list list_workflow_runs; a story is DoD-done only against a green run whose head includes its commits.",
+    "runs": [
+      {
+        "workflow": "ci.yml",
+        "run_id": 37298471332,
+        "event": "workflow_dispatch",
+        "head_sha": "2390e9a",
+        "conclusion": "failure",
+        "url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/37298471332",
+        "includes_round_1_fixes": false
+      },
+      {
+        "workflow": "ci.yml",
+        "run_id": 37372059078,
+        "event": "workflow_dispatch",
+        "head_sha": "e76fb96",
+        "status": "queued",
+        "conclusion": null,
+        "url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/37372059078",
+        "includes_round_1_fixes": true,
+        "checked": "2026-10-05 final close: mcp__github__actions_list list_workflow_runs -> status queued"
+      }
+    ],
+    "pending": [
+      {
+        "workflow": "ci.yml",
+        "run_id": 37372059078,
+        "status": "queued",
+        "owner": "sre-devops-engineer (record and triage, retro 1 A1)"
+      },
+      {
+        "workflow": "nightly-quality.yml",
+        "status": "cannot be dispatched: workflow_dispatch returns 404 until the workflow exists on main",
+        "owner": "human product owner (P1), sre-devops-engineer"
+      }
+    ],
+    "github_branch_head": {
+      "sha": "e76fb96",
+      "checked": "2026-10-05 final close",
+      "evidence": "mcp__github__list_branches: sprint-01 e76fb96172a0, main 2b9c6ca, both protected false",
+      "local_ahead": "7a9e41e, 6f6e44e and the close commit (docs only)"
+    }
+  },
+  "review": {
+    "rounds": 3,
+    "limit_reached": true,
+    "findings_per_round": {
+      "1": {
+        "blocker": 9,
+        "major": 10,
+        "minor": 9,
+        "nit": 3
+      },
+      "2": {
+        "blocker": 3,
+        "major": 7,
+        "minor": 4,
+        "nit": 2
+      },
+      "3": {
+        "blocker": 2,
+        "major": 14,
+        "minor": 8,
+        "nit": 1
+      }
+    },
+    "unresolved_after_round_3": [
+      "PE-R3-01",
+      "PE-R3-02",
+      "PE-R3-03",
+      "PE-R3-04",
+      "PE-R3-05",
+      "SEC-R3-S1-01",
+      "SEC-R3-S1-02",
+      "SEC-R3-S1-03",
+      "QA-R3-01",
+      "QA-R3-02",
+      "QA-R3-03",
+      "QA-R3-04",
+      "QA-R3-05",
+      "PD-R3-01",
+      "PD-R3-02",
+      "PD-R3-03"
+    ],
+    "closed_at_close": {
+      "QA-R3-04": "status.json and progress.md refreshed at sprint close (this update)"
+    },
+    "escalated_to_po": "docs/sprints/01/sprint-report.md §6",
+    "open_without_disposition_since_round_1": [
+      "PD-R1-01",
+      "PD-R1-02",
+      "PD-R1-03",
+      "PD-R1-04",
+      "PD-R1-05",
+      "PD-R1-07",
+      "PE-R1-04",
+      "QA-R1-04"
+    ],
+    "note": "Found by the EM at close: round 1 and 2 tables held 11 of 31 and 10 of 16 findings; the rest had no disposition row (review-rounds.md last table). implemented_units is an upper bound: these defects have no test. ADR 0030 rule 1.",
+    "sprint_close_review": {
+      "round_1": "docs/sprints/01/review-rounds.md 'Sprint-close review, review round 1'",
+      "round_2_em": "docs/sprints/01/review-rounds.md 'review round 2' (engineering-manager rows)",
+      "open_blocker_major_by_open_defects_py": "see review-rounds.md review round 2 EM rows; count by scripts/measure/open_defects.py after PE-R2-S1-02 (aliases counted once, every id shape)",
+      "po_decisions_needed": "blockers.md EM row 'PO decision request, review round 2' (P1 push+dispatch or D1(b); P2 ADR 0031; P3 phone recordings or ST-025 carry-over; P4 carry-over of the open majors)",
+      "round_3": "16 new findings (1 blocker SEC-R6-S1-01, 7 major, 8 minor) had no row until the final close; EM rows written in review-rounds.md 'Sprint close (engineering-manager, after goal round 3)'"
+    },
+    "open_blocker_major_at_close": {
+      "count": 17,
+      "command": "python3 scripts/measure/open_defects.py docs/sprints/01/review-rounds.md -> rc=1, open 17",
+      "verifier_count_round_3": 11,
+      "note": "the verifier's 11 missed the 6 round-3 families that had no row (retro 1 M10, ADR 0033)"
+    }
+  },
+  "sprint_close": {
+    "date": "2026-10-05",
+    "report": "docs/sprints/01/sprint-report.md",
+    "retro": "docs/retros/2026-10-30-sprint-01.md",
+    "goal_met": "no: goal scorecard round 3 met 10 of 12 (G01-05 disk-floor invalid, G01-11 17 open); PO standing rule",
+    "process_adr": [
+      "docs/decisions/0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md",
+      "docs/decisions/0033-reviewer-written-finding-rows-dry-run-methods-and-self-cleaning-evidence.md"
+    ],
+    "po_items": [
+      "P1 nightly-quality.yml on main, branch protection, D1",
+      "P2 ADR 0031 ASVS 6.3.3",
+      "P3 phone recordings or ST-025 carry-over",
+      "P4 carry-over of the 17 open findings (sprint-02 C-01..C-06, ST-013b, ST-042, DR-01)",
+      "P5 approve removing stale racket-* images, then rerun G01-05"
+    ],
+    "carry_over_backlog": "docs/sprints/sprint-02.md section 3 'EM carry-over from the Sprint 1 review' rows C-01..C-38"
+  },
+  "goal_scorecard": {
+    "file": "docs/sprints/01/goal-scorecard.md",
+    "round": 3,
+    "head": "e76fb96",
+    "met": 10,
+    "of": 12,
+    "not_met": {
+      "G01-05": "541.8 Mbit/s but disk_free_gb_end 9 < 10 GB floor: invalid evidence (owner sre-devops-engineer; PO item P5)",
+      "G01-11": "17 open blocker/major at final close (verifier 11)"
+    },
+    "rounds": {
+      "1": "11/12 at fb9e7d6",
+      "2": "11/12 at 3194096",
+      "3": "10/12 at e76fb96"
+    },
+    "demo": "steps 1-6 and 8 live; step 7 no nightly result; step 9 PO"
+  }
+}

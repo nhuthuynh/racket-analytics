@@ -3,10 +3,9 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { MatchDetail } from '@/components/MatchDetail';
-import { PageTitle } from '@/components/PageTitle';
 import { ApiError } from '@/lib/api/client';
-import { getMatchForRequest } from '@/lib/api/server';
-import type { Match } from '@/lib/api/types';
+import { getMatchForRequest, serverApi } from '@/lib/api/server';
+import { FALLBACK_UPLOAD_POLICY, type Match, type UploadPolicy } from '@/lib/api/types';
 
 type Props = { params: Promise<{ matchId: string }> };
 
@@ -20,18 +19,27 @@ async function loadMatch(id: string): Promise<Match> {
   }
 }
 
+/** Caps for the U-03 copy and chunk bounds (api-sprint-01 §6.1); provisional caps if unreadable. */
+async function loadPolicy(): Promise<UploadPolicy> {
+  try {
+    return await (await serverApi()).uploadPolicy();
+  } catch {
+    return FALLBACK_UPLOAD_POLICY;
+  }
+}
+
 export default async function MatchPage({ params }: Props) {
   const { matchId } = await params;
   const match = await loadMatch(matchId);
+  const policy = await loadPolicy();
   return (
     <div className="stack">
-      <PageTitle>{match.title}</PageTitle>
       <p>
         <Link href="/matches" className="back-link">
           Back to your matches
         </Link>
       </p>
-      <MatchDetail initialMatch={match} />
+      <MatchDetail initialMatch={match} policy={policy} />
     </div>
   );
 }

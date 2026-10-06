@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import httpx
 
@@ -29,13 +30,25 @@ class ExplodingService:
         return explode
 
 
-def assert_generic_error(response: httpx.Response, status: int) -> dict[str, str]:
+def assert_generic_error(response: httpx.Response, status: int) -> dict[str, Any]:
     assert response.status_code == status, response.text[:300]
     assert response.headers.get("content-type", "").startswith("application/json")
     body = response.json()
     assert set(body) == {"error"}, body
-    error: dict[str, str] = body["error"]
-    assert set(error) == {"code", "message", "support_ref"}, error
+    error: dict[str, Any] = body["error"]
+    # api-sprint-01 §1.1 (TCR row 10): exactly these keys, plus `fields` on a 422 (always an
+    # array of {field, code}) and `retry_at` on a 429. The set stays closed.
+    expected = {"code", "message", "support_ref"}
+    if status == 422:
+        expected |= {"fields"}
+    if status == 429:
+        expected |= {"retry_at"}
+    assert set(error) == expected, error
+    if status == 422:
+        assert isinstance(error["fields"], list), error
+        for item in error["fields"]:
+            assert isinstance(item, dict), item
+            assert set(item) == {"field", "code"}, item
     assert error["support_ref"], "support_ref must not be empty"
     assert_no_internals(response.text)
     return error

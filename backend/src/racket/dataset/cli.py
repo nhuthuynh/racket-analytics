@@ -5,6 +5,11 @@ Usage::
     racket-manifest-check fixtures/clips/synthetic-60s [--base-manifest base.json]
 
 Exit codes: 0 intact, 1 integrity problems, 2 malformed or unreadable manifest.
+A manifest with ``"schema": "gold-set-manifest/v1"`` is also checked as a gold set (ST-040,
+``racket.dataset.gold_set``): QD §8 fields, venue split, agreement gates, consent and its
+Full Tag label files (``full-tag-labels/v1``).
+Every set: a clip with ``shows_people: true`` that git tracks or could commit fails
+(``people_in_git``; SEC-S2-TM-06): footage of people lives in the team's private store.
 In CI, ``--base-manifest`` is the manifest from the merge base (``git show``), which enforces
 "no hash change without a version bump".
 """
@@ -20,10 +25,18 @@ from pathlib import Path
 from racket.dataset.filesystem import (
     MANIFEST_NAME,
     SymlinkInSetError,
+    git_exposed,
     hash_set,
+    load_labels,
     load_manifest,
 )
-from racket.dataset.manifest import CheckResult, ManifestCheck, ManifestFormatError
+from racket.dataset.gold_set import GoldSetCheck, gold_set_of
+from racket.dataset.manifest import (
+    CheckResult,
+    FootageStorageCheck,
+    ManifestCheck,
+    ManifestFormatError,
+)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -36,6 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     for set_dir in args.set_dir:
         try:
             manifest = load_manifest(set_dir / MANIFEST_NAME)
+            gold = gold_set_of(manifest)
             base = load_manifest(args.base_manifest) if args.base_manifest else None
         except (
             OSError,
@@ -53,11 +67,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"FAIL {set_dir}: {exc}: symbolic links are not allowed in a set [symlink]")
             worst = max(worst, 1)
             continue
+        people = manifest.people_clip_paths
+        storage = FootageStorageCheck.check(people, git_exposed(set_dir, people))
+        result = CheckResult(result.problems + storage.problems)
         if base is not None:
             bump = ManifestCheck.check_version_bump(base=base, head=manifest)
             result = CheckResult(result.problems + bump.problems)
+        if gold is not None:
+            gold_result = GoldSetCheck.check(gold, load_labels(set_dir, gold))
+            result = CheckResult(result.problems + gold_result.problems)
         if result.passed:
-            print(f"OK   {set_dir}: {manifest.id} v{manifest.version}, {len(manifest.files)} files")
+            kind = f"gold set ({gold.purpose}), " if gold is not None else ""
+            print(
+                f"OK   {set_dir}: {manifest.id} v{manifest.version}, {kind}"
+                f"{len(manifest.files)} files"
+            )
         else:
             worst = max(worst, 1)
             for problem in result.problems:

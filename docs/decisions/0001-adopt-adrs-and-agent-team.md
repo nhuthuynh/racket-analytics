@@ -1,6 +1,6 @@
 # 0001. Adopt ADRs and an AI agent team with a defined working agreement
 
-- **Status:** Accepted (pending ratification by the human product owner at the first sprint review)
+- **Status:** Accepted. Ratified by the human product owner on 2026-10-05 (ADR 0023).
 - **Date:** 2026-10-03
 - **Deciders:** engineering-manager
 - **Consulted:** research files in `docs/research/` (process, architecture/security, design/product/agents, domain/CV)
@@ -123,3 +123,4 @@ Specifically:
 ## Notes
 
 - 2026-10-03: Created during team setup. The research files were verified on 2026-10-03. Many canonical hosts were egress-blocked, so the gaps listed in each research file still apply.
+- **2026-10-05 (product-manager, recording the human product owner):** PO ratified this ADR ("accept all recommendations"). The "pending ratification" qualifier is removed. Previous status line: "Accepted (pending ratification by the human product owner at the first sprint review)". See ADR 0023.

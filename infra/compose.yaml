@@ -12,12 +12,31 @@ x-required-app-env: &app-env
   DATABASE_URL: postgresql://${POSTGRES_USER:?set POSTGRES_USER}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
   S3_ENDPOINT_URL: http://objectstore:8333
   S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:?set S3_PUBLIC_ENDPOINT_URL}
-  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID}
-  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY}
   S3_REGION: ${S3_REGION:-us-east-1}
   S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:?set S3_BUCKET_MEDIA}
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tracing:4318
   OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+  # Jaeger takes traces only. FastAPI's automatic telemetry would also send metrics and logs
+  # to this endpoint and get 404 every minute (C-13, SRE-G2-01). The SLI metrics still export
+  # when OTEL_EXPORTER_OTLP_METRICS_ENDPOINT names a collector (docs/ops/sli-metrics.md).
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+
+# Object-store key: only the services that read or write media (api, worker). The mailer never
+# touches media, so it does not get it (SEC-R5-S1-01, threat model S1-F3). A separate DB role
+# and S3 key for the sandboxed worker are ST-042 (gate before any non-dev deployment).
+x-media-store-access: &media-store-access
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY}
+
+# Sign-in by email link (ST-013, ADR 0025, ADR 0027; api-sprint-01 §8). The API builds the link
+# from PUBLIC_WEB_ORIGIN; the mailer sends it through Mailpit. AUTH_EMAIL_KEY is the HMAC key for
+# email pseudonyms: a dev placeholder in env.example, the secret store in staging/prod.
+x-sign-in-env: &sign-in-env
+  PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?set PUBLIC_WEB_ORIGIN (see infra/env.example)}
+  MAIL_SMTP_URL: smtp://mailpit:1025
+  MAIL_FROM: ${MAIL_FROM:?set MAIL_FROM}
+  AUTH_EMAIL_KEY: ${AUTH_EMAIL_KEY:?set AUTH_EMAIL_KEY}
 
 services:
   postgres:
@@ -109,6 +128,11 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/backend.Dockerfile
+      # Base image and Dockerfile frontend through DOCKERHUB_REGISTRY, like the pulled
+      # services (smoke.md §6; infra/tests/test_compose_registry.py).
+      args: &backend-build-args
+        PYTHON_IMAGE: ${DOCKERHUB_REGISTRY:-docker.io}/library/python:3.11-slim
+        BUILDKIT_SYNTAX: ${DOCKERHUB_REGISTRY:-docker.io}/docker/dockerfile:1.7
       target: api
     command: ["python", "-m", "racket.platform.migrate"]
     environment:
@@ -123,14 +147,32 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/backend.Dockerfile
+      args: *backend-build-args
       target: api
     environment:
-      <<: *app-env
+      <<: [*app-env, *sign-in-env, *media-store-access]
       OTEL_SERVICE_NAME: racket-api
+      # The browser reaches the API through web-tls, which replaces any client X-Forwarded-For
+      # with the real peer, and the web's /api rewrite, which forwards it unchanged (measured
+      # 2026-10-05, ADR 0029). So the right-most entry is the client: per-IP sign-in limits key
+      # on it, not on a proxy container (ST-013, T-ML-8).
+      TRUSTED_PROXY_HOPS: "1"
+      # Origin check on state-changing requests (C-18, SEC-R5-S1-03): empty would allow all.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS (see infra/env.example)}
+      # Media link lifetime (ST-037, NFR-055): the API refuses to start above 900 s.
+      MEDIA_URL_TTL_SECONDS: ${MEDIA_URL_TTL_SECONDS:-300}
+      # Per-IP sign-in limits (api-sprint-01 §2.4). Contract defaults; the E2E stack raises them
+      # because every Playwright test signs in from one host IP (smoke 2026-10-05).
+      AUTH_LINK_LIMIT_PER_IP: ${AUTH_LINK_LIMIT_PER_IP:-20}
+      AUTH_EXCHANGE_LIMIT_PER_IP: ${AUTH_EXCHANGE_LIMIT_PER_IP:-30}
       # tus Location prefix: the browser reaches the API through the web's /api rewrite, so
       # Location must be /api/uploads/{id} (R1-02, QA-R1-01; ADR 0011, ADR 0019).
       API_PUBLIC_PATH_PREFIX: ${API_PUBLIC_PATH_PREFIX:?set API_PUBLIC_PATH_PREFIX (see infra/env.example)}
     ports:
+      # Loopback only, for the server-side latency methods (G02-04, NFR-010). The per-IP
+      # sign-in limit (T-ML-8) holds only behind web-tls, which replaces any client
+      # X-Forwarded-For: a caller on this port picks its own right-most entry (C-11,
+      # SEC-R6-S1-02). Never publish it beyond 127.0.0.1; a deployment exposes the web only.
       - 127.0.0.1:${API_HOST_PORT:-8000}:8000
     networks: [edge]
     depends_on:
@@ -153,10 +195,14 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/backend.Dockerfile
+      args: *backend-build-args
       target: worker
     environment:
-      <<: *app-env
+      <<: [*app-env, *media-store-access]
       OTEL_SERVICE_NAME: racket-worker
+      # Media stages only: this network has no route to Mailpit, so sign-in email jobs belong
+      # to the mailer (ADR 0027).
+      WORKER_STAGES: probe
     # Back after a crash; the loop itself survives database errors (R1-06).
     restart: unless-stopped
     # Sandbox (ST-009, NFR-054): only the internal network, so no route to the internet;
@@ -192,16 +238,53 @@ services:
     stop_signal: SIGTERM
     stop_grace_period: 12s
 
+  mailer:
+    # Job worker for the sign-in email (ST-013, ADR 0027): API image (no ffprobe), edge network
+    # (reaches Mailpit), runs `send_sign_in_link` only. Media never reaches this process.
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+      args: *backend-build-args
+      target: api
+    command: ["python", "-m", "racket.worker"]
+    environment:
+      <<: [*app-env, *sign-in-env]
+      OTEL_SERVICE_NAME: racket-mailer
+      WORKER_STAGES: send_sign_in_link
+    restart: unless-stopped
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/worker-heartbeat && test $$(( $$(date +%s) - $$(stat -c %Y /tmp/worker-heartbeat) )) -lt 30"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    stop_signal: SIGTERM
+    stop_grace_period: 12s
+
   web:
     build:
       context: ..
       dockerfile: infra/docker/web.Dockerfile
+      args:
+        NODE_IMAGE: ${DOCKERHUB_REGISTRY:-docker.io}/library/node:22-slim
+        BUILDKIT_SYNTAX: ${DOCKERHUB_REGISTRY:-docker.io}/docker/dockerfile:1.7
     environment:
       APP_ENV: ${APP_ENV:?set APP_ENV}
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:?set PUBLIC_API_BASE_URL}
       API_INTERNAL_URL: http://api:8000
-    ports:
-      - 127.0.0.1:${WEB_HOST_PORT:-3000}:3000
+    # No host port: browsers reach the web only through web-tls, over https (ADR 0029).
     networks: [edge]
     depends_on:
       api:
@@ -212,6 +295,36 @@ services:
       timeout: 3s
       retries: 40
 
+  web-tls:
+    # TLS front door (ADR 0029): https://localhost:3000 by default. Outside APP_ENV=test the
+    # session cookie is `__Host-` + Secure, which WebKit drops over plain http. Caddy's internal
+    # CA and leaf key are generated at first start into caddy-data; none is committed.
+    image: ${DOCKERHUB_REGISTRY:-docker.io}/library/caddy:2.10.2-alpine
+    environment:
+      # The media route /<bucket>/* (SRE-MEDIA, infra/tls/Caddyfile).
+      S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:?set S3_BUCKET_MEDIA}
+    ports:
+      - 127.0.0.1:${WEB_HOST_PORT:-3000}:443
+    volumes:
+      - ./tls/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /config:size=8m
+      - /tmp:size=8m
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
 networks:
   edge: {}
   sandbox:
@@ -220,3 +333,4 @@ networks:
 volumes:
   pgdata: {}
   s3data: {}
+  caddy-data: {}

@@ -102,27 +102,41 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 
 | # | Title | Status | Date |
 |---|---|---|---|
-| 0001 | [Adopt ADRs and an AI agent team with a defined working agreement](0001-adopt-adrs-and-agent-team.md) | Accepted | 2026-10-03 |
-| 0002 | [MVP scope: walking skeleton and release slicing](0002-mvp-scope-walking-skeleton-release-slicing.md) | Proposed | 2026-10-03 |
-| 0003 | [Weakness ranking by rallies lost](0003-weakness-ranking-by-rallies-lost.md) | Proposed | 2026-10-03 |
-| 0004 | [Measurable definitions for the M2 and M3 accuracy targets](0004-accuracy-target-definitions-m2-m3.md) | Proposed | 2026-10-03 |
+| 0001 | [Adopt ADRs and an AI agent team with a defined working agreement](0001-adopt-adrs-and-agent-team.md) | Accepted (PO ratified 2026-10-05) | 2026-10-03 |
+| 0002 | [MVP scope: walking skeleton and release slicing](0002-mvp-scope-walking-skeleton-release-slicing.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
+| 0003 | [Weakness ranking by rallies lost](0003-weakness-ranking-by-rallies-lost.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
+| 0004 | [Measurable definitions for the M2 and M3 accuracy targets](0004-accuracy-target-definitions-m2-m3.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
 | 0005 | [Low-sample and efficacy-claim rules](0005-low-sample-and-efficacy-claim-rules.md) | Proposed | 2026-10-03 |
-| 0006 | [Retention and deletion defaults](0006-retention-and-deletion-defaults.md) | Proposed | 2026-10-03 |
-| 0007 | [Delivery sequencing in vertical slices](0007-delivery-sequencing-vertical-slices.md) | Proposed | 2026-10-03 |
+| 0006 | [Retention and deletion defaults](0006-retention-and-deletion-defaults.md) | Accepted as interim (PO 2026-10-05) | 2026-10-03 |
+| 0007 | [Delivery sequencing in vertical slices](0007-delivery-sequencing-vertical-slices.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
 | 0008 | [Stack confirmation for Sprint 0](0008-stack-confirmation-for-sprint-0.md) | Accepted (Sprint 0) | 2026-10-03 |
-| 0009 | [Rules-engine readiness split](0009-rules-engine-readiness-split.md) | Proposed | 2026-10-03 |
+| 0009 | [Rules-engine readiness split](0009-rules-engine-readiness-split.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
 | 0010 | [Estimation and capacity model](0010-estimation-and-capacity-model.md) | Accepted | 2026-10-03 |
 | 0011 | [tus server: tus 1.0.0 core inside FastAPI, not a tusd sidecar](0011-tus-server-fastapi-core.md) | Accepted (Sprint 0) | 2026-10-03 |
 | 0012 | [Red-first tests reach production code through one QA-owned seam contract](0012-red-first-test-seam-contract.md) | Proposed | 2026-10-03 |
 | 0013 | [Agent hooks: deterministic gates that never wedge a session](0013-agent-hooks-design.md) | Proposed | 2026-10-03 |
 | 0014 | [CI merge gates: fail closed, one required check, pinned actions, SBOM-based licence gate](0014-ci-merge-gates-fail-closed.md) | Proposed | 2026-10-03 |
-| 0015 | [CV licence posture: MIT/Apache code by default, pretrained weights judged by their training data, no AGPL](0015-cv-licence-posture.md) | Proposed (PO decides OQ-12) | 2026-10-03 |
+| 0015 | [CV licence posture: MIT/Apache code by default, pretrained weights judged by their training data, no AGPL](0015-cv-licence-posture.md) | Accepted (PO 2026-10-05, OQ-12) | 2026-10-03 |
 | 0016 | [Design tokens are a JSON source of truth with an executable contrast proof](0016-design-tokens-and-contrast-proof.md) | Proposed | 2026-10-03 |
 | 0017 | [Job runtime: a hand-written `SKIP LOCKED` queue with leases, not procrastinate](0017-job-runtime-skip-locked-queue-with-leases.md) | Proposed | 2026-10-03 |
 | 0018 | [Web CSP: per-request nonce in middleware, no inline-script allowance](0018-web-csp-per-request-nonce.md) | Proposed | 2026-10-03 |
-| 0019 | [The Next.js `/api` rewrite is for dev and CI only; uploads use 8 MiB chunks](0019-web-api-rewrite-limits.md) | Proposed | 2026-10-03 |
+| 0019 | [The Next.js `/api` rewrite is for dev and CI only; uploads use 8 MiB chunks](0019-web-api-rewrite-limits.md) | Accepted (amended 2026-10-05) | 2026-10-03 |
 | 0020 | [Probe stage sandbox: a pinned LGPL ffprobe, per-process limits inside an internal-network container](0020-probe-sandbox-and-lgpl-ffprobe.md) | Proposed | 2026-10-03 |
 | 0021 | [ffprobe may demux only the MP4/MOV family (input-format allowlist)](0021-probe-input-format-allowlist.md) | Proposed | 2026-10-03 |
-| 0022 | [Review loop: route findings to their owner role, smoke-test the integrated stack before review, one story per commit](0022-review-loop-routing-and-integration-smoke.md) | Accepted for Sprint 1 | 2026-10-03 |
+| 0022 | [Review loop: route findings to their owner role, smoke-test the integrated stack before review, one story per commit](0022-review-loop-routing-and-integration-smoke.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
+| 0023 | [Product-owner decisions 2026-10-05: accept all open-question recommendations](0023-product-owner-decisions-2026-10-05.md) | Accepted | 2026-10-05 |
+| 0024 | [Match participants are per-match nickname slots inside the `Match` aggregate](0024-match-participants-as-per-match-nicknames.md) | Accepted | 2026-10-05 |
+| 0025 | [Magic-link sign-in: token in the URL fragment, exchanged by POST; 30-day/7-day sessions](0025-magic-link-sign-in-design.md) | Accepted (Sprint 1; 6.3.3 residual risk needs PO) | 2026-10-05 |
+| 0026 | [Nightly quality results and SLI metrics](0026-nightly-quality-results-and-sli-metrics.md) | Proposed (Sprint 1, ST-024) | 2026-10-05 |
+| 0027 | [Sign-in emails are sent by a worker outside the media sandbox (`WORKER_STAGES`)](0027-sign-in-mail-worker-outside-the-media-sandbox.md) | Proposed (Sprint 1, ST-013) | 2026-10-05 |
+| 0028 | [Phone-browser uploads: "resume on return", no background-upload promise](0028-phone-browser-upload-resume-on-return.md) | Proposed (SPIKE-06, partial data) | 2026-10-05 |
+| 0029 | [The dev and E2E stack is served over https (`web-tls`), not given an insecure cookie](0029-dev-and-e2e-stack-served-over-https.md) | Accepted (Sprint 1, WebKit sign-in blocker) | 2026-10-05 |
+| 0030 | [Review loop: a disposition per finding, isolated evidence, M/L stories sliced before they are built](0030-finding-disposition-isolated-evidence-and-pre-sliced-stories.md) | Accepted (EM, retro 1) | 2026-10-05 |
+| 0031 | [ASVS 6.3.3: residual risk of the single-factor magic link, or passkeys in R1](0031-asvs-6-3-3-single-factor-magic-link-residual-risk.md) | Accepted (human PO, 2026-10-06: option 1, re-review before any real-user beta) | 2026-10-05 |
+| 0032 | [Account identity is the normalised address, not the HMAC `email_key` (amends 0025)](0032-account-identity-is-the-address-not-the-email-key.md) | Accepted (security-privacy-engineer sign-off recorded 2026-10-05; code is ST-013b, gate before any non-dev deployment) | 2026-10-05 |
+| 0033 | [Reviewers write their own finding rows, goal methods are dry-run, evidence cleans up after itself](0033-reviewer-written-finding-rows-dry-run-methods-and-self-cleaning-evidence.md) | Accepted (EM, retro 1 final close) | 2026-10-05 |
+| 0034 | [Deployment edge acceptance criteria (HSTS, forwarded headers, exposed ports)](0034-deployment-edge-acceptance-criteria.md) | Proposed (sre-devops-engineer; PO accepts before the first non-dev deployment) | 2026-10-06 |
+| 0035 | [Gold-set manifest v1 and Full Tag labels v1, checked by racket-manifest-check](0035-gold-set-manifest-v1-and-full-tag-labels-v1.md) | Proposed (senior-ml-cv-engineer, ST-040) | 2026-10-06 |
+| 0036 | [Local goal evidence runs in Chrome for Testing, a browser that decodes H.264](0036-local-h264-evidence-browser-chrome-for-testing.md) | Accepted (EM, review round 2, SRE-S2-05 / QA-RV1-07) | 2026-10-06 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.

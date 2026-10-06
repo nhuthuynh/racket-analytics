@@ -1,6 +1,6 @@
 # 0009. Split rules-engine work: the parameterised engine is Ready now; the USAP-2026 preset waits for verification
 
-- **Status:** Proposed. It interprets the "Domain truth" item of the Definition of Ready, so the human product owner ratifies it at the Sprint 0 review (2026-10-16), before Sprint 1 planning. Escalated under working-agreement §8 ("a domain rule cannot be verified").
+- **Status:** Accepted by the human product owner on 2026-10-05 (ADR 0023). The USAP-2026 preset (part b) still waits for verification: the PO has not yet supplied the rulebook files (OQ-01), so the only shipped preset stays `PROVISIONAL-UNVERIFIED` and provisional rows stay `@needs-verification`.
 - **Date:** 2026-10-03
 - **Deciders:** engineering-manager (proposer, owns the DoR process); senior-qa-engineer and pickleball-domain-coach (consulted owners of the tests and the rules); human product owner (approver)
 - **Consulted:** principal-engineer, business-analyst, senior-backend-engineer
@@ -85,3 +85,4 @@ Rules for applying it:
 - When the coach records rule numbers, a dated note here lists the rows that changed, if any.
 
 ## Notes
+- **2026-10-05 (product-manager, recording the human product owner):** PO ratified the readiness split ("accept all recommendations"). Sprint 1 DoR item P3 is met for ST-020a, ST-021a and ST-023. OQ-01 (rulebook PDFs) remains open. Previous status line: "Proposed. It interprets the "Domain truth" item of the Definition of Ready, so the human product owner ratifies it at the Sprint 0 review (2026-10-16), before Sprint 1 planning. Escalated under working-agreement §8 ("a domain rule cannot be verified").". See ADR 0023.

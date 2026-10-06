@@ -1,6 +1,6 @@
 # 0004. Measurable definitions for the M2 rally-segmentation and M3 auto-scoring targets
 
-- **Status:** Proposed. It changes the spec's "Done when" criteria and needs approval from the human product owner (OQ-09).
+- **Status:** Accepted by the human product owner on 2026-10-05 (OQ-09, ADR 0023).
 - **Date:** 2026-10-03
 - **Deciders:** business-analyst (proposer); senior-ml-cv-engineer and senior-qa-engineer (measurement owners); human product owner (approver)
 - **Consulted:** product-manager (PROD C8, C9), principal-engineer and senior-ml-cv-engineer (ENG §5.4 CV-T09, CV-T11), senior-qa-engineer (QD X9)
@@ -77,3 +77,4 @@ Chosen option: **Option 3.**
 - The PO answers OQ-09.
 
 ## Notes
+- **2026-10-05 (product-manager, recording the human product owner):** PO accepted OQ-09. The M2/M3 "Done when" definitions in this ADR replace the spec wording; ≤ 1.0 correction per game stays a later target. Previous status line: "Proposed. It changes the spec's "Done when" criteria and needs approval from the human product owner (OQ-09).". See ADR 0023.

@@ -20,7 +20,7 @@ from tests.support.api import ApiDriver
 from tests.support.flows import create_match, upload_fixture
 from tests.support.worker import media_facts_count, probe_job, wait_for, worker_process
 
-pytestmark = [pytest.mark.red_until(story="ST-007"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
 
 SLOW_PROBE = {contract.FAULT_INJECTION_ENV: "probe:sleep=60"}
 

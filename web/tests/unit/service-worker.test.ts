@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // path.join, not `new URL(..., import.meta.url)`: Vite rewrites the latter for public/ files.
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -14,7 +14,7 @@ const ORIGIN = 'https://app.example';
 
 type Listener = (event: unknown) => void;
 
-function loadWorker() {
+function loadWorker(overrides: { caches?: unknown; fetch?: unknown } = {}) {
   const listeners: Record<string, Listener> = {};
   const self = {
     location: { origin: ORIGIN },
@@ -24,8 +24,9 @@ function loadWorker() {
     skipWaiting: () => Promise.resolve(),
     clients: { claim: () => Promise.resolve() },
   };
-  const caches = { open: () => new Promise(() => {}), keys: () => Promise.resolve([]) };
-  vm.runInNewContext(source, { self, URL, caches, fetch: () => Promise.reject(new Error('no network')) });
+  const caches = overrides.caches ?? { open: () => new Promise(() => {}), keys: () => Promise.resolve([]) };
+  const fetch = overrides.fetch ?? (() => Promise.reject(new Error('no network')));
+  vm.runInNewContext(source, { self, URL, caches, fetch });
   return listeners;
 }
 
@@ -75,6 +76,45 @@ describe('service worker', () => {
   it('serves content-hashed static assets cache-first', () => {
     expect(handled(`${ORIGIN}/_next/static/chunks/app-1a2b3c.js`)).toBe(true);
     expect(handled(`${ORIGIN}/_next/static/css/app-1a2b3c.css`)).toBe(true);
+  });
+
+  // ST-014 (flows A-05): offline after sign-out shows the static A-01 offline page, never a
+  // cached page with data. Navigations go to the network; only a failure falls back.
+  it('answers a failed navigation with the precached offline page, and stores no page', async () => {
+    const put = vi.fn();
+    const offline = { tag: 'offline page' };
+    const listeners = loadWorker({
+      caches: {
+        open: async () => ({ match: async () => undefined, put }),
+        keys: async () => [],
+        match: async (url: string) => (url === '/offline.html' ? offline : undefined),
+      },
+      fetch: () => Promise.reject(new TypeError('offline')),
+    });
+    let response: Promise<unknown> | undefined;
+    listeners.fetch!({
+      request: { url: `${ORIGIN}/matches`, method: 'GET', headers: { has: () => false }, mode: 'navigate' },
+      respondWith: (r: Promise<unknown>) => {
+        response = r;
+      },
+    });
+    expect(response).toBeDefined();
+    await expect(response).resolves.toBe(offline);
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it('precaches only the offline page and its stylesheet', async () => {
+    const added: string[][] = [];
+    const listeners = loadWorker({
+      caches: {
+        open: async () => ({ addAll: async (urls: string[]) => added.push(urls) }),
+        keys: async () => [],
+      },
+    });
+    let done: Promise<unknown> | undefined;
+    listeners.install!({ waitUntil: (p: Promise<unknown>) => (done = p) });
+    await done;
+    expect(added).toEqual([['/offline.html', '/offline.css']]);
   });
 
   it('registers install and activate handlers that clean old caches', () => {

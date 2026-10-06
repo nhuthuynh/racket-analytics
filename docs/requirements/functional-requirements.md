@@ -333,6 +333,7 @@ Feature: Resumable upload
 - **Description:** The server accepts only real video files: MP4 or MOV containers with H.264 or HEVC, checked by content and not by extension. Files must be within the size and duration caps (provisional: 10 GB and 150 min). Rejections use the error summary and state the caps in human units. Server checks are authoritative.
 - **Priority:** Must · **Release:** R1 · **Milestone:** M0 · **Status:** ready-candidate (caps confirmed by R-05)
 - **Source:** PROD US-203; ENG NFR-SEC-04; DES FR-UX-33; [AQS/SEC-02]; [DPA/DESIGN-13]; conflict K12
+- **K12 / R-05 note (2026-10-05, senior-ml-cv-engineer, ST-025):** caps **not yet confirmed**, still provisional 10 GB / 150 min. The two caps bind together at 66.7 MB per minute (8.89 Mbit/s); if any of the ≥ 5 measured phone models records above that rate at 1080p60, the size cap binds first and must be raised or the copy changed. Measurement is blocked on real phone recordings (`docs/data/phone-fixtures.md` §4; blockers.md 2026-10-05).
 ```gherkin
 Feature: Upload validation
   Rule: Only real video files within the caps are accepted

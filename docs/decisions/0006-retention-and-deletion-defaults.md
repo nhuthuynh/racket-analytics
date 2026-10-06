@@ -1,6 +1,6 @@
 # 0006. Interim retention, expiry and deletion defaults (pending legal review)
 
-- **Status:** Proposed. This is an escalation to the human product owner (OQ-07). The legal adequacy of every window is unverified.
+- **Status:** Accepted as interim defaults by the human product owner on 2026-10-05 (OQ-07, ADR 0023). The legal adequacy of every window is still unverified and needs the legal review required before any real-user beta (OQ-05, NFR-070).
 - **Date:** 2026-10-03
 - **Deciders:** business-analyst (proposer); security-privacy-engineer (reviewer); human product owner (approver)
 - **Consulted:** product-manager (PROD US-103, US-104, US-202), principal-engineer, sre-devops-engineer, security-privacy-engineer (ENG §4.6, §6.1, ENG-FR-01), principal-designer (DES FR-UX-31, FR-UX-90)
@@ -85,3 +85,4 @@ Chosen option: **Option 3, as an interim default until the legal review (NFR-070
 - The legal-review ADR (NFR-070) confirms or supersedes this decision.
 
 ## Notes
+- **2026-10-05 (product-manager, recording the human product owner):** PO accepted OQ-07, including the consequence that re-processing after 30 days uses the 720p review video or is unavailable. Legal review remains open (OQ-05); a change after that review is a superseding ADR. Previous status line: "Proposed. This is an escalation to the human product owner (OQ-07). The legal adequacy of every window is unverified.". See ADR 0023.

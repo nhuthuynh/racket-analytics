@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   CHUNK_SIZE,
   clearStoredUploads,
-  failureFor,
   shouldRetryUpload,
   uploadEndpointFor,
-  uploadFingerprint,
+  uploadErrorDetail,
+  uploadProblemFor,
 } from '@/lib/upload/tus-policy';
 
 const MATCH_ID = '0b8f6c1e-3f3a-4c55-9a51-8d1f0e7d2a10';
@@ -37,15 +37,6 @@ describe('shouldRetryUpload', () => {
   });
 });
 
-describe('failureFor', () => {
-  it('maps statuses to the reason the UI explains', () => {
-    expect(failureFor(0)).toBe('network');
-    expect(failureFor(409)).toBe('conflict');
-    expect(failureFor(413)).toBe('rejected');
-    expect(failureFor(500)).toBe('unknown');
-  });
-});
-
 describe('uploadEndpointFor', () => {
   it('refuses an ID that is not a UUID', () => {
     expect(() => uploadEndpointFor('../../dev/sign-in')).toThrow();
@@ -53,25 +44,6 @@ describe('uploadEndpointFor', () => {
 
   it('builds the same-origin creation URL', () => {
     expect(uploadEndpointFor(MATCH_ID)).toBe(`/api/matches/${MATCH_ID}/uploads`);
-  });
-});
-
-describe('uploadFingerprint', () => {
-  it('differs per match for the same file', () => {
-    const file = { name: 'clip.mp4', size: 10, lastModified: 1, type: 'video/mp4' };
-    expect(uploadFingerprint(file, MATCH_ID)).not.toBe(
-      uploadFingerprint(file, '1b8f6c1e-3f3a-4c55-9a51-8d1f0e7d2a10'),
-    );
-  });
-
-  it('does not contain the file name (no personal data in browser storage)', () => {
-    const file = { name: 'ivy-smith-final.mp4', size: 10, lastModified: 1, type: 'video/mp4' };
-    expect(uploadFingerprint(file, MATCH_ID)).not.toContain('ivy');
-  });
-
-  it('is stable for the same file and match', () => {
-    const file = { name: 'clip.mp4', size: 10, lastModified: 1, type: 'video/mp4' };
-    expect(uploadFingerprint(file, MATCH_ID)).toBe(uploadFingerprint({ ...file }, MATCH_ID));
   });
 });
 
@@ -101,5 +73,43 @@ describe('clearStoredUploads', () => {
 
   it('does not throw when storage is unavailable', () => {
     expect(clearStoredUploads(null)).toBe(0);
+  });
+});
+
+// PE-R3-03 / PD-R3-02: a 429 is told apart by its error code (api-sprint-01 §6.3 checks 5 and 6).
+describe('uploadProblemFor 429', () => {
+  it('does not call a creation-rate limit a quota refusal', () => {
+    expect(uploadProblemFor(429, { code: 'rate_limited', retryAt: '2026-10-05T14:32:00Z' })).toBe('rate_limited');
+  });
+
+  it('treats a 429 with a retry time as a rate limit even without a known code', () => {
+    expect(uploadProblemFor(429, { code: null, retryAt: '2026-10-05T14:32:00Z' })).toBe('rate_limited');
+  });
+
+  it('keeps the unfinished-upload quota for upload_quota_exceeded and for a bare 429', () => {
+    expect(uploadProblemFor(429, { code: 'upload_quota_exceeded', retryAt: null })).toBe('quota');
+    expect(uploadProblemFor(429)).toBe('quota');
+  });
+});
+
+describe('uploadErrorDetail', () => {
+  it('ignores a body that is not the error envelope, and a malformed retry time', () => {
+    expect(uploadErrorDetail('<html>proxy</html>')).toEqual({ code: null, retryAt: null, supportRef: null });
+    expect(uploadErrorDetail(JSON.stringify({ error: { code: 7, retry_at: 'soon', support_ref: 'x' } }))).toEqual({
+      code: null,
+      retryAt: null,
+      supportRef: null,
+    });
+  });
+
+  it('reads the code, retry time and reference of the API error envelope', () => {
+    const body = JSON.stringify({
+      error: { code: 'rate_limited', retry_at: '2026-10-05T14:32:00Z', support_ref: 'ref_0123456789abcdef' },
+    });
+    expect(uploadErrorDetail(body)).toEqual({
+      code: 'rate_limited',
+      retryAt: '2026-10-05T14:32:00Z',
+      supportRef: 'ref_0123456789abcdef',
+    });
   });
 });

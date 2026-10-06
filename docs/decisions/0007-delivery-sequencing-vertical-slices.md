@@ -1,6 +1,6 @@
 # 0007. Delivery sequencing: Sprint 0 foundations, then one demonstrable vertical slice per sprint
 
-- **Status:** Proposed. Sprint 0 does not depend on this ADR's open part. Sprints 1+ depend on ADR 0002 (OQ-02). The human product owner ratifies both at the Sprint 0 review (2026-10-16).
+- **Status:** Accepted by the human product owner on 2026-10-05 (ADR 0023), ahead of the planned Sprint 0 review.
 - **Date:** 2026-10-03
 - **Deciders:** engineering-manager (R/A for sprint process, working-agreement §4); human product owner (approves release scope)
 - **Consulted:** principal-engineer (technical sequencing), senior-qa-engineer (test readiness), product-manager (value order, via `brainstorm-product.md` §11), business-analyst (via the FR/NFR registers)
@@ -105,3 +105,4 @@ Chosen option: **Option 1.**
 - Retro 0 and retro 1 check whether the order held; any change is a superseding ADR.
 
 ## Notes
+- **2026-10-05 (product-manager, recording the human product owner):** PO ratified the sequencing together with ADR 0002. Previous status line: "Proposed. Sprint 0 does not depend on this ADR's open part. Sprints 1+ depend on ADR 0002 (OQ-02). The human product owner ratifies both at the Sprint 0 review (2026-10-16).". See ADR 0023.

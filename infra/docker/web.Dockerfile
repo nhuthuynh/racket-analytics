@@ -19,9 +19,13 @@ RUN --mount=type=secret,id=extra_ca,required=false \
 FROM deps AS build
 COPY web/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
+# The runtime copies this stage, so the Next build cache goes (C-15, disk per evidence round).
+# Dev dependencies stay: `next start` transpiles next.config.ts and needs TypeScript (measured
+# 2026-10-06: after `pnpm prune --prod` the container exits trying `pnpm add typescript`).
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \
- && pnpm build
+ && pnpm build \
+ && rm -rf .next/cache
 
 FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000

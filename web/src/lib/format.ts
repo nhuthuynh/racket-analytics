@@ -48,6 +48,15 @@ export function formatProgressBytes(sent: number, total: number): string {
   return `${scaledIn(shown, index)} of ${scaledIn(total, index)} ${UNITS[index]}`;
 }
 
+/** `(1900000000, 3000000000)` → `"1.9 GB of 3.0 GB"` (flows U-01 progress text). */
+export function formatProgressAmount(sent: number, total: number): string {
+  requireNonNegative(sent, 'sent');
+  requireNonNegative(total, 'total');
+  const index = unitIndexFor(total);
+  const shown = Math.min(sent, total);
+  return `${scaledIn(shown, index)} ${UNITS[index]} of ${scaledIn(total, index)} ${UNITS[index]}`;
+}
+
 /** `60000` → `"1:00"`; `3725000` → `"1:02:05"`. Rounds to the nearest second. */
 export function formatDuration(ms: number): string {
   requireNonNegative(ms, 'duration');
@@ -88,3 +97,41 @@ export function formatMediaSummary(media: MediaSummaryInput): string {
     formatResolution(media.width, media.height),
   ].join(' · ');
 }
+
+/** A size cap in words for copy: `10000000000` → `"10 GB"` (SI, like phone file browsers). */
+export function formatSizeCap(bytes: number): string {
+  requirePositive(bytes, 'bytes');
+  const index = Math.max(unitIndexFor(bytes), 1);
+  const value = Number((bytes / STEP ** index).toFixed(1));
+  return `${value} ${UNITS[index]}`;
+}
+
+/** A duration cap in words: `9000000` → `"2 hours 30 minutes"`. Whole minutes. */
+export function formatDurationCap(ms: number): string {
+  requirePositive(ms, 'duration');
+  const minutesTotal = Math.round(ms / 60_000);
+  const hours = Math.floor(minutesTotal / 60);
+  const minutes = minutesTotal % 60;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`);
+  if (minutes > 0 || hours === 0) parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`);
+  return parts.join(' ');
+}
+
+/** M-01 card status (flows-sprint-01 §5): an unfinished upload reads "Upload stopped at 64%". */
+export function matchStatusLine(m: {
+  status: keyof typeof STATUS_LINE;
+  upload?: { state: string; offset: number; length: number } | null;
+}): string {
+  if (m.upload?.state === 'receiving') {
+    return `Upload stopped at ${Math.floor((m.upload.offset / Math.max(1, m.upload.length)) * 100)}%`;
+  }
+  return STATUS_LINE[m.status];
+}
+
+const STATUS_LINE = {
+  awaiting_upload: 'Awaiting upload',
+  uploading: 'Uploading',
+  video_received: 'Video received',
+  probe_failed: 'We could not read this video',
+} as const;

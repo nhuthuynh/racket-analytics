@@ -1,0 +1,146 @@
+# Nightly quality jobs (ST-024; sprint-01 §3.1; ADR 0026).
+# * oracle:   differential check P9, 100,000 random sequences, production engine vs the
+#             independent oracle in backend/tests/oracle (NFR-002b).
+# * mutation: mutmut on sports/pickleball/rules (NFR-072). Sprint 1 records a baseline; the
+#             >= 85% gate starts in Sprint 2.
+# * publish:  writes both results with the run date into the current sprint's status.json on
+#             the default branch. Only this job can write, and it never runs test code.
+# Reports pass between jobs as job outputs (small JSON), so no artifact download is needed.
+name: Nightly quality
+
+on:
+  schedule:
+    - cron: "43 2 * * *" # 02:43 UTC, before the CI nightly at 03:17
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-quality
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.8.17"
+  MUTMUT_VERSION: "3.8.0"
+  FORCE_COLOR: "0"
+
+jobs:
+  oracle:
+    name: Differential oracle, 100,000 sequences (NFR-002b)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      report: ${{ steps.report.outputs.report }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked
+      - name: Production engine vs oracle
+        run: |
+          mkdir -p ../reports
+          uv run --no-sync python -m tests.oracle.differential --sequences 100000 \
+            --json ../reports/oracle.json > ../reports/oracle.log 2>&1 || status=$?
+          tail -n 60 ../reports/oracle.log
+          exit "${status:-0}"
+      - name: Report as job output
+        id: report
+        if: always()
+        run: |
+          if [ -f ../reports/oracle.json ]; then
+            echo "report=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))))' ../reports/oracle.json)" >> "$GITHUB_OUTPUT"
+          fi
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-oracle
+          path: reports/oracle.*
+          if-no-files-found: warn
+
+  mutation:
+    name: Mutation score, sports/pickleball/rules (NFR-072)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    outputs:
+      report: ${{ steps.report.outputs.report }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked
+      - name: mutmut run
+        run: |
+          uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
+            --project . --target src/racket/sports/pickleball/rules \
+            --tests tests/unit/sports \
+            --ignore tests/unit/sports/pickleball/test_rules_static.py \
+            --out ../reports/mutation.json
+      - name: Report as job output
+        id: report
+        if: always()
+        run: |
+          if [ -f ../reports/mutation.json ]; then
+            echo "report=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))))' ../reports/mutation.json)" >> "$GITHUB_OUTPUT"
+          fi
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-mutation
+          path: |
+            reports/mutation.json
+            backend/mutants/mutmut-cicd-stats.json
+          if-no-files-found: warn
+
+  publish:
+    name: Publish results to the sprint status file
+    needs: [oracle, mutation]
+    if: always() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Write the nightly key into docs/sprints/<current>/status.json
+        env:
+          ORACLE_REPORT: ${{ needs.oracle.outputs.report }}
+          MUTATION_REPORT: ${{ needs.mutation.outputs.report }}
+          ORACLE_JOB: ${{ needs.oracle.result }}
+          MUTATION_JOB: ${{ needs.mutation.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p reports
+          [ -n "$ORACLE_REPORT" ] && printf '%s' "$ORACLE_REPORT" > reports/oracle.json
+          [ -n "$MUTATION_REPORT" ] && printf '%s' "$MUTATION_REPORT" > reports/mutation.json
+          python3 scripts/ci/nightly_status.py --status auto \
+            --oracle reports/oracle.json --mutation reports/mutation.json \
+            --oracle-job "$ORACLE_JOB" --mutation-job "$MUTATION_JOB" \
+            --run-url "$RUN_URL" --sha "$GITHUB_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Commit the status file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/sprints/*/status.json
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "chore(nightly): quality results $(date -u +%F) [skip ci]"
+          for _ in 1 2 3; do
+            git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+          done
+          exit 1

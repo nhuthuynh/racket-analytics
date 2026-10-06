@@ -1,0 +1,70 @@
+{
+  "title": "racket-analytics SLIs (ST-024)",
+  "uid": "racket-slis",
+  "schemaVersion": 39,
+  "tags": ["slo", "nfr-041", "nfr-042"],
+  "time": { "from": "now-7d", "to": "now" },
+  "templating": {
+    "list": [
+      { "name": "datasource", "type": "datasource", "query": "prometheus" }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "API availability (NFR-041): non-5xx / all, 429 excluded",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 3 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_request_duration_seconds_count{job=\"racket-api\", http_response_status_code!~\"5..|429\"}[$__range])) / sum(rate(http_server_request_duration_seconds_count{job=\"racket-api\", http_response_status_code!=\"429\"}[$__range]))"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Upload completion (NFR-042): completed / (created - rejected - cancelled)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(racket_upload_sessions_total{event=\"completed\"}[$__range])) / (sum(increase(racket_upload_sessions_total{event=\"created\"}[$__range])) - sum(increase(racket_upload_sessions_total{event=~\"rejected|cancelled\"}[$__range])))"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Responses per second by status class",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{http_response_status_code}}",
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{job=\"racket-api\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Upload session events per hour",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{event}} {{reason}}",
+          "expr": "sum by (event, reason) (increase(racket_upload_sessions_total[1h]))"
+        }
+      ]
+    }
+  ]
+}

@@ -3,11 +3,17 @@
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from './helpers/axe';
 import { createMatch, signInAs } from './helpers/journey';
+import { signInByLink, uniqueEmail } from './helpers/sprint-01';
 
 test('@M0 @story-ST-006 Carlos cannot open Ivy\'s match', async ({ browser }, testInfo) => {
+  // Ivy is a fresh magic-link account (PD-R2-03): createMatch starts an upload, and an upload
+  // left unfinished by a slow or interrupted run must not use up a shared player's quota.
+  // Carlos stays a dev player (ST-006 picker); he never uploads here.
   const ivy = await (await browser.newContext()).newPage();
-  await signInAs(ivy, 'Ivy');
-  const ivysMatch = await createMatch(ivy, 'Ivy private match');
+  await signInByLink(ivy, uniqueEmail('ivy'));
+  await ivy.goto('/matches');
+  // Distinctive player names: the match has no title since ST-016 (TCR: journey.ts::createMatch).
+  const ivysMatch = await createMatch(ivy, ['Ivy', 'Zephyrine']);
 
   const carlos = await (await browser.newContext()).newPage();
   await signInAs(carlos, 'Carlos');
@@ -19,6 +25,6 @@ test('@M0 @story-ST-006 Carlos cannot open Ivy\'s match', async ({ browser }, te
 
   expect(notYours).toMatch(/not found/i);
   expect(notYours).toEqual(missing);
-  expect(notYours).not.toContain('Ivy private match');
+  expect(notYours).not.toContain('Zephyrine');
   await expectNoBlockingA11yViolations(carlos, testInfo, 'not-found');
 });

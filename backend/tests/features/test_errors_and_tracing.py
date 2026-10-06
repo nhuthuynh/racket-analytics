@@ -15,8 +15,6 @@ from tests.support.errors import ExplodingService, assert_generic_error, assert_
 from tests.support.flows import create_match, upload_fixture
 from tests.support.tracing import by_trace, server_spans, trace_id_hex
 
-pytestmark = pytest.mark.red_until(story="ST-005")
-
 scenarios("errors_and_tracing.feature")
 
 

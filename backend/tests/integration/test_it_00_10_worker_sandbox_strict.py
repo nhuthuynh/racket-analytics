@@ -9,7 +9,8 @@ A positive control runs the same probe from the ``api`` container (on the ``edge
 and expects OPEN, so the test shows it can tell the two cases apart.
 
 Needs the Compose stack. Locally without it the tests skip; in CI (CI=true) a missing stack
-fails. Proposed by senior-backend-engineer for QA (test-change-requests.md, round 2).
+fails. Proposed by senior-backend-engineer for QA (test-change-requests.md, round 2);
+approved by senior-qa-engineer 2026-10-05.
 """
 
 from __future__ import annotations
@@ -103,7 +104,7 @@ def _require_compose() -> None:
         pytest.skip("needs the Compose stack (docker compose -f infra/compose.yaml up -d)")
 
 
-def _probe_from(service: str, url: str) -> str:
+def probe_from(service: str, url: str) -> str:
     result = subprocess.run(
         [*COMPOSE, "exec", "-T", service, "python", "-c", PROBE, url],
         capture_output=True,
@@ -117,17 +118,17 @@ def _probe_from(service: str, url: str) -> str:
 def test_the_worker_has_no_route_to_a_public_ip() -> None:
     _require_compose()
 
-    assert _probe_from("worker", PUBLIC_IP_URL) in {"BLOCKED ENETUNREACH", "BLOCKED EHOSTUNREACH"}
+    assert probe_from("worker", PUBLIC_IP_URL) in {"BLOCKED ENETUNREACH", "BLOCKED EHOSTUNREACH"}
 
 
 def test_the_worker_cannot_resolve_public_names() -> None:
     _require_compose()
 
-    assert _probe_from("worker", PUBLIC_NAME_URL) == "BLOCKED dns"
+    assert probe_from("worker", PUBLIC_NAME_URL) == "BLOCKED dns"
 
 
 def test_positive_control_the_same_probe_sees_egress_from_the_api() -> None:
     """Without this control a probe that always says BLOCKED would pass the two tests above."""
     _require_compose()
 
-    assert _probe_from("api", PUBLIC_IP_URL).startswith("OPEN")
+    assert probe_from("api", PUBLIC_IP_URL).startswith("OPEN")

@@ -77,6 +77,8 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 | `flaky-report` (nightly) | Suites run 3 times; `scripts/ci/flaky_report.py` | Report only (NFR-074); quarantine within 1 day |
 | `ci-gate` | Aggregates every job above except `flaky-report` | The single required status check |
 
+`.github/workflows/nightly-quality.yml` (02:43 UTC and manual dispatch; ST-024, ADR 0026): `oracle` (100,000-sequence differential check, NFR-002b), `mutation` (mutmut on `sports/pickleball/rules`, NFR-072; baseline in Sprint 1, ≥ 85% gate from Sprint 2) and `publish`, the only job with `contents: write`, which writes the `nightly` key of the current sprint's `status.json` and commits it with `[skip ci]`. Not part of `ci-gate`.
+
 **Expected red until code exists:** `python-unit`, `integration` (coverage, red-first QA suites), `web-checks`, `e2e`, the web part of `secrets-and-audit` and `sbom-licences` stay red until ST-005..ST-010 land. This is intended: QA's red-first suites (ST-012) must fail until their stories turn them green.
 
 ### 2.1 Repository settings a human admin must apply (not possible from code)
@@ -85,6 +87,7 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 2. **Labels:** create `qa-approved-test-change` (applied only by the senior-qa-engineer), `size-waiver` (EM only) and `skip-claude-review`. GitHub cannot restrict who applies a label. Limit triage/write access, and audit label events in the PR timeline at review (judgment; ADR 0014).
 3. **Secret `ANTHROPIC_API_KEY`** (Settings → Secrets and variables → Actions → New repository secret) for the review bot (§4). Without it, the review job logs a notice and passes.
 4. **Actions → General:** set "Workflow permissions" to "Read repository contents" (the workflows request what they need per job).
+5. **Nightly publish (ADR 0026):** if rule 1 requires PRs, add `github-actions[bot]` (the GitHub Actions app) as a bypass actor so the nightly `publish` job can commit `docs/sprints/*/status.json`; otherwise that job fails and the results stay in its job summary.
 
 ## 3. Agent hooks (ST-003, DPA/AI-10)
 

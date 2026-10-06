@@ -275,21 +275,21 @@ Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature fil
 | ST-010 | S0 | — | NFR-015, 027, 029, 061, 067 | `walking_skeleton.feature` ✔ | E2E-00-01, A11y |
 | ST-011 | S0 | FR-151 | NFR-078 | `gold_set_integrity.feature` ✔ | U, CI |
 | ST-012 | S0 | (suites for FR-002, FR-022, FR-080) | testing-strategy §5 suites | all S0 features | I |
-| ST-013 | S1 | FR-001 | NFR-032, 055, 057 | `sign_in.feature` | U, I (IT-01-01..03), E2E |
-| ST-014 | S1 | FR-011 | NFR-067 | `sign_out.feature` | I (IT-01-04), E2E |
-| ST-015 | S1 | FR-004, FR-020 | NFR-033, 035 | `first_run_and_capture_guide.feature` | E2E, A11y |
-| ST-016 | S1 | FR-021, FR-005 | NFR-028, 031, 034, 037 | `match_setup.feature` | U, I (IT-01-05), E2E, A11y |
-| ST-017 | S1 | FR-022 | NFR-016, 026, 042 | `resumable_upload.feature` | U, I (IT-01-06..08), E2E |
-| ST-018 | S1 | FR-023 | NFR-053, 054, 060 | `upload_validation.feature` | U, I (IT-01-09, 10) |
-| ST-019 (stretch) | S1 | FR-025 | — | `footage_quality_report.feature` | E2E |
-| ST-020 | S1 | FR-040, 041, 044 (part a) | NFR-079 | `scoring_engine_mechanics.feature` | U, CI (IT-01-12, 13) |
-| ST-021 | S1 | FR-045 (part a) | — | `match_structure.feature` | U |
-| ST-022 | S1 | — | NFR-002, 072 | `property_and_oracle.feature` (sprint-01 §14.3.7) | U (property), nightly oracle, mutation |
-| ST-023 | S1 | FR-041, FR-044 (provisional rows); FR-045 (M-01..M-08, part a) | NFR-001 | `side_out_doubles_provisional.feature`, `faults_provisional.feature` (`@needs-verification`); `match_structure.feature` (M rows) | U |
-| ST-024 | S1 | — | NFR-002, 041, 042, 072 | `nightly_quality.feature` (sprint-01 §14.3.8) | OPS, CI |
-| ST-025 | S1 | FR-023 (caps) | NFR-025 | `phone_fixtures.feature` (sprint-01 §14.3.9) | I (fixtures) |
-| ST-020b (backlog) | after OQ-01 | FR-040, 041, 044 (part b: preset values) | NFR-001, NFR-003 | rows of `side_out_doubles_provisional.feature`, `faults_provisional.feature` gain `@rule-<n>` | U, S. Status `needs-verification` (ADR 0009) |
-| ST-021b (backlog) | after OQ-01 | FR-045 (part b: rulebook defaults, if any) | — | `match_structure.feature` | U. Status `needs-verification` |
+| ST-013 | S1 | FR-001 | NFR-032, 055, 057 | `sign_in.feature` ✔ | U, I (IT-01-01..03), E2E |
+| ST-014 | S1 | FR-011 | NFR-067 | `sign_out.feature` ✔ | I (IT-01-04), E2E |
+| ST-015 | S1 | FR-004, FR-020 | NFR-033, 035 | `first_run_and_capture_guide.feature` ✔ | E2E, A11y |
+| ST-016 | S1 | FR-021, FR-005 | NFR-028, 031, 034, 037 | `match_setup.feature` ✔ | U, I (IT-01-05), E2E, A11y |
+| ST-017 | S1 | FR-022 | NFR-016, 026, 042 | `resumable_upload.feature` ✔ | U, I (IT-01-06..08), E2E |
+| ST-018 | S1 | FR-023 | NFR-053, 054, 060 | `upload_validation.feature` ✔ | U, I (IT-01-09, 10) |
+| ST-019 (stretch) | S1 | FR-025 | — | `footage_quality_report.feature` ✔ | E2E |
+| ST-020 | S1 | FR-040, 041, 044 (part a) | NFR-079 | `scoring_engine_mechanics.feature` ✔ | U, CI (IT-01-12, 13) |
+| ST-021 | S1 | FR-045 (part a) | — | `match_structure.feature` ✔ | U |
+| ST-022 | S1 | — | NFR-002, 072 | `property_and_oracle.feature` ✔ (sprint-01 §14.3.7) | U (property), nightly oracle, mutation |
+| ST-023 | S1 | FR-041, FR-044 (provisional rows); FR-045 (M-01..M-08, part a) | NFR-001 | `side_out_doubles_provisional.feature` ✔, `faults_provisional.feature` ✔ (`@needs-verification`); `match_structure.feature` ✔ (M rows) | U |
+| ST-024 | S1 | — | NFR-002, 041, 042, 072 | `nightly_quality.feature` ✔ (sprint-01 §14.3.8) | OPS, CI |
+| ST-025 | S1 | FR-023 (caps) | NFR-025 | `phone_fixtures.feature` ✔ (sprint-01 §14.3.9) | I (fixtures) |
+| ST-020b (backlog) | after OQ-01 | FR-040, 041, 044 (part b: preset values) | NFR-001, NFR-003 | rows of `side_out_doubles_provisional.feature` ✔, `faults_provisional.feature` ✔ gain `@rule-<n>` | U, S. Status `needs-verification` (ADR 0009) |
+| ST-021b (backlog) | after OQ-01 | FR-045 (part b: rulebook defaults, if any) | — | `match_structure.feature` ✔ | U. Status `needs-verification` |
 | ST-026 | S2 | FR-049 | NFR-075 | `score_sheet.feature` | U, I (IT-02-01) |
 | ST-027 | S2 | FR-050 | NFR-012, 028, 030 | `quick_tag.feature` | U, I (IT-02-04), E2E, A11y |
 | ST-028 | S2 | FR-051 | NFR-034 | `keyboard_tagging.feature` | E2E-02-02 |
@@ -313,8 +313,8 @@ Source: `docs/sprints/sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Feature fil
 |---|---|---|---|---|
 | `docs/design/tokens.json`, `tokens.md` (contrast proof 55/55 pass) | principal-designer | draft v0.1 | ST-010, ST-013..ST-019 | NFR-028, NFR-029, NFR-031, NFR-034 |
 | `docs/design/component-accessibility-checklist.md` | principal-designer | draft v0.1 | all UI stories | NFR-027..NFR-035, NFR-037 |
-| `docs/design/flows-sprint-01.md` | principal-designer | draft v0.1, review pending | ST-013..ST-019 | FR-001, 004, 005, 011, 020..023, 025, 043, 055 |
-| `docs/domain/capture-guide-wording.md` | pickleball-domain-coach | draft | ST-015 | FR-020, NFR-033, NFR-035 |
+| `docs/design/flows-sprint-01.md` | principal-designer | draft v0.1; design review scheduled 2026-10-06, not held at Sprint 1 close (DoR P7) | ST-013..ST-019 | FR-001, 004, 005, 011, 020..023, 025, 043, 055 |
+| `docs/domain/capture-guide-wording.md` | pickleball-domain-coach | draft; coach sign-off still missing at Sprint 1 close although ST-015 shipped (PD-R1-05) | ST-015 | FR-020, NFR-033, NFR-035 |
 | `docs/domain/rules-verified.md` | pickleball-domain-coach | empty: nothing verified (OQ-01) | ST-020b, ST-021b, ST-023, all `@needs-verification` rows | FR-040..FR-048, NFR-001, NFR-003 |
 | `docs/domain/metric-dictionary.md` AN-01..AN-07 | pickleball-domain-coach | draft | Sprint 3 stats stories | FR-100..FR-103, NFR-004, NFR-038 |
 
@@ -339,3 +339,101 @@ The test files as they landed in the repo (backend paths are relative to `backen
 | SPIKE-01 | — | — | — | ADR 0015 (document review) |
 
 Open test items: 6 test-change rows waiting for QA approval (`docs/sprints/00/test-change-requests.md`); stale `red_until` markers (QA-R3-08); the weak IT-00-10 probe is to be retired (QA-R3-07).
+
+## 9. Sprint 1 test files per story (engineering-manager, 2026-10-05, sprint close)
+
+The test files as they landed (backend paths relative to `backend/tests/`; feature files under `tests/features/`; browser specs under `web/e2e/sprint-01/`). Evidence for the whole table is the EM's isolated re-run at `cf8cd19`: `cd backend && env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfEs` → `3 failed, 1060 passed, 6 skipped`; `cd web && pnpm exec vitest run` → `251 passed`; `cd infra && uv run pytest -q` → `245 passed`. Browser: QA review round 2 (Chromium, `961648e`) → `44 passed, 6 skipped`. **No story is DoD-done**: no CI run includes these files, and WebKit is unverified (`docs/sprints/01/sprint-report.md`). "Gap" names an acceptance criterion or threat control with no executable test.
+
+| Story | Unit | Integration / regression | Scenario (step module → feature) | E2E / other | Gap at close |
+|---|---|---|---|---|---|
+| ST-013 | `unit/players/test_magic_link_domain.py`, `test_session_cookie_policy.py`; `unit/platform/test_settings_sprint01.py`; `unit/test_worker_stage_selection.py`; web `auth-api`, `auth-callback`, `sign-in-form`, `sign-in-copy`, `dev-tls` | `integration/test_it_01_01_magic_link.py` (IT-01-01..03, T-ML-12), `integration/platform/test_rate_limiter.py`; `infra/tests/test_compose_sprint01.py`, `test_compose_tls.py` | `features/test_sign_in.py` → `sign_in.feature` | `sign-in.spec.ts` (E2E-01-01) | T-ML-5 prefetch test; idle-timeout and 10-session-cap tests (SEC-R3-S1-02/03) |
+| ST-014 | web `account-menu`, `clear-client-data` | `integration/test_it_01_04_no_store.py` | `sign_out.feature` (browser-bound) | `sign-out.spec.ts` | WebKit upload-in-progress dialog (PD-R1-04) |
+| ST-015 | web `first-run-and-guide` | — | `first_run_and_capture_guide.feature` (browser-bound) | `first-run-and-guide.spec.ts` | WebKit captions and fallback (PD-R1-02); coach sign-off |
+| ST-016 | `unit/matches/test_participants.py`; web `setup-flow`, `match-setup`, `contact-details`, `api-sprint-01-match`, `error-summary` | `integration/test_it_01_05_participants.py` | `features/test_match_setup.py` → `match_setup.feature` | `match-setup.spec.ts` (E2E-01-03, reflow, axe) | T-UV-10 nickname render test; target size on the Q-03 error state (PD-R1-03) |
+| ST-017 | `unit/video_ingest/test_upload_extensions.py`; web `tus-transfer`, `match-upload`, `upload-estimate`, `upload-policy-sprint-01`, `upload-files` | `integration/test_it_01_06_tus_extensions.py` (IT-01-06..08), `video_ingest/test_upload_policy_route.py`, `video_ingest/test_tus_resumable_everywhere.py` | `features/test_resumable_upload.py` → `resumable_upload.feature` (depends on Pending TCR row 32) | `resumable-upload.spec.ts` (E2E-01-02) | T-UV-9 file-name log scan; T-UV-10 file-name render; repeated-failure focus (PD-R3-01) |
+| ST-018 | `unit/video_ingest/test_upload_policy.py`, `unit/matches/test_match_rejection.py`; web `format-caps` | `integration/test_it_01_09_upload_validation.py` (IT-01-09/10), `test_queue_enqueue_again.py`, `video_ingest/test_upload_create_review_round1.py` | `features/test_upload_validation.py` → `upload_validation.feature` | `upload-validation.spec.ts` | Probe delete-before-commit fault test (PE-R3-02) |
+| ST-019 (stretch) | web `quality-report` | — | `footage_quality_report.feature` (browser-bound, `073d3f3`) | `footage-quality-report.spec.ts` | — |
+| ST-020 | `unit/sports/pickleball/test_rules_config.py`, `test_rules_engine.py`, `test_rules_outcome.py`, `test_rules_state.py`, `test_rules_server_position.py`, `test_rules_static.py` (IT-01-12/13) | — | `features/test_scoring_engine_mechanics.py` → `scoring_engine_mechanics.feature` | — | — |
+| ST-021 | `unit/matches/test_match_state.py` | — | `features/test_match_structure.py` → `match_structure.feature` (M-01..M-08) | — | — |
+| ST-022 | `unit/sports/pickleball/test_rules_properties.py` (P1, P2, P4-P8; P3 skipped, OQ-01) | `oracle/test_oracle.py`, `oracle/differential.py` (P9) | `features/test_property_and_oracle.py` → `property_and_oracle.feature` (`@nightly` 100k) | nightly workflow (never run on GitHub) | Mutation baseline |
+| ST-023 | — | — | `features/test_side_out_doubles_provisional.py`, `test_faults_provisional.py` → `side_out_doubles_provisional.feature`, `faults_provisional.feature` (26 `@needs-verification` cases) | — | Rule numbers `@rule-<n>` (OQ-01) |
+| ST-024 | `unit/platform/test_slis.py`, `test_sli_wiring.py` | `infra/tests/test_nightly_quality.py`, `test_workflows_ci_run1.py`, `test_workflows_ci_run2.py` | `features/test_nightly_quality.py` → `nightly_quality.feature` (1 scenario red until a nightly run) | — | — |
+| ST-025 | `unit/dataset/test_manifest_consent.py`, `test_phone_set.py` | `integration/dataset/test_phone_manifest_tool.py` | `features/test_phone_fixtures.py` → `phone_fixtures.feature` (2 scenarios red until real clips) | — | Real phone clips (PO) |
+| SPIKE-06 | — | — | — | ADR 0028 (proxy data) | Real-device runs |
+
+
+## 10. Sprint 1 outcome per requirement (engineering-manager, 2026-10-05, final close)
+
+This section shows the state of each Sprint 1 requirement at the final close. Evidence is goal-scorecard verification round 3 at `e76fb96` (`docs/sprints/01/goal-scorecard.md` §8) and the open findings in `docs/sprints/01/sprint-report.md` §1.2. "Live" means the requirement was shown on an isolated https Compose stack. **No requirement is release-verified**: no green CI run includes these tests, and WebKit is unverified. The test files per story are in §9.
+
+| Requirement | Story | Shown live (goal metric) | Open at close |
+|---|---|---|---|
+| FR-001 Passwordless sign-in | ST-013 | Yes (G01-01, G01-06a 1.058 s) | NUL address 500 (SEC-R6-S1-01); identity key (ST-013b); ASVS 6.3.3 (ADR 0031) |
+| FR-004 First-run promise | ST-015 | Yes (G01-03, demo step 2) | — |
+| FR-005 Match participants by nickname | ST-016 | Yes (G01-01 step 3, G01-03) | NUL title 500 (SEC-R6-S1-01) |
+| FR-011 Sign out clears local data | ST-014 | Yes, Chromium (G01-01 step 9, demo step 8) | WebKit sign-out dialog |
+| FR-020 Capture guide | ST-015 | Yes, Chromium (G01-03, G01-10) | WebKit captions/fallback; consent line (PD-R2R-03) |
+| FR-021 Match setup flow | ST-016 | Yes (G01-03 incl. E2E-01-03, G01-10) | Design review P7 |
+| FR-022 Resumable upload | ST-017 | Yes (G01-01 drop and resume, G01-05 541.8 Mbit/s but run invalid on disk) | Quota race (PE-R3R-01); server-error recovery (PD-R3V-01) |
+| FR-023 Upload validation | ST-018 | Yes (G01-01 460/413/415, demo step 5) | Caps provisional until ST-025 (real phone clips) |
+| FR-025 Footage quality report (stretch) | ST-019 | Yes (G01-01 facts, demo step 4) | Design review |
+| FR-040, FR-041, FR-044, FR-045 (part a) | ST-020, ST-021, ST-023 | Yes (G01-07: 204/205, 26/26 `@needs-verification`) | Presets PROVISIONAL-UNVERIFIED until OQ-01 |
+| NFR-001 / NFR-002 golden tables, invariants, oracle | ST-022, ST-023, ST-024 | Yes, locally (G01-07, G01-08: 0/100,000) | Nightly run on GitHub (P1) |
+| NFR-010 / NFR-041 latency and availability | ST-024 | Yes (G01-04: p95 12.79 ms, 100%) | — |
+| NFR-016 Upload throughput | ST-017 | Measured 541.8 Mbit/s; evidence invalid (G01-05, disk) | Rerun at ≥ 12 GB free (PO P5) |
+| NFR-025 Phone video formats | ST-025 | No | Real phone clips (PO P3) |
+| NFR-026 / NFR-053 upload regression suites | ST-017, ST-018 | Yes (G01-02: 41/41) | — |
+| NFR-027b Manual screen-reader pass | — | No | QA-R3-GATE-01 (sprint-02 C-06) |
+| NFR-028, NFR-030, NFR-031, NFR-034, NFR-037 a11y | ST-016 | Yes, Chromium (G01-10: 0 violations, 0 targets < 24×24) | WebKit |
+| NFR-072 Rules-engine test strength | ST-022 | Baseline 0.8654 (G01-08) | Gate from Sprint 2 |
+| NFR-073 Fast tests | — | Yes (G01-12: 7.4 s / 8.3 s) | — |
+| NFR-074 Flaky rate | — | 0 flaky ×3 on `e2e/sprint-01` (G01-03) | Root specs not repeated; known flake (QA-R3-E2E-01) |
+
+## 11. Sprint 2 test files per story (engineering-manager, 2026-10-06, sprint close)
+
+Backend paths are relative to `backend/tests/`; feature files are under `tests/features/` (all exist now: `score_sheet`, `quick_tag`, `keyboard_tagging`, `score_call`, `undo_and_audit`, `corrections_replay`, `evidence_deep_link`, `mid_game_start`, `side_out_singles_provisional`, `input_robustness`, `upload_quota`, `upload_recovery`, `account_identity`); browser specs are under `web/e2e/sprint-02/`; web unit tests are under `web/tests/unit/`. Evidence for the table is verifier round 3 at `e4c24bc` (`docs/sprints/02/goal-scorecard.md` §9): IT-02 253/253, IT-01 80/80, E2E 93 passed (6 named Sprint 1 skips), scoring 304 + 1 P3 skip.
+
+| Story | Unit | Integration / regression | Scenario (step module → feature) | E2E / other | Gap at close |
+|---|---|---|---|---|---|
+| C-01 | `unit/matches/test_title_control_characters.py` | `integration/test_it_02_10_json_string_fuzz.py` | `features/test_input_robustness.py` → `input_robustness.feature` | — | — |
+| C-02 | — | `integration/test_it_02_11_limit_concurrency.py` | `features/test_upload_quota.py` → `upload_quota.feature` | — | — |
+| C-03 | web `upload-*` | — | `upload_recovery.feature` (browser-bound) | `upload-recovery.spec.ts` | DR-01 R-2a/R-2b (U-04) |
+| ST-013b | — | `integration/test_it_02_12_account_identity.py` | `features/test_account_identity.py` → `account_identity.feature` | — | — |
+| ST-026 | `unit/matches/test_scorebook_projection.py`, `test_scorebook_schema.py`, `test_scorebook_values.py` | `integration/test_it_02_01_tag_and_replay.py`; `regression/test_golden_replay.py` | `features/test_score_sheet.py` → `score_sheet.feature` | — | — |
+| ST-027 | `unit/matches/test_scorebook_tag.py`, `test_scorebook_video_bounds.py`, `test_scorebook_guards.py`, `test_scorebook_no_preset.py`; web `quick-tag`, `tagging-reducer`, `tagging-view`, `api-sprint-02-tagging`, `video-failure` | `integration/test_it_02_04_concurrent_tags.py`, `test_it_02_13_scorebook_limits.py` | `features/test_quick_tag.py` → `quick_tag.feature` | `quick-tag.spec.ts`, `journey.spec.ts` (E2E-02-01) | DR-02 |
+| ST-028a / ST-028b | web `quick-tag-keyboard`, `tagging-keymap`, `tagging-remap`, `key-remap-dialog` | — | `keyboard_tagging.feature` (browser-bound) | `keyboard-tagging.spec.ts` (E2E-02-02) | DR-02 |
+| ST-029 | web `score-announcer`, `tagging-messages*` | — | `score_call.feature` (`@needs-verification`) | `announcements.spec.ts` (E2E-02-03) | C-06 (never heard on a real screen reader); DR-02 |
+| ST-030 | web `score-sheet` | — | `score_sheet.feature` | `score-sheet.spec.ts` (320/360 px, axe S-01) | DR-02; VR1-01 (minor, 1280 px) |
+| ST-031 | `unit/matches/test_scorebook_corrections.py`; web `quick-tag-undo`, `correction-history` | `integration/test_it_02_03_corrections_append_only.py`, `test_it_02_09_correction_logs.py` | `features/test_undo_and_audit.py` → `undo_and_audit.feature` | `undo-history.spec.ts` (E2E-02-06) | DR-02 |
+| ST-032 | `unit/matches/test_scorebook_resolve.py`, `test_scorebook_outcome_correction.py`, `test_scorebook_game_order.py`, `test_scorebook_unfinished_game.py`; web `rally-corrections`, `rally-resolution` | `integration/test_it_02_02_correction_rollback.py`, `test_it_02_08_correction_latency.py`, `test_it_02_14_scorebook_review_r1.py` | `features/test_corrections_replay.py` → `corrections_replay.feature` | `fix-in-two.spec.ts`, `fix-in-two-tagged.spec.ts` (E2E-02-05), `review-round-1-fe.spec.ts` | PE-S2-R3-01, PE-S2-R3-02; TCR rows 24-28 (QA-RV3-02); DR-02 |
+| ST-037 | web `rally-video`, `video-failure` | `integration/test_it_02_06_media_link.py`, `test_it_02_15_media_content_type.py`; `regression/test_bola_matrix.py` (incl. IT-02-05 routes) | `features/test_evidence_deep_link.py` → `evidence_deep_link.feature` | `rally-video.spec.ts` (E2E-02-04, Chrome for Testing) | DR-02 |
+| ST-039 | — | `perf/locustfile_sprint02.py` (CI per-PR) | — | `journey.spec.ts`, `timing.spec.ts` (G02-06) | — |
+| ST-040 | `unit/dataset/test_labels.py`, `test_gold_set.py` | `integration/dataset/test_people_footage_storage.py` | `features/test_gold_set_integrity.py` | CI `check_fixtures.sh` | Private bucket (P11); ADR 0035 Proposed |
+| ST-041 | golden tables under `unit/matches/golden/` | — | `features/test_side_out_singles_provisional.py`, `test_mid_game_start.py` (rows `red_until` ST-035 / ST-034, stretch) | — | Rules unverified (OQ-01) |
+| ST-034, ST-035, ST-038, ST-033, ST-036 | — | — | provisional rows written, `red_until` the story | — | Stretch, not started |
+
+## 12. Sprint 2 outcome per requirement (engineering-manager, 2026-10-06, sprint close)
+
+"Live" means shown by the independent verifier on a fresh Compose stack over https (round 3, `e4c24bc`). The sprint goal is not met (G02-11), and no story is merged to `main`, so no requirement below is DoD-done.
+
+| Requirement | Story | Shown live (goal metric) | Open at close |
+|---|---|---|---|
+| FR-050 Quick Tag a rally | ST-027 | Yes (G02-01, E2E-02-01, G02-06 a/b) | PE-S2-R3-01 (resolution offer); DR-02 |
+| FR-051 Keyboard tagging | ST-028a/b | Yes (E2E-02-02) | DR-02 |
+| FR-048 Score call and announcement | ST-029 | Yes, in the DOM (E2E-02-03) | Call format `@needs-verification`; C-06 (screen reader) |
+| FR-049 Score sheet | ST-026, ST-030 | Yes (G02-01 step 4, G02-06 d, 320/360 px) | Rules data unverified (OQ-01); VR1-01 |
+| FR-055 "Unofficial scoring" label | ST-030 | Yes (G02-01 step 4, demo step 3) | PD-FL2-03 (preset id shown) |
+| FR-052 Undo and correction audit | ST-031 | Yes (G02-01 step 8 byte-identical; IT-02-03 append-only) | — |
+| FR-053 Corrections replay, conflicts kept (part a) | ST-032, ST-041 | Yes (G02-01 steps 7 and 9, G02-02 a) | PE-S2-R3-01/-02; game-end rule `@needs-verification` |
+| FR-027 Jump to the video moment | ST-037 | Yes (G02-01 step 10, E2E-02-04, G02-06 c 672.7 ms) | QA-RV3-04 (evidence browser script) |
+| FR-042 Singles (part a), FR-046 Mid-game start (part a), FR-047, FR-054, FR-024 | ST-035, ST-034, ST-036, ST-033, ST-038 | No: stretch, not started | Carried to Sprint 3 (ST-038 is a gate before any non-dev deployment) |
+| FR-151 Gold-set manifest | ST-040 | CI check only | Footage bucket (P11) |
+| NFR-001 provisional rows ≥ 46 | ST-041 | Yes (G02-07: 70 collected, 52/52 committed) | OQ-01 |
+| NFR-010, NFR-013, NFR-017 | ST-039 | Yes (G02-04 p95 16.8 ms; G02-02 a 35.3 ms; b 19 ms) | — |
+| NFR-012, NFR-014, NFR-011 | ST-027, ST-037, ST-030 | Yes (G02-06) | — |
+| NFR-055 Media URLs | ST-037 | Yes (TTL 300 s, Range 206, tampered 403) | SEC-S2-TM-04 (log scan test, minor) |
+| NFR-072 Rules mutation gate | ST-022 | Yes (0.8635 ≥ 0.85) | — |
+| NFR-075 Golden replay | ST-026 | Yes (4/4 byte-identical) | — |
+| NFR-027 (b) Manual screen-reader pass | C-06 | No | P6 (human tester) |
+| NFR-073 Fast tests | — | Yes (G02-12) | — |
+| NFR-074 Flaky rate | — | Yes (0 flaky ×3, every spec) | — |

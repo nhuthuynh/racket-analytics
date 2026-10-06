@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import os
 from dataclasses import dataclass
 
 import httpx
@@ -14,6 +15,22 @@ OCTET = "application/offset+octet-stream"
 
 def _headers(**extra: str) -> dict[str, str]:
     return {"Tus-Resumable": contract.TUS_VERSION, **extra}
+
+
+# An ISO BMFF ``ftyp`` box header: bytes 4-7 are an MP4 top-level atom type, so the offset-0
+# content check (ST-018, T-UV-1, api-sprint-01 §6.5) accepts the payload (TCR row 16).
+VIDEO_HEADER = b"\x00\x00\x00\x18ftypisom"
+
+
+def video_bytes(n: int, *, random: bool = False) -> bytes:
+    """``n`` bytes that start like an MP4 (``n >= 8``; 12 for the whole header).
+
+    The filler is ``bytes(range(256))`` repeated, or random bytes with ``random=True``.
+    """
+    if n < 8:
+        raise ValueError("an upload shorter than 8 bytes can never pass the content check")
+    filler = os.urandom(n) if random else bytes(range(256)) * (n // 256 + 1)
+    return (VIDEO_HEADER + filler)[:n]
 
 
 def metadata(**pairs: str) -> str:

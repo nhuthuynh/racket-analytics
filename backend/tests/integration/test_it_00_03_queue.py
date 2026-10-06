@@ -6,11 +6,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-import pytest
-
 from tests.support import contract
-
-pytestmark = pytest.mark.red_until(story="ST-007")
 
 
 def _key(match_id: uuid.UUID, stage: str = "probe") -> Any:

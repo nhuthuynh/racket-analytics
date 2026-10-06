@@ -5,16 +5,12 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from tests.support import tus
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match
 from tests.support.worker import probe_job
 
-pytestmark = pytest.mark.red_until(story="ST-008")
-
-DATA = bytes(range(256)) * 400
+DATA = tus.video_bytes(102_400)  # an MP4 header first (TCR row 16)
 
 
 def test_probe_enqueued_only_after_last_byte(api: ApiDriver, committed_db: Any) -> None:
