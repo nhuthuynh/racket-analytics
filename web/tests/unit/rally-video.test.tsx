@@ -98,6 +98,53 @@ describe('rally video V-01 (ST-037)', () => {
     canPlay.mockRestore();
   });
 
+  it('QA-RV1-04 (QA-S2-UI-04): "Watch rally 5" after rally 3 seeks to rally 5 even when the link is the same', async () => {
+    const api = {
+      undo: vi.fn(), corrections: vi.fn().mockResolvedValue([]), correctRally: vi.fn(), getScoreSheet: vi.fn(),
+      rallyMedia: vi.fn<SheetApi['rallyMedia']>()
+        .mockResolvedValueOnce({ url: URL1, expiresInS: 600, startMs: 30_000 })
+        .mockResolvedValueOnce({ url: URL1, expiresInS: 600, startMs: 50_000 }),
+    };
+    const two: ScoreSheet = { ...sheet, rows: [row(3, { start_ms: 30_000 }), row(5, { start_ms: 50_000 })] };
+    render(<ScoreSheetView match={match} initialSheet={two} initialVersion={1} api={api as unknown as SheetApi} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Watch rally 3' }));
+    const first = (await screen.findByRole('region', { name: 'Rally 3 video' })).querySelector('video')!;
+    vi.spyOn(first, 'play').mockResolvedValue();
+    act(() => {
+      fireEvent(first, new Event('loadedmetadata'));
+    });
+    expect(first.currentTime).toBe(30);
+    // The same link is already loaded: the browser fires no new loadedmetadata for it.
+    Object.defineProperty(first, 'readyState', { configurable: true, value: 1 });
+    await userEvent.click(screen.getByRole('button', { name: 'Watch rally 5' }));
+    const region = await screen.findByRole('region', { name: 'Rally 5 video' });
+    const video = region.querySelector('video')!;
+    if (video !== first) {
+      vi.spyOn(video, 'play').mockResolvedValue();
+      act(() => {
+        fireEvent(video, new Event('loadedmetadata'));
+      });
+    }
+    expect(video.currentTime).toBe(50);
+    expect(screen.getByText('Starts at 0:50')).toBeVisible();
+  });
+
+  it('PD-S2R1-05: when the video fails, focus goes back to the "Watch rally n" button that opened it', async () => {
+    const api = setup();
+    api.rallyMedia.mockResolvedValueOnce({ url: URL1, expiresInS: 600, startMs: 872_000 });
+    await userEvent.click(screen.getByRole('button', { name: 'Watch rally 12' }));
+    const video = (await screen.findByRole('region', { name: 'Rally 12 video' })).querySelector('video')!;
+    // jsdom does not treat <video controls> as focusable, as browsers do; make it so here.
+    video.tabIndex = -1;
+    act(() => video.focus());
+    expect(video).toHaveFocus();
+    act(() => {
+      fireEvent(video, new Event('error'));
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('This video link no longer works.');
+    expect(screen.getByRole('button', { name: 'Watch rally 12' })).toHaveFocus();
+  });
+
   it('never puts the media URL in a link the player could copy into the page', () => {
     setup();
     expect(document.querySelector('a[href*="X-Amz"]')).toBeNull();

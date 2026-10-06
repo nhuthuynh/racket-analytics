@@ -9,6 +9,13 @@ import { classifyVideoFailure, type VideoFailure } from '@/lib/media/playback';
 import type { RallyMedia } from '@/lib/tagging/types';
 import { formatClock } from '@/lib/tagging/view';
 
+function startAt(v: HTMLVideoElement, startMs: number) {
+  v.currentTime = startMs / 1000;
+  // The click that asked for the video is the user gesture; if the browser still refuses, the
+  // controls stay and the player presses play.
+  void v.play()?.catch(() => {});
+}
+
 export function RallyVideo({
   number,
   media,
@@ -23,9 +30,15 @@ export function RallyVideo({
 }) {
   const video = useRef<HTMLVideoElement>(null);
 
+  // Every "Watch rally n" press gives a new `media` object. A presigned link signed in the same
+  // second is the same string for every rally of the match, so the element is kept and no new
+  // `loadedmetadata` fires: seek here when the metadata is already there (QA-RV1-04).
   useEffect(() => {
-    video.current?.focus();
-  }, [media.url]);
+    const v = video.current;
+    if (!v) return;
+    v.focus();
+    if (v.readyState >= 1) startAt(v, media.startMs);
+  }, [media]);
 
   return (
     <section className="stack rally-video" aria-labelledby="rally-video-title">
@@ -38,13 +51,7 @@ export function RallyVideo({
         playsInline
         preload="auto"
         className="quick-tag__player"
-        onLoadedMetadata={(e) => {
-          const v = e.currentTarget;
-          v.currentTime = media.startMs / 1000;
-          // The click that asked for the video is the user gesture; if the browser still
-          // refuses, the controls stay and the player presses play.
-          void v.play()?.catch(() => {});
-        }}
+        onLoadedMetadata={(e) => startAt(e.currentTarget, media.startMs)}
         onError={(e) => {
           const v = e.currentTarget;
           onBroken(classifyVideoFailure(v.error, codec, (type) => v.canPlayType(type)));

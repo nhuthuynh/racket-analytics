@@ -4,7 +4,7 @@
 // If-Match; "Undo last change" (FR-052) replaces the sheet with the server's, reloads the
 // correction history H-01 and says so in the polite status region. A stale version reloads the
 // sheet and tells the player (IT-02-04).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScoreAnnouncer } from '@/components/tagging/ScoreAnnouncer';
 import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
@@ -39,6 +39,15 @@ export function ScoreSheetView({
   const [said, setSaid] = useState('');
   const [busy, setBusy] = useState(false);
   const [playing, setPlaying] = useState<{ number: number; media: RallyMedia } | null>(null);
+  /** The "Watch rally n" button that opened V-01: focus goes back to it if the video fails (PD-S2R1-05). */
+  const watchOpener = useRef<HTMLElement | null>(null);
+  const [refocusWatch, setRefocusWatch] = useState(false);
+
+  useEffect(() => {
+    if (!refocusWatch || playing) return;
+    setRefocusWatch(false);
+    if (watchOpener.current?.isConnected) watchOpener.current.focus();
+  }, [playing, refocusWatch]);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -99,7 +108,8 @@ export function ScoreSheetView({
     );
   }
 
-  async function watch(row: SheetRow) {
+  async function watch(row: SheetRow, opener: HTMLElement) {
+    watchOpener.current = opener;
     setProblem(null);
     try {
       // A fresh short-lived link every time (NFR-055): an old one may have expired.
@@ -136,6 +146,7 @@ export function ScoreSheetView({
           onBroken={(why) => {
             const n = playing.number;
             setPlaying(null);
+            setRefocusWatch(true);
             setProblem(
               why === 'unplayable'
                 ? 'This browser cannot play this video. Try another browser, such as Safari or Chrome. The score sheet still works here.'
@@ -159,7 +170,7 @@ export function ScoreSheetView({
                 </button>
               </span>
             ) : null}
-            <button type="button" className="button button--secondary rally-fix__button" onClick={() => void watch(row)}>
+            <button type="button" className="button button--secondary rally-fix__button" onClick={(e) => void watch(row, e.currentTarget)}>
               {`Watch rally ${row.number}`}
             </button>
             <RallyCorrections row={row} names={names} onCorrect={correct} />
