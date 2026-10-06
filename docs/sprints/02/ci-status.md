@@ -44,6 +44,21 @@ Evidence: `mcp__github__actions_list list_workflow_jobs 37434214390`; `mcp__gith
 
 Evidence: `mcp__github__actions_list list_workflow_jobs 37438997898`; `mcp__github__get_job_logs` for jobs 112187797489 (Locust, verdict JSON) and 112187797479 (Playwright summary and the nine error lines).
 
+## Run 37452407537: head `78c52ef` (review round 1, QA-RV1-01), 2026-10-06
+
+`git push origin sprint-02` (`0ab3b93..78c52ef`, fast-forward), then `workflow_dispatch` of `ci.yml` on `sprint-02`. This is the first run after `ffce41d`: 20 commits (`git log --format=%h ffce41d..78c52ef | wc -l` → 20), among them `77a7201`, `442f7b3` and the review-round-1 fixes `8af0f77`, `b5ee957`, `d9fba85`, `7bdfd21` (QA-RV1-05). Conclusion **failure**. <https://github.com/nhuthuynh/racket-analytics/actions/runs/37452407537>
+
+| Job | Result | Detail | Owner |
+|---|---|---|---|
+| actionlint, mypy, fixtures, infra, web checks, secrets/audit, SBOM, flaky report, Locust baseline | success | flaky report: 3 repeats of the backend suites green | — |
+| Python unit suites | success | domain step 9 s (10:50:43 → 10:50:52, budget 10 s; was 4 s at `ffce41d`, watch); property 41 s; whole unit 12 s | — |
+| **Python lint (Ruff)** | **failure (new regression)** | `backend/tests/tools/test_live_tagging_error_code.py:18:5: PT018 Assertion should be broken down into multiple parts` and `:53:9: UP031 Use format specifiers instead of percent format`. File added in `8af0f77` (review round 1, QA-RV1-02). Reproduced locally: `cd backend && uv run ruff check .` → `Found 2 errors.` Routed as SRE-S2-10 | principal-engineer |
+| Integration | failure, **gate step green** | `Backend suites with coverage`: `2046 passed, 1 skipped, 27 deselected in 393.62s` (selection `not nightly and not red_until`). Red-until step: `21 failed, 5 passed`; `red_until_report.py` rc 1 on the same 5 stale markers (SRE-S2-04, unchanged since `ffce41d`: no commit touched `backend/tests/features/`) | senior-qa-engineer |
+| E2E | failure | `10 failed, 12 skipped, 160 passed (11.9m)`. Same 9 as run 37438997898 (SRE-S2-05 `[chromium]` `rally-video.spec.ts:34` E2E-02-04 and `timing.spec.ts:210`; SRE-S2-07 `[webkit]` `announcements.spec.ts:8`, `quick-tag.spec.ts:15`, `:42`, `:66`, `timing.spec.ts:97`; SRE-S2-08 `[webkit]` `timing.spec.ts:210`, `:219`), plus **`[chromium]` `timing.spec.ts:219` stand-in seek: `page.evaluate: Error: no change seen for seek in 10 s`**: the smoke-2 flake SRE-S2-09 now also seen on CI (passed on run 37438997898) | senior-qa-engineer (SRE-S2-05, -08, -09); senior-frontend-engineer then senior-qa-engineer (SRE-S2-07) |
+| ci-gate | failure | Ruff, integration (stale markers), E2E | — |
+
+Evidence: `mcp__github__actions_list list_workflow_runs ci.yml branch=sprint-02` (run 37452407537, `head_sha` `78c52efe9f10…`); `list_workflow_jobs 37452407537`; `mcp__github__get_job_logs` for jobs 112231850146 (Ruff annotations), 112231850190 (pytest summaries and the red-until report) and 112231850486 (Playwright summary and the ten error blocks). The artifact download URL is refused by the sandbox proxy (`CONNECT tunnel failed, response 403`), as before.
+
 ## Next
 
-The remaining reds are all owned outside the platform lane: SRE-S2-04, SRE-S2-05, SRE-S2-07, SRE-S2-08. The SRE re-dispatches CI after each of those lands and records the run here.
+The platform lane has no red of its own. The remaining reds are owned outside it: SRE-S2-10 (principal-engineer, Ruff, two lines), SRE-S2-04 (QA markers), SRE-S2-05, SRE-S2-08, SRE-S2-09 (QA specs/config), SRE-S2-07 (FE then QA). The SRE re-dispatches CI at the head after each of those lands and records the run here; the W-01 family closes only on a green `ci-gate`.
