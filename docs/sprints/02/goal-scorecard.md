@@ -274,13 +274,16 @@ python3 scripts/measure/open_defects.py --json "$GOAL/open-defects.json" docs/sp
 
 ```bash
 cd backend
-python3 ../scripts/ci/run_with_budget.py 10 -- env -u APP_ENV uv run pytest -q -m unit tests/unit; echo rc=$?
+env -u APP_ENV uv run pytest -q --collect-only -m unit >/dev/null   # unbudgeted bytecode warm-up, as CI
+# Domain = CI's DOMAIN_TEST_PATHS (ci.yml env, W-01; NFR-073 "rules + domain"), not the whole tests/unit
+python3 ../scripts/ci/run_with_budget.py 10 -- env -u APP_ENV uv run pytest -q -m unit tests/unit/sports tests/unit/matches tests/unit/players tests/unit/video_ingest; echo rc=$?
 python3 ../scripts/ci/run_with_budget.py 60 -- env -u APP_ENV uv run pytest -q -m unit; echo rc=$?
 python3 ../scripts/ci/run_with_budget.py 600 -- env -u APP_ENV uv run pytest -q -m integration tests/integration \
   --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py; echo rc=$?     # with the G02-03 env
 ```
 
 - **Actual:** wall time and pass/fail line of each.
+- **Method fix (goal round 1, senior-qa-engineer, decision-log 2026-10-06):** the domain run used `tests/unit` (the whole backend unit suite, 1,415 tests), which CI measures under its own 60 s budget. It now uses the same paths as the CI gate; `infra/tests/test_goal_scorecard_fast_tests.py` fails if the two drift.
 
 ## 5. Traceability of targets
 
