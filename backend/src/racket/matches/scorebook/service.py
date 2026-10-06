@@ -30,6 +30,7 @@ from racket.matches.scorebook.domain import (
 from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import FieldError, ValidationFailed
 from racket.sports.pickleball.rules import Side
+from racket.video_ingest.public import media_summary
 
 log = logging.getLogger(__name__)
 TAG_KEYS = frozenset(
@@ -60,6 +61,13 @@ class ScorebookService:
         self.session = session
         self.books = ScorebookRepository(session)
         self.clock = clock or (lambda: datetime.now(UTC))
+
+    def _video_ms(self, match: Match) -> int | None:
+        """The probed duration of the match video, or ``None`` when it is not known yet
+        (QA-S2-API-02: a rally lies inside the video, FR-027). Read through Capture & Media's
+        published port (context map rule 1)."""
+        facts = media_summary(self.session, match.id.value).facts
+        return None if facts is None else facts.duration_ms
 
     def sheet(self, match: Match) -> tuple[int, dict[str, Any]]:
         book = self.books.load(match.id.value)
@@ -114,9 +122,12 @@ class ScorebookService:
         times = RallyTimes.parse(tag.get("start_ms"), tag.get("end_ms"))
         fields = {k: v for k, v in tag.items() if k not in ("start_ms", "end_ms")}
         outcome = OutcomeInput.parse(fields, format=match.format.value)
+        video_ms = self._video_ms(match)
 
         def command(book: Scorebook, ctx: CommandContext, ready: bool) -> tuple[Scorebook, Any]:
-            return book.tag(times, outcome, ready=ready, expected_version=version, ctx=ctx)
+            return book.tag(
+                times, outcome, ready=ready, expected_version=version, ctx=ctx, video_ms=video_ms
+            )
 
         book, rally = self._run(match, actor_id, command, "match.rally_tagged")
         return book, rally.id
@@ -130,10 +141,16 @@ class ScorebookService:
         if set(change) != CORRECTION_KEYS:
             raise ValidationFailed("field and value are required", [FieldError(None, "invalid")])
         rally_id = _rally_id(raw_rally_id)
+        video_ms = self._video_ms(match) if change["field"] in ("start_ms", "end_ms") else None
 
         def command(book: Scorebook, ctx: CommandContext, ready: bool) -> Scorebook:
             return book.correct(
-                rally_id, change["field"], change["value"], expected_version=version, ctx=ctx
+                rally_id,
+                change["field"],
+                change["value"],
+                expected_version=version,
+                ctx=ctx,
+                video_ms=video_ms,
             )
 
         book, _ = self._run(match, actor_id, command, "match.rally_corrected")

@@ -70,6 +70,12 @@ class RallyTimes:
         if any(self.overlaps(o) for o in others):
             raise InvalidRally("overlaps a rally", [FieldError("start_ms", "overlaps_rally")])
 
+    def check_within(self, video_ms: int | None) -> None:
+        """QA-S2-API-02: the rally lies inside the video (``end_ms`` exclusive, so it may end
+        exactly at the duration). ``None``: the duration is not known, no upper bound."""
+        if video_ms is not None and self.end_ms > video_ms:
+            raise InvalidRally("after the video", [FieldError("end_ms", "time_after_video")])
+
 
 def _one_of(value: object, allowed: frozenset[str]) -> TypeGuard[str]:
     """Membership for untrusted JSON: a list or object is never hashed (IT-02-10)."""

@@ -150,6 +150,7 @@ class Scorebook:
         ready: bool,
         expected_version: int,
         ctx: CommandContext,
+        video_ms: int | None = None,
     ) -> tuple[Scorebook, Rally]:
         """Append one rally to the current game (I1, I5, I6, I7). The tag is the original
         fact, so it has no audit row; undoing it is audited (match-aggregate §4)."""
@@ -163,6 +164,7 @@ class Scorebook:
             raise DecisionNeeded("rallies wait for the player's decision")
         if played.games[-1].over:
             raise GameIsOver("current game is over")
+        times.check_within(video_ms)
         times.check_after(r.times for r in self.kept)
         rally = Rally(
             id=ctx.new_id(),
@@ -193,6 +195,7 @@ class Scorebook:
         *,
         expected_version: int,
         ctx: CommandContext,
+        video_ms: int | None = None,
     ) -> Scorebook:
         """FR-052: change one field of one rally; the old and new value are audited. Later
         rallies are re-scored by the projection in the same step (FR-053, C-01)."""
@@ -215,6 +218,7 @@ class Scorebook:
             changed, old = _changed(rally, field, value, self.format), _value(rally, field)
             kind = "correction"
             if field in ("start_ms", "end_ms"):
+                changed.times.check_within(video_ms)
                 changed.times.check_after(r.times for r in self.kept if r.id != rally.id)
         change = self._change(
             ctx,
