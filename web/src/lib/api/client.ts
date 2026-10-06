@@ -257,9 +257,12 @@ export function createApiClient(options: ApiClientOptions) {
     async corrections(id: string): Promise<HistoryItem[]> {
       return parsed(await request('GET', `${matchPath(id)}/corrections`), parseHistory);
     },
-    /** The whole match video for the tagging screen (ASSUMED route: not in tagcontract.py; asked of the PE and BE). */
+    /**
+     * The whole match video for the tagging screen: `GET /matches/{id}/video` (BE `ac5ca2c`, same
+     * rules as the rally link). `GET /matches/{id}/media` stays the probed facts.
+     */
     async matchMedia(id: string): Promise<RallyMedia> {
-      return parsed(await request('GET', `${matchPath(id)}/media`), parseRallyMedia);
+      return parsed(await request('GET', `${matchPath(id)}/video`), parseRallyMedia);
     },
     async rallyMedia(id: string, rallyId: string): Promise<RallyMedia> {
       return parsed(await request('GET', `${matchPath(id)}/rallies/${rallyPath(rallyId)}/media`), parseRallyMedia);
