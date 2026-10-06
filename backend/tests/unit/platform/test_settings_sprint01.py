@@ -47,9 +47,18 @@ def test_bad_proxy_hops_are_refused(hops: str) -> None:
         Settings.from_env({**BASE, "TRUSTED_PROXY_HOPS": hops})
 
 
+def test_the_default_web_origin_is_the_https_dev_origin() -> None:
+    # C-25 (PE-R1-06): the dev stack is served over https (ADR 0029) and has no insecure-cookie
+    # flag (ADR 0023), so a sign-in link built from the default never points at plain http.
+    for app_env in ("dev", "test"):
+        assert Settings.from_env({**BASE, "APP_ENV": app_env}).public_web_origin == (
+            "https://localhost:3000"
+        )
+
+
 def test_defaults_follow_the_contract() -> None:
     s = Settings.from_env(BASE)
-    assert s.public_web_origin == "http://localhost:3000"
+    assert s.public_web_origin == "https://localhost:3000"  # C-25, TCR 2026-10-05 (accepted)
     assert s.magic_link_ttl_seconds == 900
     assert (s.session_absolute_seconds, s.session_idle_seconds, s.session_max_per_account) == (
         2_592_000,
