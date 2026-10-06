@@ -132,10 +132,15 @@ export function ScoreSheetView({
         <RallyVideo
           number={playing.number}
           media={playing.media}
-          onBroken={() => {
+          codec={match.media?.video_codec}
+          onBroken={(why) => {
             const n = playing.number;
             setPlaying(null);
-            setProblem(`This video link no longer works. Choose 'Watch rally ${n}' again.`);
+            setProblem(
+              why === 'unplayable'
+                ? 'This browser cannot play this video. Try another browser, such as Safari or Chrome. The score sheet still works here.'
+                : `This video link no longer works. Choose 'Watch rally ${n}' again.`,
+            );
           }}
         />
       ) : null}

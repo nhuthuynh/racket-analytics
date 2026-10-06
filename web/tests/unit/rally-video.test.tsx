@@ -74,6 +74,30 @@ describe('rally video V-01 (ST-037)', () => {
     expect((await screen.findByRole('region', { name: 'Rally 12 video' })).querySelector('video')!.getAttribute('src')).toBe(URL2);
   });
 
+  it('QA-S2-UI-03: a video this browser cannot decode says so, not that the link expired', async () => {
+    const api = {
+      undo: vi.fn(), corrections: vi.fn().mockResolvedValue([]), correctRally: vi.fn(), getScoreSheet: vi.fn(),
+      rallyMedia: vi.fn<SheetApi['rallyMedia']>().mockResolvedValue({ url: URL1, expiresInS: 600, startMs: 872_000 }),
+    };
+    const withMedia: Match = {
+      ...match,
+      media: { duration_ms: 60_000, fps: 30, width: 1920, height: 1080, has_audio: true, vfr: false, container: 'mp4', video_codec: 'h264' },
+    };
+    const canPlay = vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    render(<ScoreSheetView match={withMedia} initialSheet={sheet} initialVersion={1} api={api as unknown as SheetApi} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Watch rally 12' }));
+    const video = (await screen.findByRole('region', { name: 'Rally 12 video' })).querySelector('video')!;
+    Object.defineProperty(video, 'error', { value: { code: 4, message: 'DEMUXER_ERROR_NO_SUPPORTED_STREAMS: FFmpegDemuxer: no supported streams' } });
+    act(() => {
+      fireEvent(video, new Event('error'));
+    });
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('This browser cannot play this video. Try another browser, such as Safari or Chrome. The score sheet still works here.');
+    expect(alert).not.toHaveTextContent('no longer works');
+    expect(alert).not.toHaveTextContent('again');
+    canPlay.mockRestore();
+  });
+
   it('never puts the media URL in a link the player could copy into the page', () => {
     setup();
     expect(document.querySelector('a[href*="X-Amz"]')).toBeNull();
