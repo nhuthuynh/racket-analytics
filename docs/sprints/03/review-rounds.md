@@ -2,15 +2,33 @@
 
 Every reviewer appends one row per finding under its own heading, with the disposition **Open**, as soon as it states the finding (ADR 0033 rule 1; working-agreement §7 step 2). Owners add a later row with the new disposition (fixed with evidence, deferred to a named backlog row, or rejected with a reason the reviewer accepts). The last row naming an id wins. After every review or verification round the engineering-manager reconciles the reviewers' returned ids against this file and writes an Open row for any id that has none, before the next step starts (ADR 0037 rule 1; working-agreement §7 step 3d). Count: `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md` (goal scorecard G03-12).
 
-## Owner dispositions: senior-backend-engineer (Sprint 3 build, 2026-10-06)
+## Carried from Sprint 2 (engineering-manager, planning, 2026-10-06)
 
-| Finding | Severity | Disposition | Files | Test evidence |
+The 14 blocker/major rows still open at the Sprint 2 close (`python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md` → rc=1, `open 14`, at `ce91984`). They are copied here, one row per id as the counter lists them, so the Sprint 3 count starts from the true number (retro 2 M1; decision-log 2026-10-06). The Sprint 2 rows stay the history; this table is where their next disposition is written.
+
+| Finding | Severity | Disposition | Owner (Sprint 3) | Waits on |
 |---|---|---|---|---|
-| SEC-RV3-02 | minor | Fixed, pending the security-privacy-engineer's re-check. A staging or prod process refuses an `AUTH_EMAIL_KEY` that contains `dev-only` (any case), with a message that never echoes the key. Before, the env.example key `dev-only-email-key-not-a-secret-0000` (36 characters) passed the 32-character rule | `backend/src/racket/platform/settings.py`, `backend/tests/unit/platform/test_settings_sprint03.py` | Red: `cd backend && env -u APP_ENV uv run pytest -q tests/unit/platform/test_settings_sprint03.py` → `6 failed, 3 passed` (the 3 dev keys × staging/prod accepted). Green: same → `9 passed`; `tests/unit/platform` → `101 passed`; ruff clean |
+| QA-RV3-02 | blocker | Open (carried). TCR rows 24-28 of `docs/sprints/02/test-change-requests.md` have no QA decision (ADR 0014). Row C3-01, first in the QA lane | senior-qa-engineer | — |
+| PE-S2-R3-02 | major | Open (carried). `api-sprint-02.md` §3/§4.2 and `match-aggregate.md` §4/§8 do not state `not_last_in_game` or "latest kept rally first". Row C3-02 (task PE-4, D1) | principal-engineer | — |
+| PE-S2-R3-01 | major | Open (carried). S-01 offers "Move rally n to the next game" on rows the server refuses with `decision/not_last_in_game`. Row C3-03, red first, after C3-02 | senior-frontend-engineer | C3-02 |
+| PE-S2-R3-03 | major | Open (carried). No CI run covers the Sprint 2 close head. Row C3-05 (CI at the head, smoke, merge chain; retro 2 A4) | sre-devops-engineer with the orchestrator | PO labels and merge (C3-01 first) |
+| QA-RV3-04 | major | Open (carried). `scripts/dev-chrome.sh` (ADR 0036 residual) does not exist. Row C3-04 | sre-devops-engineer | — |
+| QA-R3-GATE-01 / C-06 | major | Open (carried). Manual VoiceOver/TalkBack pass (NFR-027 b), 0 of 24 rows run. Row C3-06; human-gated (sprint-03 §0.4) | senior-qa-engineer with a human tester | PO item P6 |
+| SEC-RV3-01 | major | Open (carried). Repository visibility: GitHub says public, the PO record's correction said private (since retracted). Row C3-07; human-gated | human PO; engineering-manager (record) | PO item P10 |
+| BLK-GOLD-01 | major | Open (carried). No private bucket or access policy for footage that shows people. Row C3-08; human-gated | sre-devops-engineer, security-privacy-engineer | PO item P11 |
+| PD-R1-06 / PD-R2R-02 / QA-R2V-12 / DR-02 / DR-01 / PE-S2-R3-06 | blocker | Open (carried). The Sprint 1 and Sprint 2 flows design reviews are not held. Row C3-09: decider tasks DR-01 and DR-02 on D1 (sprint-03 §3.3) | principal-designer (chair) | the deciders' briefs on D1 |
+| PD-RV2-DR-FE | blocker | Open (carried). Decider cells R2-2 and R2-5 of `flows-sprint-02.md` §13.1. Task DR-02-FE, D1 | senior-frontend-engineer | — |
+| PD-RV2-DR-COACH | blocker | Open (carried). Decider cells R2-4 and R2-7. Task DR-02-COACH, D1 | pickleball-domain-coach | — |
+| PD-RV2-DR-BA | blocker | Open (carried). Decider cell R2-3. Task DR-02-BA, D1 | business-analyst | — |
+| PD-RV2-DR-PM | blocker | Open (carried). Decider cells R2-5 and R2-7. Task DR-02-PM, D1 | product-manager | — |
+| PD-RV2-DR-SEC | major | Open (carried). Decider cell R2-6. Task DR-02-SEC, D1 (if the reviewer cannot write files, the chair commits its text, attributed) | security-privacy-engineer | — |
 
-## Goal round 1: senior-qa-engineer (2026-10-07, routed G03-11)
+Minors and nits deferred at the Sprint 2 close (PE-S2-R3-07/-08/-09, SEC-RV3-02/-03/-04, SEC-S2-TM-03-DOC/-04/-05/-07, QA-RV3-06, PD-R3S2-01/-02, PD-FL2-03/-05, VR1-01) keep their Sprint 2 "Deferred" rows; they are sprint-03 row C3-10 and are not counted by G03-12.
 
-| Id | Fix | Files | Test evidence or "not fixed: reason" |
-|---|---|---|---|
-| G03-11 (b) / VR1-S3-01 | **Fixed.** `tests.support.paths.REPO` is now the nearest ancestor holding `docs/` and `backend/` (`repo_root()`, `LookupError` if none), not `BACKEND.parent`; `test_stats_contract_doc.py` builds `CONTRACT` from `REPO`. mutmut's clean run inside `backend/mutants/` now finds `docs/`, so both doc-sync tests stay in the mutation runs (they can kill mutants) and the CI nightly job is fixed the same way. TCR row 2026-10-07 (G03-11 b) | `backend/tests/support/paths.py`, `backend/tests/unit/analytics/test_stats_contract_doc.py`, `backend/tests/unit/test_support_paths.py` (new), `docs/sprints/03/test-change-requests.md` | Red first: `pytest tests/unit/test_support_paths.py` → `ImportError: cannot import name 'repo_root'`; then with both doc-sync tests `11 passed`; `env -u APP_ENV uv run pytest -q -m unit` → `1833 passed, 1 skipped, 859 deselected in 10.97s`; `--collect-only tests` → 2693 collected. At `6a245e5` + this change, the scorecard's G03-11 mutation commands (`mutation_score.py`, mutmut 3.8.0): rules rc=0 `status: measured, score: 0.8635` (386/447, target ≥ 0.85); starter stats rc=0 `status: measured, score: 0.9251` (309/334, target ≥ 0.80) |
-| G03-11 (d) integration budget | **Not fixed: not a QA-harness defect.** 229 s is within the 600 s budget; the 63 failed / 50 errors are IT-03 product and test-side reds routed in this round to senior-backend-engineer (G03-01..05, -08 rows above) and the G03-04 TCR rows; QA re-measures (d) at the next goal run | — | Scorecard §7.4 VR1 line `63 failed, 479 passed, 2 skipped, 50 errors in 229.27s` |
+## Reconciliation log (engineering-manager, ADR 0037 rule 1)
+
+One row per review or verification round: the ids each reviewer returned, the rows found, the rows written, and the `open_defects.py` count. Goal verification and the next round start only after the row exists.
+
+| Round | Head | Reviewers | Returned ids | Rows already present | Open rows written by the EM | `open_defects.py` |
+|---|---|---|---|---|---|---|
+| Planning | `ce91984` | — (carry-over) | 14 (Sprint 2 close) | 0 | 14 (table above) | rc=1, open 14 (`python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md`) |

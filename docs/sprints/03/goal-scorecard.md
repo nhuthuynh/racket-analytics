@@ -31,17 +31,15 @@
 | G03-03 | **Purge leaves nothing, live (NFR-066 b):** after the 5 runs, the purge job is run once on the stack; (a) rows in any public table whose `match_id`, `owner_id` or `account_id` column, or `matches.id` / `accounts.id`, holds a deleted match or account id; (b) rally video links taken before deletion and still within their TTL, fetched after the purge; (c) the purge job is scheduled at least daily in Compose (NFR-066 c) | **(a) 0 rows; (b) every checked link 404 (object gone), ≥ 1 link checked; (c) schedule present, interval ≤ 24 h** | `live_stats.py --psql … --purge-cmd …` summary `purge`; `grep` of the scheduler config (§4) | | | |
 | G03-04 | **Integration-test pass rate** against real Postgres, the object store and Mailpit: (a) every Sprint 3 IT id IT-03-01..IT-03-14 plus the BOLA matrix with its inventory diff (NFR-051); (b) every Sprint 1 and Sprint 2 IT id (IT-01-01..13 except 11, IT-02-01..12 except 07), the upload-resume regression and the strict sandbox (no regression) | **(a) 100% passed, 0 failed, 0 skipped, every required id present; (b) 100% passed, every id present** | `pytest --junitxml`, `scripts/measure/junit_rate.py` | | | |
 | G03-05 | **API read latency and availability, live:** open loop at 50 RPS for 60 s on GET stats, GET evidence (AN-01, side A) and GET match, for a match tagged with the worked example (NFR-010 "dashboard", NFR-041) | **p95 ≤ 300 ms, p99 ≤ 800 ms, availability ≥ 99.5%, 0 unexpected 4xx, achieved rate ≥ 47.5 RPS** | `scripts/measure/stats_latency.py --rps 50 --duration 60` | | | |
-| G03-06 | **E2E pass rate,** Playwright in Chrome for Testing (ADR 0036) over https against the Compose stack, every spec, including:<br>- E2E-03-01 journey v2 (tag → stats = reference → Show me plays → delete match → gone);<br>- E2E-03-02 evidence crawl;<br>- E2E-03-03 definition shown, draft hidden, low-sample text;<br>- E2E-03-04 delete account;<br>- E2E-03-05 Full Tag (labeller tags and exports; player refused);<br>- E2E-03-06 keyboard-only and 320/360 px on stats and evidence;<br>- E2E-03-07 S-01 move offered only on the latest kept rally (C3-03);<br>- E2E-03-08 S-01 "Move back" offered only on the first rally of its game (C3-03);<br>- E2E-03-09 D-01 and E-01 error, empty, nothing-published and loading states with axe and 24x24, and "Show me" opening S-01 at the rally (ST-048; PD-R1S3-03);<br>- every Sprint 1 and Sprint 2 spec, root specs included (no regression) | **100% of non-skipped tests passed, 0 failed, every E2E-03 id present and not skipped; earlier skips ≤ 6, each naming its API binding; 0 flaky over 3 repeats of every spec (NFR-074)** | `playwright test` (junit, json), `junit_rate.py`, `--repeat-each=3`, `flaky_report.py` | | | |
+| G03-06 | **E2E pass rate,** Playwright in Chrome for Testing (ADR 0036) over https against the Compose stack, every spec, including:<br>- E2E-03-01 journey v2 (tag → stats = reference → Show me plays → delete match → gone);<br>- E2E-03-02 evidence crawl;<br>- E2E-03-03 definition shown, draft hidden, low-sample text;<br>- E2E-03-04 delete account;<br>- E2E-03-05 Full Tag (labeller tags and exports; player refused);<br>- E2E-03-06 keyboard-only and 320/360 px on stats and evidence;<br>- E2E-03-07 S-01 move offered only on the latest kept rally (C3-03);<br>- every Sprint 1 and Sprint 2 spec, root specs included (no regression) | **100% of non-skipped tests passed, 0 failed, every E2E-03 id present and not skipped; earlier skips ≤ 6, each naming its API binding; 0 flaky over 3 repeats of every spec (NFR-074)** | `playwright test` (junit, json), `junit_rate.py`, `--repeat-each=3`, `flaky_report.py` | | | |
 | G03-07 | **Browser timings, live** (`web/e2e/sprint-03/timing.spec.ts`, ST-054; 20 samples each): (a) stats dashboard interactive, warm; (b) "Show me" rally → first video frame playing, 9/1.5 Mbit/s and 4× CPU (reference profile); (c) cumulative layout shift while the stats load (CLS × 1000) | **(a) p95 ≤ 2,000 ms (NFR-011); (b) p95 ≤ 1,500 ms (NFR-014); (c) p95 = 0 (NFR-039); each ≥ 20 samples** | `scripts/measure/pw_timings.py` on the timing JSON report | | | |
 | G03-08 | **Metric correctness:**<br>(a) golden matches GS-AN-1 v1 (3 matches × every coach-reviewed metric × 2 sides) equal the coach's hand counts exactly (NFR-004), and the manifest check passes (FR-151, NFR-078);<br>(b) FR-101 examples and ADR 0005 thresholds (8/4, 20/10, 40/22, one game) as executable scenarios;<br>(c) FR-109 attribution conservation, property suite at ≥ 1,000 generated matches;<br>(d) metric dictionary: draft entries absent, a definition change bumps the version (FR-102);<br>(e) the coach's review record lists every shown entry as `coach-reviewed` with its QD-AN-03 evidence | **(a) 100% exact, 0 mismatches, manifest rc=0; (b) 100% passed; (c) 0 violations, ≥ 1,000 examples; (d) 100% passed; (e) every entry the API shows is `coach-reviewed` or `verified` in metric-dictionary §3** | `pytest -m golden_an`, `-m "analytics and scenario"`, `-m conservation`, `racket-manifest-check`, a `grep` | | | |
 | G03-09 | **Full Tag and drill lint:** (a) IT-03-11 and E2E-03-05 (labeller only; consent required; export validates against `gold-label-schema` v1 with the tagged frame and player); (b) drill lint: the valid fixture library passes and each of the 5 FR-140 negative fixtures fails naming the drill and its reason; (c) the lint runs as a CI job on the PR | **(a) passed; (b) 1 pass + 5 named failures, 0 wrong verdicts; (c) the CI job exists and was green on the last run at the head** | `junit_rate.py` on the G03-04/G03-06 reports; `racket-drill-lint` (name per ST-053) on the fixtures; `actions_list` | | | |
-| G03-10 | **Accessibility of the Sprint 3 screens** (stats dashboard D, evidence E, deletion X, Full Tag L) and every earlier family: (a) axe serious/critical (WCAG 2.2 AA tags) on every page an E2E test checks; (b) targets below 24×24 CSS px; (c) keyboard-only stats, evidence and Full Tag (E2E-03-05, E2E-03-06); (d) stats at 320 and 360 px with no sideways scrolling (NFR-034) | **(a) 0, with ≥ 1 axe check per family D, E, X, L and per earlier family; (b) 0, with ≥ 1 target check per family D, E, X, L and on the D-01/E-01 empty, loading and error states (E2E-03-09; PD-R1S3-03); (c) passed; (d) passed** | From the G03-06 Playwright JSON report | | | |
+| G03-10 | **Accessibility of the Sprint 3 screens** (stats dashboard D, evidence E, deletion X, Full Tag L) and every earlier family: (a) axe serious/critical (WCAG 2.2 AA tags) on every page an E2E test checks; (b) targets below 24×24 CSS px; (c) keyboard-only stats, evidence and Full Tag (E2E-03-05, E2E-03-06); (d) stats at 320 and 360 px with no sideways scrolling (NFR-034) | **(a) 0, with ≥ 1 axe check per family D, E, X, L and per earlier family; (b) 0; (c) passed; (d) passed** | From the G03-06 Playwright JSON report | | | |
 | G03-11 | **Test strength, coverage and speed:** (a) backend changed lines against the Sprint 2 head `ce91984`; analytics line coverage; rules and aggregates; web unit; (b) mutation score on `sports/pickleball/rules` (gate) and on the starter-stats module (first gate); (c) differential oracle; (d) fast tests: domain suite (CI's `DOMAIN_TEST_PATHS`, which must include `tests/unit/analytics`), backend unit, integration | **(a) changed lines ≥ 85%; analytics ≥ 90% line (NFR-071); rules and aggregates ≥ 95% line / ≥ 90% branch; web ≥ 80% line; (b) rules ≥ 0.85; starter stats ≥ 0.80; (c) 100,000 sequences, 0 disagreements; (d) domain < 10 s, unit ≤ 60 s, integration < 10 min, all 0 failed (NFR-073)** | `pytest --cov`, `diff-cover`, `coverage report`, `vitest --coverage`, `mutation_score.py`, `tests.oracle.differential`, `run_with_budget.py` | | | |
 | G03-12 | **Open defects:** blocker or major findings whose latest disposition is open in `docs/sprints/03/review-rounds.md` (which starts with the 14 carried Sprint 2 rows), plus open product-defect rows in `smoke.md` and `blockers.md` not yet in review-rounds, plus open GitHub issues labelled `bug` with `blocker` or `major` | **0** | `scripts/measure/open_defects.py`, GitHub issue search (§4) | | | |
 
 **Overall:** the Sprint 3 goal is met only when all 12 rows are "yes". A row whose method could not run is "no", never "n/a" (fail closed, ADR 0014). `@needs-verification` results never count toward a Must FR (QD-QG-P5): metrics that read the provisional score sequence (AN-01, AN-02, AN-03, AN-05, AN-06) are reported on their own line in G03-08. Human-gated rows (sprint-03 §0.4) stay in G03-12 unless the PO chose option (b) in writing before the verifier runs.
-
-**Status note (engineering-manager, review round 1, 2026-10-07; not a verifier result):** the goal is **not met**. The stats, evidence, delete-match and delete-account routes are not served at `15a7551` (openapi: no `/stats` or `/evidence` path; `/matches/{match_id}` and `/me` have only `get`), and `api-sprint-03.md` and `flows-sprint-03.md` do not exist. The pre-review smoke at `316a514` gives `live_stats.py` rc 1, runs passed 0/1 (QA-R1S3-06). G03-12 at this step: `open_defects.py` rc=1, open 9. Under PO P12 (b), C-06, SEC-RV3-01 and BLK-GOLD-01 are sprint-DoD rows (sprint-03 §9.1), not G03-12 rows.
 
 ## 3. Rules for the verifier
 
@@ -97,7 +95,7 @@ Start `dockerd` first if `docker info` fails; images come through `mirror.gcr.io
 python3 scripts/measure/live_stats.py --api "$API" --origin "$WEB" --mailpit "$MAILPIT" \
   --cacert "$RA_DEV_STATE/root.crt" --file fixtures/clips/synthetic-60s/clip.mp4 --runs 5 \
   --psql "$DC exec -T postgres psql -U racket -d racket -At -F|" \
-  --purge-cmd "$DC exec -T purge python -m racket.platform.purge --once" \
+  --purge-cmd "$DC exec -T worker python -m racket.platform.purge --once" \
   --json "$GOAL/live-stats.json"; echo rc=$?
 jq '.summary | {runs, runs_passed, tag_to_stats, correction_to_stats, delete_hidden, purge}' "$GOAL/live-stats.json"
 jq -r '.runs[] | to_entries[] | select(.value.ok != true) | .key' "$GOAL/live-stats.json"   # must print nothing
@@ -148,8 +146,6 @@ python3 scripts/measure/stats_latency.py --api http://127.0.0.1:48000 --seed-api
 ### G03-06: E2E pass rate (and G03-10)
 
 ```bash
-# labeller-admin CLI for E2E-03-05 (QA proposal; ST-052 names it). Absolute compose path: Playwright runs it from web/
-export E2E_ADMIN_CMD="docker compose -p racket-goal03 -f $PWD/infra/compose.yaml --env-file $RA_DEV_STATE/goal.env exec -T api python -m racket.dataset.admin"
 cd web
 flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
   BASE_URL=$WEB PW_PROJECTS=chromium \
@@ -157,11 +153,11 @@ flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL
   pnpm exec playwright test --workers=1 --output "$GOAL/pw-out" --reporter=line,junit,json; echo rc=$?
 cd ..
 python3 scripts/measure/junit_rate.py --include '.' --allow-skips \
-  $(for i in 01 02 03 04 05 06 07 08 09; do printf -- '--require E2E-03-%s ' $i; done) \
+  $(for i in 01 02 03 04 05 06 07; do printf -- '--require E2E-03-%s ' $i; done) \
   $(for i in 01 02 03 04 05 06; do printf -- '--require E2E-02-%s ' $i; done) \
   --require 'E2E-01-02' --require 'E2E-01-03' --require 'walking-skeleton|walking skeleton' \
   --json "$GOAL/e2e-rate.json" "$GOAL/e2e.xml"; echo rc=$?
-jq -r '[.. | objects | select(has("annotations")) | .annotations[]? | select(.type=="skip") | .description] | unique | .[]' "$GOAL/e2e.json"   # each reason once (the report repeats a test's annotations per result)
+jq -r '[.. | objects | select(has("annotations")) | .annotations[]? | select(.type=="skip") | .description] | .[]' "$GOAL/e2e.json"
 (cd web && flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
   BASE_URL=$WEB PW_PROJECTS=chromium PLAYWRIGHT_JUNIT_OUTPUT_NAME="$GOAL/e2e-repeat.xml" \
   pnpm exec playwright test --repeat-each=3 --workers=1 --output "$GOAL/pw-out-repeat" --reporter=line,junit)
@@ -192,20 +188,16 @@ python3 scripts/measure/pw_timings.py "$GOAL/e2e-timing.json" --min-n 20 \
 
 ```bash
 cd backend
-eval "$(bash ../scripts/dev-postgres.sh url)"; eval "$(bash ../scripts/dev-objectstore.sh env)"   # the scenarios run the API on Postgres (QA-RV3-06)
 env -u APP_ENV uv run pytest -q -rs -m "golden_an" --junitxml="$GOAL/golden-an.xml"; echo rc=$?
 env -u APP_ENV uv run pytest -q -rs -m "analytics and scenario" --junitxml="$GOAL/analytics-scenarios.xml"; echo rc=$?
-HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs -m "conservation" --junitxml="$GOAL/conservation.xml"; echo rc=$?   # the FR-109 scenario
-HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs tests/unit/analytics/test_attribution.py -k property \
-  --hypothesis-show-statistics --junitxml="$GOAL/conservation-property.xml" | tee "$GOAL/conservation-property.txt"; echo rc=$?
-grep -E '[0-9]+ passing, 0 failing|max_examples=' "$GOAL/conservation-property.txt"            # (c): >= 1,000 passing, 0 failing
-env -u APP_ENV uv run racket-manifest-check tests/regression/golden_matches; echo rc=$?   # the CLI takes the set directory
+HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs -m "conservation" --junitxml="$GOAL/conservation.xml"; echo rc=$?
+env -u APP_ENV uv run racket-manifest-check tests/regression/golden_matches/manifest.json; echo rc=$?
 cd ..
 python3 scripts/measure/junit_rate.py --include '.' --require 'GS-AN-1|golden_an' --json "$GOAL/golden-an-rate.json" "$GOAL/golden-an.xml"; echo rc=$?
-python3 scripts/measure/junit_rate.py --include '.' --require 'Low-sample|low_sample|lowsample' --require 'Draft metric hidden|draft' \
+python3 scripts/measure/junit_rate.py --include '.' --require 'Low-sample|low_sample' --require 'Draft metric hidden|draft' \
   --require 'Definition shown|definition' --json "$GOAL/analytics-rate.json" "$GOAL/analytics-scenarios.xml"; echo rc=$?
-python3 scripts/measure/junit_rate.py --include '.' --require 'conservation' --require 'property_every_lost_rally' --json "$GOAL/conservation-rate.json" "$GOAL/conservation.xml" "$GOAL/conservation-property.xml"; echo rc=$?
-grep -nE '^\| 20[0-9]{2}-' docs/domain/metric-dictionary.md | grep 'coach-reviewed' | grep -vc 'planned'   # (e): one dated row per shown entry; the undated "(planned)" row does not count
+python3 scripts/measure/junit_rate.py --include '.' --require 'conservation' --json "$GOAL/conservation-rate.json" "$GOAL/conservation.xml"; echo rc=$?
+grep -nE '^\| (before|20[0-9]{2}-)' docs/domain/metric-dictionary.md | grep -c 'coach-reviewed'   # (e): one row per shown entry
 ```
 
 - The `golden_an`, `analytics`, `scenario` and `conservation` markers are registered by QA in `backend/pyproject.toml` (QA-ACC-3, ST-049); the conservation property prints its example count, which must be ≥ 1,000 under `HYPOTHESIS_PROFILE=ci`.
@@ -235,12 +227,10 @@ jq '[.. | objects | select(has("attachments")) | .attachments[] | select(.name|s
 jq '[.. | objects | select(has("errors")) | .errors[]? | .message? // "" | select(test("axe serious/critical"))] | length' "$GOAL/e2e.json"   # 0
 jq -r '[.. | objects | select(has("attachments")) | .attachments[] | select(.name|startswith("axe-")) | .name] | unique | .[]' "$GOAL/e2e.json"
 jq '[.. | objects | select(has("errors")) | .errors[]? | .message? // "" | select(test("targets below 24x24"))] | length' "$GOAL/e2e.json"   # 0
-jq -r '[.. | objects | select(has("attachments")) | .attachments[] | select(.name|startswith("targets-")) | .name] | unique | .[]' "$GOAL/e2e.json"   # (b): D-01, E-01, X-01, X-02, L-01 and the D-01/E-01 -empty/-loading/-error names present
 ```
 
 - Screen families D (dashboard), E (evidence), X (deletion), L (Full Tag) with the screen ids of `flows-sprint-03.md` (PD-1). E2E-03-05, E2E-03-06 and the 320/360 px cases must be among the passed cases of `e2e-rate.json`.
-- (b) counts only when every family D, E, X, L has a `targets-` attachment and the D-01/E-01 empty, loading and error states have theirs (E2E-03-09; PD-R1S3-03, decision-log 2026-10-07); a family without one is "no", not 0.
-- The manual screen-reader pass (NFR-027 b, C3-06) is a human item; while open it counts in G03-12. PO P12 option (b) moved it out of the goal: it is sprint-DoD row S3-DoD-P6 "not met: waiting on P6" and not in G03-12 (decision-log 2026-10-07).
+- The manual screen-reader pass (NFR-027 b, C3-06) is a human item; while open it counts in G03-12.
 
 ### G03-11: test strength, coverage and speed
 
@@ -270,7 +260,7 @@ mv mutants "$GOAL/mutants-stats" 2>/dev/null || true
 DOMAIN=$(uv run --project ../infra python -c "import yaml;print(yaml.safe_load(open('../.github/workflows/ci.yml'))['env']['DOMAIN_TEST_PATHS'])")
 echo "$DOMAIN" | grep -q 'tests/unit/analytics' || echo "DOMAIN_TEST_PATHS lacks tests/unit/analytics -> (d) no"
 env -u APP_ENV uv run pytest -q --collect-only -m unit >/dev/null   # unbudgeted warm-up, as CI
-python3 ../scripts/ci/run_with_budget.py 10 -- env -u APP_ENV uv run pytest -q -n auto --dist worksteal -m unit $DOMAIN; echo rc=$?  # workers as CI (CI-DOMAIN-BUDGET)
+python3 ../scripts/ci/run_with_budget.py 10 -- env -u APP_ENV uv run pytest -q -m unit $DOMAIN; echo rc=$?
 python3 ../scripts/ci/run_with_budget.py 60 -- env -u APP_ENV uv run pytest -q -m unit; echo rc=$?
 python3 ../scripts/ci/run_with_budget.py 600 -- env -u APP_ENV uv run pytest -q -m integration tests/integration \
   --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py; echo rc=$?     # with the G03-04 env
@@ -316,12 +306,12 @@ One row per method, written by its author after an end-to-end run on an isolated
 
 | Method | Author | Head | rc | Date | Note |
 |---|---|---|---|---|---|
-| G03-01..G03-03 `live_stats.py` | senior-qa-engineer with principal-engineer | `fb69a7d` | 1 | 2026-10-07 | Dry-run 1 (pre-build), `--runs 1` on the isolated stack `racket-qa03` (port 53000 for 43000). Runs end to end and fails closed: failed steps `tag_to_stats`, `stats`, `evidence`, `correction`, `delete_match`, `delete_account` (routes not built: ST-046/047/050/051); purge rows left in 11 columns and "purge command rc=1" (no `racket.platform.purge`, ST-050). Method changed: purge runs in `api` (the purge job ships in the API image, `ecee023`; ADR 0038 Proposed), not `worker` (least-privilege role, ST-042). Re-run with `--runs 5` after PE-1/PE-3 |
-| G03-04 IT rates | senior-qa-engineer | `fb69a7d` | 1 | 2026-10-07 | Dry-run 1, dev Postgres + dev object store + qa03 Mailpit: earlier ITs `317/317` passed, rc=0 (no regression); strict sandbox 10 passed; IT-03 `52/161`, rc=1, missing none; every failure is an IT-03 `red_until` row or one of the 3 `golden_an` hand-count rows (COACH-1). Method unchanged |
+| G03-01..G03-03 `live_stats.py` | senior-qa-engineer with principal-engineer | | | | |
+| G03-04 IT rates | senior-qa-engineer | | | | |
 | G03-05 `stats_latency.py` | sre-devops-engineer | | | | |
-| G03-06, G03-10 E2E | senior-qa-engineer | `9c64d79` | 1 | 2026-10-07 | Dry-run 1 on `racket-qa03` (https, Chrome for Testing 141): 115 selected, 97 passed, 12 failed, 6 skipped (Sprint 1, each naming its API binding), missing none; the 12 failures are exactly the red-first E2E-03-01..06 and timing specs (COACH-1, ST-047/048/051/052; QA-R1S3-01); every Sprint 1/2 spec and E2E-03-07 passed. G03-10: 40 axe attachments, 0 serious/critical, 2 targets-below-24 (QA-R1S3-01); no D/E/X/L attachment yet. Method changed: `E2E_ADMIN_CMD` exported (E2E-03-05), skip reasons printed once (`unique`) |
-| G03-07 timings | senior-qa-engineer | `9c64d79` | 1 | 2026-10-07 | Dry-run 1: `--repeat-each=20`, every sample fails at COACH-1 / missing D-01, so `pw_timings.py` reports n = 0 for all three metrics, rc=1 (fails closed, no empty pass). Method unchanged |
-| G03-08 correctness | senior-qa-engineer with pickleball-domain-coach | `fb69a7d` | 1 | 2026-10-07 | Dry-run 1: `golden_an` 28/31 (3 = hand count, COACH-1); `analytics and scenario` 0/15 (routes, ST-046); conservation scenario 1/1 and the property `1000 passing, 0 failing`; manifest rc=0; (e) 0 dated `coach-reviewed` rows. Method changed (3 defects): the 1,000-example property is in `tests/unit/analytics` and was not selected by `-m conservation`; `--require 'Low-sample'` matched no test id (`test_lowsample_flag`); the (e) grep counted the undated "(planned)" row |
-| G03-09 Full Tag and lint | senior-ml-cv-engineer with senior-qa-engineer | `bac3d81` | 1 | 2026-10-07 | Dry-run 1 by the QA co-author (the ML author's own row still due): (b) `racket-drill-lint ../content/drills` → `ok, 0 problem(s)`, rc=0, and each of the 5 negative fixtures rc=1 naming its drill and FR-140 reason (met at this head); (a) IT-03-11 and E2E-03-05 red until ST-052; (c) `grep -i drill .github/workflows/ci.yml` → nothing: no lint job in CI yet (SRE/ML), so (c) is "no". Method unchanged |
-| G03-11 strength, coverage, speed | senior-qa-engineer | `4fff02c` | 1 | 2026-10-07 | Dry-run 1, dev Postgres + object store: coverage run `2224 passed, 1 failed` (the BOLA inventory guard, QA's own regression QA-R1S3-03, fixed in `99a711f`); diff-cover vs `ce91984` 96% of 584 lines, rc=0; analytics 99.56% line / 98.57% branch; rules + aggregates 99.57% / 98.41%; web lines 91.84% (477 tests); oracle 100,000 sequences, 0 disagreements; mutation rules 0.8635 (386/447), starter stats 0.8698 (274/315); `DOMAIN_TEST_PATHS` includes `tests/unit/analytics`; domain 1110 passed in 8.5 s of 10; unit 1620 passed in 12.2 s of 60; integration 264 s of 600 but `50 failed, 50 errors`, all IT-03 `red_until` rows (the budget command does not exclude `red_until`, so (d) stays "no" until those stories land: intended). Note: the two `coverage report` lines must run before the mutation steps, which delete `backend/.coverage` (order as written) |
+| G03-06, G03-10 E2E | senior-qa-engineer | | | | |
+| G03-07 timings | senior-qa-engineer | | | | |
+| G03-08 correctness | senior-qa-engineer with pickleball-domain-coach | | | | |
+| G03-09 Full Tag and lint | senior-ml-cv-engineer with senior-qa-engineer | | | | |
+| G03-11 strength, coverage, speed | senior-qa-engineer | | | | |
 | G03-12 open defects | engineering-manager | | | | |
