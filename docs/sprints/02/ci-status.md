@@ -88,3 +88,32 @@ Evidence: `mcp__github__actions_get get_workflow_run 37464553177` → `conclusio
 ## Next
 
 `ci-gate` is green at `fd363fa` (run 37464553177), so the W-01 / QA-R1-06 family closes on CI. Still open outside CI: the local-evidence part of SRE-S2-05 (no H.264 in local Playwright Chromium; PO/EM decision whether the CI Chrome run is the G02-05/G02-06 (c) evidence, blockers.md). SRE-S2-09 (stand-in seek flake) did not recur in two runs; it stays watched by the flaky report. The SRE re-dispatches CI at each later head that changes code and records it here.
+
+## Release: PR #2 (`sprint-02` → `main`), 2026-10-06
+
+`git push -u origin sprint-02` (`3461f77..c01d0dd`), then PR #2 opened (<https://github.com/nhuthuynh/racket-analytics/pull/2>, base `main`; stacks on PR #1, fork point `2b97fa0`). Labels: **none**. `qa-approved-test-change` needs 0 pending rows in `test-change-requests.md`; 5 rows (lines 24-28) have an empty QA decision. `size-waiver`: the EM recorded only commit-level waivers, none for this PR (po-input 2026-10-06 addendum).
+
+### Run 37505286086: head `c01d0dd` (pull_request), conclusion failure
+
+| Job | Result | Detail | Owner |
+|---|---|---|---|
+| actionlint, Ruff, mypy, fixtures, infra, web checks, secrets/audit, SBOM, unit, integration, E2E | success | — | — |
+| Flaky-test report | skipped | runs on schedule/dispatch only | — |
+| **PR policy** | **failure** | `check_test_immutability.py`: modified accepted tests (e.g. `backend/tests/support/*.py`, `web/e2e/walking-skeleton.spec.ts`) without the `qa-approved-test-change` label; size step skipped after it (would fail too: `check_pr_size.py` locally → `52633 changed lines`, no `size-waiver`) | senior-qa-engineer (decide TCR rows 24-28, then label); engineering-manager (PR size waiver) |
+| **Locust baseline** | **failure (new)** | `perf_verdict.py`: `restored_byte_identical: false`, all other gates true (availability 1.0, correction p95 500 ms, 50.5 RPS). Cause: the `-t 60s` limit killed the correction user with a PATCH in flight; the API committed it (`match.rally_corrected` version 122 at 17:42:52.414, shutdown at 17:42:52.230) and no undo followed. Harness defect, not a product defect | sre-devops-engineer: **fixed `3ee3af1`** (test-first: `infra/tests/test_perf_restore.py` red on collection, then 5 passed; infra suite `477 passed`) |
+| ci-gate | failure | pr-policy, perf-baseline | — |
+
+Evidence: `mcp__github__pull_request_read get_check_runs 2`; `mcp__github__get_job_logs` jobs 112412274591 (PR policy list of modified accepted tests) and 112412274471 (Locust summary and the verdict JSON).
+
+### Run 37507959925: head `3ee3af1` (pull_request), conclusion failure: PR policy only
+
+| Job | Result |
+|---|---|
+| actionlint, Ruff, mypy, fixtures, infra, web checks, secrets/audit, SBOM, unit, integration, E2E (Chromium + WebKit), **Locust baseline (fixed)** | success |
+| Flaky-test report | skipped (by design outside schedule/dispatch) |
+| **PR policy** | **failure**: same as run 37505286086 (no `qa-approved-test-change` label) |
+| ci-gate | **failure** (`pr-policy: failure`) |
+
+Evidence: `mcp__github__pull_request_read get_check_runs 2` (head `3ee3af1`).
+
+**Merge decision:** not merged. `ci-gate` is red on the PR head because of the PR-policy label gate, which only QA (test-change decisions) and the EM (size waiver) can clear; the SRE does not apply labels without that evidence and does not bypass the gate. Blocker row 2026-10-06 (sre-devops-engineer, release) in `blockers.md`.

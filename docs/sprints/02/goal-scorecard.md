@@ -498,3 +498,11 @@ Driven in Chrome for Testing against the same live stack, starting 16:40:19 UTC,
 **Observation (VR1-01, still open, minor, routed to senior-frontend-engineer):** reproduced again at 1280 px (`demo/3-sheet.png`): the score sheet table sits in the narrow page column; headers and cells break inside words and scores ("Ra / lly", "Sco / re / bef / ore", "0- / 1-1", "0: / 1 / 8"). No metric fails on it and it is not counted in G02-11 (minor). No new finding raised in round 3.
 
 **Observation O-2 (unchanged):** the G02-02 correction match is still 76 rallies, not "about 100+"; target met; wording still needs the method author's (engineering-manager with principal-engineer) decision-log row.
+
+## CI on the release PR (#2), 2026-10-06 (sre-devops-engineer)
+
+| Metric | Target | Actual | Met |
+|---|---|---|---|
+| CI: `ci-gate` on the PR head | success, every job success (skips by design only) | head `3ee3af1`, run 37507959925: every build/test/E2E/perf job success; **PR policy failure** (no `qa-approved-test-change`; 5 pending TCR rows) → `ci-gate` failure | **no** |
+
+Detail and the Locust harness fix (`3ee3af1`): `ci-status.md`, section "Release: PR #2".
