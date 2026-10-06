@@ -191,7 +191,7 @@ cd backend
 env -u APP_ENV uv run pytest -q -rs -m "golden_an" --junitxml="$GOAL/golden-an.xml"; echo rc=$?
 env -u APP_ENV uv run pytest -q -rs -m "analytics and scenario" --junitxml="$GOAL/analytics-scenarios.xml"; echo rc=$?
 HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs -m "conservation" --junitxml="$GOAL/conservation.xml"; echo rc=$?
-env -u APP_ENV uv run racket-manifest-check tests/regression/golden_matches/manifest.json; echo rc=$?
+env -u APP_ENV uv run racket-manifest-check tests/regression/golden_matches; echo rc=$?   # the CLI takes the set directory
 cd ..
 python3 scripts/measure/junit_rate.py --include '.' --require 'GS-AN-1|golden_an' --json "$GOAL/golden-an-rate.json" "$GOAL/golden-an.xml"; echo rc=$?
 python3 scripts/measure/junit_rate.py --include '.' --require 'Low-sample|low_sample' --require 'Draft metric hidden|draft' \
