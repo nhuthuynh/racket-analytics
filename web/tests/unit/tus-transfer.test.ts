@@ -46,8 +46,11 @@ const RESUME = '/api/uploads/5d0c6c1e-3f3a-4c55-9a51-8d1f0e7d2a10';
 const POLICY = { chunkMinBytes: 5 * 1024 * 1024, chunkMaxBytes: 50 * 1024 * 1024 };
 const file = new File([new Uint8Array(10).fill(1)], 'Sat doubles.mp4', { type: 'video/mp4', lastModified: 1759480000000 });
 const callbacks = () => ({ onProgress: vi.fn(), onSuccess: vi.fn(), onError: vi.fn(), onRetrying: vi.fn() });
+// PD-RV2-03: the Upload is built after a dynamic import and a SHA-256 of the file head, which
+// can take more than a few macrotasks on a loaded host. Wait until it exists (bounded), not for a
+// fixed number of ticks.
 const flush = async () => {
-  for (let i = 0; i < 5; i += 1) await new Promise((r) => setTimeout(r, 0));
+  await vi.waitFor(() => expect(created.length).toBeGreaterThan(0), { timeout: 5000, interval: 5 });
 };
 
 beforeEach(() => {
