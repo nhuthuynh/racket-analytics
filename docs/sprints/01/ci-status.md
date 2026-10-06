@@ -117,3 +117,32 @@ PR: <https://github.com/nhuthuynh/racket-analytics/pull/1>. `git push -u origin 
 | ci-gate | **failure** | aggregates PR policy, integration and E2E | — | — |
 
 **Merge:** not merged. `ci-gate` is not green on the PR head; the PO instruction merges only on green CI.
+
+## Release re-check: PR #1 after labels (sre-devops-engineer, 2026-10-06)
+
+`git ls-remote origin` → `refs/heads/sprint-01` = `2b97fa0` = local `sprint-01`; nothing to push. PR #1 open, base `main`, labels `qa-approved-test-change` and `size-waiver` (applied by the orchestrator per the PO addendum of 2026-10-06 in `docs/requirements/po-input-2026-10-05.md`). Applying the labels triggered run 37426849830 (`cancelled` by concurrency; its `ci-gate` reported failure on the cancellations) and run 37426849974.
+
+**Run 37426849974** (`pull_request`, head `2b97fa0`): **failure**. <https://github.com/nhuthuynh/racket-analytics/actions/runs/37426849974>
+
+| Job | Result | Cause | Owner (PO addendum 2026-10-06) |
+|---|---|---|---|
+| Workflow lint (actionlint) | success | — | — |
+| Python lint and format (Ruff) | success | — | — |
+| Python types (mypy) | success | — | — |
+| Python unit suites (time-budgeted) | success | — | — |
+| Fixture and gold-set integrity | success | — | — |
+| Infra, hooks and CI-script tests | success | — | — |
+| Web lint, types, unit, coverage, bundle budget | success | — | — |
+| Secret scan, dependency audit | success | — | — |
+| SBOM (CycloneDX) and licence gate | success | — | — |
+| PR policy (test immutability, size) | success | labels now present | — |
+| Flaky-test report | skipped | by design (schedule/dispatch only) | — |
+| Integration on Compose | **failure** | `FAILED tests/features/test_nightly_quality.py::test_nightly_run_completes - AssertionError: no nightly result in docs/sprints/01/status.json`; `FAILED tests/features/test_phone_fixtures.py::test_coverage_of_the_set` and `::test_probe_every_fixture` - `RED until ST-025: fixtures/clips/phones-v1/manifest.json does not exist` | senior-qa-engineer + sre-devops-engineer (relocate S-08 to the nightly workflow, TCR); senior-qa-engineer (ST-025 carried, TCR) — Sprint 2 |
+| E2E (Playwright, Chromium + WebKit) | **failure** | `6 failed, 12 skipped, 98 passed (10.3m)`, all `[webkit]`: error-states-a11y U-04, first-run "Guide video cannot load", resumable-upload "A damaged chunk is not kept", sign-out "Upload in progress", walking-skeleton "upload the fixture clip and see its facts" and reload-resume. Chromium green | senior-frontend-engineer + senior-qa-engineer — Sprint 2, test-first, proven on CI WebKit |
+| ci-gate | **failure** | aggregates Integration and E2E | — |
+
+Evidence: `mcp__github__actions_list list_workflow_jobs 37426849974`; `mcp__github__get_job_logs` for jobs 112148386648 (pytest short test summary) and 112148386694 (Playwright summary).
+
+**No fix pushed by the SRE.** Every red test is a test change or a WebKit product defect that the PO assigned to Sprint 2 owners with TCR rows and a merge order (`sprint-02` → `sprint-01`, then PR #1 → `main`). Editing these tests on `sprint-01` would be an unapproved test change (EP/ENG-28).
+
+**Merge:** not merged. `ci-gate` is not success on the PR head; the PO instruction is to merge only on green CI.

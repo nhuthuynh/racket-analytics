@@ -468,3 +468,5 @@ python3 ../scripts/ci/run_with_budget.py 60 -- env -u APP_ENV uv run pytest -q -
 | Metric | Target | Actual | Met |
 |---|---|---|---|
 | CI on the PR head (PR #1) | every job success (skips by design only), `ci-gate` success | Run 37377206126 at `9808296`: 9 jobs success, flaky report skipped by design; PR policy, integration (3 PO-blocked red tests) and E2E (8 WebKit-only failures) failure; `ci-gate` failure. Detail: ci-status.md "Release" | no |
+
+**Re-check 2026-10-06 (sre-devops-engineer):** run 37426849974 at `2b97fa0` (labels applied): 10 jobs success, including PR policy; flaky report skipped by design; Integration failure (the same 3 PO-assigned tests: S-08 nightly, 2 x ST-025 phone fixtures); E2E failure (6 WebKit-only); `ci-gate` failure. CI metric: **not met**. PR #1 not merged; it waits for the Sprint 2 fixes per the PO addendum of 2026-10-06. Detail: ci-status.md "Release re-check".
