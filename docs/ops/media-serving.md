@@ -9,13 +9,14 @@ Owner: sre-devops-engineer. Story: SRE-MEDIA (sprint-02 §3; FR-027, NFR-055, NF
 3. `web-tls` (`infra/tls/Caddyfile`) sends `/{$S3_BUCKET_MEDIA}/*` to `objectstore:8333` with path and Host unchanged, because the signature covers both. Everything else goes to the web.
 4. The page CSP `media-src 'self' blob:` allows it, because it is the same origin. No CORS rule exists or is needed.
 
-## Edge rules (tested in `infra/tests/test_compose_sprint02.py`)
+## Edge rules (tested in `infra/tests/test_compose_sprint02.py` and `infra/tests/test_media_edge_headers.py`)
 
 | Rule | Why |
 |---|---|
 | Only `GET`/`HEAD` with an `X-Amz-Signature` query reach the store; anything else on the bucket path gets 403 from the edge | No listing, no writes, no unsigned reads through the public origin |
 | `Cookie` and `Authorization` are removed before the store | The session never leaves the edge (NFR-055: no session token with media) |
 | `Access-Control-*` and `Server` are removed from the store's answers | Same origin only; SeaweedFS adds CORS grants and its version banner to every GET (measured) |
+| `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox` and `Cache-Control: private, no-store` are set on the store's answers; `Seaweed-*` and `X-Seaweedfs-*` are removed (SEC-S2-TM-03) | SeaweedFS ignores the signed `response-content-type` (threat model E3), so the stored type is the only type control: the browser must not sniff, a URL opened as a page runs nothing, a signed private object is not cached, and store internals (owner, upload id) stay at the edge. The integration test runs the pinned Caddy image in front of a stub store that answers `text/html` with SeaweedFS headers |
 | Path and Host are not rewritten | Any rewrite breaks every signature |
 | TTL `MEDIA_URL_TTL_SECONDS` (default 300) | The API refuses to start above 900 s (NFR-055) |
 | No access log on `web-tls` | A signed URL never lands in a log (NFR-069) |
