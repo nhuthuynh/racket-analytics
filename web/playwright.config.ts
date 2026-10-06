@@ -1,12 +1,16 @@
 // Playwright (ST-004 harness, ST-010 journeys; AQS/STACK-03). Specs live in web/e2e/ (QA-owned).
 // The stack must already be running: CI uses Compose, locally see web/README.md.
-// Projects: Chromium and WebKit, the skeleton of the NFR-024 browser matrix.
+// Projects: Chromium and WebKit, the skeleton of the NFR-024 browser matrix. On CI the
+// "chromium" project launches Google Chrome, which decodes the H.264 match video (QA-RV1-07,
+// SRE-S2-05; e2e/helpers/browser-channel.ts).
 import { defineConfig, devices } from '@playwright/test';
+import { chromiumChannel } from './e2e/helpers/browser-channel';
 import { chromiumDevCertificateArgs, trustsDevCertificate } from './src/lib/security/dev-tls';
 
 // https: the Compose stack is served by the web-tls proxy (ADR 0029).
 const baseURL = process.env.BASE_URL ?? 'https://localhost:3000';
 const projects = (process.env.PW_PROJECTS ?? 'chromium,webkit').split(',').map((p) => p.trim());
+const channel = chromiumChannel(process.env);
 
 export default defineConfig({
   testDir: './e2e',
@@ -26,7 +30,11 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], launchOptions: { args: chromiumDevCertificateArgs(baseURL) } },
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(channel ? { channel } : {}),
+        launchOptions: { args: chromiumDevCertificateArgs(baseURL) },
+      },
     },
     { name: 'webkit', use: { ...devices['iPhone 13'] } },
   ].filter((p) => projects.includes(p.name)),
