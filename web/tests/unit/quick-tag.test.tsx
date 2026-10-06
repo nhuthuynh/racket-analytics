@@ -70,6 +70,14 @@ describe('QuickTag (T-01)', () => {
     expect(screen.getByText('0-0-2')).toBeVisible();
   });
 
+  it('PD-S2R1-06: before game 1 starts it shows no call and no server, only the question', () => {
+    setup(sheet([], []), 0);
+    expect(screen.getByText('Who serves first in game 1?')).toBeVisible();
+    expect(screen.queryByText('0-0-2')).toBeNull();
+    expect(screen.queryByText('Your side serves')).toBeNull();
+    expect(screen.queryByText('Other side serves')).toBeNull();
+  });
+
   it('a tag shows the optimistic score at once, then the server sheet', async () => {
     const { api, setTime } = setup();
     const answer = deferred<Awaited<ReturnType<QuickTagApi['tagRally']>>>();

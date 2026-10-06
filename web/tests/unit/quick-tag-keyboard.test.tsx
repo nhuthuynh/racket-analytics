@@ -84,6 +84,18 @@ describe('Keyboard tagging (ST-028a)', () => {
     expect(start).toHaveFocus();
   });
 
+  it('PD-S2R1-04: "?" pressed with nothing focused returns focus to "Keyboard shortcuts", not the page body', async () => {
+    const u = userEvent.setup();
+    setup();
+    (document.activeElement as HTMLElement | null)?.blur();
+    await u.keyboard('?');
+    const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' });
+    // jsdom does not turn Esc into the dialog's cancel event; the Esc path is covered in Chromium (E2E).
+    await u.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Keyboard shortcuts' })).toHaveFocus();
+  });
+
   it('keys typed in the dialog checkbox do not tag', async () => {
     const u = userEvent.setup();
     setup();

@@ -67,6 +67,17 @@ export function QuickTag({
   const [keysOpen, setKeysOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const opener = useRef<HTMLElement | null>(null);
+  const keysButton = useRef<HTMLButtonElement>(null);
+  const [refocusKeys, setRefocusKeys] = useState(false);
+  useEffect(() => {
+    if (keysOpen || !refocusKeys) return;
+    setRefocusKeys(false);
+    const back = opener.current;
+    // "?" pressed with nothing focused: the opener was the page body, so go to the button
+    // that opens the same dialog.
+    if (back && back.isConnected && back !== document.body) back.focus();
+    else keysButton.current?.focus();
+  }, [keysOpen, refocusKeys]);
   const video = useRef<HTMLVideoElement>(null);
   const [keyMap, setKeyMap] = useState<KeyMap>(DEFAULT_KEYMAP);
   useEffect(() => {
@@ -241,8 +252,10 @@ export function QuickTag({
 
       <div role="group" aria-label="Score" className="quick-tag__score">
         <p className="quick-tag__game">{status.matchOver ? 'Match over' : `Game ${state.game}`}</p>
-        {call ? <p className="quick-tag__call">{call}</p> : null}
-        {serving && !status.matchOver ? (
+        {/* Before a game is started the first server is the question being asked, so neither
+            the call nor the server is shown as fact (PD-S2R1-06, HAX G1/G2). */}
+        {call && !needsGame ? <p className="quick-tag__call">{call}</p> : null}
+        {serving && !status.matchOver && !needsGame ? (
           <p className="quick-tag__serving">{serving === names.mySide ? 'Your side serves' : 'Other side serves'}</p>
         ) : null}
         {busy ? <p className="quick-tag__saving">Saving…</p> : null}
@@ -315,6 +328,7 @@ export function QuickTag({
           Undo
         </button>
         <button
+          ref={keysButton}
           type="button"
           className="button button--secondary"
           onClick={(e) => {
@@ -349,8 +363,10 @@ export function QuickTag({
             saveKeyMap(window.localStorage, DEFAULT_KEYMAP);
           }}
           onClose={() => {
+            // Focus moves in an effect once the dialog is gone: while the modal is still open
+            // the opener is inert and focus() does nothing (PD-S2R1-04, SC 2.4.3).
             setKeysOpen(false);
-            opener.current?.focus();
+            setRefocusKeys(true);
           }}
         />
       ) : null}
