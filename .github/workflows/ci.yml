@@ -351,6 +351,57 @@ jobs:
           path: web/playwright-report/
           if-no-files-found: warn
 
+  perf-baseline:
+    # ST-039 slice 3: Locust at 50 RPS on the API port, seeded through the https origin.
+    # Gated now: availability >= 99.5% (NFR-041), correction/undo p95 <= 1.5 s (NFR-013),
+    # sheet restored byte-identical (C-04). Read p95 is a baseline until the R1 review (NFR-010).
+    name: Locust baseline 50 RPS (ST-039; NFR-010 baseline, NFR-013, NFR-041)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Start the full stack
+        # One account signs in for the whole run; the per-IP limits are raised as in e2e.
+        env:
+          AUTH_LINK_LIMIT_PER_IP: "1000"
+          AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
+        run: $COMPOSE up -d --build --wait
+      - name: Copy the dev CA root (public certificate only; ADR 0029)
+        run: |
+          mkdir -p reports/perf
+          $COMPOSE cp web-tls:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/racket-dev-ca.crt"
+      - name: Locust, 50 readers at 1 RPS and 1 correction user, 60 s
+        env:
+          RA_ORIGIN: https://localhost:3000
+          RA_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
+          MAILPIT_API_URL: http://127.0.0.1:8025
+          RA_PERF_STATE: reports/perf/perf_state.json
+        run: |
+          pip install "uv==${UV_VERSION}"
+          # Locust exits 1 on any failed request; perf_verdict.py decides the gate.
+          uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_sprint02.py \
+            --headless --host http://127.0.0.1:8000 -u 51 -r 51 -t 60s \
+            --csv reports/perf/perf --only-summary || echo "locust rc=$?"
+      - name: Verdict (gates) and baseline table
+        run: |
+          python3 scripts/ci/perf_verdict.py --stats reports/perf/perf_stats.csv \
+            --state reports/perf/perf_state.json --rps 50 --json reports/perf/verdict.json \
+            --summary "$GITHUB_STEP_SUMMARY"
+      - name: Service logs on failure
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=200
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: perf-baseline
+          path: reports/perf/
+          if-no-files-found: warn
+
   # ------------------------------------------------------------------ supply chain
   secrets-and-audit:
     name: Secret scan, dependency audit
@@ -491,6 +542,7 @@ jobs:
       - infra-tests
       - web-checks
       - e2e
+      - perf-baseline
       - secrets-and-audit
       - sbom-licences
     runs-on: ubuntu-24.04
