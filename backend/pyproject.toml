@@ -71,6 +71,7 @@ markers = [
     "nightly: runs in the nightly quality job (ST-024), e.g. the 100,000-sequence differential oracle (NFR-002b)",
     "slow: takes more than ~1 s; excluded from the edit-time hook run",
     "scoring: rules engine, match structure and their properties (Gherkin @scoring); sprint-01 §12 demo `pytest -m scoring`",
+    "golden_replay: replays a stored fixture match and compares canonical bytes with its golden file (NFR-075, G02-07)",
     "needs_verification: depends on a pickleball rule not yet verified by the domain coach (DOM G1); reported separately",
     "milestone(name=...): spec milestone tag from Gherkin, e.g. @M0",
     "story(id=...): story tag from Gherkin, e.g. @story-ST-008",
