@@ -14,6 +14,7 @@ from dataclasses import replace
 import pytest
 
 from racket.matches.scorebook.domain import InvalidRally, OutcomeInput, RallyTimes
+from racket.platform.errors import ValidationFailed
 from tests.unit.matches.test_scorebook_corrections import Book, fresh
 
 pytestmark = [pytest.mark.unit, pytest.mark.scoring]
@@ -81,3 +82,41 @@ def test_controls_a_later_game_2_tag_and_an_earlier_tag_inside_the_same_game() -
     rows = b.sheet()["rows"]
     assert [(r["game"], r["start_ms"]) for r in rows[11:]] == [(2, 15_000), (2, 20_000)]
     assert [r["number"] for r in rows] == list(range(1, 14))
+
+
+# PE-S2-R2-01 (review round 2): ``move_to_next_game`` keeps I5 too. Rallies 12-14 are after the
+# end of game 1 (taglib.CONFLICT_TAGS, rally 11 corrected to A). Only the latest kept rally of
+# game n moves forward, so no game-n rally is left behind a game-n+1 rally on the video
+# (the mirror of C-03's "earliest first"; provisional, match-aggregate §8 Q1).
+CONFLICT = ["A"] * 10 + ["B", "A", "A", "A"]
+
+
+def marked_with_game_2() -> Book:
+    return fresh(*CONFLICT).correct(11, "winning_side", "A").start("B")
+
+
+def move_forward(b: Book, n: int) -> Book:
+    b.b = b.b.resolve(b.ids[n - 1], "move_to_next_game", expected_version=b.v, ctx=b.ctx)
+    return b
+
+
+def test_moving_a_rally_forward_that_leaves_a_later_game_1_rally_behind_is_refused() -> None:
+    b = marked_with_game_2()
+    before = b.b
+    for n in (12, 13):
+        with pytest.raises(ValidationFailed) as exc:
+            move_forward(b, n)
+        assert [(f.field, f.code) for f in exc.value.fields] == [("decision", "not_last_in_game")]
+        assert b.b is before  # nothing changed
+
+
+@pytest.mark.needs_verification
+def test_rallies_move_forward_latest_first_and_keep_the_video_order() -> None:
+    b = marked_with_game_2()
+    for n in (14, 13, 12):
+        move_forward(b, n)
+    rows = b.sheet()["rows"]
+    assert [(r["game"], r["marker"]) for r in rows[11:]] == [(2, None)] * 3
+    assert [r["number"] for r in rows] == list(range(1, 15))
+    assert [r["start_ms"] for r in rows] == sorted(r["start_ms"] for r in rows)
+    b.correct(12, "end_ms", 11_800)  # the PE probe's correction: accepted now

@@ -158,3 +158,39 @@ def test_it_02_14_c03_rallies_move_back_into_the_reopened_game(api: ApiDriver) -
     assert moved.status_code == 200, moved.text
     rows = moved.json()["sheet"]["rows"]
     assert (rows[11]["game"], rows[11]["marker"]) == (1, None)
+
+
+@pytest.mark.needs_verification
+def test_it_02_14_r2_rallies_move_forward_latest_first(api: ApiDriver, committed_db: Any) -> None:
+    """PE-S2-R2-01 (review round 2): ``move_to_next_game`` moves only the latest kept rally of
+    game n, so no game-n rally is left behind a game-n+1 rally on the video (I5)."""
+    ivy = api.as_user("ivy")
+    match_id = api.run(sb.create_doubles(ivy, "IT-02-14 r2 forward"))
+    api.run(sb.receive_video(ivy, match_id))
+    api.run(sb.start_game(ivy, match_id))
+    sides = ["A"] * 10 + ["B", "A", "A", "A"]  # rally 11 corrected to A: 12-14 after the end
+    tagged = api.run(sb.tag_all(ivy, match_id, [_tag(s, n) for n, s in enumerate(sides)]))
+    ids = [r.json()[sb.tagcontract.RALLY_ID_KEY] for r in tagged]
+    fix = _send(api, ivy, "correct", body={"field": "winning_side", "value": "A"},
+                match_id=match_id, rally_id=ids[10])  # fmt: skip
+    assert fix.status_code == 200, fix.text
+    assert [r["marker"] for r in fix.json()["sheet"]["rows"][11:]] == ["needs_decision"] * 3
+    api.run(sb.start_game(ivy, match_id, side="B"))
+
+    before = sb.row_counts(committed_db)
+    for n in (11, 12):  # rallies 12 and 13: a later game-1 rally would stay behind
+        refused = _send(api, ivy, "resolve", body={"decision": "move_to_next_game"},
+                        match_id=match_id, rally_id=ids[n])  # fmt: skip
+        assert _error(refused) == (422, "validation_failed", [("decision", "not_last_in_game")])
+    assert sb.row_counts(committed_db) == before
+
+    for n in (13, 12, 11):
+        moved = _send(api, ivy, "resolve", body={"decision": "move_to_next_game"},
+                      match_id=match_id, rally_id=ids[n])  # fmt: skip
+        assert moved.status_code == 200, moved.text
+    rows = moved.json()["sheet"]["rows"]
+    assert [(r["game"], r["marker"]) for r in rows[11:]] == [(2, None)] * 3
+    assert [r["rally_id"] for r in rows] == ids  # sheet order is the video order
+    shrink = _send(api, ivy, "correct", body={"field": "end_ms", "value": 22_800},
+                   match_id=match_id, rally_id=ids[11])  # fmt: skip
+    assert shrink.status_code == 200, shrink.text

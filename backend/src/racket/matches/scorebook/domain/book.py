@@ -347,8 +347,12 @@ class Scorebook:
             target = rally.game_number + 1
             if target not in {g.number for g in self.games}:
                 raise GameNotStarted("the next game is not started")
+            self._check_move_forward(rally)
             field, old = "game_number", rally.game_number
             changed = replace(rally, game_number=target)
+            changed.times.check_game_order(
+                target, ((r.game_number, r.times) for r in self.kept if r.id != rally.id)
+            )
         change = self._change(
             ctx,
             "resolution",
@@ -380,6 +384,15 @@ class Scorebook:
         if min(same_game, key=lambda r: (r.times.start_ms, r.seq)).id != rally.id:
             raise ValidationFailed(
                 "not the first rally of its game", [FieldError("decision", "not_first_in_game")]
+            )
+
+    def _check_move_forward(self, rally: Rally) -> None:
+        """PE-S2-R2-01, provisional (§8 Q1): only the latest kept rally of game n moves to game
+        n+1, so no game-n rally is left behind it on the video (I5); the mirror of C-03."""
+        same_game = [r for r in self.kept if r.game_number == rally.game_number]
+        if max(same_game, key=lambda r: (r.times.start_ms, r.seq)).id != rally.id:
+            raise ValidationFailed(
+                "not the last rally of its game", [FieldError("decision", "not_last_in_game")]
             )
 
 

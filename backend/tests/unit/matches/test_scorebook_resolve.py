@@ -71,7 +71,7 @@ def test_withdraw_keeps_the_rally_stored_audited_and_undoable() -> None:
 def test_move_to_next_game_scores_the_rallies_in_game_2() -> None:
     b = conflicted().start("B")
     before = b.bytes()
-    for n in (12, 13, 14):
+    for n in (14, 13, 12):  # latest first (PE-S2-R2-01, I5)
         resolve(b, n, "move_to_next_game")
     sheet = b.sheet()
     assert [r["marker"] for r in sheet["rows"][11:]] == [None, None, None]
