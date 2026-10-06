@@ -1,0 +1,36 @@
+{
+ "match": "gm2-three-games",
+ "metric_dict_version": "0.1",
+ "rules_version": "PROVISIONAL-UNVERIFIED",
+ "source": "Computed by the independent reference scripts/measure/statslib.py (pinned to the coach's worked example, metric-dictionary §2) and frozen. The coach's QD-AN-03 hand count is docs/domain/hand-counts/GS-AN-1-v1.json; test_golden_an compares the two (COACH-1).",
+ "metrics": {
+  "AN-01": {
+   "A": {"k": 24, "n": 35, "value": 0.6857, "ci_low": 0.5202, "ci_high": 0.8145, "low_sample": false, "rallies": [2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 30, 31, 41, 42, 43, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 58, 59]},
+   "B": {"k": 11, "n": 22, "value": 0.5, "ci_low": 0.3072, "ci_high": 0.6928, "low_sample": true, "rallies": [1, 8, 9, 19, 21, 22, 23, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 44, 56, 57]}
+  },
+  "AN-02": {
+   "A": {"k": 11, "n": 22, "value": 0.5, "ci_low": 0.3072, "ci_high": 0.6928, "low_sample": true, "rallies": [1, 8, 9, 19, 21, 22, 23, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 44, 56, 57]},
+   "B": {"k": 11, "n": 35, "value": 0.3143, "ci_low": 0.1855, "ci_high": 0.4798, "low_sample": false, "rallies": [2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 30, 31, 41, 42, 43, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 58, 59]}
+  },
+  "AN-03": {
+   "A": {"points": 24, "turns": 8, "value": 3.0, "low_sample": true, "rallies": [3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 17, 24, 42, 45, 46, 47, 48, 49, 50, 51, 52, 54, 58, 59]},
+   "B": {"points": 11, "turns": 7, "value": 1.6, "low_sample": true, "rallies": [21, 22, 27, 32, 34, 35, 36, 37, 38, 39, 44]}
+  },
+  "AN-04": {
+   "A": {"count": 9, "games": 3, "value": 3.0, "by_player": {"A1": 2, "A2": 4}, "player_not_tagged": 3, "low_sample": false, "rallies": [7, 18, 21, 22, 31, 35, 43, 44, 55]},
+   "B": {"count": 6, "games": 3, "value": 2.0, "by_player": {"B1": 3, "B2": 2}, "player_not_tagged": 1, "low_sample": false, "rallies": [1, 4, 13, 19, 50, 57]}
+  },
+  "AN-05": {
+   "A": {"k": 0, "n": 35, "value": 0.0, "ci_low": 0.0, "ci_high": 0.0989, "fault_type_not_tagged": 0, "low_sample": false, "rallies": []},
+   "B": {"k": 0, "n": 22, "value": 0.0, "ci_low": 0.0, "ci_high": 0.1487, "fault_type_not_tagged": 0, "low_sample": false, "rallies": []}
+  },
+  "AN-06": {
+   "A": {"longest": 11, "histogram": {"1": 2, "2": 0, "3": 0, "4": 0, "5+": 2}, "n": 24, "low_sample": false, "rallies": [3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 17, 24, 42, 45, 46, 47, 48, 49, 50, 51, 52, 54, 58, 59]},
+   "B": {"longest": 8, "histogram": {"1": 1, "2": 1, "3": 0, "4": 0, "5+": 1}, "n": 11, "low_sample": false, "rallies": [21, 22, 27, 32, 34, 35, 36, 37, 38, 39, 44]}
+  },
+  "AN-07": {
+   "A": {"n": 38, "counts": {"winner": 21, "unforced_error": 9, "forced_error": 2, "fault": 6}, "low_sample": false, "rallies": [2, 3, 6, 7, 8, 9, 12, 14, 17, 18, 21, 22, 23, 24, 26, 27, 28, 31, 32, 33, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 54, 55, 56, 58, 59]},
+   "B": {"n": 19, "counts": {"winner": 5, "unforced_error": 6, "forced_error": 3, "fault": 5}, "low_sample": true, "rallies": [1, 4, 5, 10, 11, 13, 15, 16, 19, 25, 29, 30, 34, 37, 49, 50, 51, 52, 57]}
+  }
+ }
+}

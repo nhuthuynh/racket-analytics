@@ -1,0 +1,36 @@
+{
+ "match": "gm3-corrections-needs-decision",
+ "gold_set": "GS-AN-1",
+ "description": "One game, two corrections: an ending changed, then a winner switched so A reaches 11 earlier and the last rallies become 'needs your decision' (excluded, metric-dictionary rule 0.1).",
+ "format": "doubles",
+ "best_of": 3,
+ "rules_version": "PROVISIONAL-UNVERIFIED",
+ "games": [
+  {"first_serving_side": "A", "tags": [
+   {"start_ms": 4000, "end_ms": 7000, "winning_side": "B", "ending": "fault", "fault_kind": "nvz", "responsible_player": "A2"},
+   {"start_ms": 8000, "end_ms": 11000, "winning_side": "B", "ending": "unforced_error", "fault_kind": null, "responsible_player": "A1"},
+   {"start_ms": 12000, "end_ms": 15000, "winning_side": "B", "ending": "winner", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 16000, "end_ms": 19000, "winning_side": "A", "ending": "fault", "fault_kind": "nvz", "responsible_player": null},
+   {"start_ms": 20000, "end_ms": 23000, "winning_side": "B", "ending": "winner", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 24000, "end_ms": 27000, "winning_side": "B", "ending": "unforced_error", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 28000, "end_ms": 31000, "winning_side": "A", "ending": "unforced_error", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 32000, "end_ms": 35000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A1"},
+   {"start_ms": 36000, "end_ms": 39000, "winning_side": "B", "ending": "winner", "fault_kind": null, "responsible_player": "B1"},
+   {"start_ms": 40000, "end_ms": 43000, "winning_side": "A", "ending": "fault", "fault_kind": "serve", "responsible_player": "B1"},
+   {"start_ms": 44000, "end_ms": 47000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 48000, "end_ms": 51000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A2"},
+   {"start_ms": 52000, "end_ms": 55000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A2"},
+   {"start_ms": 56000, "end_ms": 59000, "winning_side": "B", "ending": "winner", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 60000, "end_ms": 63000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 64000, "end_ms": 67000, "winning_side": "A", "ending": "forced_error", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 68000, "end_ms": 71000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A2"},
+   {"start_ms": 72000, "end_ms": 75000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A2"},
+   {"start_ms": 76000, "end_ms": 79000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 80000, "end_ms": 83000, "winning_side": "B", "ending": "unforced_error", "fault_kind": null, "responsible_player": null},
+   {"start_ms": 84000, "end_ms": 87000, "winning_side": "A", "ending": "forced_error", "fault_kind": null, "responsible_player": "B2"},
+   {"start_ms": 88000, "end_ms": 91000, "winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A1"},
+   {"start_ms": 92000, "end_ms": 95000, "winning_side": "A", "ending": "unforced_error", "fault_kind": null, "responsible_player": "B2"}
+  ]}
+ ],
+ "corrections": [{"rally": 6, "field": "ending", "value": "forced_error"}, {"rally": 14, "field": "winning_side", "value": "A"}]
+}

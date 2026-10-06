@@ -131,6 +131,10 @@ def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
         marker = pytest.mark.nightly
     elif tag == "scoring":
         marker = pytest.mark.scoring
+    elif tag == "analytics":
+        marker = pytest.mark.analytics
+    elif tag == "conservation":
+        marker = pytest.mark.conservation
     elif m := _STORY.fullmatch(tag):
         marker = pytest.mark.story(id=m.group(1))
     elif m := _NFR.fullmatch(tag):
