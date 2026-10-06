@@ -35,6 +35,9 @@ export function ScoreSheetView({
   const [version, setVersion] = useState(initialVersion);
   const [history, setHistory] = useState<HistoryItem[] | null>(null);
   const [historyFailed, setHistoryFailed] = useState(false);
+  /** Failed loads in a row and a reload in flight, for H-01 feedback (PD-R3S2-02). */
+  const [historyTries, setHistoryTries] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [said, setSaid] = useState('');
   const [busy, setBusy] = useState(false);
@@ -50,11 +53,16 @@ export function ScoreSheetView({
   }, [playing, refocusWatch]);
 
   const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
     try {
       setHistory(await api.corrections(match.id));
       setHistoryFailed(false);
+      setHistoryTries(0);
     } catch {
       setHistoryFailed(true);
+      setHistoryTries((n) => n + 1);
+    } finally {
+      setHistoryLoading(false);
     }
   }, [api, match.id]);
 
@@ -213,10 +221,23 @@ export function ScoreSheetView({
         <h2 id="history-title">Correction history</h2>
         {historyFailed ? (
           <div className="stack">
-            <p>The correction history could not be loaded.</p>
+            {historyTries > 1 ? (
+              <p role="alert" className="notice notice--error">
+                {`The history still could not be loaded (tried ${historyTries} times). Check your connection, then reload it again.`}
+              </p>
+            ) : (
+              <p>The correction history could not be loaded.</p>
+            )}
             <p>
-              <button type="button" className="button button--secondary" onClick={() => void loadHistory()}>
-                Reload the history
+              <button
+                type="button"
+                className="button button--secondary"
+                aria-busy={historyLoading}
+                onClick={() => {
+                  if (!historyLoading) void loadHistory();
+                }}
+              >
+                {historyLoading ? 'Reloading the history…' : 'Reload the history'}
               </button>
             </p>
           </div>
