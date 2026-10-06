@@ -147,8 +147,12 @@ STATUS_LABELS = {
 #                   server_player: str (one of "A1", "A2", "B1", "B2") and
 #                   right_court_player: Mapping[Side, str], the player standing in the
 #                   right-hand court of each side. A new or declared state puts A1 and B1 in the
-#                   right-hand court, and the serving side's right-court player serves at
-#                   server 1 (its partner at server 2). Sprint 1 per sprint-01 §7.8 / ST-023
+#                   right-hand court. Every service turn starts from the right-hand court: the
+#                   serving side's right-court player serves first (server 1, or the single
+#                   first server at 0-0-2). The partner, server 2, serves from the court where
+#                   they stand when the turn passes, which may be either court, so "server 2
+#                   is in the left court" is NOT an invariant (PE-R1-03 dispute; pinned by
+#                   test_rules_server_position.py). Sprint 1 per sprint-01 §7.8 / ST-023
 #                   (SOD-01..SOD-12); docs/architecture/scoring-engine.md §2.4 defers it to
 #                   Sprint 2, routed to the principal-engineer (docs/sprints/01/decision-log.md).
 #   new_game(config, first_server: Side) -> GameState
