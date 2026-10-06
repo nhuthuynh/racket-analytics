@@ -160,6 +160,10 @@ services:
       # Location must be /api/uploads/{id} (R1-02, QA-R1-01; ADR 0011, ADR 0019).
       API_PUBLIC_PATH_PREFIX: ${API_PUBLIC_PATH_PREFIX:?set API_PUBLIC_PATH_PREFIX (see infra/env.example)}
     ports:
+      # Loopback only, for the server-side latency methods (G02-04, NFR-010). The per-IP
+      # sign-in limit (T-ML-8) holds only behind web-tls, which replaces any client
+      # X-Forwarded-For: a caller on this port picks its own right-most entry (C-11,
+      # SEC-R6-S1-02). Never publish it beyond 127.0.0.1; a deployment exposes the web only.
       - 127.0.0.1:${API_HOST_PORT:-8000}:8000
     networks: [edge]
     depends_on:
