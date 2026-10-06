@@ -344,6 +344,20 @@ def test_open_defects_counts_short_and_dotted_ids() -> None:
     assert [r["ids"] for r in rows] == [["S-07"], ["S-08"], ["BLK-ASVS-6.3.3"], ["QA-R2V-01"]]
 
 
+# G02-11, goal round 1: the verifier's id VR1-01 (letters then digits before the dash) was
+# refused as "no finding id", so the whole G02-11 measurement exited 2.
+def test_open_defects_reads_ids_with_digits_in_the_prefix() -> None:
+    text = """
+| Finding | Severity | Disposition | Owner | Evidence |
+|---|---|---|---|---|
+| VR1-01 | minor (principal-designer to confirm) | Open. Table squeezed at 1280 px | fe | png |
+| VR1-02 | major | Open | fe | png |
+| VR1-03 | major | Fixed | fe | png |
+"""
+    rows = m.open_defects(text)
+    assert [r["ids"] for r in rows] == [["VR1-02"]]
+
+
 def test_open_defects_counts_a_finding_in_a_combined_and_a_single_row_once() -> None:
     text = """
 | Finding | Severity | Disposition | Files | Evidence |

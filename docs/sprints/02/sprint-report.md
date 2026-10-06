@@ -6,7 +6,7 @@
 
 ## 1. Goal and scorecard status (review round 2, 2026-10-06)
 
-> **The Sprint 2 goal is NOT yet shown to be met.** Live dry-runs reach the target on 10 of 12 rows. **G02-11** (open defects: 3 after this round, target 0) and **G02-12** (domain suite over its 10 s budget on the loaded host) do not. The verifier's isolated run is still to come.
+> **The Sprint 2 goal is NOT yet shown to be met.** Live dry-runs reach the target on 10 of 12 rows. **G02-11** (open defects: 2 after goal round 1, target 0; both need decisions outside the agent team's code: DR-01/DR-02 role cells and the C-06 human pass) and **G02-12** (domain suite over its 10 s budget on the loaded host) do not. The verifier's isolated run is still to come.
 >
 > New this round: the H.264 blocker is closed locally. With ADR 0036 (Chrome for Testing at `/opt/google/chrome`, `PW_CHROMIUM_CHANNEL=chrome`), E2E-02-04, G02-06 (c) and the V-01 axe check on the real video now run **on the local stack**. No PO exception is needed.
 
@@ -24,24 +24,21 @@
 | G02-08 | (a) 100,000, 0 disagreements; (b) ≥ 0.85; (c) recorded | (a) 0 disagreements; (b) 0.8635; (c) 0.9107 | QA dry-run | yes (dry-run) |
 | G02-09 | changed lines ≥ 85%; rules/aggregates ≥ 95% / 90%; web ≥ 80% | 97%; 99.54% / 98.25%; 91.02% | QA dry-run | yes (dry-run) |
 | G02-10 | (a) 0 serious/critical, T K S H V + Sprint 1 families; (b) 0 and 0; (c), (d) passed | 37 axe checks, 0 serious/critical, families T, K, S, H, **V on the real video (`axe-V-01`)** and every Sprint 1 family; 0 target failures; E2E-02-02, E2E-02-03, sheet at 320/360 px passed | EM dry-run (G02-05 report) | yes (dry-run) |
-| G02-11 | 0 | `open_defects.py` → rc=1, **open 3** after the round-2 EM rows (4 before) | EM, `48e1e71` + this commit | **no** |
+| G02-11 | 0 | `open_defects.py` → rc=1, **open 2** after the goal-round-1 EM rows (DR-01/DR-02 family, C-06). Verifier round 1 read 4 at `db0f0be` (the tool itself exited rc=2 on `VR1-01` until the EM method fix) | verifier round 1 `db0f0be`; EM goal round 1, `4f5cc45` + this commit | **no** |
 | G02-12 | domain < 10 s; unit ≤ 60 s; IT < 10 min; 0 failed | domain rc=124 (budget exceeded, wall 9.5-10.4 s on a loaded host; pytest itself 7.8-8.5 s); unit 11.2 s; IT 227.9 s | QA dry-run | **no** |
 
 QA's own live check at `e270c8d` (review round 2, QA-RV2-05) agrees: G02-01/02 5/5, tag_to_sheet p95 26 ms, corrections p95 33.7 ms (n=100); G02-04 p95 13.0 ms, p99 14.7 ms, 50.0 RPS. That run used bundled Chromium, so its G02-05 was `91 passed, 2 failed, 6 skipped` (the two H.264 tests), the gap ADR 0036 closes.
 
 ### 1.2 Open blocker and major findings (G02-11)
 
-`python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md` → rc=1, **open 3**:
+`python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md` → rc=1, **open 2** (goal round 1, EM rows at `4f5cc45` + this commit):
 
 | # | Finding (family) | Sev. | What is open | Who can close it |
 |---|---|---|---|---|
-| 1 | BE-D1-01 | major | Harness `_code()` error-code fix: the row was never re-dispositioned, although G02-01 now passes 5/5 live | principal-engineer (harness owner) writes the closing row |
-| 2 | QA-R1-06 family (QA-RV2-01) | blocker | The SRE round-2 row ("Fixed on CI", run 37464553177 at `fd363fa`, **ci-gate green**) names only `QA-R1-06` and `QA-RV2-01`. The family's other ids (PE-R2-02, QA-R2-02, PE-R3-05, QA-R3-05, QA-R2V-01) still have "Not fixed" (line 275) as their latest row, so the counter keeps the family open (fail closed, as designed) | sre-devops-engineer adds one row naming every id of the family |
-| 3 | PD-R1-06 / DR-01 / DR-02 family | blocker | Flows design reviews not held; the chair's routed cells (PD-RV2-DR-FE, -COACH, -BA, -PM, -SEC) are not yet filled | principal-designer with the named roles; DR-02 by end of 2026-10-07, DR-01 by 2026-11-02 |
+| 1 | PD-R1-06 / DR-01 / DR-02 family | blocker | Flows design reviews not held; the routed cells (PD-RV2-DR-FE, -COACH, -BA, -PM, -SEC) are not filled | principal-designer with the named roles; DR-02 by end of 2026-10-07 (else EM escalates to the PO), DR-01 by 2026-11-02 |
+| 2 | QA-R3-GATE-01 / C-06 | major | Manual VoiceOver/TalkBack pass, 0 of 24 rows run; NFR-027 (b) unmet | a human tester (PO item P6, due 2026-11-13); senior-qa-engineer runs it with them |
 
-**Counted elsewhere, not open:** QA-R3-GATE-01 / C-06 (manual screen-reader pass) is "Deferred" to the named row C-06 under ADR 0030, so the counter does not count it. It is still **not done**: 0 of 24 rows have been run, so NFR-027 (b) is unmet (§1.4).
-
-**Counter gaps the EM found this round:** the principal-designer's routed table (PD-RV2-DR-*) has no Disposition column, so the counter does not read those routed rows. They ride on the open DR-01 / DR-02 family above. A closing row has to name every alias of its family (row 2). QA's round-2 findings QA-RV2-05 and QA-RV2-07 had no Open rows of their own (ADR 0033 rule 1). They are answered in the EM's round-2 rows.
+**Closed in goal round 1 (EM, bookkeeping with fresh evidence):** BE-D1-01 (harness reads `error.code`: `test_live_tagging_error_code.py` 9 passed; verifier G02-01 5/5); the QA-R1-06 family (alias row for the SRE's "Fixed on CI": run 37464553177 at `fd363fa`, ci-gate success; the sprint-close head still needs its own ci-gate run, C-12); the SRE-S2-05 family (alias `G02-10` now read by the tool; verifier G02-10 met). **Method fix:** the tool exited rc=2 on the verifier's id `VR1-01`; it now reads that id shape (decision-log row, goal round 1).
 
 ### 1.3 G02-05 flake check (×3, Chrome for Testing)
 
@@ -54,6 +51,6 @@ QA's own live check at `e270c8d` (review round 2, QA-RV2-05) agrees: G02-01/02 5
 
 ## 2. Next step to a verdict
 
-1. Owners close G02-11 rows 1-3 (above).
+1. Owners close G02-11 rows 1-2 (above): DR-02 / DR-01 role cells, and the C-06 human pass (P6).
 2. QA (G02-12 owner) runs the domain budget on an unloaded host, or proposes a method change through a decision-log row. The budget itself does not change.
 3. The independent verifier runs §4 at one recorded head on its own Compose stack, with `PW_CHROMIUM_CHANNEL=chrome` for G02-05/06/10 (ADR 0036), and fills §2.
