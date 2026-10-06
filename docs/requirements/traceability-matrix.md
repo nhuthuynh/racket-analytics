@@ -388,3 +388,52 @@ This section shows the state of each Sprint 1 requirement at the final close. Ev
 | NFR-072 Rules-engine test strength | ST-022 | Baseline 0.8654 (G01-08) | Gate from Sprint 2 |
 | NFR-073 Fast tests | — | Yes (G01-12: 7.4 s / 8.3 s) | — |
 | NFR-074 Flaky rate | — | 0 flaky ×3 on `e2e/sprint-01` (G01-03) | Root specs not repeated; known flake (QA-R3-E2E-01) |
+
+## 11. Sprint 2 test files per story (engineering-manager, 2026-10-06, sprint close)
+
+Backend paths are relative to `backend/tests/`; feature files are under `tests/features/` (all exist now: `score_sheet`, `quick_tag`, `keyboard_tagging`, `score_call`, `undo_and_audit`, `corrections_replay`, `evidence_deep_link`, `mid_game_start`, `side_out_singles_provisional`, `input_robustness`, `upload_quota`, `upload_recovery`, `account_identity`); browser specs are under `web/e2e/sprint-02/`; web unit tests are under `web/tests/unit/`. Evidence for the table is verifier round 3 at `e4c24bc` (`docs/sprints/02/goal-scorecard.md` §9): IT-02 253/253, IT-01 80/80, E2E 93 passed (6 named Sprint 1 skips), scoring 304 + 1 P3 skip.
+
+| Story | Unit | Integration / regression | Scenario (step module → feature) | E2E / other | Gap at close |
+|---|---|---|---|---|---|
+| C-01 | `unit/matches/test_title_control_characters.py` | `integration/test_it_02_10_json_string_fuzz.py` | `features/test_input_robustness.py` → `input_robustness.feature` | — | — |
+| C-02 | — | `integration/test_it_02_11_limit_concurrency.py` | `features/test_upload_quota.py` → `upload_quota.feature` | — | — |
+| C-03 | web `upload-*` | — | `upload_recovery.feature` (browser-bound) | `upload-recovery.spec.ts` | DR-01 R-2a/R-2b (U-04) |
+| ST-013b | — | `integration/test_it_02_12_account_identity.py` | `features/test_account_identity.py` → `account_identity.feature` | — | — |
+| ST-026 | `unit/matches/test_scorebook_projection.py`, `test_scorebook_schema.py`, `test_scorebook_values.py` | `integration/test_it_02_01_tag_and_replay.py`; `regression/test_golden_replay.py` | `features/test_score_sheet.py` → `score_sheet.feature` | — | — |
+| ST-027 | `unit/matches/test_scorebook_tag.py`, `test_scorebook_video_bounds.py`, `test_scorebook_guards.py`, `test_scorebook_no_preset.py`; web `quick-tag`, `tagging-reducer`, `tagging-view`, `api-sprint-02-tagging`, `video-failure` | `integration/test_it_02_04_concurrent_tags.py`, `test_it_02_13_scorebook_limits.py` | `features/test_quick_tag.py` → `quick_tag.feature` | `quick-tag.spec.ts`, `journey.spec.ts` (E2E-02-01) | DR-02 |
+| ST-028a / ST-028b | web `quick-tag-keyboard`, `tagging-keymap`, `tagging-remap`, `key-remap-dialog` | — | `keyboard_tagging.feature` (browser-bound) | `keyboard-tagging.spec.ts` (E2E-02-02) | DR-02 |
+| ST-029 | web `score-announcer`, `tagging-messages*` | — | `score_call.feature` (`@needs-verification`) | `announcements.spec.ts` (E2E-02-03) | C-06 (never heard on a real screen reader); DR-02 |
+| ST-030 | web `score-sheet` | — | `score_sheet.feature` | `score-sheet.spec.ts` (320/360 px, axe S-01) | DR-02; VR1-01 (minor, 1280 px) |
+| ST-031 | `unit/matches/test_scorebook_corrections.py`; web `quick-tag-undo`, `correction-history` | `integration/test_it_02_03_corrections_append_only.py`, `test_it_02_09_correction_logs.py` | `features/test_undo_and_audit.py` → `undo_and_audit.feature` | `undo-history.spec.ts` (E2E-02-06) | DR-02 |
+| ST-032 | `unit/matches/test_scorebook_resolve.py`, `test_scorebook_outcome_correction.py`, `test_scorebook_game_order.py`, `test_scorebook_unfinished_game.py`; web `rally-corrections`, `rally-resolution` | `integration/test_it_02_02_correction_rollback.py`, `test_it_02_08_correction_latency.py`, `test_it_02_14_scorebook_review_r1.py` | `features/test_corrections_replay.py` → `corrections_replay.feature` | `fix-in-two.spec.ts`, `fix-in-two-tagged.spec.ts` (E2E-02-05), `review-round-1-fe.spec.ts` | PE-S2-R3-01, PE-S2-R3-02; TCR rows 24-28 (QA-RV3-02); DR-02 |
+| ST-037 | web `rally-video`, `video-failure` | `integration/test_it_02_06_media_link.py`, `test_it_02_15_media_content_type.py`; `regression/test_bola_matrix.py` (incl. IT-02-05 routes) | `features/test_evidence_deep_link.py` → `evidence_deep_link.feature` | `rally-video.spec.ts` (E2E-02-04, Chrome for Testing) | DR-02 |
+| ST-039 | — | `perf/locustfile_sprint02.py` (CI per-PR) | — | `journey.spec.ts`, `timing.spec.ts` (G02-06) | — |
+| ST-040 | `unit/dataset/test_labels.py`, `test_gold_set.py` | `integration/dataset/test_people_footage_storage.py` | `features/test_gold_set_integrity.py` | CI `check_fixtures.sh` | Private bucket (P11); ADR 0035 Proposed |
+| ST-041 | golden tables under `unit/matches/golden/` | — | `features/test_side_out_singles_provisional.py`, `test_mid_game_start.py` (rows `red_until` ST-035 / ST-034, stretch) | — | Rules unverified (OQ-01) |
+| ST-034, ST-035, ST-038, ST-033, ST-036 | — | — | provisional rows written, `red_until` the story | — | Stretch, not started |
+
+## 12. Sprint 2 outcome per requirement (engineering-manager, 2026-10-06, sprint close)
+
+"Live" means shown by the independent verifier on a fresh Compose stack over https (round 3, `e4c24bc`). The sprint goal is not met (G02-11), and no story is merged to `main`, so no requirement below is DoD-done.
+
+| Requirement | Story | Shown live (goal metric) | Open at close |
+|---|---|---|---|
+| FR-050 Quick Tag a rally | ST-027 | Yes (G02-01, E2E-02-01, G02-06 a/b) | PE-S2-R3-01 (resolution offer); DR-02 |
+| FR-051 Keyboard tagging | ST-028a/b | Yes (E2E-02-02) | DR-02 |
+| FR-048 Score call and announcement | ST-029 | Yes, in the DOM (E2E-02-03) | Call format `@needs-verification`; C-06 (screen reader) |
+| FR-049 Score sheet | ST-026, ST-030 | Yes (G02-01 step 4, G02-06 d, 320/360 px) | Rules data unverified (OQ-01); VR1-01 |
+| FR-055 "Unofficial scoring" label | ST-030 | Yes (G02-01 step 4, demo step 3) | PD-FL2-03 (preset id shown) |
+| FR-052 Undo and correction audit | ST-031 | Yes (G02-01 step 8 byte-identical; IT-02-03 append-only) | — |
+| FR-053 Corrections replay, conflicts kept (part a) | ST-032, ST-041 | Yes (G02-01 steps 7 and 9, G02-02 a) | PE-S2-R3-01/-02; game-end rule `@needs-verification` |
+| FR-027 Jump to the video moment | ST-037 | Yes (G02-01 step 10, E2E-02-04, G02-06 c 672.7 ms) | QA-RV3-04 (evidence browser script) |
+| FR-042 Singles (part a), FR-046 Mid-game start (part a), FR-047, FR-054, FR-024 | ST-035, ST-034, ST-036, ST-033, ST-038 | No: stretch, not started | Carried to Sprint 3 (ST-038 is a gate before any non-dev deployment) |
+| FR-151 Gold-set manifest | ST-040 | CI check only | Footage bucket (P11) |
+| NFR-001 provisional rows ≥ 46 | ST-041 | Yes (G02-07: 70 collected, 52/52 committed) | OQ-01 |
+| NFR-010, NFR-013, NFR-017 | ST-039 | Yes (G02-04 p95 16.8 ms; G02-02 a 35.3 ms; b 19 ms) | — |
+| NFR-012, NFR-014, NFR-011 | ST-027, ST-037, ST-030 | Yes (G02-06) | — |
+| NFR-055 Media URLs | ST-037 | Yes (TTL 300 s, Range 206, tampered 403) | SEC-S2-TM-04 (log scan test, minor) |
+| NFR-072 Rules mutation gate | ST-022 | Yes (0.8635 ≥ 0.85) | — |
+| NFR-075 Golden replay | ST-026 | Yes (4/4 byte-identical) | — |
+| NFR-027 (b) Manual screen-reader pass | C-06 | No | P6 (human tester) |
+| NFR-073 Fast tests | — | Yes (G02-12) | — |
+| NFR-074 Flaky rate | — | Yes (0 flaky ×3, every spec) | — |

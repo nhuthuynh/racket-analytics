@@ -1,56 +1,149 @@
 # Sprint 2 report: Quick Tag to an unofficial score sheet, with undo, corrections and the rally video
 
-- **Prepared by:** engineering-manager. Started 2026-10-06 in the review-round-2 status step (QA-RV2-05). §1 is rewritten in each status step when the scorecard numbers or the open count change (ADR 0033; sprint-02 §4 EM row). The other sections are written at the sprint close.
-- **Head at this writing:** `48e1e71` on `sprint-02`, plus this docs-only commit.
-- **Read this first:** nothing in §1 is the independent verifier's measurement. The verifier has not run yet, so the `Actual` / `Met` / `Evidence` columns of `goal-scorecard.md` §2 are still empty, as that file's rules require. §1 shows the newest **live** numbers from method authors' dry-runs (scorecard §6) and from reviewers' live checks, each with its source. They show where the goal stands, not that it is met.
+- **Prepared by:** engineering-manager, at the sprint close on 2026-10-06. The session was compressed; the review with the PO keeps its planned date, 2026-11-13. §1 was first written in the review-round-2 status step and is now final (ADR 0033 rule 4).
+- **Head at this writing:** `b0e7cbb` on `sprint-02`, plus this docs-only commit. The verifier measured `e4c24bc`. Since then only docs and the G02-11 counter changed: `git diff --stat e4c24bc HEAD -- backend web infra/docker infra/compose.yaml` is empty.
+- **Sources:** `goal-scorecard.md` §2 and §9 (verification round 3, by the independent verifiers), `review-rounds.md`, `status.json`, `blockers.md`, and the CI runs on `sprint-02`.
 
-## 1. Goal and scorecard status (review round 2, 2026-10-06)
+## 1. Goal and scorecard (read this first)
 
-> **The Sprint 2 goal is NOT yet shown to be met.** Live dry-runs reach the target on 10 of 12 rows. **G02-11** (open defects: 2 after goal round 1, target 0; both need decisions outside the agent team's code: DR-01/DR-02 role cells and the C-06 human pass) and **G02-12** (domain suite over its 10 s budget on the loaded host) do not. The verifier's isolated run is still to come.
->
-> New this round: the H.264 blocker is closed locally. With ADR 0036 (Chrome for Testing at `/opt/google/chrome`, `PW_CHROMIUM_CHANNEL=chrome`), E2E-02-04, G02-06 (c) and the V-01 axe check on the real video now run **on the local stack**. No PO exception is needed.
+> **The Sprint 2 goal is NOT met** under the PO standing rule. The independent verifiers met **11 of 12** metrics on a fresh-volume Compose stack over https at `e4c24bc` (round 3). The product part of the goal works live: tagging by taps and by keys, the score sheet with the "unofficial scoring" label, corrections that re-score and keep conflicts, byte-identical undo, the audit trail and the rally video. **G02-11 (open blocker and major findings, target 0) fails.** The verifier counted 2. At this close the EM wrote rows for the review-round-3 findings that had none and recounted **14** (§1.2).
 
-### 1.1 Metrics: target against the latest live result
+### 1.1 Metrics: target against the verifier's result (round 3, `e4c24bc`)
 
-| ID | Target | Latest live result | Source (who, head, stack) | On target |
+| ID | What | Target | Actual | Met |
 |---|---|---|---|---|
-| G02-01 | 5 of 5 runs pass | 5/5, rc=0, no failing step (step 9 `@needs-verification` passed) | EM dry-run, `48e1e71`, own native https stack `.local/em-rv2` (https://localhost:47943) | yes (dry-run) |
-| G02-02 | (a) p95 ≤ 1,500 ms, ≥ 100 samples, 0 failed, byte-identical; (b) p95 ≤ 5 s | (a) p95 28.3 ms, n=100, 0 failures, restored byte-identical (76 rallies, 3 games); (b) p95 17 ms, n=30 | same run | yes (dry-run) |
-| G02-03 | (a) 100%, every id; (b) 13/13 | IT-02 231/231, missing []; IT-01 80/80, missing []; rc=0 | QA dry-run, `0609d6a`..`77a7201` | yes (dry-run) |
-| G02-04 | p95 ≤ 300 ms, p99 ≤ 800 ms, ≥ 99.5%, 0 unexpected, ≥ 47.5 RPS | p95 14.5 ms, p99 17.7 ms, availability 1.0, 0 unexpected, 50.0 RPS, 3,000 requests, rc=0 | EM dry-run, `48e1e71`, `.local/em-rv2` (load on the API port, seeding through https) | yes (dry-run) |
-| G02-05 | 100% of non-skipped, 0 failed, every E2E-02 id, ≤ 6 named skips, 0 flaky ×3 | `93 passed, 0 failed, 6 skipped`, rate 1.0, missing [], 6 skips each name their API binding; ×3 repeat `279 passed, 0 failed, 18 skipped`, `flaky_report.py --fail-on-flaky` rc=0, 0 flaky | EM dry-run in Chrome for Testing (ADR 0036), `48e1e71`, `.local/em-rv2` | yes (dry-run) |
-| G02-06 | (a) ≤ 200; (b) ≤ 100; (c) ≤ 1,500; (d) ≤ 2,000 ms p95, n ≥ 20 each | (a) 11.5 ms n=160; (b) 11.8 ms n=640; (c) 740.1 ms n=40 (reference profile, real H.264 link); (d) 392.8 ms n=60; `pw_timings.py` rc=0 | same | yes (dry-run) |
-| G02-07 | 100% (P3 skip), golden 100%, ≥ 46 provisional, 0 `red_until` on committed, ≤ 90 s | 275 passed, 1 skipped (P3) in 34.9 s; golden 4 passed; 62 provisional collected; 0 | QA dry-run | yes (dry-run) |
-| G02-08 | (a) 100,000, 0 disagreements; (b) ≥ 0.85; (c) recorded | (a) 0 disagreements; (b) 0.8635; (c) 0.9107 | QA dry-run | yes (dry-run) |
-| G02-09 | changed lines ≥ 85%; rules/aggregates ≥ 95% / 90%; web ≥ 80% | 97%; 99.54% / 98.25%; 91.02% | QA dry-run | yes (dry-run) |
-| G02-10 | (a) 0 serious/critical, T K S H V + Sprint 1 families; (b) 0 and 0; (c), (d) passed | 37 axe checks, 0 serious/critical, families T, K, S, H, **V on the real video (`axe-V-01`)** and every Sprint 1 family; 0 target failures; E2E-02-02, E2E-02-03, sheet at 320/360 px passed | EM dry-run (G02-05 report) | yes (dry-run) |
-| G02-11 | 0 | `open_defects.py` → rc=1, **open 2** after the goal-round-1 EM rows (DR-01/DR-02 family, C-06). Verifier round 1 read 4 at `db0f0be` (the tool itself exited rc=2 on `VR1-01` until the EM method fix) | verifier round 1 `db0f0be`; EM goal round 1, `4f5cc45` + this commit | **no** |
-| G02-12 | domain < 10 s; unit ≤ 60 s; IT < 10 min; 0 failed | domain rc=124 (budget exceeded, wall 9.5-10.4 s on a loaded host; pytest itself 7.8-8.5 s); unit 11.2 s; IT 227.9 s | QA dry-run | **no** |
+| G02-01 | Full tagging journey over https, 12 steps, fresh accounts | 5 of 5 runs | 5/5, no failing step; step 9 `@needs-verification` 5/5 | yes |
+| G02-02 | (a) correction or undo to confirmed state; (b) last tag to sheet | (a) p95 ≤ 1,500 ms, ≥ 100 samples, 0 failed, identical; (b) p95 ≤ 5 s | (a) 35.3 ms, n=100, 0 failed, byte-identical; (b) 19.0 ms, n=30 | yes |
+| G02-03 | Integration tests on real services | 100%, 0 skipped, every id | IT-02 + BOLA 253/253; IT-01 80/80; missing [] | yes |
+| G02-04 | Read latency at 50 RPS for 60 s | p95 ≤ 300 ms, p99 ≤ 800 ms, ≥ 99.5%, ≥ 47.5 RPS | 16.8 / 54.6 ms, 1.0, 0 unexpected, 50.0 RPS | yes |
+| G02-05 | Playwright E2E over https (Chrome for Testing, ADR 0036) | 100% of non-skipped, E2E-02 ids present, ≤ 6 named skips, 0 flaky ×3 | 93 passed, 0 failed, 6 named skips; ×3: 279 passed, 0 flaky | yes |
+| G02-06 | Browser timings | p95 (a) ≤ 200 (b) ≤ 100 (c) ≤ 1,500 (d) ≤ 2,000 ms, n ≥ 20 | 12.8 / 12.7 / 672.7 / 388.5 ms (n 160/640/40/60) | yes |
+| G02-07 | Scoring and replay correctness | 100%, golden 100%, ≥ 46 provisional, 0 committed `red_until`, ≤ 90 s | 304 passed + 1 P3 skip in 33.2 s; golden 4/4; 70 collected, 52/52; 0 | yes |
+| G02-08 | Oracle and mutation | 100,000 / 0; rules ≥ 0.85; projection recorded | 100,000 / 0; 0.8635; 0.9196 | yes |
+| G02-09 | Coverage | changed lines ≥ 85%; rules + aggregates ≥ 95% / 90%; web ≥ 80% | 97%; 99.57% / 98.41%; 91.7% | yes |
+| G02-10 | Accessibility (T, K, S, H, V and Sprint 1 screens) | 0 serious/critical; 0 small targets; E2E-02-02/03; 320/360 px | 0 in 37 axe checks (incl. `axe-V-01` on the real video); 0 / 0; passed; passed | yes |
+| G02-11 | Open blocker/major findings | **0** | verifier: **2**; EM close recount: **14** | **no** |
+| G02-12 | Fast tests (NFR-073) | domain < 10 s; unit ≤ 60 s; integration < 10 min | 7.1 / 6.8 / 6.8 s; 10.3 s; 210.6 s; 0 failed | yes |
 
-QA's own live check at `e270c8d` (review round 2, QA-RV2-05) agrees: G02-01/02 5/5, tag_to_sheet p95 26 ms, corrections p95 33.7 ms (n=100); G02-04 p95 13.0 ms, p99 14.7 ms, 50.0 RPS. That run used bundled Chromium, so its G02-05 was `91 passed, 2 failed, 6 skipped` (the two H.264 tests), the gap ADR 0036 closes.
+`@needs-verification` results (G02-01 step 9 and the 52 provisional rows in G02-07) are reported but never counted toward a Must FR. Scoring stays `PROVISIONAL-UNVERIFIED` until the PO supplies the rulebook (P7, ADR 0023).
 
-### 1.2 Open blocker and major findings (G02-11)
+Demo (sprint-02 §12): steps 1-7 ran live in 9.6 s (`goal-scorecard.md` §9.3). Step 8 is this scorecard. Step 9 (stretch) was not in scope. Step 10 belongs to the PO.
 
-`python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md` → rc=1, **open 2** (goal round 1, EM rows at `4f5cc45` + this commit):
+### 1.2 G02-11 at close: 14 open
 
-| # | Finding (family) | Sev. | What is open | Who can close it |
+`python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md` → rc=1, **open 14** (at `b0e7cbb` plus the EM close rows). GitHub open issues labelled `bug`: 0 (verifier round 3). `smoke.md` and `blockers.md` have no open product-defect row that is missing from review-rounds.
+
+Why the count rose from 2 to 14: review round 3 ran at `db0f0be` in parallel with goal round 1, and no reviewer wrote rows for its findings (retro 2, M1). The counter also skipped the chair's routed design-review table because it had no disposition column (PD-R3S2-04, fixed in `b0e7cbb`). The EM has now written one row per round-3 finding, each re-checked at this head. 14 is the true count under the scorecard's own method.
+
+| # | Finding | Sev. | What is open | Owner |
 |---|---|---|---|---|
-| 1 | PD-R1-06 / DR-01 / DR-02 family | blocker | Flows design reviews not held; the routed cells (PD-RV2-DR-FE, -COACH, -BA, -PM, -SEC) are not filled | principal-designer with the named roles; DR-02 by end of 2026-10-07 (else EM escalates to the PO), DR-01 by 2026-11-02 |
-| 2 | QA-R3-GATE-01 / C-06 | major | Manual VoiceOver/TalkBack pass, 0 of 24 rows run; NFR-027 (b) unmet | a human tester (PO item P6, due 2026-11-13); senior-qa-engineer runs it with them |
+| 1 | PD-R1-06 / DR-01 / DR-02 family (+ PE-S2-R3-06) | blocker | Design reviews DR-01 and DR-02 not held; the decider cells are empty | principal-designer (chair) |
+| 2-5 | PD-RV2-DR-FE, -COACH, -BA, -PM | blocker | Each role's DR-02 and DR-01 decision cells are empty | senior-frontend-engineer, pickleball-domain-coach, business-analyst, product-manager |
+| 6 | PD-RV2-DR-SEC | major | Security cell R2-6 is empty. The reviewer's decision ("Accept") is in its review output; the reviewer cannot write files, so the cell is filled once the reviewer confirms the text | security-privacy-engineer |
+| 7 | QA-R3-GATE-01 / C-06 | major | VoiceOver and TalkBack pass: 0 of 24 rows run; NFR-027 (b) not met. Not waived | senior-qa-engineer with a human tester (P6, due 2026-11-13) |
+| 8 | QA-RV3-02 | blocker | 5 committed test changes (TCR rows 24-28) have no QA decision | senior-qa-engineer |
+| 9 | PE-S2-R3-01 | major | S-01 offers "move to next game" where the server refuses it; the client does not know `not_last_in_game` | senior-frontend-engineer |
+| 10 | PE-S2-R3-02 | major | Contract drift: `not_last_in_game` and "latest kept rally first" are not in api-sprint-02 or match-aggregate | principal-engineer |
+| 11 | PE-S2-R3-03 | major | No CI run at the close head. The newest is 37464553177 at `fd363fa` (success) | sre-devops-engineer |
+| 12 | SEC-RV3-01 | major | The PO record says the repository is private; GitHub says it is public | human PO (P10); the EM escalates |
+| 13 | QA-RV3-04 | major | `scripts/dev-chrome.sh` (ADR 0036 residual) is missing, so the H.264 evidence browser cannot be re-provisioned | sre-devops-engineer |
+| 14 | BLK-GOLD-01 (BLK-GOLD-BUCKET) | major | No private bucket exists for footage that shows people, so ST-040 recording is blocked | sre-devops-engineer; human PO (provider, P11) |
 
-**Closed in goal round 1 (EM, bookkeeping with fresh evidence):** BE-D1-01 (harness reads `error.code`: `test_live_tagging_error_code.py` 9 passed; verifier G02-01 5/5); the QA-R1-06 family (alias row for the SRE's "Fixed on CI": run 37464553177 at `fd363fa`, ci-gate success; the sprint-close head still needs its own ci-gate run, C-12); the SRE-S2-05 family (alias `G02-10` now read by the tool; verifier G02-10 met). **Method fix:** the tool exited rc=2 on the verifier's id `VR1-01`; it now reads that id shape (decision-log row, goal round 1).
+Nine of the 14 wait on a decision: rows 1-6 by roles that never ran in this session, and rows 7, 12 and 14 by the human. Rows 8-11 and 13 are agent work, sized in §8.
 
-### 1.3 G02-05 flake check (×3, Chrome for Testing)
+## 2. Committed against implemented and DoD-done
 
-`PW_CHROMIUM_CHANNEL=chrome … playwright test --repeat-each=3 --workers=1` → rc=0, `279 passed, 18 skipped` (the 6 named skips ×3), 20.5 min. `flaky_report.py --fail-on-flaky` over the single run and the repeat gives "2 runs, 99 tests, 0 flaky", rc=0. The stand-in seek flake from QA's earlier dry-run (QA-S2-UI-04) did not recur.
+| Lane | Committed units | Implemented | DoD-done | Not implemented |
+|---|---|---|---|---|
+| BE | 12.5 | 12.5 | 0 | — |
+| FE | 12.0 | 12.0 | 0 | — |
+| QA | 11.5 | 10.5 | 0 | C-06 (1.0): needs a human tester (P6) |
+| SRE | 8.0 | 8.0 | 0 | — (W-01 implemented: ci-gate green at `fd363fa`; the nightly waits on the PR #1 merge) |
+| ML | 2.0 | 2.0 | 0 | — |
+| **Total** | **46.0** | **45.0 (0.978)** | **0** | |
 
-### 1.4 Not measurable by agents
+**DoD-done is 0** because no story is "Merged to `main`", which is a story-level DoD box. PR #1 (`sprint-01` → `main`) is still open and `sprint-02` is not merged (PO merge order, po-input addendum "PR #1 path to green"). Two other gaps also apply: the UI stories ST-027..ST-032 and ST-037 lack "Design review held" (DR-02), and no CI run covers the close head.
 
-- **C-06 / NFR-027 (b):** the VoiceOver and TalkBack pass needs a human (PO item P6, due 2026-11-13). If P6 has no answer by then, the EM carries C-06 into the Sprint 3 plan as a named row (ADR 0030 rule 1; review-rounds row of review round 1). Until it runs, nobody has heard the Sprint 2 announcements (T-01 live region, S-01 "Rally n corrected", the disclosure options), and the sprint DoD item for NFR-027 (b) stays open.
-- **Scoring rules:** still PROVISIONAL-UNVERIFIED (ADR 0023, P7). The sheet says "unofficial scoring (rules not yet verified)". `@needs-verification` rows never count toward a Must FR.
+**Stretch:** ST-028b is done (FE, `30fc21a`). ST-035, ST-034, ST-038, ST-033 and ST-036 were not started: the stretch rule allowed them only after review round 1, and the review rounds then used the remaining capacity. ST-025 is still blocked on P3. ST-042 moved to Sprint 3 at planning.
 
-## 2. Next step to a verdict
+## 3. Gates
 
-1. Owners close G02-11 rows 1-2 (above): DR-02 / DR-01 role cells, and the C-06 human pass (P6).
-2. QA (G02-12 owner) runs the domain budget on an unloaded host, or proposes a method change through a decision-log row. The budget itself does not change.
-3. The independent verifier runs §4 at one recorded head on its own Compose stack, with `PW_CHROMIUM_CHANNEL=chrome` for G02-05/06/10 (ADR 0036), and fills §2.
+| Gate | State | Evidence |
+|---|---|---|
+| `ci-gate` on `sprint-02` | Green at `fd363fa`; **no run at the close head** | Run 37464553177 (success, 2026-10-06 12:52 UTC). Runs 37461758337, 37452407537, 37438997898 and 37434214390 failed and were triaged (`ci-status.md`) |
+| WebKit | Green on CI at `fd363fa` (in run 37464553177); 0 Sprint 1 `[webkit]` failures since run 37438997898 | `ci-status.md` |
+| Nightly (`nightly-quality.yml`) | Not run: the workflow is not on `main` until PR #1 merges | PO P1; merge-order addendum |
+| Locust per-PR perf baseline (ST-039) | Green on CI: 0 failures, correction p95 410 ms, 51.2 RPS | Run 37438997898 |
+| Integration smoke before review (ADR 0022) | Smoke 2 at `aeed281` and smoke 3 at `fe156e7`; **the "Sprint-close head" section is empty** | `smoke.md` |
+| Test immutability (ADR 0014) | **Not met:** TCR rows 24-28 undecided (QA-RV3-02) | `test-change-requests.md` |
+| Mutation gate on rules (NFR-072; a gate for the first time this sprint) | Met: 0.8635 ≥ 0.85 | G02-08 |
+
+## 4. Sprint-level DoD
+
+| Item | State |
+|---|---|
+| Every story meets the story-level DoD | **No** (0 of 46 units; §2) |
+| Functional, integration, performance and E2E suites pass on `main` | **No**: nothing is merged to `main`. The suites pass on `sprint-02` locally (§5) and on CI at `fd363fa` |
+| Model and coaching evals | N/A this sprint |
+| Sprint goal demonstrated against its bullets | Bullets 1-4: **yes**, live (G02-01..G02-10 and the demo). Bullet 5 ("none is open at the close"): **no** (G02-11) |
+| Manual screen-reader pass (NFR-027 b) | **Not met**: 0 of 24 rows (C-06, P6). Reported as not met, not waived |
+| Retro written, previous actions reviewed | Yes: `docs/retros/2026-11-13-sprint-02.md` |
+| Significant decisions have ADRs | Yes: ADRs 0034-0036 this sprint and ADR 0037 from the retro; small decisions are in `decision-log.md` |
+
+## 5. Test counts by level (latest independent or isolated run)
+
+| Level | Result | Source |
+|---|---|---|
+| Backend domain unit (CI `DOMAIN_TEST_PATHS`) | 1,031 passed, 1 skipped; 6.8-7.1 s | verifier round 3, G02-12 |
+| Backend unit (`-m unit`) | 1,466 passed, 1 skipped; 10.3 s | verifier round 3, G02-12 |
+| Backend integration + regression | 490 passed, 2 skipped. The 2 are the strict sandbox tests, run separately: 10 passed | verifier round 3, G02-03 |
+| Scoring scenarios and properties | 304 passed, 1 skipped (P3); golden replay 4/4; `@needs-verification` 70 collected, 52/52 on committed stories | verifier round 3, G02-07 |
+| Whole backend suite | 2,070 passed, 21 failed, 3 skipped. The 21 are `red_until` rows of stretch or PO-blocked stories (ST-035 ×18, ST-025 ×2, ST-024 ×1), which the gate excludes | QA review round 3 at `db0f0be` |
+| Oracle / mutation | 100,000 sequences, 0 disagreements; rules 0.8635, projection 0.9196 | G02-08 |
+| Web unit (Vitest) | 55 files, 458 passed; lines 91.7% | G02-09 |
+| E2E (Playwright, Chrome for Testing, https) | 93 passed, 0 failed, 6 named skips; ×3: 279 passed, 0 flaky | G02-05 |
+| Infra and harness | 472 passed | `cd infra && uv run pytest -q -p no:cacheprovider` at `b0e7cbb` (EM, this close) |
+| Coverage | backend changed lines 97%; rules + aggregates 99.57% line / 98.41% branch | G02-09 |
+
+## 6. Delivery metrics
+
+| Measure | Sprint 2 | Sprint 1 |
+|---|---|---|
+| Commits on the branch | 161 (`2b97fa0..b0e7cbb`): 59 docs, 40 fix, 32 feat, 26 test, 2 style, 2 ci | 139 |
+| Median commit size (changed lines) | 63; 16 commits over 400 (max 2,336) | 94; 13 over 400 |
+| Commits after the integration smoke (`941bf7f`) | 45 | 49 |
+| CI runs on the branch | 5 dispatched; 1 green (37464553177) | 3 |
+| Deployment frequency, lead time, change failure rate, MTTR | N/A: nothing deployed, no merged PR | N/A |
+| Review rounds | 3 review rounds + 3 goal verification rounds | 3 + 3 |
+| Open blocker/major trajectory | 17 (planning) → 14 → 6 (review round 1) → 3 (round 2) → 2 (goal rounds 1-3) → **14** (close recount) | 17 at close |
+| Escalations to the human | P1-P9 on day 1; P1-P5 answered; P10 and P11 new at this close | P1-P5 |
+
+## 7. PO items
+
+| Item | State | Need-by |
+|---|---|---|
+| P1-P4 | Answered 2026-10-06 (po-input addenda) | — |
+| P5 disk prune | Answered 2026-10-06: approved | — |
+| P6 screen-reader tester (C-06) | Open | 2026-11-13 |
+| P7 USAP rulebook (OQ-01) | Open | 2026-11-16 (Sprint 3 planning) |
+| P8 beta budget (OQ-13) | Open | 2026-11-13 |
+| P9 testers and interviewees (OQ-20) | Open | 2026-11-16 |
+| **P10 repository visibility (SEC-RV3-01), new** | Open. GitHub reports `nhuthuynh/racket-analytics` as **public** (API, 2026-10-06), but the PO record says private. Either make it private, or confirm it is public so the record is corrected. Until then the threat model's exploit notes and the dev keys are world-readable; no personal data is in git | 2026-11-13; sooner is safer |
+| **P11 provider of the private footage bucket (BLK-GOLD-01), new** | Open (relayed 2026-10-06). No ST-040 footage of people may be recorded until the bucket exists | Sprint 3 planning, 2026-11-16 |
+
+## 8. Carry-over to Sprint 3 (each row gets an owner and a Sprint 3 backlog row at planning)
+
+| Row | Items | Owner | Size (judgment) |
+|---|---|---|---|
+| Design reviews | DR-02 (due end of 2026-10-07, otherwise it moves to DR-01's date); DR-01 (hard date 2026-11-02); PD-RV2-DR-FE/-COACH/-BA/-PM/-SEC | principal-designer with the named roles | 0 units (decisions); XS for FE follow-ups |
+| Blocker/major code and docs | QA-RV3-02 TCR decisions; PE-S2-R3-01 (FE, red first); PE-S2-R3-02 (contract); PE-S2-R3-03 CI at the head; QA-RV3-04 `scripts/dev-chrome.sh` | QA, FE, PE, SRE | about 2 units |
+| Human-gated | C-06 (P6); SEC-RV3-01 (P10); BLK-GOLD-01 (P11); ST-025 (P3 clips) | human PO with QA, SRE, ML | — |
+| Minors and nits | PE-S2-R3-07/-08/-09, SEC-RV3-02/-03/-04, SEC-S2-TM-03-DOC/-04/-05/-07, QA-RV3-06, PD-R3S2-01/-02, PD-FL2-03/-05, VR1-01 | the owners named in review-rounds | about 3 units of review-loop reserve |
+| Stretch not started | ST-035, ST-034, ST-038 (a gate before any non-dev deployment), ST-033, ST-036; ST-042 is already in Sprint 3 | BE, FE | as sized in sprint-02 §3 |
+| Merge chain | `sprint-02` → `sprint-01` once ci-gate is green at the head, then PR #1 → `main`, then the first nightly | sre-devops-engineer, orchestrator | XS |
+
+## 9. History of this report
+
+- 2026-10-06, review round 2 status step: §1 first written from dry-runs (QA-RV2-05).
+- 2026-10-06, goal rounds 1-2: §1 rewritten (10/12, then 11/12).
+- 2026-10-06, sprint close: final report. G02-11 recounted from 2 to 14. This also fixes PD-R3S2-05: the earlier §1.2 left C-06 out as "counted elsewhere", which contradicted the scorecard method.

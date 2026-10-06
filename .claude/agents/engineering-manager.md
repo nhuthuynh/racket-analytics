@@ -40,6 +40,7 @@ Never invent URLs.
 - In each M or L story brief, name the slices (each ≤ 400 changed lines). Decide any commit-size waiver before the commit, not after it (ADR 0030; retro 1, M6).
 - At the end of every review or verification round, check that each reviewer wrote one Open row per finding in `review-rounds.md`. In the status step, run `python3 scripts/measure/open_defects.py docs/sprints/<nn>/review-rounds.md` and rewrite `sprint-report.md` §1 when the scorecard or the open count changes (ADR 0033; retro 1 final close, M10/M14).
 - Before handing a goal scorecard to the verifier, have each method author dry-run their method end to end on an isolated stack and log the rc in the sprint decision log (ADR 0033; retro 1 final close, M11).
+- After every review or verification round, reconcile the reviewers' returned finding ids against `review-rounds.md` rows and write an Open row for each missing id (also for reviewers that cannot write files). Do not start goal verification or the next round before this. In the sprint plan, schedule every design-review decision cell as a task with a role, a brief and a date. At planning, ask the PO about any goal item that depends on a human input due after the session ends (ADR 0037; retro 2, M1-M3).
 - Keep priorities stable inside a sprint; changes go through the product owner [EP/ENG-22].
 </responsibilities>
 

@@ -268,6 +268,7 @@ The plan above is not rewritten; actuals are added here (engineering-manager). S
 |---|---|---|---|---|---|
 | S0 | 28 | 19 (0.68) | 0 | Partly: walking skeleton local; no green CI | `docs/sprints/00/`, retro 0 |
 | S1 | 32 (+1 stretch) | 29 (0.906) + 1 stretch | 0 | **Not met** (PO standing rule): scorecard round 3 met 10 of 12; G01-05 invalid below the disk floor, G01-11 17 open blocker/major | `docs/sprints/01/sprint-report.md` §1; `goal-scorecard.md` §8 |
+| S2 | 46 (+8 stretch) | 45 (0.978) + 1 stretch (ST-028b) | 0 (nothing merged to `main`) | **Not met** (PO standing rule): verifier round 3 met 11 of 12 live; G02-11 open: verifier 2, close recount 14 (review-round-3 rows written at close) | `docs/sprints/02/sprint-report.md` §1; `goal-scorecard.md` §9; retro `docs/retros/2026-11-13-sprint-02.md` |
 
 **Effect on the plan (judgment, for the PO at the 2026-10-30 review; changes go through the PO, §11):**
 - **S2** starts with a carry-over of about 12 units: `sprint-02.md` §3 rows C-01..C-38, plus ST-013b, ST-042 and DR-01. At load factor 0.8 this takes about 1 lane-week out of the Quick Tag scope. The fallback, if the PO keeps the S2 scope, is to move the stretch stories ST-033 and ST-036 to S3.
@@ -275,3 +276,8 @@ The plan above is not rewritten; actuals are added here (engineering-manager). S
 - **External dependencies are unchanged:** OQ-01 rulebook PDFs need-by 2026-11-16 (S3 planning); OQ-05 legal review (US + AU) before any real-user beta; real phone clips for ST-025 before S2 planning (2026-11-02).
 - **CI cadence:** run 37372059078 is the first run that includes the S1 fixes. Until D1 is decided, every sprint's DoD depends on the PO pushing and dispatching (retro 1 A1).
 
+**Effect of Sprint 2 on the plan (engineering-manager, 2026-10-06, judgment; for the PO at the 2026-11-13 review, §11):**
+- **S3 starts with a carry-over of about 5 units** (`docs/sprints/02/sprint-report.md` §8): the agent-owned blockers and majors QA-RV3-02, PE-S2-R3-01/-02/-03 and QA-RV3-04 first; the design reviews DR-01/DR-02 as scheduled decider-role tasks (ADR 0037); minors in the review-loop reserve; the stretch stories ST-034, ST-035, ST-038, ST-033 and ST-036 compete with S3 scope. ST-038 and ST-042 stay on the R1 critical path before any non-dev deployment.
+- **Go port (PO decision 2026-10-06; ADR 0023 note):** **S6 becomes the Go port** of the whole product, tooling and tests, directly after the R1 release candidate (S5). Release 2 moves by one sprint: the outlines in §6 for S6-S9 now apply to **S7-S10**, and the R3 outline moves to S11-S13. The calendar in §2 is not rewritten; S6 planning updates it with the port ADR (principal-engineer).
+- **External dependencies:** OQ-01 rulebook (P7) need-by stays S3 planning, 2026-11-16; P6 screen-reader tester 2026-11-13; new P10 (repository visibility: GitHub reports public) and P11 (private footage bucket provider, needed before any ST-040 recording).
+- **Merge cadence:** S1 and S2 are both unmerged (PR #1 open), so DoD-done is 0 for two sprints. The merge chain (`sprint-02` → `sprint-01` → `main`) is retro 2 action A4, due 2026-11-13.
