@@ -16,11 +16,12 @@ valid body in the same file.
 from __future__ import annotations
 
 import json
+import unicodedata
 from collections.abc import Callable
 from typing import Any
 
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 from tests.support import scorebook as sb
@@ -54,7 +55,17 @@ def bad_text(draw: Any, base: str = "") -> str:
     extra = draw(st.lists(st.tuples(st.integers(0, len(text)), BAD_CHAR), max_size=3))
     for pos, ch in extra:
         text = text[:pos] + ch + text[pos:]
+    # BE-QA-02: a high + low surrogate drawn side by side is one VALID character once the
+    # JSON escapes are decoded, and a Zl/Zp/Cc whitespace next to an edge space is trimmed;
+    # such a value is not bad where the server reads it, so it is not a test case.
+    assume(still_bad(text))
     return text
+
+
+def still_bad(text: str) -> bool:
+    """True when the server, after JSON decoding and trimming, still sees a refused character
+    (Cc, Cs, Zl, Zp: ``racket.platform.text.REFUSED_CATEGORIES``)."""
+    return any(unicodedata.category(ch) in {"Cc", "Cs", "Zl", "Zp"} for ch in _server_view(text))
 
 
 ANY_JSON = st.recursive(
@@ -257,3 +268,27 @@ def test_it_02_10_any_json_value_in_a_field_is_never_a_5xx(target: Target, field
         )
 
     check()
+
+
+# ------------------------------------------------------------------ generator self-tests (BE-QA-02)
+def _server_view(text: str) -> str:
+    """The string the API decodes from the JSON text this file sends, trimmed as the parsers
+    trim (``str.strip``): an escaped high+low surrogate pair is ONE valid character there."""
+    decoded: str = json.loads(json.dumps(text))
+    return decoded.strip()
+
+
+def test_it_02_10_a_valid_surrogate_pair_is_not_a_bad_character() -> None:
+    # negative control: the BE-QA-02 example decodes to U+10000, a valid character
+    assert not still_bad("i𐀀vy@example.com")
+    assert still_bad("i\ud800vy")
+    assert still_bad("a\x00b")
+    assert still_bad("D\udc00\ud800i")  # low then high: two lone surrogates
+
+
+@settings(max_examples=2000, deadline=None)
+@given(value=st.one_of(bad_text(), bad_text("ivy@example.com"), bad_text(" Di")))
+def test_it_02_10_every_generated_value_is_still_bad_where_the_server_reads_it(
+    value: str,
+) -> None:
+    assert still_bad(value), f"{value!r} decodes to the clean {_server_view(value)!r}"
