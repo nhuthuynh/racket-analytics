@@ -1,7 +1,8 @@
 """Binds tests/features/phone_fixtures.feature (ST-025; sprint-01 §14.3.9; NFR-025; OQ-06).
 
-RED until ST-025 adds fixtures/clips/phones-v1 with the per-clip manifest entries proposed in
-tests/support/contract.py and the consent rule in racket-manifest-check.
+"Coverage of the set" and "Probe every fixture" are RED until ST-025 adds fixtures/clips/phones-v1
+with the per-clip manifest entries proposed in tests/support/contract.py. The consent rule in
+racket-manifest-check is in the gate.
 """
 
 from __future__ import annotations
@@ -13,12 +14,29 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pytest_bdd import given, scenarios, then, when
+from pytest_bdd import given, scenario, scenarios, then, when
 
 from tests.support import contract
 from tests.support.paths import BACKEND, FIXTURES, SYNTHETIC_60S
 
-pytestmark = [pytest.mark.red_until(story="ST-025"), pytest.mark.slow]
+pytestmark = pytest.mark.slow
+
+# Only the scenarios that need the phones-v1 clips wait on ST-025 (QA-RV1-06 / SRE-S2-04); the
+# consent rule ("File with people and no consent record") passes today and belongs in the gate.
+_WAITS_ON_ST_025 = pytest.mark.red_until(story="ST-025")
+
+
+@_WAITS_ON_ST_025
+@scenario("phone_fixtures.feature", "Coverage of the set")
+def test_coverage_of_the_set() -> None:
+    pass
+
+
+@_WAITS_ON_ST_025
+@scenario("phone_fixtures.feature", "Probe every fixture")
+def test_probe_every_fixture() -> None:
+    pass
+
 
 scenarios("phone_fixtures.feature")
 

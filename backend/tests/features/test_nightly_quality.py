@@ -2,7 +2,7 @@
 
 The workflow file itself is checked by infra/tests (SRE lane). Here: the published nightly
 result in docs/sprints/01/status.json and the SLI arithmetic (seams in tests/support/contract.py).
-RED until ST-024.
+"Nightly run completes" is RED until ST-024; the SLI scenarios are in the gate.
 """
 
 from __future__ import annotations
@@ -12,12 +12,19 @@ import json
 from typing import Any
 
 import pytest
-from pytest_bdd import given, parsers, scenarios, then, when
+from pytest_bdd import given, parsers, scenario, scenarios, then, when
 
 from tests.support import contract
 from tests.support.paths import REPO
 
-pytestmark = pytest.mark.red_until(story="ST-024")
+
+# Only the scenario that needs the nightly job itself waits on ST-024 (QA-RV1-06 / SRE-S2-04);
+# the SLI arithmetic scenarios pass today and belong in the per-PR gate.
+@pytest.mark.red_until(story="ST-024")
+@scenario("nightly_quality.feature", "Nightly run completes")
+def test_nightly_run_completes() -> None:
+    pass
+
 
 scenarios("nightly_quality.feature")
 
