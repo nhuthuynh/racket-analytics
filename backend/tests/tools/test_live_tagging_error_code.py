@@ -15,7 +15,8 @@ from tests.support.paths import REPO
 def _harness() -> ModuleType:
     path = REPO / "scripts" / "measure" / "live_tagging.py"
     spec = importlib.util.spec_from_file_location("live_tagging_under_test", path)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -50,6 +51,6 @@ def test_a_body_outside_the_envelope_has_no_code(body: bytes) -> None:
 @pytest.mark.parametrize("code", ["stale_match", "match_not_ready", "invalid_outcome"])
 def test_the_code_is_read_from_the_error_envelope(code: str) -> None:
     body = (
-        '{"error": {"code": "%s", "message": "x", "support_ref": "ref_0123456789abcdef"}}' % code
+        f'{{"error": {{"code": "{code}", "message": "x", "support_ref": "ref_0123456789abcdef"}}}}'
     ).encode()
     assert _harness()._code(_Reply(body)) == code

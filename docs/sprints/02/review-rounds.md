@@ -326,3 +326,9 @@ Fix commits: `95ffc23` (PE-S2-R2-01) and `453b1a7` (SEC-S2-TM-01, SEC-S2-TM-02, 
 |---|---|---|---|---|
 | BE-RV2-01 | minor | Open. Add `decision`/`not_last_in_game` to the resolution row of api-sprint-02 §2 and to the §4.2 text ("`move_to_next_game` applies to the latest kept rally of game *n* only"). Add the same wording to match-aggregate §4 `resolve`, and add C-02 "latest first" to the §8 Q1 coach question | principal-engineer (contract), pickleball-domain-coach (§8 Q1) | `95ffc23`; `grep -n not_last_in_game docs/architecture/*.md` → none |
 | BE-RV2-02 | minor | Open. The score sheet offers "Move to next game" on every marked row. Only the latest marked row of the game can move now; any other row gets 422 `validation_failed` `decision`/`not_last_in_game`. Offer the action on that row only, or explain the refusal ("Move the later rally first."). The FE working tree is not touched by BE | senior-frontend-engineer | `web/src/components/score-sheet/ScoreSheetView.tsx:165` renders the button for every `needs_decision` row; IT-02-14 r2 shows the 422 |
+
+## Review round 2: principal-engineer (auto-fix, 2026-10-06)
+
+| Finding | Severity | Disposition | Files | Test evidence |
+|---|---|---|---|---|
+| SRE-S2-10 (both rows) / QA-RV2-02 | blocker | Fixed. Style-only change, so the test still checks the same thing: the compound `assert spec is not None and spec.loader is not None` becomes two asserts (PT018), and the `%` format becomes an f-string with escaped braces, so the body bytes are identical (UP031). No TCR row (the assertions are unchanged; QA can ask for one) | `backend/tests/tools/test_live_tagging_error_code.py` | Before: `cd backend && uv run ruff check --output-format=concise .` → `:18:5 PT018`, `:53:9 UP031`, `Found 2 errors.` After: `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` → `310 files already formatted`; `env -u APP_ENV uv run pytest -q tests/tools/test_live_tagging_error_code.py` → `9 passed` |
