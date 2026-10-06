@@ -45,6 +45,25 @@ export function ScoreSheetView({
   /** The "Watch rally n" button that opened V-01: focus goes back to it if the video fails (PD-S2R1-05). */
   const watchOpener = useRef<HTMLElement | null>(null);
   const [refocusWatch, setRefocusWatch] = useState(false);
+  /**
+   * DR-02 E-3: the rallies that followed the decided row, in order, so focus can go to the next
+   * one still shown when the row's controls go. By rally id, not number: the server renumbers
+   * the kept rallies after a removal.
+   */
+  const [followers, setFollowers] = useState<string[] | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const undoRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (followers === null) return;
+    setFollowers(null);
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return; // the control used is still there
+    const target = followers
+      .map((id) => rootRef.current?.querySelector<HTMLElement>(`tr[data-rally-id="${CSS.escape(id)}"] button`))
+      .find((b) => b);
+    (target ?? undoRef.current)?.focus();
+  }, [followers, sheet]);
 
   useEffect(() => {
     if (!refocusWatch || playing) return;
@@ -106,15 +125,21 @@ export function ScoreSheetView({
   const names = sideNames(match);
 
   function decide(row: SheetRow, decision: RallyDecision) {
+    const after = [...sheet.rows]
+      .sort((a, b) => a.number - b.number)
+      .filter((r) => r.number > row.number)
+      .map((r) => r.rally_id);
     void run(
       'Decision',
       (v) => (api.resolveRally ?? browserApi.resolveRally)(match.id, v, row.rally_id, decision),
-      () =>
-        decision === 'withdraw'
+      () => {
+        setFollowers(after);
+        return decision === 'withdraw'
           ? `Rally ${row.number} removed. It stays in the correction history.`
           : decision === 'move_to_previous_game'
             ? `Rally ${row.number} moved back to game ${row.game - 1}.`
-            : `Rally ${row.number} moved to the next game.`,
+            : `Rally ${row.number} moved to the next game.`;
+      },
     );
   }
 
@@ -168,7 +193,7 @@ export function ScoreSheetView({
   }
 
   return (
-    <div className="stack">
+    <div className="stack" ref={rootRef}>
       {problem ? (
         <p role="alert" className="notice notice--error">
           {problem}
@@ -209,6 +234,7 @@ export function ScoreSheetView({
       />
       <p>
         <button
+          ref={undoRef}
           type="button"
           className="button button--secondary"
           aria-busy={busy}
