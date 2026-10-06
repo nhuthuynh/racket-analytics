@@ -12,7 +12,7 @@ import {
   ResponseShapeError,
 } from './parse';
 import {
-  parseHistory,
+  parseHistoryPage,
   parseRallyMedia,
   parseSheetResponse,
   parseTagged,
@@ -82,6 +82,13 @@ function fieldErrorsFrom(raw: unknown): ApiFieldError[] {
   }
   return out;
 }
+
+/** A decision on a rally marked "needs your decision" (api-sprint-02 §3 resolution). */
+export type RallyDecision = 'withdraw' | 'move_to_next_game' | 'move_to_previous_game';
+
+/** api-sprint-02 §2.2: at most 200 items a page; SCOREBOOK_MAX_CHANGES (2000) fills 10 pages. */
+const HISTORY_PAGE = 200;
+const MAX_HISTORY_PAGES = 50;
 
 export interface ApiClientOptions {
   /** "/api" in the browser; the internal API origin on the server. No trailing slash. */
@@ -216,7 +223,7 @@ export function createApiClient(options: ApiClientOptions) {
     async getMatch(id: string): Promise<Match> {
       return parsed(await request('GET', matchPath(id)), parseMatch);
     },
-    // Sprint 2 (ST-027..ST-037). Routes from tagcontract.py until api-sprint-02.md exists.
+    // Sprint 2 (ST-027..ST-037): docs/architecture/api-sprint-02.md §3.
     async getScoreSheet(id: string): Promise<{ version: number | null; sheet: ScoreSheet }> {
       const response = await request('GET', `${matchPath(id)}/score-sheet`);
       const etag = response.headers.get('etag');
@@ -247,7 +254,7 @@ export function createApiClient(options: ApiClientOptions) {
       id: string,
       version: number,
       rallyId: string,
-      decision: 'withdraw' | 'move_to_next_game',
+      decision: RallyDecision,
     ): Promise<Versioned> {
       const path = `${matchPath(id)}/rallies/${rallyPath(rallyId)}/resolution`;
       return parsed(await request('POST', path, { decision }, ifMatch(version)), parseVersioned);
@@ -255,8 +262,25 @@ export function createApiClient(options: ApiClientOptions) {
     async undo(id: string, version: number): Promise<Versioned> {
       return parsed(await request('POST', `${matchPath(id)}/undo`, undefined, ifMatch(version)), parseVersioned);
     },
+    /**
+     * The whole correction history H-01, oldest first: follows `next_cursor` page by page
+     * (api-sprint-02 §2.2, 200 items a page). A cursor the server repeats, or more pages than
+     * the change cap can fill, is refused rather than looped on.
+     */
     async corrections(id: string): Promise<HistoryItem[]> {
-      return parsed(await request('GET', `${matchPath(id)}/corrections`), parseHistory);
+      const all: HistoryItem[] = [];
+      const seen = new Set<string>();
+      let cursor: string | null = null;
+      for (let page = 0; page < MAX_HISTORY_PAGES; page += 1) {
+        const query: string = `?limit=${HISTORY_PAGE}${cursor === null ? '' : `&cursor=${encodeURIComponent(cursor)}`}`;
+        const { items, nextCursor }: { items: HistoryItem[]; nextCursor: string | null } = await parsed(await request('GET', `${matchPath(id)}/corrections${query}`), parseHistoryPage);
+        all.push(...items);
+        if (nextCursor === null) return all;
+        if (seen.has(nextCursor)) break;
+        seen.add(nextCursor);
+        cursor = nextCursor;
+      }
+      throw new ApiError(200, 'invalid_response');
     },
     /**
      * The whole match video for the tagging screen: `GET /matches/{id}/video` (BE `ac5ca2c`, same

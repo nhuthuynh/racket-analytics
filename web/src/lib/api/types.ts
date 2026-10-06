@@ -144,8 +144,7 @@ export const API_ERROR_CODES = [
   'not_a_video',
   'upload_quota_exceeded',
   'checksum_mismatch',
-  // Sprint 2 (tagcontract.py STALE, NOT_READY, INVALID_OUTCOME; match-aggregate §3 refusals).
-  // Assumed until api-sprint-02.md exists (decision-log 2026-10-05).
+  // api-sprint-02 §4.1
   'stale_match',
   'match_not_ready',
   'invalid_outcome',
@@ -157,6 +156,8 @@ export const API_ERROR_CODES = [
   'game_not_started',
   'game_not_over',
   'decision_needed',
+  'rules_unavailable',
+  'scorebook_full',
 ] as const;
 export type ServerErrorCode = (typeof API_ERROR_CODES)[number];
 export type ApiErrorCode = ServerErrorCode | 'network_error' | 'invalid_response' | 'unknown';
@@ -171,7 +172,7 @@ export function isPublicId(value: string): boolean {
   return UUID_RE.test(value);
 }
 
-/** Closed field codes of api-sprint-01 §4.2. */
+/** Closed field codes of api-sprint-01 §4.2 and api-sprint-02 §4.2. */
 export const FIELD_ERROR_CODES = [
   'email_invalid',
   'format_required',
@@ -191,6 +192,31 @@ export const FIELD_ERROR_CODES = [
   'participants_without_format',
   'unknown_field',
   'invalid',
+  // api-sprint-02 §4.2
+  'time_invalid',
+  'end_before_start',
+  'overlaps_rally',
+  'out_of_game_order',
+  'time_after_video',
+  'ending_invalid',
+  'side_invalid',
+  'side_required',
+  'replay_has_no_side',
+  'player_invalid',
+  'replay_has_no_player',
+  'must_be_on_winning_side',
+  'must_be_on_losing_side',
+  'fault_kind_invalid',
+  'only_for_fault',
+  'field_invalid',
+  'unchanged',
+  'decision_invalid',
+  'not_needed',
+  'no_previous_game',
+  'previous_game_over',
+  'not_first_in_game',
+  'too_many_rallies',
+  'too_many_changes',
 ] as const;
 export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
 

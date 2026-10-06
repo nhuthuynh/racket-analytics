@@ -164,6 +164,17 @@ function historyValue(o: Obj, key: string, path: string, field: string | null): 
     : scalarOrNull(o, key, path);
 }
 
+/** One page of GET …/corrections (api-sprint-02 §2.2): items plus the opaque next cursor. */
+export function parseHistoryPage(value: unknown): { items: HistoryItem[]; nextCursor: string | null } {
+  const o = obj(value, 'history');
+  const next = o.next_cursor ?? null;
+  // Opaque, but it goes back into a query string: a bounded printable token only.
+  if (next !== null && (typeof next !== 'string' || !/^[\x21-\x7e]{1,512}$/.test(next))) {
+    throw new ResponseShapeError('history.next_cursor');
+  }
+  return { items: parseHistory(value), nextCursor: next as string | null };
+}
+
 export function parseHistory(value: unknown): HistoryItem[] {
   const o = obj(value, 'history');
   const items = o.items;
