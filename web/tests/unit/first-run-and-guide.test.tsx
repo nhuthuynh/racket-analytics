@@ -44,6 +44,15 @@ describe('G-01 page', () => {
     expect(screen.queryByText(/Settings > Camera/)).toBeNull();
   });
 
+  it('PD-R2R-03 (D-8): shows the consent courtesy line, exactly, as a second notice next to the safety line', () => {
+    render(<GuidePage />);
+    const line = screen.getByText("Film only people who agree to be filmed. Don't upload matches with anyone under 18.");
+    expect(line).toBeVisible();
+    expect(line).toHaveClass('notice');
+    const safety = screen.getByText(/Keep the tripod and its legs off the court and out of walkways\./);
+    expect(line.parentElement).toBe(safety.parentElement);
+  });
+
   it('starts setup and links back to the matches', () => {
     render(<GuidePage />);
     expect(screen.getByRole('link', { name: 'Record your first match' })).toHaveAttribute('href', '/matches/new');

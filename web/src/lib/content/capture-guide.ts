@@ -53,6 +53,13 @@ export const CAPTURE_GUIDE_ITEMS: readonly CaptureGuideItem[] = [
 export const SAFETY_LINE =
   'Keep the tripod and its legs off the court and out of walkways. Never climb a fence or a chair to raise it.';
 
+/**
+ * D-8 consent courtesy line (PD-R2R-03): product-manager text, accepted unchanged by the
+ * security-privacy-engineer (threat-model-sprint-02 §6). An instruction, not a legal claim; the
+ * US/AU legal review (NFR-070) comes before any real-user beta.
+ */
+export const CONSENT_LINE = "Film only people who agree to be filmed. Don't upload matches with anyone under 18.";
+
 export const BATTERY_NOTE =
   'A 90-minute match at 1080p 60 fps can use several gigabytes. Charge your phone and free up space first.';
 

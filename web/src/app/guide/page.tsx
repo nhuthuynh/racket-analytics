@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { GuideIllustration } from '@/components/GuideIllustration';
 import { GuideVideo } from '@/components/GuideVideo';
 import { PageTitle } from '@/components/PageTitle';
-import { BATTERY_NOTE, CAPTURE_GUIDE_ITEMS, SAFETY_LINE, SIXTY_FPS_HELP } from '@/lib/content/capture-guide';
+import { BATTERY_NOTE, CAPTURE_GUIDE_ITEMS, CONSENT_LINE, SAFETY_LINE, SIXTY_FPS_HELP } from '@/lib/content/capture-guide';
 
 export default function GuidePage() {
   return (
@@ -24,7 +24,12 @@ export default function GuidePage() {
             <div className="guide-list__text">
               <p className="guide-list__instruction">{item.instruction}</p>
               <p>{item.why}</p>
-              {item.id === 'height' ? <p className="notice notice--warning">{SAFETY_LINE}</p> : null}
+              {item.id === 'height' ? (
+                <>
+                  <p className="notice notice--warning">{SAFETY_LINE}</p>
+                  <p className="notice notice--info">{CONSENT_LINE}</p>
+                </>
+              ) : null}
             </div>
           </li>
         ))}
