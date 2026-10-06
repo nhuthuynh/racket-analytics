@@ -1,0 +1,244 @@
+# Sprint 2 flows: Quick Tag, key map, score sheet, correction history, rally video
+
+- **Status:** Draft v0.1, 2026-10-06 (principal-designer). **Written after the screens were built** (review round 1, PD-S2R1-03 / PD-R1-06-S2). Sprint-02 §0.1 asked for this file before any Sprint 2 UI story started; it did not exist, and the FE built from the Gherkin and the decision log (decision-log 2026-10-05, senior-frontend-engineer). This version therefore does two jobs: it **specifies** every screen and state, and it **records where the built screens differ** from that specification (§9). The design review DR-02 (§11) is **not yet held**; until it is, this file is a proposal and the Sprint 2 UI stories keep "Design review held" open (sprint-02 §14 DoR row R7).
+- **Stories:** ST-027 Quick Tag (screen family T); ST-028a key map, ST-028b remapping (K); ST-029 score call (T, S); ST-030 score sheet (S); ST-031 undo and correction history (S, H); ST-032 corrections and "needs your decision" (S); ST-037 rally video (V).
+- **Requirements:** FR-027, FR-048..FR-053, FR-055; NFR-011..NFR-014, NFR-028..NFR-031, NFR-033, NFR-034, NFR-036d, NFR-055, NFR-058.
+- **Design sources:** DES FR-UX-60 (layout), FR-UX-61 (key map), FR-UX-62 (score feedback), FR-UX-70 (score sheet) in `docs/requirements/brainstorm-design.md`; HAX [DPA/DESIGN-11]; target sizes [DPA/DESIGN-02, DPA/DESIGN-10]; focus not obscured [DPA/DESIGN-07]; contrast [DPA/DESIGN-03, DPA/DESIGN-04].
+- **Contract:** `docs/architecture/api-sprint-02.md` (Accepted) for routes and error codes. **Gherkin:** `docs/sprints/sprint-02.md` §7.1-§7.4, §7.6, §14.3.5, §14.3.6. **The copy in §3-§7 matches the Gherkin strings and the shipped strings exactly** (file and line in §8). A copy change here needs the same change in the Gherkin and the component, agreed with QA.
+- **Builds on:** `flows-sprint-01.md` (conventions §0, M-02 match page, U-04). Tokens: `tokens.md`. Component rules: `component-accessibility-checklist.md`.
+- **Viewport:** 360 CSS px, one hand, often courtside (judgment); reflow to 320 px (NFR-034). Quick Tag is also used on a laptop with a keyboard (FR-051).
+
+## 0. Conventions (in addition to flows-sprint-01 §0)
+
+- **Screen IDs:** `T-` tagging, `K-` key map, `S-` score sheet, `H-` correction history, `V-` rally video. These are the ids used by the a11y manual script (`docs/sprints/02/a11y-manual.md` rows 18-23) and by the G02-10 axe attachments.
+- **Every screen lists all states:** Empty, Loading, Error, Offline, Conflict (another device changed the match), Low-confidence, Low-sample, and, where a rally can be in conflict, **Needs your decision**. Low-confidence and Low-sample are "N/A" with the reason: there is no automatic call and no metric in Sprint 2.
+- **The score is never typed by the player.** Every number on T and S comes from the server's replay of the rules (FR-049). The screen may show an **optimistic** score for at most one pending tag; the server's sheet replaces it (NFR-012a).
+- **Unofficial label.** While the server says `unofficial: true`, every T and S screen shows "unofficial scoring (rules not yet verified)" (FR-055; ADR 0023: rulebook PDFs to come, preset `PROVISIONAL-UNVERIFIED`).
+- **Announcements:** one polite live region per screen (`role="status"`, `aria-atomic`). It is rendered from first paint and only its text changes. Focus never moves because of an announcement (SC 4.1.3, judgment; Gherkin §7.2).
+- **Errors on T, K, S:** a single notice with `role="alert"` at the top of the working area that says what happened and what to do, plus `Reference: <support_ref>` when the API gave one (NFR-058). These screens are not forms with fields, so the GOV.UK error summary [DPA/DESIGN-13] applies only to the game-start question T-02.
+- **Targets:** every tagging control ≥ 48×48 CSS px with ≥ 8 px gaps (NFR-028; FR-UX-60); every other control ≥ 24×24 (SC 2.5.8), primary actions 48 px [DPA/DESIGN-10].
+- **Words for sides:** "Your side (Ivy and Dana)" / "Other side (Carlos and Bo)" on buttons and labels; "us" / "them" in the short score call only (FR-048 example). Never "Team A" or "Side B" (judgment; the coach confirms at DR-02).
+
+## 1. Flow map
+
+```
+ M-02 Match (Video received) ──"Tag rallies"──► T-01 Tag rallies ──"Score sheet"──► S-01 Score sheet
+        │ no video yet                              │  ▲                                  │   │   │
+        ▼                                           │  │ "Start game n"                   │   │   └─"Watch rally n"──► V-01 Rally video (on S-01)
+   T-00 "You can tag this match once its            ▼  │                                  │   └─ Switch winner / ending / player (S-01 inline)
+        video is received."                    T-02 Who serves first in game n?         │       └─ needs your decision ─► "Move rally n to the next game" | "Remove rally n"
+                                                    │ game over (not match over)         └─ H-01 Correction history (section of S-01)
+                                                    ▼
+                                               T-02 (next game) … T-03 Match over ──"Open the score sheet"──► S-01
+ T-01 ──"?" or "Keyboard shortcuts"──► K-01 Key map (dialog) ──Close/Esc──► T-01 (focus back on the opener)
+ T-01 / S-01 ── another device changed the match (409 stale_match) ──► same screen, latest sheet, notice
+```
+
+## 2. Shared score region (T-01, S-01)
+
+- **Game line:** "Game n", or "Match over".
+- **Call:** the server's call, e.g. "4-6-1" (three numbers in doubles; format provisional, `@needs-verification`, FR-048, [DOM G1 R6] unverified).
+- **Server line (T-01 only):** "Your side serves" / "Other side serves".
+- **Unofficial label:** "unofficial scoring (rules not yet verified)" (FR-055), styled as a warning notice on S-01 and as secondary text under the call on T-01.
+- **Last-rally line = the live region:** "Rally 7: them. Score 4-6-1." (FR-048, FR-UX-62). For a rally that needs a decision: "Rally 7: them. Needs your decision." For a replay: "Rally 10: replay. Score 5-5-1."
+
+## 3. Quick Tag (ST-027, ST-029; FR-050, FR-048)
+
+### T-00 Tag rallies, video not received (§14.3.5)
+
+- **When:** the match status is not `video_received`.
+- **Content:** `<h1>` "Tag rallies"; "You can tag this match once its video is received."; "Back to the match". No tagging controls are rendered, so no rally can be saved (§14.3.5 "no rally is saved").
+
+### T-01 Tag rallies
+
+- **Layout (FR-UX-60):** video on top (native controls, `playsInline`); score region (§2); live region; the rally control bar; then a row "Undo", "Keyboard shortcuts", "Score sheet". The bar is in normal flow, never sticky, so it cannot cover the focused control (SC 2.4.11, NFR-031).
+- **Rally control bar** (each group is `role="group"` with a name):
+  1. "Rally start", "Rally end": toggle buttons (`aria-pressed`), the time is read from the video's current time.
+  2. Group "Won by": "Your side (…)", "Other side (…)": one is pressed at a time.
+  3. Group "Who hit it (optional)": one button per player nickname; pressing the pressed one clears it.
+  4. Group "Ending (saves the rally)": "Winner", "Unforced error", "Forced error", "Fault", "Replay". **Choosing the ending saves the rally**; there is no separate Save button (fewest taps, NFR-036, judgment). The group name says so, so it is not a surprise (SC 3.2.2, judgment).
+- **Pressed state:** filled and a check mark, never colour alone (NFR-034).
+- **After a save:** the marks clear, the video keeps playing from the end of the rally, ready for the next start (FR-050 R1), the score updates and the live region speaks (§2). Focus stays on the control the player used (Gherkin §7.2).
+- **Order checks on the device, before any request** (shown in the error notice, nothing is sent):
+  - "Mark the rally start first." / "Mark the rally end first." / "The rally end must be after its start."
+  - "Choose which side won the rally first."
+  - "The player who made the error must be on the side that lost the rally." (Gherkin §7.1 "Error attributed to the winning side")
+  - "The player who hit the winner must be on the side that won the rally."
+  - "This rally starts before the end of rally n. Play on to the next rally, then mark its start."
+
+### T-02 Who serves first in game n?
+
+- **When:** no game started yet, or the last game is over and the match is not.
+- **Pattern:** one question [DPA/DESIGN-12]: legend "Who serves first in game n?", two radios ("Your side (…)", "Other side (…)"), button "Start game n". Optional intro line "Game n-1 won by your side." Error: "Choose who serves first in game n." Server failure: "Game n could not be started. Try again. Reference: …".
+
+### T-03 Match over
+
+- "Match over" in the game line; "Match won by your side." / "Match won by the other side."; primary link "Open the score sheet". The control bar is not shown; Undo stays.
+
+### T-01 states
+
+| State | What the player sees | Source |
+|---|---|---|
+| Empty (no rally yet) | Game line, no call, the bar; live region empty | — |
+| Loading | Page load: `/matches` loading view "Loading…" with reserved skeleton rows (C-30). Saving a tag: "Saving…" next to the optimistic call; the controls stay enabled, a second ending press while saving is ignored | NFR-012 |
+| Error (not saved) | Notice: "The rally was not saved. Try again. Reference: …"; the marks stay so the player can retry with one press | NFR-058 |
+| Error (outcome refused by the server) | "The rally was not saved: check the winner, the ending and the player." | api-sprint-02 §4.2 |
+| Error (times overlap) | "The rally was not saved: its times overlap another rally. Mark its start and end again." | api-sprint-02 |
+| Offline | "The rally was not saved because the connection dropped. Try again." Marks kept. No offline queue in R1 (judgment; out of scope) | NFR-058 |
+| Conflict (409 `stale_match`) | The latest sheet replaces the screen; notice "This match was changed on another device. The latest score is shown; your rally was not saved." | §14.3.5 "Two devices" |
+| Game over (409 `game_over`) | "This game is over. Start the next game to go on tagging." then T-02 | api-sprint-02 |
+| Needs your decision (409 `decision_needed`) | "Some rallies need your decision first. Open the score sheet to decide." | FR-053 (a) |
+| No playable video | Notice (info): see §9 PD-FL2-04 for the proposed copy | NFR-060 |
+| Low-confidence | N/A: every call is the player's own; the only uncertainty is the rules preset, shown by the unofficial label | FR-055 |
+| Low-sample | N/A: no metric on this screen | — |
+
+## 4. Key map (ST-028a, ST-028b; FR-051, FR-UX-61)
+
+### K-01 Keyboard shortcuts (modal dialog)
+
+- **Opens with:** "?" anywhere on T-01 (except in a text field), or the "Keyboard shortcuts" button. Focus moves to "Close"; Esc or "Close" returns focus to the opener (component checklist, dialogs).
+- **Content:** `<h2>` "Keyboard shortcuts"; a two-column table "Key" / "What it does" (caption "Tagging shortcuts", visually hidden), rows: Space "Play or pause the video"; `S` "Rally start"; `E` "Rally end"; `1` "Won by your side"; `2` "Won by the other side"; `3`-`6` "Player: <nickname>"; `W` / `U` / `O` / `F` / `R` "Ending: winner / unforced error / forced error / fault / replay (saves the rally)"; `Z` undo; `J` / `L` −5 s / +5 s; `,` / `.` one frame back / forward; Esc "Clear the marks of the rally being tagged"; `?` this list. (`O` for forced error is an addition to FR-UX-61, which lists W/U/F only; DR-02 item R2-3.)
+- **Single-key switch (SC 2.1.4, judgment):** checkbox "Use single-key shortcuts", on by default; hint "When this is off, only Space and Esc work as shortcuts. You can still tag with Tab and Enter." Remembered on this device.
+- **Remapping (ST-028b, stretch):** fieldset "Change a key": select "Shortcut to change", button "Choose a new key" then "Press the new key for <action>. Esc cancels."; success in the dialog's status line "<action> is now <KEY>."; refusal as an alert with the reason; "Use the default keys" → "The default keys are back."
+- **States:** Empty N/A (always has rows); Loading N/A (no request); Error: refused remap only; Offline N/A (local); Low-confidence / Low-sample N/A.
+
+## 5. Score sheet (ST-030, ST-031, ST-032; FR-049, FR-052, FR-053, FR-055)
+
+### S-01 Score sheet
+
+- **Header:** "Back to the match"; `<h1>` "Score sheet"; match title; unofficial label (warning notice, before the tables, so a screen reader reads it first: a11y manual row 20); rules line (see §9 PD-FL2-03).
+- **Tables:** one semantic table per game, caption "Game n" or "Game n, won by your side". Columns: Rally (row header "Rally n"), Start (m:ss, floored), Server ("Your side, server 2"), Score before, Score after, Won by ("No one (replay)" for a replay), Ending, Player ("player not tagged" when skipped, Gherkin §7.1; "Not applicable" for a replay), Notes.
+- **Notes cell:** text markers "corrected by you" (Gherkin §7.3) and "needs your decision" (FR-053 (a)), in bold words, never colour alone; then the row's actions.
+- **Narrow screens (≤ 48em, 768 px):** each row stacks into labelled lines ("Score after: 4-6-1"); nothing scrolls sideways at 320 and 360 px (Gherkin §7.3 "Narrow phone screen"; G02-10 (d)). Table roles stay explicit so the stacked layout keeps its semantics.
+- **Row actions:**
+  - "Watch rally n" → V-01.
+  - **Switch winner** (1 tap, NFR-036d): visible label and accessible name must agree (see PD-FL2-01). Specified accessible name: "Switch winner, rally n" (visible words first, SC 2.5.3).
+  - **Change ending / Change player:** specified as a disclosure "Change ending" that shows the five endings as buttons (and "Change player" with the nicknames and "Not tagged"); one press of an option saves. Two taps in all (NFR-036d), and nothing is saved by moving through a list with the arrow keys (SC 3.2.2; see PD-FL2-02 for the built select).
+  - On a "needs your decision" row: "Move rally n to the next game" (primary) and "Remove rally n" (secondary).
+- **After any change:** the server's sheet replaces the tables; the live region says "Rally n corrected. The score sheet is up to date.", "Rally n moved to the next game.", "Rally n removed. It stays in the correction history." or "Last change undone."; H-01 reloads. Focus stays on the control used, or, when that row's control is gone, on the next row's first action (judgment; DR-02 item R2-5).
+- **Undo:** "Undo last change" below the tables; nothing to undo → "There is nothing to undo."
+
+### S-01 states
+
+| State | What the player sees | Source |
+|---|---|---|
+| Empty | "No rallies tagged yet." and the primary link "Tag rallies" | FR-049 |
+| Loading | `/matches` loading view (C-30); a change in progress: the Undo button is `aria-busy`, a second command is ignored until the first is answered | NFR-013 |
+| Error (load) | `/matches` error page: "Sorry, we could not load this page. Try again. Reference: …" and "Try again" (C-30) | NFR-058 |
+| Error (change refused) | "Correction failed. Try again. Reference: …"; "Correction was refused: the winner, the ending and the player do not fit together."; "Start the next game on the tagging screen first, then move the rally." | api-sprint-02 |
+| Offline | "<Correction / Undo / Decision> failed because the connection dropped. Try again." | NFR-058 |
+| Conflict (409 `stale_match`) | Latest sheet shown; "This match was changed on another device. The latest score sheet is shown; check it and try again." | §14.3.5 |
+| Needs your decision | Row marker "needs your decision" in words, the two decision buttons; later rallies are kept, never deleted (FR-053 (a), Gherkin §7.4 C-02, C-03, `@needs-verification`) | FR-053 |
+| Low-confidence | N/A: no automatic call. The unofficial label carries the one uncertainty (HAX G2) | FR-055 |
+| Low-sample | N/A: no metric (stats are Sprint 3) | — |
+
+## 6. Correction history (ST-031; FR-052)
+
+### H-01 Correction history (section of S-01)
+
+- `<h2>` "Correction history"; an ordered list (`aria-label` "Correction history"), oldest first, one line per change in words: "Rally 5: ending changed from winner to forced error at 14:32" (Gherkin §7.4: rally, field, old value, new value); "Rally 5 removed"; "Rally 22: moved from game 2 to game 1"; "Rally 23 removed (your decision)"; "A game was started"; "Undone: Rally 5: won by changed from your side to the other side".
+- Values are tag values only, never free text (match-aggregate §6). "Who" is always the signed-in owner in R1, so it is not repeated on each line (judgment).
+- **States:** Empty "No changes yet."; Loading "Loading the history…"; Error "The correction history could not be loaded." with "Reload the history"; Offline: same as Error; Low-confidence / Low-sample N/A.
+
+## 7. Rally video (ST-037; FR-027, NFR-014, NFR-055)
+
+### V-01 Rally n video (section on S-01)
+
+- Opened by "Watch rally n". A **fresh** short-lived link is fetched on every press (NFR-055: TTL ≤ 15 min, no session token in the URL); the link is never shown as text.
+- Region `<h2>` "Rally n video", native video controls, "Starts at m:ss". Plays from the rally start (Gherkin §7.6 "plays from 14:32"); focus moves to the video so keyboard users land on its controls (the player asked for it, so the move is expected; judgment).
+- **States:**
+  - Loading: the browser's own video loading; the button stays usable.
+  - Error (link could not be had): "The video for rally n could not be opened. Try again. Reference: …".
+  - Error (link expired or changed, §7.6, §14.3.6): "This video link no longer works. Choose 'Watch rally n' again." Choosing it again works (Gherkin §7.6).
+  - Error (browser cannot decode, QA-S2-UI-03): "This browser cannot play this video. Try another browser, such as Safari or Chrome. The score sheet still works here." (copy review asked in decision-log 2026-10-06: accepted by the designer, see §9).
+  - Empty / Offline: offline gives the "could not be opened" message; Low-confidence / Low-sample N/A.
+- Captions: the video is the player's own recording with no speech to caption; the score sheet is its text alternative (NFR-033, [DPA/DESIGN-09]).
+
+## 8. Copy register (shipped string → source)
+
+| Screen | String | Shipped in | Gherkin / FR |
+|---|---|---|---|
+| T-00 | "You can tag this match once its video is received." | `web/src/app/matches/[matchId]/tag/page.tsx`; `lib/tagging/messages.ts` | §14.3.5 |
+| T-01 | "Rally 7: them. Score 4-6-1." | `lib/tagging/view.ts` `tagLine` | FR-048 (`@needs-verification`) |
+| T-01 | "The player who made the error must be on the side that lost the rally." | `lib/tagging/reducer.ts` | §7.1 |
+| T-01, S-01 | "unofficial scoring (rules not yet verified)" | `lib/tagging/types.ts` `UNOFFICIAL_LABEL` | §7.3, FR-055 |
+| S-01 | "player not tagged" | `components/score-sheet/ScoreSheetTable.tsx` | §7.1 |
+| S-01 | "corrected by you", "needs your decision" | same | §7.3, FR-053 |
+| H-01 | "Rally 5: ending changed from winner to forced error" | `lib/tagging/view.ts` `historyText` | §7.4 |
+| V-01 | "This video link no longer works. Choose 'Watch rally n' again." | `components/score-sheet/ScoreSheetView.tsx` | §7.6 |
+
+## 9. Differences between this specification and the built screens (2026-10-06)
+
+Found by reading the shipped components at `971c4d7` against §3-§7 (not yet walked on the live stack; that is DR-02 item R2-1). Each is routed to its owner as an Open row in `docs/sprints/02/review-rounds.md` (review round 1, principal-designer). If one repeats a PD-S2R1 finding, the ids are aliases.
+
+| Id | Severity | Screen | Built | Specified | Owner |
+|---|---|---|---|---|---|
+| PD-FL2-01 | major | S-01 | "Switch winner" has `aria-label` "Rally n: change the winner to your side", which does not contain the visible words "Switch winner" (`RallyCorrections.tsx:27-28`). Speech-input users who say "click Switch winner" get no match: SC 2.5.3 Label in Name (Level A, judgment: WCAG text not fetched) | Accessible name starts with the visible label: "Switch winner, rally n" (the "to your side / the other side" part may follow) | senior-frontend-engineer |
+| PD-FL2-02 | major | S-01 | The ending and player corrections are `<select>`s that save on `change` (`RallyCorrections.tsx:35-37`, `:45-47`). In browsers that fire `change` while arrowing through a closed select (Chromium and Firefox on Windows, judgment), each arrow key saves a correction, re-scores the match and adds a history line. The selects also have no visible label, only the current value | Disclosure "Change ending" / "Change player" with one button per option; one press saves (§5). Keeps ≤ 2 taps (NFR-036d) and nothing saves on navigation (SC 3.2.2) | senior-frontend-engineer |
+| PD-FL2-03 | minor | S-01 | "Rules: PROVISIONAL-UNVERIFIED" shows the internal preset id (`ScoreSheetTable.tsx` rules line) | "Rules: provisional, not yet checked against the rulebook" while the preset is `PROVISIONAL-UNVERIFIED`; the preset name after OQ-01 | senior-frontend-engineer (copy confirmed by the coach at DR-02) |
+| PD-FL2-04 | minor | T-01 | No playable video: "The video cannot be played here right now. Rally times come from this page's clock." The player is not told that those times will not match the video, so V-01 later starts at the wrong moment | "The video cannot be played here right now. Reload the page to try again. If you tag without it, the rally times will not match the video." | senior-frontend-engineer |
+| PD-FL2-05 | nit | T-01, S-01 | "Undo" on T-01, "Undo last change" on S-01 for the same command | "Undo last change" on both | senior-frontend-engineer |
+
+Accepted as built (designer, 2026-10-06): the V-01 "cannot play" copy (QA-S2-UI-03), the T-02 one-question form, the K-01 dialog, the per-game tables with stacked rows, the decision buttons' words, and H-01 without a "who" column.
+
+## 10. HAX checklist (Sprint 2 scope) [DPA/DESIGN-11]
+
+| Guideline | Where | Design response |
+|---|---|---|
+| G1 Make clear what the system can do | T-01, S-01 | The player tags; the app only replays the rules. No automatic rally detection in R1 (FR-050, FR-087 is R2) |
+| G2 Make clear how well it can do it | T-01, S-01 | "unofficial scoring (rules not yet verified)" on every score; the rules line (PD-FL2-03) |
+| G8 Support efficient dismissal | T-01 | Esc clears the marks; pressing a chosen player again clears it |
+| G9 Support efficient correction | S-01 | Switch winner in 1 tap; ending and player in 2 (NFR-036d); "Undo last change" for any change |
+| G11 Make clear why the system did what it did | S-01 | Score before and after and the server on every row; "needs your decision" says why a rally is not scored |
+| G12 Remember recent interactions | K-01 | Single-key setting and remapped keys remembered on the device |
+| G16 Convey the consequences of user actions | T-01 ending group "(saves the rally)"; S-01 "Remove rally n" announcement "It stays in the correction history." | The consequence is in the label or the announcement |
+| G17 Provide global controls | K-01 | Single-key shortcuts on/off; remapping |
+| G3-G7, G10, G13-G15, G18 | — | No automatic call, recommendation or learning in Sprint 2 |
+
+## 11. WCAG 2.2 AA design-level checklist per screen
+
+"✓" means this file specifies it; "✗" means the built screen differs (§9). Implementation evidence comes from G02-10 (axe, targets, keyboard, reflow) and the human run C-06 (`a11y-manual.md` rows 18-23).
+
+| Check | T-00..T-03 | K-01 | S-01 | H-01 | V-01 |
+|---|---|---|---|---|---|
+| Unique title ("Tag rallies: <match>", "Score sheet: <match>"); one `<h1>` | ✓ | — (dialog `<h2>`) | ✓ | — (section `<h2>`) | — (section `<h2>`) |
+| Targets ≥ 24 px; tagging and correction controls ≥ 48 px (SC 2.5.8; NFR-028) | ✓ | ✓ | ✓ | — | ✓ |
+| Contrast from proven tokens only; pressed state not colour alone (SC 1.4.3, 1.4.11; NFR-029) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Focus not obscured: no sticky bar over the controls (SC 2.4.11; NFR-031) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Keyboard-only completion (NFR-034; E2E-02-02) | ✓ | ✓ (focus trapped, returned) | ✓ | ✓ | ✓ |
+| Character key shortcuts can be turned off (SC 2.1.4) | ✓ | ✓ | — | — | — |
+| Label in name (SC 2.5.3) | ✓ | ✓ | ✗ PD-FL2-01 | — | ✓ |
+| No change of setting on input (SC 3.2.2) | ✓ (the ending group says it saves) | ✓ | ✗ PD-FL2-02 | — | — |
+| Polite announcements, focus kept (SC 4.1.3; E2E-02-03) | ✓ | ✓ (status line) | ✓ | — | ✓ |
+| No dragging needed (SC 2.5.7; NFR-030) | ✓ | — | ✓ | — | ✓ (native controls; frame and 5 s keys on T-01) |
+| Reflow at 320 px, no sideways scroll (NFR-034; G02-10 (d)) | ✓ | ✓ | ✓ (stacked rows) | ✓ | ✓ |
+| Markers in words, not colour alone | — | — | ✓ | ✓ | — |
+| Text alternative for the video (NFR-033) | — | — | ✓ (the sheet is the alternative) | — | ✓ |
+
+## 12. Open items
+
+| # | Item | Owner | Needed by |
+|---|---|---|---|
+| E-1 | Score call format (three numbers, "us/them") is provisional; the coach verifies it (FR-048, `@needs-verification`) | pickleball-domain-coach | Rulebook PDFs (OQ-01), Sprint 3 planning 2026-11-16 |
+| E-2 | Endings: is "Forced error" kept separate in the UI while κ ≥ 0.6 is unproven (FR-050)? Proposed: keep the button, merge in analytics only | pickleball-domain-coach, product-manager | DR-02 |
+| E-3 | Focus target after a decision removes the row's controls (§5) | senior-frontend-engineer | DR-02 |
+| E-4 | Offline tagging queue: out of scope for R1; T-01 says the rally was not saved | product-manager | R2 planning |
+
+## 13. Design review record (DR-02)
+
+| Date | Participants | Outcome | Findings |
+|---|---|---|---|
+| 2026-10-06 | principal-designer (author) | Draft written after the build, from the shipped components and the Gherkin | §9 PD-FL2-01..05, routed in `review-rounds.md` |
+| Opened 2026-10-06; decisions due end of 2026-10-07; hard date 2026-11-02 (the DR-01 hard date, sprint-02 §0.1) | principal-designer (chair), pickleball-domain-coach (SME), senior-frontend-engineer, business-analyst, product-manager; security-privacy-engineer for R2-6 | **Not yet held.** Same asynchronous format as `flows-sprint-01.md` §10.2: each participant writes accept or reject with one line of reason in the "Decision" column below and commits it under ADR 0022. While any cell is empty, the Sprint 2 UI stories (ST-027..ST-032, ST-037 FE) keep "Design review held" open (sprint-02 DoR R7) and §9 stays a proposal | — |
+
+### 13.1 Agenda (chair's proposals, judgment unless cited)
+
+| # | Item | Proposal | Decides | Decision |
+|---|---|---|---|---|
+| R2-1 | Walk T-00..T-03, K-01, S-01, H-01, V-01 on the local HTTPS stack against §3-§7 and §11 | Run with the FE at the next live run; add any new difference to §9 | all | |
+| R2-2 | §9 PD-FL2-01..05 | Accept all five as specified | senior-frontend-engineer | |
+| R2-3 | `O` for "forced error" (FR-UX-61 lists W/U/F only) | Accept: forced error is an FR-050 ending and needs a key | business-analyst | |
+| R2-4 | Words "Your side (…)" / "Other side (…)" and "us/them" in the call | Accept for R1; verify with the call format (E-1) | pickleball-domain-coach | |
+| R2-5 | Ending press saves the rally, no Save button; focus rule after a decision (E-3) | Accept both | senior-frontend-engineer, product-manager | |
+| R2-6 | V-01 messages say nothing about the link's lifetime or its contents | Accept: no URL shown, no expiry time shown (NFR-055) | security-privacy-engineer | |
+| R2-7 | E-2 forced vs unforced error in the UI | Keep the button; analytics decides later | pickleball-domain-coach, product-manager | |
