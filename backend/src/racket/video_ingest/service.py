@@ -51,6 +51,7 @@ from racket.video_ingest.domain import (
     UploadSession,
     UploadStatus,
 )
+from racket.video_ingest.domain.uploads import ORIGINAL_CONTENT_TYPE
 from racket.video_ingest.repository import MediaRepository, UploadRepository
 
 PROBE_STAGE = "probe"
@@ -265,7 +266,7 @@ class UploadService:
             self.session.rollback()
             raise RateLimited(retry_at, now)
         object_key = ObjectKeyPolicy().original_key()
-        s3_upload_id = self.store.create_multipart(object_key)
+        s3_upload_id = self.store.create_multipart(object_key, content_type=ORIGINAL_CONTENT_TYPE)
         upload = UploadSession.start(
             owner_id=owner_id,
             match_id=match_id,

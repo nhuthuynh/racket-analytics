@@ -109,17 +109,19 @@ class ObjectStore:
         ttl_seconds: int = PRESIGN_MAX_SECONDS,
         *,
         public_endpoint: str | None = None,
+        content_type: str | None = None,
     ) -> str:
         """A GET link for ``key``. With ``public_endpoint`` the link is signed for the host the
         browser uses (the https origin's media route, SRE-MEDIA), so the signature matches what
-        the store receives through the proxy. Bearer secret: never log it (NFR-069)."""
+        the store receives through the proxy. With ``content_type`` the store answers with that
+        ``Content-Type`` (signed ``response-content-type``), whatever the object was stored
+        with (QA-RV1-05). Bearer secret: never log it (NFR-069)."""
         ttl = max(1, min(ttl_seconds, PRESIGN_MAX_SECONDS))
         client = self._client if public_endpoint is None else self._signer(public_endpoint)
-        return str(
-            client.generate_presigned_url(
-                "get_object", Params={"Bucket": self.bucket, "Key": key}, ExpiresIn=ttl
-            )
-        )
+        params = {"Bucket": self.bucket, "Key": key}
+        if content_type is not None:
+            params["ResponseContentType"] = content_type
+        return str(client.generate_presigned_url("get_object", Params=params, ExpiresIn=ttl))
 
     def _signer(self, endpoint: str) -> Any:
         """A client that only signs (no request is sent), for the public endpoint."""
@@ -138,8 +140,10 @@ class ObjectStore:
         self._client.head_bucket(Bucket=self.bucket)
 
     # ------------------------------------------------------------ multipart
-    def create_multipart(self, key: str) -> str:
-        return str(self._client.create_multipart_upload(Bucket=self.bucket, Key=key)["UploadId"])
+    def create_multipart(self, key: str, *, content_type: str | None = None) -> str:
+        extra = {} if content_type is None else {"ContentType": content_type}
+        response = self._client.create_multipart_upload(Bucket=self.bucket, Key=key, **extra)
+        return str(response["UploadId"])
 
     def upload_part(self, key: str, upload_id: str, number: int, data: bytes) -> str:
         response = self._client.upload_part(

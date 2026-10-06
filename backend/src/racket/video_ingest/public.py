@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from racket.platform.settings import Settings
 from racket.platform.storage import ObjectStore
 from racket.video_ingest.domain import MediaFacts, MediaUrlPolicy, UploadStatus
+from racket.video_ingest.domain.uploads import ORIGINAL_CONTENT_TYPE
 from racket.video_ingest.repository import PROBE_FAILED, MediaRepository, UploadRepository
 
 # Part of the port: other contexts name upload states through here, never through the domain
@@ -117,6 +118,9 @@ def media_link(
         return None
     policy = MediaUrlPolicy(ttl_seconds=settings.media_url_ttl_seconds)
     url = store.presigned_get(
-        asset.object_key, policy.ttl_seconds, public_endpoint=settings.s3_public_endpoint_url
+        asset.object_key,
+        policy.ttl_seconds,
+        public_endpoint=settings.s3_public_endpoint_url,
+        content_type=ORIGINAL_CONTENT_TYPE,  # QA-RV1-05: also for originals stored before
     )
     return MediaLink(policy.check(url, session_token=session_token), policy.ttl_seconds)
