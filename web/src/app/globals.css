@@ -939,6 +939,11 @@ main:focus-visible,
   max-inline-size: 100%;
 }
 
+/* S-01 why a "needs your decision" row has no move (C3-03): its own line, body text colour. */
+.rally-fix__why {
+  flex-basis: 100%;
+}
+
 /* S-01 "Change ending" / "Change player" options (PD-S2R1-02): a wrapping row of buttons. */
 .rally-fix__options {
   display: flex;

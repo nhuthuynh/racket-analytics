@@ -111,18 +111,30 @@ export function ScoreSheetView({
   }
 
   /**
-   * Which move a "needs your decision" row can take (api-sprint-02 §3 Resolution). C-03: while
-   * the game before the row's game is not over, the next game is refused by the server, and only
-   * the earliest kept rally of the row's game may move back; otherwise the rally is past the end
-   * of its game and moves to the next one.
+   * Which move a "needs your decision" row can take (api-sprint-02 §3 Resolution), and, when none,
+   * why (C3-03, Gherkin §7.7). C-03: while the game before the row's game is not over, the next
+   * game is refused by the server, and only the earliest kept rally of the row's game may move
+   * back. Otherwise the rally is past the end of its game and moves to the next one, but only the
+   * latest kept rally of the game (by time on the video), so no rally of the game is left behind
+   * it (PE-S2-R2-01; the server refuses others with decision/not_last_in_game, PE-S2-R3-01).
    */
-  function moveFor(row: SheetRow): RallyDecision | null {
+  function moveFor(row: SheetRow): { decision: RallyDecision | null; why: string | null } {
+    const sameGame = sheet.rows.filter((r) => r.game === row.game);
     const previous = sheet.games?.find((g) => g.number === row.game - 1);
-    if (!previous || previous.winner !== null) return 'move_to_next_game';
-    const first = sheet.rows
-      .filter((r) => r.game === row.game)
-      .reduce<SheetRow | null>((a, r) => (a === null || r.start_ms < a.start_ms ? r : a), null);
-    return first?.rally_id === row.rally_id ? 'move_to_previous_game' : null;
+    if (!previous || previous.winner !== null) {
+      const last = sameGame.reduce<SheetRow | null>((a, r) => (a === null || r.start_ms > a.start_ms ? r : a), null);
+      if (!last || last.rally_id === row.rally_id) return { decision: 'move_to_next_game', why: null };
+      return {
+        decision: null,
+        why: `Only the last rally of game ${row.game} can move to the next game. Decide rally ${last.number} first.`,
+      };
+    }
+    const first = sameGame.reduce<SheetRow | null>((a, r) => (a === null || r.start_ms < a.start_ms ? r : a), null);
+    if (!first || first.rally_id === row.rally_id) return { decision: 'move_to_previous_game', why: null };
+    return {
+      decision: null,
+      why: `Only the first rally of game ${row.game} can move back to game ${row.game - 1}. Decide rally ${first.number} first.`,
+    };
   }
 
   async function watch(row: SheetRow, opener: HTMLElement) {
@@ -178,20 +190,7 @@ export function ScoreSheetView({
         rowActions={(row) => (
           <>
             {row.marker === 'needs_decision' ? (
-              <span className="rally-fix">
-                {moveFor(row) === 'move_to_next_game' ? (
-                  <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_next_game')}>
-                    {`Move rally ${row.number} to the next game`}
-                  </button>
-                ) : moveFor(row) === 'move_to_previous_game' ? (
-                  <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_previous_game')}>
-                    {`Move rally ${row.number} back to game ${row.game - 1}`}
-                  </button>
-                ) : null}
-                <button type="button" className="button button--secondary rally-fix__button" onClick={() => decide(row, 'withdraw')}>
-                  {`Remove rally ${row.number}`}
-                </button>
-              </span>
+              <MoveOffer row={row} offer={moveFor(row)} onDecide={decide} />
             ) : null}
             <button type="button" className="button button--secondary rally-fix__button" onClick={(e) => void watch(row, e.currentTarget)}>
               {`Watch rally ${row.number}`}
@@ -228,5 +227,34 @@ export function ScoreSheetView({
         )}
       </section>
     </div>
+  );
+}
+
+/** The decision buttons of a "needs your decision" row (ST-032, C-03, C3-03). */
+function MoveOffer({
+  row,
+  offer,
+  onDecide,
+}: {
+  row: SheetRow;
+  offer: { decision: RallyDecision | null; why: string | null };
+  onDecide: (row: SheetRow, decision: RallyDecision) => void;
+}) {
+  return (
+    <span className="rally-fix">
+      {offer.decision === 'move_to_next_game' ? (
+        <button type="button" className="button rally-fix__button" onClick={() => onDecide(row, 'move_to_next_game')}>
+          {`Move rally ${row.number} to the next game`}
+        </button>
+      ) : offer.decision === 'move_to_previous_game' ? (
+        <button type="button" className="button rally-fix__button" onClick={() => onDecide(row, 'move_to_previous_game')}>
+          {`Move rally ${row.number} back to game ${row.game - 1}`}
+        </button>
+      ) : null}
+      <button type="button" className="button button--secondary rally-fix__button" onClick={() => onDecide(row, 'withdraw')}>
+        {`Remove rally ${row.number}`}
+      </button>
+      {offer.why ? <span className="rally-fix__why">{offer.why}</span> : null}
+    </span>
   );
 }
