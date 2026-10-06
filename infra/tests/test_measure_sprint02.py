@@ -387,3 +387,28 @@ def test_live_scripts_refuse_below_the_disk_floor(script: str) -> None:
     )
     assert res.returncode == 2
     assert "prune first" in res.stderr
+
+
+# ================================ tag_latency seeds through the https origin (SRE-S2-02, QA-RV1-03)
+def test_tag_latency_refuses_a_seed_api_that_is_not_an_http_url() -> None:
+    res = subprocess.run(
+        [sys.executable, str(MEASURE / "tag_latency.py"), "--seed-api", "localhost:34300/api"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res.returncode == 2
+    assert "--seed-api" in res.stderr
+    assert "http(s) URL" in res.stderr
+
+
+def test_tag_latency_seeds_on_the_api_unless_a_seed_api_is_given() -> None:
+    tl = _load("tag_latency")
+    plain = tl.build_parser().parse_args(["--api", "http://127.0.0.1:34800"])
+    assert tl.bases(plain) == ("http://127.0.0.1:34800", "http://127.0.0.1:34800")
+    split = tl.build_parser().parse_args(
+        ["--api", "http://127.0.0.1:34800", "--seed-api", "https://localhost:34300/api"]
+    )
+    # Seeding (sign-in, match, tus upload, tags) goes through the origin, where the tus
+    # Location's /api prefix is served; the measured load stays on the API port.
+    assert tl.bases(split) == ("https://localhost:34300/api", "http://127.0.0.1:34800")

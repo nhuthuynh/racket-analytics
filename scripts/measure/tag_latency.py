@@ -9,6 +9,14 @@ loop, as api_latency.py). Prints p50/p95/p99 and availability (non-5xx / all, ex
     python3 scripts/measure/tag_latency.py --api http://127.0.0.1:8000 --rps 50 --duration 60 \
         --json reports/goal/tag-latency.json
 
+On the Compose stack the tus Location carries the web's ``/api`` prefix, which the bare API port
+does not serve, so seed through the https origin and measure on the API port (SRE-S2-02,
+QA-RV1-03):
+
+    python3 scripts/measure/tag_latency.py --api http://127.0.0.1:34800 \
+        --seed-api https://localhost:34300/api --origin https://localhost:34300 \
+        --cacert <root.crt> --mailpit http://127.0.0.1:34825 --rps 50 --duration 60
+
 Exit 0 only when no response is an unexpected 3xx/4xx (other than 429), p95 <= --max-p95-ms,
 p99 <= --max-p99-ms, availability >= --min-availability and the achieved rate is >= 95% of
 --rps; 2 when it refuses to start (disk floor).
@@ -22,6 +30,7 @@ import shutil
 import sys
 import threading
 import time
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -34,9 +43,21 @@ from livehttp import Client, sign_in, ssl_context
 from measurelib import latency_summary
 
 
-def main(argv: list[str] | None = None) -> int:
+def _http_url(value: str) -> str:
+    if urllib.parse.urlsplit(value).scheme not in ("http", "https"):
+        raise argparse.ArgumentTypeError(f"not an http(s) URL: {value!r}")
+    return value
+
+
+def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--api", default="http://127.0.0.1:8000", help="API base URL (server-side)")
+    p.add_argument("--api", default="http://127.0.0.1:8000", help="API base URL (measured load)")
+    p.add_argument(
+        "--seed-api",
+        type=_http_url,
+        help="base URL for the seeding (sign-in, match, upload, tags), e.g. the https origin's "
+        "/api; default: --api",
+    )
     p.add_argument("--origin", default="https://localhost:3000")
     p.add_argument("--mailpit", default="http://127.0.0.1:8025")
     p.add_argument("--cacert")
@@ -51,7 +72,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--result-timeout", type=float, default=120.0)
     p.add_argument("--json", type=Path)
     p.add_argument("--min-free-gb", type=int, default=10)
-    args = p.parse_args(argv)
+    return p
+
+
+def bases(args: argparse.Namespace) -> tuple[str, str]:
+    """(seed base, load base): seeding may go through the origin, the load stays on --api."""
+    return (args.seed_api or args.api, args.api)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    seed_base, load_base = bases(args)
     free_gb = shutil.disk_usage("/").free // 1024**3
     if free_gb < args.min_free_gb:
         print(
@@ -62,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     ctx = ssl_context(args.cacert, args.insecure_loopback)
-    setup = Client(args.api, args.origin, ctx)
+    setup = Client(seed_base, args.origin, ctx)
     login = sign_in(setup, args.mailpit)
     match_id = new_match(setup) if login["ok"] else None
     video = (
@@ -99,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         if delay > 0:
             time.sleep(delay)
         if not hasattr(local, "c"):
-            local.c = Client(args.api, args.origin, ctx, timeout=10)
+            local.c = Client(load_base, args.origin, ctx, timeout=10)
             local.c.cookie = cookie
         try:
             r = local.c.request("GET", paths[i % len(paths)])
@@ -118,7 +149,13 @@ def main(argv: list[str] | None = None) -> int:
             pool.submit(fire, i, start + i / args.rps)
     wall = time.perf_counter() - start
     summary = latency_summary(latencies, statuses, wall)
-    summary.update(target_rps=args.rps, duration_s=args.duration, api=args.api, endpoints=paths)
+    summary.update(
+        target_rps=args.rps,
+        duration_s=args.duration,
+        api=load_base,
+        seed_api=seed_base,
+        endpoints=paths,
+    )
     summary["ok"] = bool(
         summary["p95_ms"] is not None
         and summary["p95_ms"] <= args.max_p95_ms

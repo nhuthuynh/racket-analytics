@@ -131,11 +131,13 @@ python3 scripts/measure/junit_rate.py --include 'test_it_01_|test_rules_static|t
 ### G02-04: read latency at 50 RPS
 
 ```bash
-python3 scripts/measure/tag_latency.py --api http://127.0.0.1:38000 --origin "$WEB" --mailpit "$MAILPIT" \
+python3 scripts/measure/tag_latency.py --api http://127.0.0.1:38000 --seed-api "$API" --origin "$WEB" \
+  --cacert "$RA_DEV_STATE/root.crt" --mailpit "$MAILPIT" \
   --rps 50 --duration 60 --json "$GOAL/tag-latency.json"; echo rc=$?
 ```
 
 - Server-side latency as NFR-010 defines it (the API's published port). The session comes from a magic-link sign-in; the match is tagged with the 6-rally journey first.
+- **Seeding goes through the https origin (`--seed-api "$API"`), the load stays on the API port (`--api`)** (SRE-S2-02, QA-RV1-03; decision-log 2026-10-06). On Compose the tus `Location` carries the web's `/api` prefix, which the bare API port does not serve, so seeding on the API port leaves the upload `uploading` and the run exits 1 before any load. The JSON names both bases (`api`, `seed_api`).
 - **Actual:** `p95_ms`, `p99_ms`, `availability`, `status_unexpected`, `achieved_rps`. Met only with rc=0.
 - **Supporting line (not the measure):** the same with `--api "$API" --cacert "$RA_DEV_STATE/root.crt"` (through TLS and the Next rewrite).
 
@@ -301,6 +303,6 @@ python3 ../scripts/ci/run_with_budget.py 600 -- env -u APP_ENV uv run pytest -q 
 |---|---|---|
 | G02-01, G02-02 | engineering-manager with principal-engineer | Not yet possible: the Sprint 2 API does not exist. Harness unit tests 81 passed; fail-closed smoke rc=1 (decision-log 2026-10-05) |
 | G02-03, G02-07, G02-08, G02-09, G02-12 | senior-qa-engineer | 2026-10-06, heads `0609d6a`..`77a7201` (test-only commits between), QA's own Postgres/object store/Mailpit and Compose `racket-qa02` for the strict sandbox. **G02-03** rc=0 ×4: IT run `458 passed, 2 skipped` (the 2 are the strict sandbox file, run separately: `10 passed`); IT-02 rate 231/231, missing []; IT-01 rate 80/80, missing []. **G02-07** rc=0 after two method fixes (decision-log 2026-10-06): scoring `275 passed, 1 skipped` (P3, FR-043) in 34.9 s; golden replay `4 passed`; `needs_verification` collected 62 (≥ 46); `needs_verification and not red_until` `44 passed`; committed-story `red_until` grep 0; stretch: ST-035 (SOS rows). **G02-08** oracle 100,000 sequences, 0 disagreements, rc=0; mutation rules 0.8635 (≥ 0.85), projection 0.9107 (target path fixed), rc=0. **G02-09** pytest rc=0 (`1871 passed, 1 skipped`); diff-cover 97% (rc=0); rules + aggregates 99.54% line, 98.25% branch (include fixed); web lines 91.02%. **G02-12** rc=124 / 0 / 0: domain run 10 s budget exceeded on this loaded host (pytest itself 7.8-8.5 s; wall 9.5-10.4 s), backend unit 11.2 s, integration 227.9 s |
-| G02-04 | sre-devops-engineer | |
+| G02-04 | sre-devops-engineer (method fix by engineering-manager, SRE-S2-02) | 2026-10-06, head `8af0f77` + the `--seed-api` change, own fresh Compose stack `racket-ems2r1` over HTTPS (clean worktree, `evidence.sh up` rc 0, 9 services healthy; `down` rc 0, volumes and images removed). Old method (no `--seed-api`): **rc=1**, `"video": {"ok": false, "status": "uploading"}`, no load sent (reproduces SRE-S2-02). New method `--api http://127.0.0.1:34800 --seed-api https://localhost:34300/api --origin https://localhost:34300 --cacert root.crt --rps 50 --duration 60`: **rc=0**, 3000 requests, p50 11.1 ms, p95 24.1 ms, p99 73.4 ms, availability 1.0, 0 unexpected, 0 5xx, 0 429, achieved 50.0 RPS. A dry-run, not the verifier's measurement |
 | G02-05, G02-06, G02-10 | senior-qa-engineer with sre-devops-engineer | 2026-10-06, head `0609d6a`, Compose `racket-qa02` (https://localhost:43000, SRE-MEDIA in), Chromium 1194. **G02-05** rc=1: `82 passed, 3 failed, 6 skipped` (rate 0.965, every required id present); failures: E2E-02-04 and `seek-first-frame` real link ("this browser cannot decode the H.264 original", blockers.md 2026-10-06) and the stand-in seek (QA-S2-UI-04); 6 skips each name their API binding; `--repeat-each=3` `248 passed`, flaky report rc=1, 1 flaky = the stand-in seek, caused by product defect QA-S2-UI-04 (not a test flake). **G02-06** rc=1: (a) n=160 p95 13.0 ms; (b) n=640 p95 12.6 ms; (c) n=0 (H.264 blocker); (d) n=60 p95 403.1 ms. **G02-10**: 36 axe attachments, 0 serious/critical, 0 target failures; families T, K, S, H, V (V via the stand-in only) and every Sprint 1 family incl. C-22 states |
 | G02-11 | engineering-manager | `open_defects.py docs/sprints/02/review-rounds.md` → rc=1, open 17 (planning, 2026-10-05) |
