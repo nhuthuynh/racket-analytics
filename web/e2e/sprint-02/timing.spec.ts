@@ -207,25 +207,35 @@ test.describe('@story-ST-039 Browser timings (G02-06)', () => {
     }
   }
 
-  test('seek-first-frame on the reference profile (real video link)', async ({ page }, testInfo) => {
-    const matchId = await receivedMatch(page, 'Timing video');
-    await tagJourneyByApi(page, matchId);
-    await page.goto(`/matches/${matchId}/sheet`);
-    expect(await decodesH264(page), 'this browser cannot decode the H.264 original (blockers.md 2026-10-06)').toBe(true);
-    await throttle(page);
-    await seekSamples(page, testInfo, matchId, 'seek-first-frame');
-  });
+  // throttle() uses a CDP session, which only Chromium-based browsers have; the ST-039 card puts
+  // WebKit timings out of scope (QA-RV1-08 / SRE-S2-08). The skip is decided from the project
+  // alone, before any browser starts. Owner: senior-qa-engineer.
+  test.describe('reference profile (CDP throttling)', () => {
+    test.skip(
+      ({ browserName }) => browserName !== 'chromium',
+      'reference-profile throttling needs CDP (Chromium/Chrome only; ST-039 card: WebKit timings out of scope)',
+    );
 
-  test('seek-first-frame with the decodable stand-in (supporting, not the G02-06 (c) measure)', async ({ page }, testInfo) => {
-    // Chromium has no H.264 decoder, so the presigned link is answered with a VP9 copy of the
-    // fixture. A routed response skips the network emulation, so only the 4x CPU applies: this
-    // shows the page's seek-and-play path, not the link's delivery (metric name kept separate).
-    const matchId = await receivedMatch(page, 'Timing stand-in');
-    await tagJourneyByApi(page, matchId);
-    const body = await decodableStandIn();
-    await page.route(/X-Amz-Signature=/, (route) => route.fulfill(rangeResponse(route.request().headers()['range'], body)));
-    await page.goto(`/matches/${matchId}/sheet`);
-    await throttle(page);
-    await seekSamples(page, testInfo, matchId, 'seek-first-frame-standin');
+    test('seek-first-frame on the reference profile (real video link)', async ({ page }, testInfo) => {
+      const matchId = await receivedMatch(page, 'Timing video');
+      await tagJourneyByApi(page, matchId);
+      await page.goto(`/matches/${matchId}/sheet`);
+      expect(await decodesH264(page), 'this browser cannot decode the H.264 original (blockers.md 2026-10-06)').toBe(true);
+      await throttle(page);
+      await seekSamples(page, testInfo, matchId, 'seek-first-frame');
+    });
+
+    test('seek-first-frame with the decodable stand-in (supporting, not the G02-06 (c) measure)', async ({ page }, testInfo) => {
+      // Chromium has no H.264 decoder, so the presigned link is answered with a VP9 copy of the
+      // fixture. A routed response skips the network emulation, so only the 4x CPU applies: this
+      // shows the page's seek-and-play path, not the link's delivery (metric name kept separate).
+      const matchId = await receivedMatch(page, 'Timing stand-in');
+      await tagJourneyByApi(page, matchId);
+      const body = await decodableStandIn();
+      await page.route(/X-Amz-Signature=/, (route) => route.fulfill(rangeResponse(route.request().headers()['range'], body)));
+      await page.goto(`/matches/${matchId}/sheet`);
+      await throttle(page);
+      await seekSamples(page, testInfo, matchId, 'seek-first-frame-standin');
+    });
   });
 });
