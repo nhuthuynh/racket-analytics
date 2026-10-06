@@ -61,3 +61,29 @@ def test_it_02_05_every_match_scoped_route_has_a_probe(api: ApiDriver) -> None:
     served = {k for k in id_routes(api.app) if k[1].startswith("/matches/{match_id}/")}
     assert served, "inventory is empty (BE-QA-01)"
     assert served - set(MATRIX) == set(), sorted(served - set(MATRIX))
+
+
+RALLY_ROUTES = [(m, t, k) for (m, t), k in RALLY_ID_ROUTES_02.items()]
+
+
+@pytest.mark.parametrize(
+    ("method", "template", "kwargs"), RALLY_ROUTES, ids=[f"{m} {t}" for m, t, _ in RALLY_ROUTES]
+)
+def test_it_02_05_mixed_ids_carlos_own_match_with_ivys_rally_is_a_404(
+    api: ApiDriver, ivy_match: dict[str, str], method: str, template: str, kwargs: Any
+) -> None:
+    """SEC-RV3-03: Carlos owns a match and names Ivy's rally under it. The rally must be looked
+    up within the match (and the match within the owner), so this is the same 404 as a missing
+    rally, and Ivy's sheet is unchanged."""
+    carlos_match = sb.ready_tagged_match(api, "carlos", title="IT-02-05 carlos")
+    before = sb.sheet_body(api, "ivy", ivy_match["match"])
+    mixed = template.format(match_id=carlos_match, rally_id=ivy_match["rally"])
+    missing = template.format(match_id=carlos_match, rally_id=uuid.uuid4())
+    # Carlos's current version, so a command passes the version check and reaches the lookup
+    version = api.run(sb.version_of(api.as_user("carlos"), carlos_match))
+    headers = {sb.tagcontract.VERSION_HEADER: f'"{version}"'}
+    got = api.request("carlos", method, mixed, headers=headers, **kwargs())
+    absent = api.request("carlos", method, missing, headers=headers, **kwargs())
+    assert got.status_code == 404, got.text
+    assert _strip(got) == _strip(absent)
+    assert sb.sheet_body(api, "ivy", ivy_match["match"]) == before
