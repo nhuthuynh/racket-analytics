@@ -194,10 +194,10 @@ env -u APP_ENV uv run pytest -q -rs -m "needs_verification and not red_until" --
 cd ..
 grep -rnE 'red_until\(story="ST-0(26|27|28|29|30|31|32|37|41)"' backend/tests | wc -l         # must be 0
 grep -rnE 'red_until\(story="ST-0(33|34|35|36|38)"' backend/tests                            # stretch rows: list them
-python3 scripts/measure/junit_rate.py --include '.' --allow-skips --require 'C-01|c_01' --require 'C-04|c_04' \
-  --require 'P6|projection_equals_fold' --require 'P8|replay' --json "$GOAL/scoring-rate.json" "$GOAL/scoring.xml"; echo rc=$?
+python3 scripts/measure/junit_rate.py --include '.' --allow-skips --require 'C-01|c_?01' --require 'C-04|c_?04' \
+  --require 'P6|projection_equals_(a_)?fold' --require 'P8|replay' --json "$GOAL/scoring-rate.json" "$GOAL/scoring.xml"; echo rc=$?
 python3 scripts/measure/junit_rate.py --include '.' --require 'golden_replay' --json "$GOAL/golden-rate.json" "$GOAL/golden-replay.xml"; echo rc=$?
-python3 scripts/measure/junit_rate.py --include '.' --require 'SOD' --require 'F-0|fault' --require 'C-02|c_02' \
+python3 scripts/measure/junit_rate.py --include '.' --require 'SOD|sod' --require 'F-0|f0|fault' --require 'C-02|c_?02' \
   --json "$GOAL/needs-verification-rate.json" "$GOAL/needs-verification.xml"; echo rc=$?
 ```
 
@@ -216,7 +216,7 @@ env -u APP_ENV uv run --with mutmut==3.8.0 python ../scripts/ci/mutation_score.p
   --ignore tests/unit/sports/pickleball/test_rules_static.py --out "$GOAL/mutation-rules.json"; echo rc=$?
 mv mutants "$GOAL/mutants-rules" 2>/dev/null || true
 env -u APP_ENV uv run --with mutmut==3.8.0 python ../scripts/ci/mutation_score.py --project . \
-  --target src/racket/matches/projection.py --tests tests/unit/matches --out "$GOAL/mutation-projection.json"; echo rc=$?
+  --target src/racket/matches/scorebook/domain/projection.py --tests tests/unit/matches --out "$GOAL/mutation-projection.json"; echo rc=$?
 ```
 
 - The projection module path follows match-aggregate §5; if ST-026 names it differently, the method author changes the `--target` with a decision-log row before the dry-run.
@@ -234,7 +234,7 @@ env -u APP_ENV uv run --with mutmut==3.8.0 python ../scripts/ci/mutation_score.p
 uvx --from diff-cover==10.6.0 diff-cover "$GOAL/coverage-backend.xml" --compare-branch=2b97fa0 --fail-under=85 \
   --markdown-report "$GOAL/diff-cover.md"; echo rc=$?
 (cd backend && uv run coverage report --data-file=.coverage \
-  --include='src/racket/sports/pickleball/rules/*,src/racket/matches/match_state.py,src/racket/matches/participants.py,src/racket/matches/aggregate*.py,src/racket/matches/projection*.py,src/racket/matches/corrections*.py')
+  --include='src/racket/sports/pickleball/rules/*,src/racket/matches/match_state.py,src/racket/matches/participants.py,src/racket/matches/scorebook/domain/*')
 (cd web && pnpm exec vitest run --coverage --coverage.reporter=text-summary)
 ```
 
@@ -300,7 +300,7 @@ python3 ../scripts/ci/run_with_budget.py 600 -- env -u APP_ENV uv run pytest -q 
 | Row | Method author | Dry-run (date, head, rc) |
 |---|---|---|
 | G02-01, G02-02 | engineering-manager with principal-engineer | Not yet possible: the Sprint 2 API does not exist. Harness unit tests 81 passed; fail-closed smoke rc=1 (decision-log 2026-10-05) |
-| G02-03, G02-07, G02-08, G02-09, G02-12 | senior-qa-engineer | |
+| G02-03, G02-07, G02-08, G02-09, G02-12 | senior-qa-engineer | 2026-10-06, heads `0609d6a`..`77a7201` (test-only commits between), QA's own Postgres/object store/Mailpit and Compose `racket-qa02` for the strict sandbox. **G02-03** rc=0 ×4: IT run `458 passed, 2 skipped` (the 2 are the strict sandbox file, run separately: `10 passed`); IT-02 rate 231/231, missing []; IT-01 rate 80/80, missing []. **G02-07** rc=0 after two method fixes (decision-log 2026-10-06): scoring `275 passed, 1 skipped` (P3, FR-043) in 34.9 s; golden replay `4 passed`; `needs_verification` collected 62 (≥ 46); `needs_verification and not red_until` `44 passed`; committed-story `red_until` grep 0; stretch: ST-035 (SOS rows). **G02-08** oracle 100,000 sequences, 0 disagreements, rc=0; mutation rules 0.8635 (≥ 0.85), projection 0.9107 (target path fixed), rc=0. **G02-09** pytest rc=0 (`1871 passed, 1 skipped`); diff-cover 97% (rc=0); rules + aggregates 99.54% line, 98.25% branch (include fixed); web lines 91.02%. **G02-12** rc=124 / 0 / 0: domain run 10 s budget exceeded on this loaded host (pytest itself 7.8-8.5 s; wall 9.5-10.4 s), backend unit 11.2 s, integration 227.9 s |
 | G02-04 | sre-devops-engineer | |
-| G02-05, G02-06, G02-10 | senior-qa-engineer with sre-devops-engineer | |
+| G02-05, G02-06, G02-10 | senior-qa-engineer with sre-devops-engineer | 2026-10-06, head `0609d6a`, Compose `racket-qa02` (https://localhost:43000, SRE-MEDIA in), Chromium 1194. **G02-05** rc=1: `82 passed, 3 failed, 6 skipped` (rate 0.965, every required id present); failures: E2E-02-04 and `seek-first-frame` real link ("this browser cannot decode the H.264 original", blockers.md 2026-10-06) and the stand-in seek (QA-S2-UI-04); 6 skips each name their API binding; `--repeat-each=3` `248 passed`, flaky report rc=1, 1 flaky = the stand-in seek, caused by product defect QA-S2-UI-04 (not a test flake). **G02-06** rc=1: (a) n=160 p95 13.0 ms; (b) n=640 p95 12.6 ms; (c) n=0 (H.264 blocker); (d) n=60 p95 403.1 ms. **G02-10**: 36 axe attachments, 0 serious/critical, 0 target failures; families T, K, S, H, V (V via the stand-in only) and every Sprint 1 family incl. C-22 states |
 | G02-11 | engineering-manager | `open_defects.py docs/sprints/02/review-rounds.md` → rc=1, open 17 (planning, 2026-10-05) |
