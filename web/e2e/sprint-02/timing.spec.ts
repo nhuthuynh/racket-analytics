@@ -17,7 +17,9 @@ import {
   OTHER_SIDE,
   decodableStandIn,
   decodesH264,
+  moveRallyClockOn,
   openTagging,
+  playableVideo,
   rangeResponse,
   receivedMatch,
   sheetOf,
@@ -96,6 +98,7 @@ async function timedTap(page: Page, testInfo: TestInfo, button: Locator, label: 
 test.describe('@story-ST-039 Browser timings (G02-06)', () => {
   test('tag-optimistic and tap-feedback on Quick Tag', async ({ page }, testInfo) => {
     test.slow();
+    await playableVideo(page); // rally times come from the video, as in WebKit (SRE-S2-07)
     const matchId = await receivedMatch(page, 'Timing tags');
     await openTagging(page, matchId);
     const bar = page.getByRole('group', { name: 'Tag the rally' });
@@ -105,7 +108,7 @@ test.describe('@story-ST-039 Browser timings (G02-06)', () => {
     for (let n = 1; n <= 8; n += 1) {
       const winner = n % 2 === 1 ? MY_SIDE : OTHER_SIDE;
       await timedTap(page, testInfo, bar.getByRole('button', { name: 'Rally start' }), `start-${n}`);
-      await page.waitForTimeout(5); // rally times come from the page clock without a video
+      await moveRallyClockOn(page); // SRE-S2-07: seek a playable video, else let the page clock tick
       await timedTap(page, testInfo, bar.getByRole('button', { name: 'Rally end' }), `end-${n}`);
       await timedTap(page, testInfo, bar.getByRole('button', { name: winner }), `side-${n}`);
 

@@ -2,10 +2,11 @@
 // @needs-verification) and E2E-02-03: after each tag the polite live region says the rally
 // number, the winner and the new score, and focus stays on the tagging controls (SC 4.1.3).
 import { expect, test } from '@playwright/test';
-import { JOURNEY, JOURNEY_ROWS, openTagging, receivedMatch, tagByKeys } from '../helpers/sprint-02';
+import { JOURNEY, JOURNEY_ROWS, moveRallyClockOn, openTagging, playableVideo, receivedMatch, tagByKeys } from '../helpers/sprint-02';
 
 test.describe('@M0 @story-ST-029 @needs-verification Score call and announcement', () => {
   test('E2E-02-03 each tag is announced in the live region and focus stays on the controls', async ({ page }) => {
+    await playableVideo(page); // rally times come from the video, as in WebKit (SRE-S2-07)
     await openTagging(page, await receivedMatch(page));
     const region = page.locator('[role="status"][aria-live="polite"]').first();
     await expect(region).toHaveAttribute('aria-atomic', 'true');
@@ -13,7 +14,7 @@ test.describe('@M0 @story-ST-029 @needs-verification Score call and announcement
     // Taps: focus stays on the ending button that saved the rally.
     const bar = page.getByRole('group', { name: 'Tag the rally' });
     await bar.getByRole('button', { name: 'Rally start' }).click();
-    await page.waitForTimeout(5);
+    await moveRallyClockOn(page); // SRE-S2-07: a paused video does not move on by itself
     await bar.getByRole('button', { name: 'Rally end' }).click();
     await bar.getByRole('button', { name: /^Your side/ }).click();
     await bar.getByRole('button', { name: 'Ivy', exact: true }).click();

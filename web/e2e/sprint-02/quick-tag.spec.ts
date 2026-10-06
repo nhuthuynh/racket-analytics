@@ -4,7 +4,9 @@ import { expect, test } from '@playwright/test';
 import {
   JOURNEY,
   OTHER_SIDE,
+  moveRallyClockOn,
   openTagging,
+  playableVideo,
   receivedMatch,
   sheetOf,
   tagByTaps,
@@ -13,6 +15,7 @@ import { signInByLink } from '../helpers/sprint-01';
 
 test.describe('@M0 @story-ST-027 Quick Tag', () => {
   test('Tag a rally: the score is shown at once and the video continues from the end of the rally', async ({ page }) => {
+    await playableVideo(page); // rally times come from the video, as in WebKit (SRE-S2-07)
     const matchId = await receivedMatch(page);
     await openTagging(page, matchId);
     for (const [i, tag] of JOURNEY.entries()) await tagByTaps(page, tag, i + 1);
@@ -20,7 +23,7 @@ test.describe('@M0 @story-ST-027 Quick Tag', () => {
     // Rally 7: won by the other side, unforced error by Ivy herself.
     const bar = page.getByRole('group', { name: 'Tag the rally' });
     await bar.getByRole('button', { name: 'Rally start' }).click();
-    await page.waitForTimeout(5);
+    await moveRallyClockOn(page); // SRE-S2-07: a paused video does not move on by itself
     await bar.getByRole('button', { name: 'Rally end' }).click();
     const endMarked = await page.evaluate(() => document.querySelector('video')?.currentTime ?? null);
     await bar.getByRole('button', { name: OTHER_SIDE }).click();
@@ -40,10 +43,11 @@ test.describe('@M0 @story-ST-027 Quick Tag', () => {
   });
 
   test('Error attributed to the winning side is refused with the reason', async ({ page }) => {
+    await playableVideo(page);
     await openTagging(page, await receivedMatch(page));
     const bar = page.getByRole('group', { name: 'Tag the rally' });
     await bar.getByRole('button', { name: 'Rally start' }).click();
-    await page.waitForTimeout(5);
+    await moveRallyClockOn(page); // SRE-S2-07: a paused video does not move on by itself
     await bar.getByRole('button', { name: 'Rally end' }).click();
     await bar.getByRole('button', { name: /^Your side/ }).click();
     await bar.getByRole('button', { name: 'Dana', exact: true }).click();
@@ -65,14 +69,16 @@ test.describe('@M0 @story-ST-027 Quick Tag', () => {
 
   test('Two devices tag at once: the other device is told and shows the latest score', async ({ browser }) => {
     const phone = await browser.newPage();
+    await playableVideo(phone);
     const matchId = await receivedMatch(phone);
     await openTagging(phone, matchId);
     const laptop = await browser.newPage({ storageState: await phone.context().storageState() });
-    await laptop.goto(`/matches/${matchId}/tag`);
+    await playableVideo(laptop);
+    await openTagging(laptop, matchId);
     await tagByTaps(phone, JOURNEY[0]!, 1); // the phone saves rally 1 first
     const bar = laptop.getByRole('group', { name: 'Tag the rally' });
     await bar.getByRole('button', { name: 'Rally start' }).click();
-    await laptop.waitForTimeout(5);
+    await moveRallyClockOn(laptop);
     await bar.getByRole('button', { name: 'Rally end' }).click();
     await bar.getByRole('button', { name: OTHER_SIDE }).click();
     await bar.getByRole('button', { name: 'Winner', exact: true }).click();

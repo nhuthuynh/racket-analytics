@@ -112,6 +112,27 @@ export async function openTagging(page: Page, matchId: string): Promise<void> {
     await start.click();
   }
   await expect(page.getByRole('group', { name: 'Tag the rally' })).toBeVisible();
+  // Rally times come from the video once it has metadata, from the page clock before: let the
+  // video settle first so a rally's start and end never mix the two clocks (SRE-S2-07).
+  await expect
+    .poll(() => page.evaluate(() => {
+      const v = document.querySelector('video');
+      return !v || v.readyState > 0 || v.error !== null;
+    }), { timeout: 15_000 })
+    .toBe(true);
+}
+
+/**
+ * Give T-01 a video this browser plays (SRE-S2-07, QA-RV2-03). WebKit and a Chrome channel
+ * decode the H.264 original, so T-01 reads rally times from the paused video there; Playwright
+ * Chromium cannot, so the decodable stand-in is routed to the presigned link and every browser
+ * takes the same path. Call before the page opens T-01; WebKit needs `serviceWorkers: 'block'`
+ * only when it routes, and it never does (it decodes the original).
+ */
+export async function playableVideo(page: Page): Promise<void> {
+  if (await decodesH264(page)) return;
+  const body = await decodableStandIn();
+  await page.route(/X-Amz-Signature=/, (route) => route.fulfill(rangeResponse(route.request().headers()['range'], body)));
 }
 
 /** Seek the T-01 video (when it plays here) so rally ``i`` (0-based) has its own 10 s slot. */
@@ -119,6 +140,24 @@ async function seek(page: Page, seconds: number): Promise<void> {
   await page.evaluate((s) => {
     const v = document.querySelector('video');
     if (v && v.readyState > 0) v.currentTime = s;
+  }, seconds);
+}
+
+/**
+ * Move the rally clock on between "Rally start" and "Rally end" (SRE-S2-07, QA-RV2-03). T-01
+ * reads rally times from the video once it has metadata (WebKit, a Chrome channel, or the routed
+ * stand-in), so seek it ``seconds`` forward; without a playable video it reads the page clock,
+ * so wait until that clock has moved on. Never a fixed sleep: a paused video does not advance.
+ */
+export async function moveRallyClockOn(page: Page, seconds = 4): Promise<void> {
+  await page.evaluate(async (s) => {
+    const v = document.querySelector('video');
+    if (v && v.readyState > 0) {
+      v.currentTime += s;
+      return;
+    }
+    const from = performance.now();
+    while (performance.now() - from < 2) await new Promise((r) => setTimeout(r, 1));
   }, seconds);
 }
 
@@ -132,7 +171,7 @@ export async function tagByTaps(page: Page, tag: JourneyTag, number: number): Pr
   await seek(page, (number - 1) * 9);
   await bar.getByRole('button', { name: 'Rally start' }).click();
   await seek(page, (number - 1) * 9 + 4);
-  await page.waitForTimeout(5); // without a playable video, rally times come from the page clock
+  await moveRallyClockOn(page, 0); // the seek moved a playable video; else the page clock ticks
   await bar.getByRole('button', { name: 'Rally end' }).click();
   if (tag.side) await bar.getByRole('button', { name: tag.side === 'mine' ? MY_SIDE : OTHER_SIDE }).click();
   if (tag.player) await bar.getByRole('button', { name: tag.player, exact: true }).click();
@@ -144,7 +183,7 @@ export async function tagByTaps(page: Page, tag: JourneyTag, number: number): Pr
 export async function tagByKeys(page: Page, tag: JourneyTag, number: number): Promise<void> {
   await page.keyboard.press('s');
   await page.keyboard.press('l');
-  await page.waitForTimeout(5); // without a playable video, rally times come from the page clock
+  await moveRallyClockOn(page, 0); // L moved a playable video 5 s on; else the page clock ticks
   await page.keyboard.press('e');
   await page.keyboard.press('l');
   if (tag.side) await page.keyboard.press(tag.side === 'mine' ? '1' : '2');
