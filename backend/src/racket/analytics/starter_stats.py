@@ -23,78 +23,17 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from typing import Any
 
+from racket.analytics.attribution import attribute_lost_rallies, check_conservation
+from racket.analytics.sheet import SIDES, CountedRally, counted_rallies, games_in_scope
 from racket.analytics.uncertainty import LowSamplePolicy, wilson
 
 METRICS = ("AN-01", "AN-02", "AN-03", "AN-04", "AN-05", "AN-06", "AN-07")
-SIDES = ("A", "B")
 CATEGORIES = ("winner", "unforced_error", "forced_error", "fault")
 RUN_BUCKETS = ("1", "2", "3", "4", "5+")
-_OTHER = {"A": "B", "B": "A"}
-
 Stats = dict[str, dict[str, dict[str, Any]]]
-
-
-@dataclass(frozen=True, slots=True)
-class CountedRally:
-    """One sheet row that counts towards the stats (rules 0.1 and 0.2 applied)."""
-
-    number: int
-    rally_id: str
-    game: int
-    winning_side: str
-    ending: str
-    fault_kind: str | None
-    responsible_player: str | None
-    serving_side: str
-    actor: str  # the side that made the ending (rule 0.2)
-    point_to: str | None  # the side that scored, or None when only the serve moved
-
-
-def _total(call: object) -> int | None:
-    """Sum of the two scores of a call ("4-2-1" or "4-2"); None if it is not a call."""
-    if not isinstance(call, str):
-        return None
-    parts = call.split("-")
-    if len(parts) < 2 or not all(p.isdigit() for p in parts[:2]):
-        return None
-    return int(parts[0]) + int(parts[1])
-
-
-def counted_rallies(sheet: Mapping[str, Any]) -> list[CountedRally]:
-    out = []
-    for row in sheet.get("rows", ()):
-        side, serving = row.get("winning_side"), row.get("serving_side")
-        if row.get("marker") is not None or row.get("ending") == "replay":
-            continue
-        if side not in _OTHER or serving not in _OTHER:
-            continue  # defensive: the sheet never scores such a row
-        before, after = _total(row.get("score_before")), _total(row.get("score_after"))
-        scored = before is not None and after is not None and after == before + 1
-        ending = row["ending"]
-        out.append(
-            CountedRally(
-                number=row["number"],
-                rally_id=row["rally_id"],
-                game=row["game"],
-                winning_side=side,
-                ending=ending,
-                fault_kind=row.get("fault_kind"),
-                responsible_player=row.get("responsible_player"),
-                serving_side=serving,
-                actor=side if ending == "winner" else _OTHER[side],
-                point_to=side if scored else None,
-            )
-        )
-    return out
-
-
-def games_in_scope(sheet: Mapping[str, Any]) -> int:
-    """Completed games plus the current one (dictionary AN-04); a game the sheet cannot score
-    because an earlier game is unfinished is not in scope (C-03)."""
-    return sum(1 for g in sheet.get("games", ()) if g.get("score_a") is not None)
+__all__ = ["METRICS", "CountedRally", "Stats", "counted_rallies", "starter_stats"]
 
 
 def _round(value: float | None, places: int) -> float | None:
@@ -224,6 +163,7 @@ def starter_stats(sheet: Mapping[str, Any], policy: LowSamplePolicy | None = Non
     """AN-01..AN-07 per side (A, B) for one match: ``stats[metric][side] -> fields``."""
     rules = policy or LowSamplePolicy()
     counted = counted_rallies(sheet)
+    check_conservation(counted, attribute_lost_rallies(counted))  # FR-109, every computation
     games = games_in_scope(sheet)
     stats: Stats = {m: {} for m in METRICS}
     for side in SIDES:
