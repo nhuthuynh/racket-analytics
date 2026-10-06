@@ -1,12 +1,12 @@
 {
   "sprint": "02",
-  "goal": "Quick Tag to an unofficial score sheet, with undo, corrections that keep conflicting rallies, and the rally video; the Sprint 1 blockers and majors fixed first (docs/sprints/sprint-02.md \u00a71)",
+  "goal": "Quick Tag to an unofficial score sheet, with undo, corrections that keep conflicting rallies, and the rally video; the Sprint 1 blockers and majors fixed first (docs/sprints/sprint-02.md §1)",
   "goal_scorecard": "docs/sprints/02/goal-scorecard.md",
   "dates": {
     "planned_start": "2026-11-02",
     "planned_review": "2026-11-13",
     "work_started": "2026-10-05",
-    "status_written": "2026-10-05 (planning, engineering-manager)"
+    "status_written": "2026-10-06 (review round 1 status step, engineering-manager)"
   },
   "owner": "engineering-manager",
   "branch": "sprint-02",
@@ -64,28 +64,18 @@
     }
   },
   "open_defects": {
-    "count": 17,
+    "count": 6,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/02/review-rounds.md",
-    "measured": "2026-10-05 planning"
+    "measured": "2026-10-06 review round 1 (engineering-manager), rc 1"
   },
   "preconditions": {
     "adr_0009_ratified": "met (ADR 0023)",
-    "match_aggregate_design_approved": "not met (Proposed; review D1)",
-    "api_sprint_02_contract": "not met (D2)",
+    "match_aggregate_design_approved": "met (Accepted, D1 closed, 8af0f77)",
+    "api_sprint_02_contract": "met (Accepted, 8af0f77)",
     "flows_sprint_02": "not met (D2)",
     "dr_01_sprint_1_p7_review": "not met (D1, hard date 2026-11-02)"
   },
-  "po_items_open": [
-    "P1",
-    "P2",
-    "P3",
-    "P4",
-    "P5",
-    "P6",
-    "P7",
-    "P8",
-    "P9"
-  ],
+  "po_items_open": 5,
   "stories": [
     {
       "id": "C-01",
@@ -95,14 +85,14 @@
         "BE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
-      "open": [
-        "red first: unit + IT-02-10"
-      ],
-      "evidence": []
+      "open": [],
+      "evidence": [
+        "9bf41f0"
+      ]
     },
     {
       "id": "C-02",
@@ -112,14 +102,14 @@
         "BE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
-      "open": [
-        "red first: IT-02-11"
-      ],
-      "evidence": []
+      "open": [],
+      "evidence": [
+        "4ba6f99"
+      ]
     },
     {
       "id": "C-03",
@@ -129,12 +119,14 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "5942e09"
+      ]
     },
     {
       "id": "C-04",
@@ -144,14 +136,15 @@
         "QA": 0.5
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 0.5,
       "dod_done_units": 0,
       "depends_on": [],
-      "open": [
-        "TCR row first"
-      ],
-      "evidence": []
+      "open": [],
+      "evidence": [
+        "a79627e",
+        "fd835df"
+      ]
     },
     {
       "id": "C-05",
@@ -161,12 +154,14 @@
         "SRE": 0.5
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 0.5,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "2ce84e4"
+      ]
     },
     {
       "id": "C-06",
@@ -176,14 +171,16 @@
         "QA": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [
-        "PO item P6: human tester with devices; due 2026-11-13"
+        "PO item P6: human tester with VoiceOver/TalkBack devices; due 2026-11-13 (review round 1, QA-R3-GATE-01 deferred to this row)"
       ],
-      "evidence": []
+      "evidence": [
+        "442f7b3 (plan and 24-row script; 0 of 24 rows run)"
+      ]
     },
     {
       "id": "ST-013b",
@@ -193,14 +190,14 @@
         "BE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
-      "open": [
-        "ADR 0032 red tests 1-5 first"
-      ],
-      "evidence": []
+      "open": [],
+      "evidence": [
+        "019c551"
+      ]
     },
     {
       "id": "ST-026",
@@ -210,14 +207,17 @@
         "BE": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [
         "R3 design review D1"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "292b417",
+        "e78e161"
+      ]
     },
     {
       "id": "ST-027",
@@ -228,8 +228,8 @@
         "FE": 4
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 6,
       "dod_done_units": 0,
       "depends_on": [
         "ST-026",
@@ -238,7 +238,12 @@
         "R7 DR-01"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "423de28",
+        "54539a5",
+        "477c3bb",
+        "ec619aa..6f0a06c (FE slices)"
+      ]
     },
     {
       "id": "ST-028a",
@@ -248,14 +253,17 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [
         "ST-027"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "6f0a06c",
+        "586e058"
+      ]
     },
     {
       "id": "ST-029",
@@ -265,14 +273,16 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [
         "ST-027"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "423de28"
+      ]
     },
     {
       "id": "ST-030",
@@ -283,14 +293,18 @@
         "FE": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2.5,
       "dod_done_units": 0,
       "depends_on": [
         "ST-026"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "477c3bb",
+        "14dc352",
+        "ae59979"
+      ]
     },
     {
       "id": "ST-031",
@@ -301,14 +315,18 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 3,
       "dod_done_units": 0,
       "depends_on": [
         "ST-026"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "af9837f",
+        "072d82f",
+        "fc3f95c"
+      ]
     },
     {
       "id": "ST-032",
@@ -319,8 +337,8 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 3,
       "dod_done_units": 0,
       "depends_on": [
         "ST-031",
@@ -328,7 +346,13 @@
         "R5 coach Q1"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "af9837f",
+        "9ebb848",
+        "2b46b21",
+        "8c21bc3",
+        "ff9fd60"
+      ]
     },
     {
       "id": "ST-037",
@@ -339,15 +363,22 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [
         "ST-027",
         "SRE-MEDIA"
       ],
-      "open": [],
-      "evidence": []
+      "open": [
+        "E2E-02-04 / G02-06 (c): local Chromium has no H.264 (blockers.md 2026-10-06, SRE-S2-05)"
+      ],
+      "evidence": [
+        "c949d70",
+        "ac5ca2c",
+        "f94a72f",
+        "5820cd0"
+      ]
     },
     {
       "id": "ST-039",
@@ -358,14 +389,18 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 3,
       "dod_done_units": 0,
       "depends_on": [
         "ST-030"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "1ef2dd7",
+        "0609d6a",
+        "7a1ad00"
+      ]
     },
     {
       "id": "ST-040",
@@ -375,12 +410,16 @@
         "ML": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [],
-      "open": [],
-      "evidence": []
+      "open": [
+        "ADR 0035 Proposed; review pending"
+      ],
+      "evidence": [
+        "20febb5"
+      ]
     },
     {
       "id": "ST-041",
@@ -390,12 +429,14 @@
         "QA": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "dc6880b"
+      ]
     },
     {
       "id": "QA-ACC",
@@ -405,15 +446,18 @@
         "QA": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [
         "R4",
         "R6"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "5a3be41",
+        "109cc21"
+      ]
     },
     {
       "id": "QA-FUZZ",
@@ -423,12 +467,14 @@
         "QA": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "c7ea7c4"
+      ]
     },
     {
       "id": "QA-MINORS",
@@ -438,12 +484,18 @@
         "QA": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "3608cf9 C-34",
+        "b2a4716",
+        "77a7201 C-32",
+        "74f1ec6 C-31",
+        "b5626fa C-22"
+      ]
     },
     {
       "id": "QA-DRYRUN",
@@ -453,12 +505,16 @@
         "QA": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
-      "open": [],
-      "evidence": []
+      "open": [
+        "G02-01/02 dry-run (EM with PE) after BE-D1-01 fix; G02-04 dry-run rc 0 in review round 1 (SRE-S2-02 fix)"
+      ],
+      "evidence": [
+        "66f089e"
+      ]
     },
     {
       "id": "W-01",
@@ -468,14 +524,18 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [
-        "PO item P1"
+        "ci-gate not green yet (SRE-S2-05, -07, -08)",
+        "nightly-quality.yml dispatch after PR #1 merges to main (PO P1 / PR #1 addendum; S-08, DEMO-07 deferred to this row)"
       ],
-      "evidence": []
+      "evidence": [
+        "ffce41d",
+        "7cff44b"
+      ]
     },
     {
       "id": "SRE-MEDIA",
@@ -485,12 +545,14 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "03ab524"
+      ]
     },
     {
       "id": "SRE-SMOKE",
@@ -500,12 +562,16 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "f9150c6",
+        "941bf7f",
+        "40de20a"
+      ]
     },
     {
       "id": "SRE-CARRY",
@@ -515,14 +581,22 @@
         "SRE": 3.5
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 3.5,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [
         "C-15 needs PO item P5 for other rounds' images"
       ],
-      "evidence": []
+      "evidence": [
+        "c869eb9 C-23",
+        "7470a7b C-15",
+        "65e8adc C-11",
+        "7f9a83c C-18",
+        "7bb971f C-29",
+        "d6c92bd C-13",
+        "bddd3c7 C-12"
+      ]
     },
     {
       "id": "DR-01",
@@ -535,7 +609,7 @@
       "dod_done_units": 0,
       "depends_on": [],
       "open": [
-        "hard date 2026-11-02"
+        "hard date 2026-11-02; PD-R1-06 family still Open"
       ],
       "evidence": []
     }
@@ -609,7 +683,9 @@
   ],
   "totals": {
     "planned_units": 46.0,
-    "implemented_units": 0,
+    "implemented_units": 44.0,
     "dod_done_units": 0
-  }
+  },
+  "po_items_note": "P1-P4 answered 2026-10-06 (po-input-2026-10-05.md addenda); P5-P9 open",
+  "dod_done_note": "dod_done_units stay 0 until review round 1 closes and the goal scorecard is verified on the live stack (PO standing rule)"
 }
