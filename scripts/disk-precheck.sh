@@ -29,7 +29,8 @@ if (( avail_gb < floor )); then
   cat >&2 <<MSG
 disk-precheck: only ${avail_gb} GB free on ${path}, need >= ${floor} GB.
 Evidence from this run would not be valid. The SRE prunes first (docs/ops/disk-and-prune.md):
-  docker builder prune -af; docker image prune -af; docker volume prune -f   # stale only
+  docker builder prune -af; docker image prune -f; docker volume prune -f   # stale and dangling only
+Tear down your own evidence stack with 'down -v --rmi local'; never remove another round's images.
 then re-run this check.
 MSG
   exit 3

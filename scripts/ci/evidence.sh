@@ -2,13 +2,16 @@
 # One door for E2E evidence runs (ADR 0033 rule 3; sprint-02 rows C-05, C-15, C-23).
 #
 #   bash scripts/ci/evidence.sh e2e RUN_DIR [playwright test args...]
-#       Playwright from web/ with --output RUN_DIR/pw-out, holding the evidence lock.
+#       Disk precheck (C-23), then Playwright from web/ with --output RUN_DIR/pw-out, holding
+#       the evidence lock.
 #
 # Why: concurrent agents shared web/test-results and produced false reds (QA-R3-E2E-02). Every
 # evidence run therefore writes its own output directory and takes one shared lock,
 # .local/evidence-e2e.lock, for as long as Playwright runs.
 #
-# Exit codes: the command's own rc; 2 usage; 4 lock not acquired within RA_EVIDENCE_LOCK_WAIT_S.
+# Exit codes: the command's own rc; 2 usage; 3 below the disk floor (scripts/disk-precheck.sh,
+# RA_MIN_FREE_GB, default 10 GB: evidence from a full disk is not valid); 4 lock not acquired
+# within RA_EVIDENCE_LOCK_WAIT_S.
 # Overrides (tests): RA_EVIDENCE_PLAYWRIGHT (default "pnpm exec playwright test"),
 # RA_EVIDENCE_LOCK, RA_EVIDENCE_LOCK_WAIT_S (default 3600).
 set -euo pipefail
@@ -16,12 +19,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOCK="${RA_EVIDENCE_LOCK:-$REPO_ROOT/.local/evidence-e2e.lock}"
 LOCK_WAIT_S="${RA_EVIDENCE_LOCK_WAIT_S:-3600}"
+RA_MIN_FREE_GB="${RA_MIN_FREE_GB:-10}"
+export RA_MIN_FREE_GB
 
 usage() {
   cat >&2 <<'MSG'
 usage: evidence.sh e2e RUN_DIR [playwright test args...]
 MSG
   exit 2
+}
+
+disk_precheck() {
+  # Prints the `df -h` line (the evidence); rc 3 below the floor (PD-R2R-10).
+  bash "$REPO_ROOT/scripts/disk-precheck.sh" / || exit $?
 }
 
 take_lock() {
@@ -53,6 +63,7 @@ cmd_e2e() {
     fi
   done
   mkdir -p "$run_dir"
+  disk_precheck
   take_lock
   local -a pw
   read -r -a pw <<<"${RA_EVIDENCE_PLAYWRIGHT:-pnpm exec playwright test}"

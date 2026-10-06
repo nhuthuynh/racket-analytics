@@ -10,9 +10,10 @@ At the Sprint 1 close, concurrent Playwright runs shared `web/test-results` (ENO
 
 | Command | What it does | Exit codes |
 |---|---|---|
-| `bash scripts/ci/evidence.sh e2e RUN_DIR [playwright args]` | From `web/`: `pnpm exec playwright test --output RUN_DIR/pw-out [args]` while holding the lock | Playwright's rc; 2 usage (no `RUN_DIR`, or a caller-supplied `--output`); 4 lock not taken in time |
+| `bash scripts/ci/evidence.sh e2e RUN_DIR [playwright args]` | `scripts/disk-precheck.sh /` first (C-23), then from `web/`: `pnpm exec playwright test --output RUN_DIR/pw-out [args]` while holding the lock | Playwright's rc; 2 usage (no `RUN_DIR`, or a caller-supplied `--output`); 3 below the disk floor; 4 lock not taken in time |
 
 - **Lock:** `.local/evidence-e2e.lock` (`flock`), shared by every agent and the verifier. A run waits up to `RA_EVIDENCE_LOCK_WAIT_S` seconds (default 3600) and then exits 4. Nothing runs without the lock.
+- **Disk floor (C-23, PD-R2R-10):** every E2E evidence run starts with the precheck, floor `RA_MIN_FREE_GB` (default 10). The `df -h /` line it prints is the disk evidence of the run. Below the floor Playwright never starts (rc 3): a run on a full disk would not be valid evidence.
 - **Output:** always `RUN_DIR/pw-out`. A relative `RUN_DIR` is resolved against the caller's directory. Passing `--output` yourself is refused, so a run can never fall back to the shared `web/test-results`.
 - Environment for Playwright (`BASE_URL`, `MAILPIT_API_URL`, `PW_PROJECTS`, `PLAYWRIGHT_BROWSERS_PATH`, reporter output names) passes through unchanged.
 

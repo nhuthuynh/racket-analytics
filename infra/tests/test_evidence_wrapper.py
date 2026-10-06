@@ -138,3 +138,32 @@ def test_default_lock_is_the_shared_evidence_lock_under_dot_local() -> None:
     # Every agent and the verifier must contend for the same file (ADR 0033 rule 3).
     text = EVIDENCE.read_text()
     assert "${RA_EVIDENCE_LOCK:-$REPO_ROOT/.local/evidence-e2e.lock}" in text
+
+
+# ---------------------------------------------------------------- C-23: disk precheck first
+@pytest.mark.unit
+def test_e2e_refuses_below_the_disk_floor_before_playwright_starts(tmp_path: Path) -> None:
+    # PD-R2R-10: live_goal refused below the floor, E2E runs did not.
+    pw, log = recorder(tmp_path, "pw")
+    res = run(
+        tmp_path, "e2e", str(tmp_path / "run"),
+        RA_EVIDENCE_PLAYWRIGHT=str(pw), RA_MIN_FREE_GB="1000000",
+    )  # fmt: skip
+    assert res.returncode == 3, res
+    assert "need >= 1000000 GB" in res.stderr
+    assert not log.exists()
+
+
+@pytest.mark.unit
+def test_e2e_records_the_df_line_as_evidence(tmp_path: Path) -> None:
+    pw, _ = recorder(tmp_path, "pw")
+    res = run(tmp_path, "e2e", str(tmp_path / "run"), RA_EVIDENCE_PLAYWRIGHT=str(pw))
+    assert res.returncode == 0, res
+    assert "Filesystem" in res.stdout
+    assert "disk-precheck: ok" in res.stdout
+
+
+@pytest.mark.unit
+def test_e2e_default_floor_is_the_evidence_floor_of_10_gb() -> None:
+    text = EVIDENCE.read_text()
+    assert 'RA_MIN_FREE_GB="${RA_MIN_FREE_GB:-10}"' in text

@@ -87,3 +87,14 @@ def test_live_goal_default_floor_is_10_gb() -> None:
     assert res.returncode == 0
     assert "--min-free-gb" in res.stdout
     assert "default 10" in res.stdout
+
+
+@pytest.mark.unit
+def test_precheck_advice_never_removes_images_another_agent_may_use() -> None:
+    # `docker image prune -a` removes every image without a running container, including other
+    # rounds' stacks (ADR 0033 option 3 rejected; docs/ops/disk-and-prune.md step 3: dangling only).
+    res = precheck(RA_MIN_FREE_GB="1000000")
+    assert res.returncode == 3, res
+    assert "image prune -af" not in res.stderr
+    assert "image prune -a " not in res.stderr
+    assert "docker image prune -f" in res.stderr
