@@ -74,3 +74,47 @@ def test_locustfile_routes_come_from_the_harness_contract_only() -> None:
     text = LOCUSTFILE.read_text()
     assert "import tagcontract as k" in text
     assert "/score-sheet" not in text  # routes live only in scripts/measure/tagcontract.py
+
+
+# ---------------------------------------------------------------- W-01: CI run 37434214390
+def test_domain_budget_measures_the_rules_and_domain_suite_only() -> None:
+    # NFR-073: "Rules + domain unit suite < 10 s". tests/unit (1,262 tests) is the whole
+    # backend unit suite, which has its own 60 s budget; on the runner it passed 10 s (rc 124).
+    env = yaml.safe_load(CI.read_text())["env"]
+    paths = env["DOMAIN_TEST_PATHS"].split()
+    assert "tests/unit" not in paths
+    assert paths == [
+        "tests/unit/sports",
+        "tests/unit/matches",
+        "tests/unit/players",
+        "tests/unit/video_ingest",
+    ]
+    for p in paths:
+        assert (REPO_ROOT / "backend" / p).is_dir(), p
+
+
+def test_e2e_job_has_ffmpeg_for_the_decodable_stand_in() -> None:
+    # rally-video.spec.ts builds a VP9 stand-in with ffmpeg: `spawnSync ffmpeg ENOENT` x 4
+    text = runs("e2e")
+    assert "apt-get install -y -q --no-install-recommends ffmpeg" in text
+    names = [s.get("name", "") for s in jobs()["e2e"]["steps"]]
+    install = next(i for i, n in enumerate(names) if "ffmpeg" in n.lower())
+    playwright = next(i for i, n in enumerate(names) if n.startswith("Playwright journeys"))
+    assert install < playwright
+
+
+def test_the_integration_gate_excludes_rows_waiting_on_a_story() -> None:
+    text = runs("integration")
+    assert (
+        '-m "(unit or integration or scenario or regression) and not nightly and not red_until"'
+        in text
+    )
+
+
+def test_rows_waiting_on_a_story_are_listed_and_a_stale_marker_fails() -> None:
+    steps = jobs()["integration"]["steps"]
+    step = next(s for s in steps if "red_until" in s.get("name", ""))
+    assert step.get("continue-on-error") is not True
+    assert '-m "red_until and not nightly"' in step["run"]
+    assert "scripts/ci/red_until_report.py" in step["run"]
+    assert '--summary "$GITHUB_STEP_SUMMARY"' in step["run"]

@@ -32,7 +32,9 @@ env:
   # Property tests on the Hypothesis `ci` profile (>= 1,000 examples, ST-004). Own budget, so
   # the 10 s domain budget keeps measuring the default profile (QA-R1-07; decision-log).
   PROPERTY_BUDGET_S: "90"
-  DOMAIN_TEST_PATHS: "tests/unit"
+  # NFR-073 "rules + domain unit suite": the rules engine and the bounded contexts' unit tests.
+  # tests/unit as a whole is the backend unit suite with its own 60 s budget (W-01, run 37434214390).
+  DOMAIN_TEST_PATHS: "tests/unit/sports tests/unit/matches tests/unit/players tests/unit/video_ingest"
   COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
   FORCE_COLOR: "1"
 
@@ -198,10 +200,19 @@ jobs:
         run: |
           uv sync --locked
           python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" -- \
-            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly" \
+            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
+      - name: Rows waiting on a story (red_until; listed, not gated; a stale marker fails)
+        # sprint-02 §8: rows red until a story (stretch or PO-blocked) are listed separately.
+        # pytest's own rc is expected to be 1 here; the report decides (W-01).
+        working-directory: backend
+        run: |
+          uv run --no-sync pytest -q -p no:cacheprovider -m "red_until and not nightly" \
+            --junitxml=../reports/red-until.xml || echo "pytest rc=$? (red-until rows are expected to fail)"
+          python3 ../scripts/ci/red_until_report.py --junit ../reports/red-until.xml --root . \
+            --summary "$GITHUB_STEP_SUMMARY"
       - name: Changed-lines coverage >= 85% (testing-strategy §8, NFR-071)
         if: github.event_name == 'pull_request'
         env:
@@ -331,6 +342,11 @@ jobs:
           uv sync --locked
           uv run --no-sync pytest -q tests/integration/test_it_00_10_worker_sandbox.py \
             tests/integration/test_it_00_10_worker_sandbox_strict.py
+      - name: Install ffmpeg (the rally-video specs build a decodable VP9 stand-in; W-01)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
       - working-directory: web
         run: |
           pnpm install --frozen-lockfile
@@ -516,7 +532,7 @@ jobs:
           export MAILPIT_API_URL="http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
           uv sync --locked
           for i in 1 2 3; do
-            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly" \
+            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --junitxml="../reports/run-$i.xml" || true
