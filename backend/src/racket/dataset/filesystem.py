@@ -6,6 +6,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from racket.dataset.gold_set import GoldSet
+from racket.dataset.labels import UnreadableLabels
 from racket.dataset.manifest import Manifest
 
 MANIFEST_NAME = "manifest.json"
@@ -38,3 +40,18 @@ def hash_set(root: Path) -> dict[str, str]:
 
 def load_manifest(path: Path) -> Manifest:
     return Manifest.from_dict(json.loads(path.read_text(encoding="utf-8")))
+
+
+def load_labels(root: Path, gold: GoldSet) -> dict[str, object]:
+    """Parsed label documents of a gold set by path; absent files are left out (the
+    integrity check reports them), unparsable ones become ``UnreadableLabels``."""
+    labels: dict[str, object] = {}
+    for label_file in (f for clip in gold.clips for f in clip.label_files):
+        path = root / label_file
+        if not path.is_file() or path.is_symlink():
+            continue
+        try:
+            labels[label_file] = json.loads(path.read_text(encoding="utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            labels[label_file] = UnreadableLabels(str(exc))
+    return labels

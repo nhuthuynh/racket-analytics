@@ -1,0 +1,151 @@
+{
+  "schema": "gold-set-manifest/v1",
+  "id": "example-full-tag-v1",
+  "version": 1,
+  "created": "2026-10-06",
+  "description": "Schema example of gold-set manifest v1 and Full Tag labels v1 (ST-040). NOT an evaluation set: synthetic FFmpeg test patterns, schema-only labels, synthetic venues. Built by fixtures/gold/make_example_full_tag_v1.py.",
+  "purpose": "vision",
+  "label_schema": "full-tag-labels/v1",
+  "rules_version": null,
+  "metric_dict_version": null,
+  "licence": "CC0-1.0",
+  "consent_status": "synthetic",
+  "labellers": [
+    {
+      "role_id": "synthetic-generator",
+      "role": "generator"
+    }
+  ],
+  "agreement": [],
+  "venues": [
+    {
+      "id": "synthetic-venue-1",
+      "split": "train"
+    },
+    {
+      "id": "synthetic-venue-2",
+      "split": "train"
+    },
+    {
+      "id": "synthetic-venue-3",
+      "split": "test"
+    },
+    {
+      "id": "synthetic-venue-4",
+      "split": "test"
+    },
+    {
+      "id": "synthetic-venue-5",
+      "split": "test"
+    }
+  ],
+  "clips": [
+    {
+      "path": "clips/c1.mp4",
+      "label_file": "labels/c1.json",
+      "second_label_file": "labels/c1.second.json",
+      "venue_id": "synthetic-venue-1",
+      "double_labelled": true,
+      "shows_people": false,
+      "consent_record": null,
+      "consent_jurisdiction": null
+    },
+    {
+      "path": "clips/c2.mp4",
+      "label_file": "labels/c2.json",
+      "second_label_file": null,
+      "venue_id": "synthetic-venue-2",
+      "double_labelled": false,
+      "shows_people": false,
+      "consent_record": null,
+      "consent_jurisdiction": null
+    },
+    {
+      "path": "clips/c3.mp4",
+      "label_file": "labels/c3.json",
+      "second_label_file": null,
+      "venue_id": "synthetic-venue-3",
+      "double_labelled": false,
+      "shows_people": false,
+      "consent_record": null,
+      "consent_jurisdiction": null
+    },
+    {
+      "path": "clips/c4.mp4",
+      "label_file": "labels/c4.json",
+      "second_label_file": null,
+      "venue_id": "synthetic-venue-4",
+      "double_labelled": false,
+      "shows_people": false,
+      "consent_record": null,
+      "consent_jurisdiction": null
+    },
+    {
+      "path": "clips/c5.mp4",
+      "label_file": "labels/c5.json",
+      "second_label_file": null,
+      "venue_id": "synthetic-venue-5",
+      "double_labelled": false,
+      "shows_people": false,
+      "consent_record": null,
+      "consent_jurisdiction": null
+    }
+  ],
+  "files": [
+    {
+      "path": "clips/c1.mp4",
+      "sha256": "1c46d47f7984ad1e35ea6042ff4e8b5f14bcf479048bf30f88227c5536e4e4df",
+      "bytes": 46204
+    },
+    {
+      "path": "clips/c2.mp4",
+      "sha256": "bf5159d755f8c77c1d235965e944a53391135996889b119a0ee936d6dd05e2e4",
+      "bytes": 48049
+    },
+    {
+      "path": "clips/c3.mp4",
+      "sha256": "bfe80606b2f965d68a26e37bbe9832ed28dc3235428b2415cfe75a5f227cc4ce",
+      "bytes": 47377
+    },
+    {
+      "path": "clips/c4.mp4",
+      "sha256": "34956515566ecffd5fbc5fd7479d0b96b9595d593ef12f969d92e6294d7dc2d0",
+      "bytes": 46039
+    },
+    {
+      "path": "clips/c5.mp4",
+      "sha256": "6d4b6497d8226c9fd59b7ed183c6c76f91b8a07c8ff5ce0939d34fa9b78552b9",
+      "bytes": 47927
+    },
+    {
+      "path": "labels/c1.json",
+      "sha256": "73f9f2ffea4c9989d6af35297cf0e13bae216de6d0a05747dc7e0235428e7efe",
+      "bytes": 1171
+    },
+    {
+      "path": "labels/c1.second.json",
+      "sha256": "73f9f2ffea4c9989d6af35297cf0e13bae216de6d0a05747dc7e0235428e7efe",
+      "bytes": 1171
+    },
+    {
+      "path": "labels/c2.json",
+      "sha256": "e22815e2dd8268a41ee3014a70380c0a969461c23f74092ef2353576abf42e97",
+      "bytes": 1171
+    },
+    {
+      "path": "labels/c3.json",
+      "sha256": "ea91f2ef7eb3eb9c9bf8f172bb5d9a8b3003634774e37f6af6cb97fabd284b2d",
+      "bytes": 1171
+    },
+    {
+      "path": "labels/c4.json",
+      "sha256": "73ebd244a80b99102424c67312ba5172081c17eaa46538186e9aa3c8d0bf9a8b",
+      "bytes": 1171
+    },
+    {
+      "path": "labels/c5.json",
+      "sha256": "b558123ed820cc9b0820bfeeec970283efb6d1a2d30e4140aa8038aa2880256b",
+      "bytes": 1171
+    }
+  ]
+}

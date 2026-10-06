@@ -26,6 +26,16 @@ ProblemKind = Literal[
     "version_decreased",
     "consent_missing",
     "clip_not_in_files",
+    # gold-set manifest v1 (ST-040, racket.dataset.gold_set)
+    "held_out_venues",
+    "unknown_venue",
+    "double_label_share",
+    "kappa_below_gate",
+    "facet_not_admitted",
+    "consent_contradiction",
+    "consent_jurisdiction",
+    "label_not_in_files",
+    "label_invalid",
 ]
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -133,6 +143,7 @@ class Manifest:
 class IntegrityProblem:
     kind: ProblemKind
     path: str
+    detail: str = ""
 
     def describe(self) -> str:
         messages = {
@@ -143,9 +154,20 @@ class IntegrityProblem:
             "version_decreased": "manifest version went backwards",
             "consent_missing": "clip shows people but has no consent record (OQ-06)",
             "clip_not_in_files": "clip entry names a file that is not in the manifest files",
+            "held_out_venues": "vision gold set needs at least 3 held-out (test) venues with clips",
+            "unknown_venue": "clip names a venue that is not in the manifest venues",
+            "double_label_share": "vision gold set needs at least 20% of clips double-labelled",
+            "kappa_below_gate": "facet is admitted but its agreement is below the gate",
+            "facet_not_admitted": "labels carry a shot facet that is not admitted (QD-TX-03)",
+            "consent_contradiction": "set is marked synthetic but a clip shows people",
+            "consent_jurisdiction": "clip shows people but its consent names no covered "
+            "jurisdiction (US or AU, ADR 0023)",
+            "label_not_in_files": "label file is not in the manifest files",
+            "label_invalid": "label file does not follow full-tag-labels/v1",
         }
         where = f"{self.path}: " if self.path else ""
-        return f"{where}{messages[self.kind]} [{self.kind}]"
+        detail = f" ({self.detail})" if self.detail else ""
+        return f"{where}{messages[self.kind]}{detail} [{self.kind}]"
 
 
 @dataclass(frozen=True)
