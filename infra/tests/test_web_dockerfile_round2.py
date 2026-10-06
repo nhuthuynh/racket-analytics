@@ -66,3 +66,28 @@ def test_runtime_start_needs_no_network() -> None:
     assert "corepack" not in cmd[-1], cmd
     assert "corepack enable" not in runtime
     assert '"node", "node_modules/next/dist/bin/next", "start"' in cmd[-1]
+
+
+@pytest.mark.unit
+def test_runtime_image_ships_no_next_build_cache() -> None:
+    """C-15 (disk): the runtime copies the whole build stage, so ``.next/cache`` went into every
+    web image. Dev dependencies must stay: ``next start`` needs TypeScript for next.config.ts."""
+    text = WEB_DOCKERFILE.read_text()
+    build = text.split(" AS build", 1)[1].split(" AS runtime", 1)[0]
+    steps = run_steps(build)
+    build_step = next(s for s in steps if "pnpm build" in s)
+    assert "rm -rf .next/cache" in build_step, build_step
+    assert build_step.index("pnpm build") < build_step.index("rm -rf .next/cache")
+    assert "prune --prod" not in build_step
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "pattern",
+    ["**/test-results", "**/playwright-report", "**/blob-report", "**/coverage", "reports"],
+)
+def test_build_context_leaves_out_local_test_output(pattern: str) -> None:
+    """C-15 (disk): ``COPY web/ ./`` carried ``web/test-results`` (809 MB of local Playwright
+    output, measured 2026-10-06) into every web image and every evidence round."""
+    ignore = (WEB_DOCKERFILE.parents[2] / ".dockerignore").read_text().splitlines()
+    assert pattern in ignore

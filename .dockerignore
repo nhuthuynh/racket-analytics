@@ -15,3 +15,9 @@ infra/secrets
 .claude
 fixtures
 docs
+# Local test output never enters an image (C-15: web/test-results was 809 MB per web image)
+**/test-results
+**/playwright-report
+**/blob-report
+**/coverage
+reports

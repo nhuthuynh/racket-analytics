@@ -11,10 +11,16 @@ At the Sprint 1 close, concurrent Playwright runs shared `web/test-results` (ENO
 | Command | What it does | Exit codes |
 |---|---|---|
 | `bash scripts/ci/evidence.sh e2e RUN_DIR [playwright args]` | `scripts/disk-precheck.sh /` first (C-23), then from `web/`: `pnpm exec playwright test --output RUN_DIR/pw-out [args]` while holding the lock | Playwright's rc; 2 usage (no `RUN_DIR`, or a caller-supplied `--output`); 3 below the disk floor; 4 lock not taken in time |
+| `bash scripts/ci/evidence.sh up PROJECT ENV_FILE` | Build floor `RA_UP_MIN_FREE_GB` (default 16: a fresh build of the app images takes about 6 GB), then under the lock `docker compose -p PROJECT -f infra/compose.yaml [-f extra…] --env-file ENV_FILE up -d --build --wait`, then the 10 GB run floor | compose's rc; 2 usage or a refused project/env file; 3 below a floor; 4 lock |
+| `bash scripts/ci/evidence.sh down PROJECT ENV_FILE` | Under the lock: `df -h /`, `… down -v --rmi local --remove-orphans` (C-15), `df -h /`, then a check that no `PROJECT-*` image is left | compose's rc; 2; 4; 5 an image of the project survived |
 
 - **Lock:** `.local/evidence-e2e.lock` (`flock`), shared by every agent and the verifier. A run waits up to `RA_EVIDENCE_LOCK_WAIT_S` seconds (default 3600) and then exits 4. Nothing runs without the lock.
 - **Disk floor (C-23, PD-R2R-10):** every E2E evidence run starts with the precheck, floor `RA_MIN_FREE_GB` (default 10). The `df -h /` line it prints is the disk evidence of the run. Below the floor Playwright never starts (rc 3): a run on a full disk would not be valid evidence.
 - **Output:** always `RUN_DIR/pw-out`. A relative `RUN_DIR` is resolved against the caller's directory. Passing `--output` yourself is refused, so a run can never fall back to the shared `web/test-results`.
+- **Own project only (C-15):** `PROJECT` must match `racket-<lower-case id>` and is never `racket-analytics` (the developer stack, `compose.yaml` `name:`). The wrapper therefore cannot tear down someone else's default stack. Use one project per round (`racket-goal02`, `racket-sre02`, …).
+- **Self-cleaning (C-15, ADR 0033 rule 3):** `down` removes the project's containers, volumes and locally built images, and fails with rc 5 if any `PROJECT-*` image is still present. Shared base images (`mirror.gcr.io/...`) stay; they are not the project's.
+- **Extra compose files:** `RA_EVIDENCE_COMPOSE_EXTRA="a.yaml b.yaml"` (space-separated) follow `infra/compose.yaml`, for a sandbox-only build-CA override that is never committed. A missing file is refused (rc 2).
+- **Smaller web image (C-15, disk):** `.dockerignore` keeps `**/test-results`, `**/playwright-report`, `**/blob-report`, `**/coverage` and `reports` out of every build context (`web/test-results` alone was 809 MB, measured 2026-10-06), and the web build stage deletes `.next/cache` after `pnpm build`. Dev dependencies stay in the runtime: `next start` transpiles `next.config.ts` and needs TypeScript.
 - Environment for Playwright (`BASE_URL`, `MAILPIT_API_URL`, `PW_PROJECTS`, `PLAYWRIGHT_BROWSERS_PATH`, reporter output names) passes through unchanged.
 
 Example (the goal scorecard G02-05 run, same effect as its `flock … --output "$GOAL/pw-out"` line):
@@ -25,4 +31,12 @@ MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers BASE_URL=$WEB
   bash scripts/ci/evidence.sh e2e "$GOAL" --workers=1 --reporter=line,junit,json; echo rc=$?
 ```
 
-Tests: `cd infra && uv run pytest -q tests/test_evidence_wrapper.py`.
+Stack example (goal scorecard §4.0, same effect as its `flock … $DC up/down` lines):
+
+```bash
+bash scripts/ci/evidence.sh up racket-goal02 "$RA_DEV_STATE/goal.env"; echo rc=$?
+# ... methods ...
+bash scripts/ci/evidence.sh down racket-goal02 "$RA_DEV_STATE/goal.env"; echo rc=$?   # rc 0 = nothing left
+```
+
+Tests: `cd infra && uv run pytest -q tests/test_evidence_wrapper.py tests/test_web_dockerfile_round2.py`.
