@@ -59,6 +59,32 @@ Evidence: `mcp__github__actions_list list_workflow_jobs 37438997898`; `mcp__gith
 
 Evidence: `mcp__github__actions_list list_workflow_runs ci.yml branch=sprint-02` (run 37452407537, `head_sha` `78c52efe9f10…`); `list_workflow_jobs 37452407537`; `mcp__github__get_job_logs` for jobs 112231850146 (Ruff annotations), 112231850190 (pytest summaries and the red-until report) and 112231850486 (Playwright summary and the ten error blocks). The artifact download URL is refused by the sandbox proxy (`CONNECT tunnel failed, response 403`), as before.
 
+## Run 37461758337: head `fe156e7` (review round 2: SRE-S2-10 Ruff, SEC-S2-TM-03 edge headers), 2026-10-06
+
+`git push origin sprint-02` (`c62c1b0..fe156e7`), then `workflow_dispatch` of `ci.yml` on `sprint-02`. First run after the round-1 fixes `c3b042a` (QA-RV1-06), `a3ec48b` (QA-RV1-08), `f737e00` (Chrome channel on CI, QA-RV1-07), `29c1e68` (V-01) and the round-2 fixes up to `063c2f4` (Ruff) and `fe156e7` (edge headers). Conclusion **failure, E2E only**. <https://github.com/nhuthuynh/racket-analytics/actions/runs/37461758337>
+
+| Job | Result | Detail | Owner |
+|---|---|---|---|
+| actionlint, **Ruff** (was red), mypy, fixtures, infra (incl. the new live Caddy header test), web checks, secrets/audit, SBOM, unit, Locust baseline, flaky report | success | Ruff: SRE-S2-10 closed on CI | — |
+| **Integration** | **success** (was failure) | gate step and the red-until step both green: the stale markers are gone (QA-RV1-06 / SRE-S2-04 closed on CI) | — |
+| E2E | failure | `10 failed, 14 skipped, 174 passed (15.6m)`. **No longer failing since run 37452407537** (the `github` reporter lists failures only; skipped went 12 → 14, exactly the two named WebKit CDP skips, so the others below passed): `[chromium]` E2E-02-04 and `seek-first-frame (real video link)` (Chrome channel plays the H.264 original: QA-RV1-07 / SRE-S2-05 CI part), `[webkit]` CDP seek tests now skipped (+2 skipped: QA-RV1-08 / SRE-S2-08), `[chromium]` stand-in seek flake did not recur (SRE-S2-09, 1 run). **Left:** the SRE-S2-07 family, now in **both** browsers: `announcements.spec.ts:8` (`Expected: "Rally 1: us. Score 1-0-2." Received: ""`), `quick-tag.spec.ts:15`, `:66` (`toBeVisible` failed), `:42` (`Received string: "Mark the rally end first."`), `timing.spec.ts:97` (`no change seen for end-1 in 10 s`). With real Chrome the video is playable, so the 5 ms rally (`waitForTimeout(5)`) fails in Chromium as it did in WebKit. These specs are at `fd363fa` (QA's fix for SRE-S2-07, QA-RV2-03), which landed after this head | senior-qa-engineer (SRE-S2-07, closed by `fd363fa` if the next run is green) |
+| ci-gate | failure | `e2e: failure`; every other need `success` | — |
+
+Evidence: `mcp__github__actions_list list_workflow_jobs 37461758337` (all jobs but E2E `success`); `mcp__github__get_job_logs` job 112270228204 (ci-gate: `e2e: failure`) and job 112262804591 (Playwright summary and the ten error blocks, log lines 2840-3232). The log blob URL is refused by the sandbox proxy (`CONNECT tunnel failed, response 403`); the content came through the MCP tool.
+
+## Run 37464553177: head `fd363fa` (review round 2, QA's SRE-S2-07 fix), 2026-10-06: **ci-gate green**
+
+`git push origin sprint-02` (`fe156e7..fd363fa`: `aa763ed`, `48bb9de`, `456f1de`, `26c7be4` FE round 2; `d4f2a6b` PO; `6c59633`, `fd363fa` QA round 2), then `workflow_dispatch` of `ci.yml` on `sprint-02`. Conclusion **success**: the first fully green Sprint 2 run. <https://github.com/nhuthuynh/racket-analytics/actions/runs/37464553177>
+
+| Job | Result | Detail |
+|---|---|---|
+| actionlint, Ruff, mypy, fixtures, infra (incl. live Caddy header test), web checks, secrets/audit, SBOM, unit (domain step 8 s, budget 10 s), Locust baseline, flaky report (3 repeats) | success | — |
+| Integration | success | gate step and the red-until step (no stale marker) |
+| E2E, Chromium (Google Chrome channel) + WebKit, https, fresh Compose stack | **success** | `Running 198 tests using 1 worker` → **`184 passed, 14 skipped` (12.7m), 0 failed, 0 flaky**. The SRE-S2-07 family passes in both browsers. Skips: the 12 Sprint 1 API-bound skips and the 2 named WebKit CDP skips (QA-RV1-08) |
+| ci-gate | **success** | "All gates green" |
+
+Evidence: `mcp__github__actions_get get_workflow_run 37464553177` → `conclusion: success`, `head_sha fd363fae0aa1…`; `list_workflow_jobs 37464553177` → every job `success` (PR policy `skipped`, allowed outside PRs), ci-gate job 112278570278 `success`; `mcp__github__get_job_logs` job 112272206181 (Playwright summary lines above).
+
 ## Next
 
-The platform lane has no red of its own. The remaining reds are owned outside it: SRE-S2-10 (principal-engineer, Ruff, two lines), SRE-S2-04 (QA markers), SRE-S2-05, SRE-S2-08, SRE-S2-09 (QA specs/config), SRE-S2-07 (FE then QA). The SRE re-dispatches CI at the head after each of those lands and records the run here; the W-01 family closes only on a green `ci-gate`.
+`ci-gate` is green at `fd363fa` (run 37464553177), so the W-01 / QA-R1-06 family closes on CI. Still open outside CI: the local-evidence part of SRE-S2-05 (no H.264 in local Playwright Chromium; PO/EM decision whether the CI Chrome run is the G02-05/G02-06 (c) evidence, blockers.md). SRE-S2-09 (stand-in seek flake) did not recur in two runs; it stays watched by the flaky report. The SRE re-dispatches CI at each later head that changes code and records it here.

@@ -95,6 +95,41 @@ A local fresh-volume Compose run of the smoke tree needs 16 GB free before `up -
 | **SRE-S2-09 (new)** `timing.spec.ts` "seek-first-frame with the decodable stand-in" is flaky: 1 of 1 in the full run and 1 of 3 in the re-run fail with `no change seen for seek in 10 s` | senior-qa-engineer (spec), senior-frontend-engineer if V-01 misses a seek | Open |
 | 21 `red_until` rows (ST-035 stretch, ST-024/ST-025 PO-blocked) | as in smoke 1 | expected |
 
+## Smoke 3 at the round-2 head `fe156e7` (SRE-SMOKE, QA-RV2-06, 2026-10-06)
+
+- **Run by:** sre-devops-engineer. **Tree:** `sprint-02` at `fe156e7`, a clean detached worktree (`git worktree add --detach .local/smoke-s2c/tree HEAD`), so no lane's uncommitted file is in the run. It contains every round-1 fix and the round-2 fixes through `063c2f4` (Ruff) and `fe156e7` (SEC-S2-TM-03). `fd363fa` (QA, SRE-S2-07) landed after it and is covered by the next CI run in `ci-status.md`.
+- **Disk first:** `bash scripts/disk-precheck.sh` → `10 GB free (floor 10 GB)`; `docker builder prune -af` (own build cache, 3.2 GB) → `14G` free. That is under the 16 GB build floor of `evidence.sh up` (`docs/ops/evidence-runs.md`); the rest is held by other agents' state, which the SRE does not remove. So, as in smoke 1, the fresh-volume Compose part (stack up, Playwright both browsers, Locust) comes from **CI run 37461758337 at the same commit** (fresh runner, fresh volumes), and the platform-specific live check (the media edge) ran locally with the real Caddy image and the real object store.
+- **Isolation:** own `RA_DEV_STATE=.local/smoke-s2c/svc` Postgres and object store, own Mailpit container `smoke2c-mailpit` (49225/49125), own edge container `smoke2c-edge`; all stopped and removed at the end (`dev-postgres: stopped and removed`, `dev-objectstore: stopped and removed`).
+
+### Verdict
+
+**Every gate except E2E is green at this head on CI, and the live media edge now sends the safe headers.** The only red is the SRE-S2-07 family (5 specs × 2 browsers), a test defect owned by QA whose fix `fd363fa` is already on the branch; the next CI run decides it.
+
+**Follow-up at `fd363fa` (QA's SRE-S2-07 fix, no platform or backend code change since `fe156e7`: `git diff --stat fe156e7 fd363fa -- backend infra scripts` is empty):** CI run 37464553177 on a fresh runner and fresh Compose volumes is **fully green**: Playwright Chromium (Chrome channel) + WebKit `184 passed, 14 skipped`, 0 failed; integration, red-until, Locust, worker sandbox and ci-gate `success` (`ci-status.md`).
+
+### Suites
+
+| Suite | Where | Command | Result |
+|---|---|---|---|
+| Infra (incl. the new live Caddy test) | worktree | `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run pytest -q -p no:cacheprovider` | **464 passed** (64.9 s) |
+| Web types, lint | worktree | `pnpm exec tsc --noEmit`; `pnpm exec eslint --max-warnings=0 .` (`pipefail`) | rc 0; rc 0 |
+| Web unit | worktree | `pnpm exec vitest run --coverage` | **52 files, 424 passed**; lines 91.29% |
+| Backend, full (own services) | worktree | `env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfE tests --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py` | **21 failed, 2058 passed, 3 skipped** (377 s); the 21 are exactly the `red_until` rows: ST-035 SOS-01..18 (18), ST-025 (2), ST-024 (1) |
+| Fresh Compose stack, worker sandbox IT-00-10, integration on Compose, red-until step, Locust 50 RPS | CI run 37461758337 (`fe156e7`) | jobs "Start the full stack", integration, perf-baseline | success each |
+| Playwright, Chromium (Google Chrome channel) + WebKit, https | same | `pnpm exec playwright test` | **174 passed, 10 failed, 14 skipped** (15.6 min); the 10 = SRE-S2-07 family in both browsers (`ci-status.md`) |
+
+### Live check: media edge (SEC-S2-TM-03, QA-RV2-08)
+
+The committed `infra/tls/Caddyfile`, with only the upstream address, site port and health address changed for the host network (`diff` shows those 3 lines), ran in `caddy:2.10.2-alpine` in front of the real SeaweedFS from `scripts/dev-objectstore.sh`. The scratch probe uploads one object as `video/mp4` and one as `text/html`, presigns GETs for `https://localhost:47643` with `ResponseContentType=video/mp4`, and requests each with `Range: bytes=0-99`, with and without the signature.
+
+| Request | Result |
+|---|---|
+| `video/mp4` object, signed, ranged | 206, `ct= video/mp4`, `nosniff`, `csp= default-src 'none'; sandbox`, `cc= private, no-store`, store headers `[]` |
+| `text/html` object, signed, ranged (the E3 case) | 206, `ct= text/html` (SeaweedFS still ignores the signed type), **`nosniff`, CSP `default-src 'none'; sandbox`, `private, no-store`, store headers `[]`**: the browser does not sniff it and runs nothing if opened as a page |
+| either object, unsigned | 403 from the edge (`Server: Caddy`, the edge's own, not the store's) |
+
+Before the fix: the QA-RV2-08 probe got 206 with `Seaweed-X-Amz-Owner: admin`, `X-Seaweedfs-Upload-Id` and no nosniff, CSP or Cache-Control; the new integration test, red at `063c2f4`'s Caddyfile, got the stub store's `text/html` and `cache-control: public, max-age=3600` through with no nosniff.
+
 ## Sprint-close head
 
 To be filled by the SRE at the sprint-close head (C-12 rule; Sprint 1 §7): tree, stack, suites, verdict.
