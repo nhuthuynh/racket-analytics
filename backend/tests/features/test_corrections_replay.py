@@ -240,3 +240,43 @@ def game_2_needs_decision(state: dict[str, Any]) -> None:
     assert len(game_2) == len(C03_GAME2)
     assert all(r["marker"] == contract.NEEDS_DECISION for r in game_2), game_2
     assert all(r["marker"] is None for r in rows if r["game"] == 1)
+
+
+# ------------------------------------------------------------------ C3-03 (Sprint 3 §7.7)
+@given("rallies 12 to 14 need Ivy's decision")
+def rallies_12_to_14_need_a_decision(state: dict[str, Any]) -> None:
+    conflict_game(state)
+    state["book"].correct_winner(11, "A")
+    state["book"].start("B")  # game 2 exists, so "move to the next game" has a target
+    markers = [r["marker"] for r in state["book"].sheet()["rows"]]
+    assert markers[11:] == ["needs_decision"] * 3
+
+
+def _move(book: Book, number: int) -> Any:
+    return book.book.resolve(
+        book.rally_ids[number - 1], "move_to_next_game",
+        expected_version=book.book.version, ctx=book.ctx,
+    )  # fmt: skip
+
+
+@when("she opens the options of rally 12")
+def options_of_rally_12(state: dict[str, Any]) -> None:
+    from racket.platform.errors import ValidationFailed
+
+    with pytest.raises(ValidationFailed) as refused:
+        _move(state["book"], 12)
+    state["refused"] = refused.value
+
+
+@then('"Move to the next game" is not offered')
+def move_not_offered(state: dict[str, Any]) -> None:
+    assert state["refused"] is not None
+    # positive control: the latest kept rally (14) can be moved, so the refusal is about order
+    moved = _move(state["book"], 14)
+    assert moved.version > state["book"].book.version
+
+
+@then("she is told only the latest kept rally can be moved first")
+def told_latest_first(state: dict[str, Any]) -> None:
+    codes = [(f.field, f.code) for f in state["refused"].fields]
+    assert ("decision", "not_last_in_game") in codes, codes
