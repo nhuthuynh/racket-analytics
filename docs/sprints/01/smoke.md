@@ -154,3 +154,16 @@ These are smoke evidence, not the scorecard: the verifier still fills `goal-scor
 | S-07, S-08, S-09 | unchanged | Phone clips (ST-025), nightly run, WebKit-only results still need the human PO / CI | backend failures above; WebKit cannot run here |
 
 **Verdict:** ready for review. Every suite is green except the 3 tests held by external blockers (S-07, S-08). All Sprint 1 Playwright journeys pass on Chromium over https with 0 flaky over 3 repeats, and the live goal journey passes 5 of 5. WebKit still has CI evidence only (S-09).
+
+## 7. Sprint-close head `2b97fa0` (recorded 2026-10-06, sre-devops-engineer; sprint-02 C-12, QA-R3-SMOKE-01)
+
+Recorded in Sprint 2 because the Sprint 1 record stopped at §6 (`f97f0e7`/`8e58d4d`), and the sprint closed later at `2b97fa0`. No new local run was made at `2b97fa0`: what reached that head after the last fresh-stack runs is below, with the evidence that covers it.
+
+| Question | Answer | Evidence |
+|---|---|---|
+| What changed after goal round 3 (`e76fb96`, which built and ran the whole stack fresh)? | No runtime code: `ci.yml` (per-PR selection excludes `@nightly`), one infra test, the EM agent file and docs | `git diff --stat e76fb96 2b97fa0 -- . ':(exclude)docs'` → `.claude/agents/engineering-manager.md`, `.github/workflows/ci.yml`, `infra/tests/test_workflows_ci_run4.py` (3 files, 46+/2−); `git log --oneline e76fb96..2b97fa0 \| wc -l` → 6 |
+| Was the stack started fresh at exactly `2b97fa0`? | Yes, on GitHub: CI run 37426849974 (PR #1, head `2b97fa0`) built every image, started the full https stack with `up --wait` and ran the worker sandbox IT-00-10 and Playwright against it | `docs/sprints/01/ci-status.md` "Release re-check"; run 37426849974: integration `3 failed` (S-08, ST-025 ×2, all external), E2E `6 failed, 12 skipped, 98 passed`, all failures `[webkit]` |
+| Chromium journeys at that head | All green on CI (the 6 failures were WebKit only) | same run |
+| WebKit at that head | 6 failures, routed in Sprint 2 (W-01); green on the Sprint 2 code: run 37434214390 has 0 Sprint 1 `[webkit]` failures | `docs/sprints/02/ci-status.md` |
+
+**Verdict for the close head:** the runtime under `2b97fa0` is the one goal round 3 ran fresh at `e76fb96`, and CI ran it fresh at `2b97fa0` itself. The only reds at that head were the external S-07/S-08 tests and the WebKit family that Sprint 2 carried. From Sprint 2 on, the smoke at the sprint-close head is a row of the sprint's own `smoke.md` (`docs/sprints/02/smoke.md` §"Sprint-close head"), run by the SRE before the close, so this gap does not recur.
