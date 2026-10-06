@@ -74,10 +74,11 @@ Forced and unforced errors stay apart in storage; whether analytics merges them 
 | I2 | `rules_version`, `format`, `scoring_system` and `best_of` are fixed once the first rally exists | `Conflict` | QD-RE-02; ddd §4.7 |
 | I3 | Games are numbered 1..`best_of`; game *n*+1 starts only after game *n* is over in the projection; no game starts after the match is decided | `IllegalState` / `MatchOver` | FR-045; ST-021 `start_game` |
 | I4 | A declared start passes `declare_state` (server number 1-2 in doubles; score not already game over) | `IllegalStart` (422, field-level) | FR-046; SOD-13..15 |
-| I5 | `0 ≤ start_ms < end_ms`, integer ms from video start; rallies ordered by `start_ms`; no overlap with any non-withdrawn rally | `InvalidRally` (422) | QD-TR-02; ddd §4.2 |
+| I5 | `0 ≤ start_ms < end_ms`, integer ms from video start; rallies ordered by `start_ms`; no overlap with any non-withdrawn rally; games follow each other on the video: a rally of game *g* starts after every kept rally of an earlier game ends and ends before every kept rally of a later game starts (checked on tags and times corrections, `out_of_game_order`; PE-S2-R1-04). Inside one game the order is free (the sheet sorts by `start_ms`) | `InvalidRally` (422) | QD-TR-02; ddd §4.2 |
 | I6 | `OutcomeInput` is well formed (§2.1 table: side present except replay, fault kind only for faults, responsible player on the right side) | `InvalidOutcome` (422) | FR-050; sprint-02 TDD `RallyOutcome` |
-| I7 | A new tag is refused when the projection says the target game or the match is over | `GameOver` / `MatchOver` | FR-045 |
+| I7 | A new tag goes to the first game the projection says is not over (after a correction reopens game *n*, an empty game *n*+1 waits; PE-S2-R1-02); it is refused when every started game or the match is over | `GameOver` / `MatchOver` | FR-045 |
 | I8 | Every change after a tag (correct, withdraw, undo, resolve) appends exactly one `Correction` in the same transaction; corrections are never updated or deleted | DB refuses UPDATE/DELETE | FR-052; IT-02-03 |
+| I10 | A match holds at most `max_rallies` stored rallies (withdrawn included) and `max_changes` audit rows (`Limits`, from settings; defaults 500 and 2000); a match whose (`rules_version`, `format`) has no preset takes no game start and no tag (PE-S2-R1-05) | `ScorebookFull` (422) / `RulesUnavailable` (409) | SEC-S2-R1-01; BE-D1-05 |
 | I9 | Only the owner can load or change the match (repository filters by `owner_id`; other owners get 404) | `NotFound` | ddd §4.9; IT-02-05 |
 
 I7 is checked against the projection *before* the change, so it is the same code path as the score sheet: there is one source of truth for "is the game over".
@@ -88,10 +89,10 @@ I7 is checked against the projection *before* the change, so it is the same code
 |---|---|---|---|
 | `start_game(first_server, ends_switched)` / `declare_start(...)` | adds a `Game` | `kind=game_started` | ST-021 (domain exists), ST-034 |
 | `tag_rally(start_ms, end_ms, input)` | appends a `Rally` to the current game | none (the tag is the original fact); undo of it is audited | ST-026, ST-027 |
-| `correct_rally(rally_id, field, new_value)` | changes one field of one rally's input or times | `kind=correction`, old and new value | ST-031, ST-032 |
+| `correct_rally(rally_id, field, new_value)` | changes one field of one rally's input or times; `field = outcome` sets the whole outcome input at once (the only way between `replay` and a scored ending, PE-S2-R1-03) | `kind=correction`, old and new value | ST-031, ST-032 |
 | `withdraw_rally(rally_id)` | `withdrawn = true` (the row stays) | `kind=withdrawal` | ST-031 (undo of a tag) |
 | `undo()` | reverses the newest not-yet-undone change by this match (a correction, a withdrawal, a game start, or the newest tag, which becomes a withdrawal) | `kind=undo`, `undoes=<id>` | ST-031, C-04 |
-| `resolve(rally_id, decision)` | for a `needs_decision` rally only: `move_to_next_game` (sets `game_number`; the next game must be started) or `withdraw`. There is no `keep_in_game`: a rally after the end of its game can never be scored in it | `kind=resolution` | ST-032 (provisional) |
+| `resolve(rally_id, decision)` | for a `needs_decision` rally only: `move_to_next_game` (sets `game_number`; the next game must be started), `move_to_previous_game` (C-03, PE-S2-R1-02, provisional: the earliest kept rally of game *n*+1 back into game *n* while game *n* is not over) or `withdraw`. There is no `keep_in_game`: a rally after the end of its game can never be scored in it, and one in a game after an unfinished game cannot be scored before that game ends | `kind=resolution` | ST-032 (provisional) |
 
 Each command: load the whole aggregate (a 3-game match is about 70 rallies; judgment), check the `version` from the client's `If-Match` (IT-02-04: one wins, the other gets 409 `stale_match` and retries), apply, compute the projection, save, bump `version`, commit. Nothing is written if any step fails (IT-02-02). The response carries the new projection, so the client never computes a score itself beyond the optimistic display (NFR-012a).
 
@@ -139,7 +140,7 @@ The repository loads and saves the whole aggregate; no other module reads these 
 
 | # | Question | Owner | Due |
 |---|---|---|---|
-| Q1 | C-02/C-03 resolution choices (move to next game, withdraw; D1 removed "keep") and which rallies of the next game are marked in C-03 (all of them, or only up to the first point) | pickleball-domain-coach | before ST-032 (rows `@needs-verification`, ADR 0009) |
+| Q1 | C-02/C-03 resolution choices (move to next game, withdraw; D1 removed "keep"; move to the previous game for C-03, earliest rally first, built provisionally for PE-S2-R1-02) and which rallies of the next game are marked in C-03 (all of them, or only up to the first point) | pickleball-domain-coach | before ST-032 (rows `@needs-verification`, ADR 0009) |
 | Q2 | Responsible-player side rules for forced errors (table §2.1) | pickleball-domain-coach | before ST-027 tests are final |
 | Q3 | `PRESETS` is keyed by `rules_version` only and holds a doubles config; singles (ST-035) needs one config per format. Proposal: key by (`rules_version`, `format`) inside `racket.sports.pickleball.rules`, no other change | senior-backend-engineer with QA | ST-035 |
 | Q4 | Undo depth and scope: newest change only, repeated (stack) — proposed; no redo in R1 | principal-designer | ST-031 |

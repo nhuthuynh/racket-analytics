@@ -96,6 +96,10 @@ class Settings:
     # ---- Sprint 2 (ST-037; NFR-055): rally video links
     media_url_ttl_seconds: int = 300
     s3_public_endpoint_url: str | None = None  # the origin the browser reaches the store at
+    # ---- Sprint 2 (SEC-S2-R1-01): scorebook command rate per account and caps per match
+    scorebook_command_limit_per_minute: int = 300
+    scorebook_max_rallies: int = 500
+    scorebook_max_changes: int = 2000
 
     # -------------------------------------------------------------- construction
     @classmethod
@@ -220,6 +224,9 @@ class Settings:
             worker_stages=stages,
             media_url_ttl_seconds=media_ttl,
             s3_public_endpoint_url=(optional("S3_PUBLIC_ENDPOINT_URL") or "").rstrip("/") or None,
+            scorebook_command_limit_per_minute=integer("SCOREBOOK_COMMAND_LIMIT_PER_MINUTE", 300),
+            scorebook_max_rallies=integer("SCOREBOOK_MAX_RALLIES", 500),
+            scorebook_max_changes=integer("SCOREBOOK_MAX_CHANGES", 2000),
         )
 
     # -------------------------------------------------------------- views

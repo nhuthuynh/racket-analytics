@@ -30,7 +30,8 @@ VERSION_KEY, SHEET_KEY, RALLY_ID_KEY = "version", "sheet", "rally_id"
 # Sheet: {"rules_version": str, "unofficial": bool, "label": str, "rows": [row...]};
 # row fields are taglib.ROW_FIELDS plus "rally_id" and "corrected_by_user".
 CORRECTED_KEY = "corrected_by_user"
-# History: {"items": [{"kind", "rally_id", "field", "old_value", "new_value", "undoes"}...]}
+# History: {"items": [{"kind", "rally_id", "field", "old_value", "new_value", "undoes"}...],
+#           "next_cursor": str | None} (?limit=1..200, default 200; review round 1)
 HISTORY_ITEMS = "items"
 # Media: {"url": str, "expires_in_s": int, "start_ms": int}
 MEDIA_URL, MEDIA_TTL, MEDIA_START = "url", "expires_in_s", "start_ms"

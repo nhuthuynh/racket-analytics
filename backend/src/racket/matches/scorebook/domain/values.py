@@ -70,6 +70,18 @@ class RallyTimes:
         if any(self.overlaps(o) for o in others):
             raise InvalidRally("overlaps a rally", [FieldError("start_ms", "overlaps_rally")])
 
+    def check_game_order(self, game: int, others: Iterable[tuple[int, RallyTimes]]) -> None:
+        """I5 (PE-S2-R1-04): games follow each other on the video. A rally of ``game`` starts
+        after every kept rally of an earlier game ends and ends before every kept rally of a
+        later game starts. Inside one game the order is free (the sheet sorts by ``start_ms``)."""
+        for other_game, other in others:
+            if (other_game < game and other.end_ms > self.start_ms) or (
+                other_game > game and self.end_ms > other.start_ms
+            ):
+                raise InvalidRally(
+                    "out of game order", [FieldError("start_ms", "out_of_game_order")]
+                )
+
     def check_within(self, video_ms: int | None) -> None:
         """QA-S2-API-02: the rally lies inside the video (``end_ms`` exclusive, so it may end
         exactly at the duration). ``None``: the duration is not known, no upper bound."""

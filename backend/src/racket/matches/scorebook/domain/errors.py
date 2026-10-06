@@ -3,7 +3,7 @@ status and code (api-sprint-00 §3 envelope; codes listed in ``racket.platform.e
 
 from __future__ import annotations
 
-from racket.platform.errors import Conflict
+from racket.platform.errors import Conflict, ValidationFailed
 
 
 class MatchNotReady(Conflict):
@@ -54,3 +54,17 @@ class RallyNotFound(Conflict):
 
 class NothingToUndo(Conflict):
     code = "nothing_to_undo"
+
+
+class RulesUnavailable(Conflict):
+    """PE-S2-R1-05 (BE-D1-05): the match's (``rules_version``, ``format``) pair has no rules
+    preset (today: singles, until ST-035), so no game can start and no rally can be tagged."""
+
+    code = "rules_unavailable"
+
+
+class ScorebookFull(ValidationFailed):
+    """SEC-S2-R1-01: the match holds its cap of stored rallies (``too_many_rallies``) or of
+    audit rows (``too_many_changes``); nothing more is written (ASVS 5.0 2.4.1)."""
+
+    code = "scorebook_full"

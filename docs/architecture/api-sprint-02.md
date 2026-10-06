@@ -1,5 +1,6 @@
 # API contract: Sprint 2 (tagging, score sheet, corrections, rally video)
 
+- **Review round 1 (senior-backend-engineer, 2026-10-06):** the additions marked PE-S2-R1-02..05, SEC-S2-R1-01 and QA-RV1-05 below are built and tested; they wait for the principal-engineer's acceptance and the FE/QA review of this file (routed in `docs/sprints/02/review-rounds.md`).
 - **Status:** Accepted for Sprint 2 (principal-engineer, 2026-10-06; design review D1 of `match-aggregate.md`, outcome recorded there in §0). Written after the routes were built (blockers.md 2026-10-05, BE start on the Proposed design): this file states the contract the code at `40de20a` implements, with the D1 answers BE-D1-01..06, and changes nothing the FE, the harness or the tests already rely on except BE-D1-01 (§1.1). Changes go through a PR on this file reviewed by BE, FE and QA; `scripts/measure/tagcontract.py` (the harness mirror) changes in the same commit (ADR 0033 rule 2).
 - **Owner:** principal-engineer. **Domain design:** `match-aggregate.md` (Accepted). **Security:** threat-model rows of ST-031 (audit) and ST-037 (media link) are acceptance criteria of those stories (ADR 0022 rule 4).
 - **Stories:** ST-026, ST-027, ST-030, ST-031, ST-032, ST-034 (domain), ST-035 (singles, red until the preset exists), ST-037.
@@ -57,7 +58,7 @@ Every route loads the match through the owner filter: another account's match, a
 
 ### 2.2 History item (ST-031; FR-052)
 
-`GET …/corrections` → `{"items": [Item, …]}`, oldest first:
+`GET …/corrections?limit=&cursor=` → `{"items": [Item, …], "next_cursor": "<opaque>" | null}`, oldest first, at most `limit` items (1-200, default 200). `next_cursor` is `null` on the last page; pass it as `cursor` for the next page. A `limit` or `cursor` that is not valid is 422 `validation_failed` with `limit`/`invalid` or `cursor`/`invalid` (SEC-S2-R1-01, review round 1):
 
 ```json
 {"id": "…", "kind": "correction", "rally_id": "…", "rally_number": 2, "game": 1,
@@ -65,7 +66,7 @@ Every route loads the match through the owner filter: another account's match, a
  "at": "2026-10-06T09:14:03.120Z"}
 ```
 
-`kind` ∈ `game_started`, `correction`, `withdrawal`, `resolution`, `undo`. `rally_number` is the rally's current `number` in the sheet, or `null` when the rally is withdrawn or the item is a game start. `old_value`/`new_value` hold tag values only (sides, slots, enums, integers, booleans): no names, no free text (IT-02-09). The audit table refuses UPDATE and DELETE (§5).
+`kind` ∈ `game_started`, `correction`, `withdrawal`, `resolution`, `undo`. `rally_number` is the rally's current `number` in the sheet, or `null` when the rally is withdrawn or the item is a game start. `old_value`/`new_value` hold tag values only (sides, slots, enums, integers, booleans), or, for `field = "outcome"`, an object of the four outcome fields holding such values: no names, no free text (IT-02-09). The audit table refuses UPDATE and DELETE (§5).
 
 ## 3. Routes
 
@@ -73,21 +74,23 @@ All routes need a session; state-changing ones also need an allowed `Origin`. Re
 
 | Route | Body | Success | Refusals (besides 401, 403 Origin, 404 §1.4, 409 `stale_match`) | Story |
 |---|---|---|---|---|
-| `POST /matches/{id}/games` | `{"first_serving_side": "A"\|"B", "ends_switched": bool = false}` | 201 `{version, sheet}` | 409 `match_not_ready`, `game_not_over`, `match_over`; 422 `validation_failed` (`first_serving_side`/`side_invalid`, `ends_switched`/`invalid`) | ST-021, ST-027 |
-| `POST /matches/{id}/rallies` | `{"start_ms", "end_ms", "ending", "winning_side", "responsible_player"?, "fault_kind"?}` | 201 `{version, rally_id, sheet}` | 409 `match_not_ready`, `game_not_started`, `decision_needed`, `game_over`, `match_over`; 422 `invalid_rally`, `invalid_outcome` (§4.2) | ST-026, ST-027 |
+| `POST /matches/{id}/games` | `{"first_serving_side": "A"\|"B", "ends_switched": bool = false}` | 201 `{version, sheet}` | 409 `match_not_ready`, `rules_unavailable`, `game_not_over`, `match_over`; 422 `scorebook_full`; 429 `rate_limited`; 422 `validation_failed` (`first_serving_side`/`side_invalid`, `ends_switched`/`invalid`) | ST-021, ST-027 |
+| `POST /matches/{id}/rallies` | `{"start_ms", "end_ms", "ending", "winning_side", "responsible_player"?, "fault_kind"?}` | 201 `{version, rally_id, sheet}` | 409 `match_not_ready`, `rules_unavailable`, `game_not_started`, `decision_needed`, `game_over`, `match_over`; 422 `invalid_rally`, `invalid_outcome` (§4.2), `scorebook_full`; 429 `rate_limited` | ST-026, ST-027 |
 | `GET /matches/{id}/score-sheet` | none | 200 `Sheet`, `ETag` | none | ST-030 |
-| `PATCH /matches/{id}/rallies/{rally_id}` | `{"field": <correctable>, "value": …}`, both required | 200 `{version, sheet}` | 422 `validation_failed` (`field`/`field_invalid`, `value`/`invalid`, `value`/`unchanged`), `invalid_rally`, `invalid_outcome` | ST-031, ST-032 |
-| `POST /matches/{id}/undo` | none (any body is ignored) | 200 `{version, sheet}` | 409 `nothing_to_undo` | ST-031 |
-| `GET /matches/{id}/corrections` | none | 200 `{"items": […]}` | none | ST-031 |
-| `POST /matches/{id}/rallies/{rally_id}/resolution` | `{"decision": "withdraw" \| "move_to_next_game"}` | 200 `{version, sheet}` | 409 `game_not_started` (move with no next game); 422 `validation_failed` (`decision`/`decision_invalid`, `decision`/`not_needed`) | ST-032 (provisional) |
+| `PATCH /matches/{id}/rallies/{rally_id}` | `{"field": <correctable>, "value": …}`, both required | 200 `{version, sheet}` | 422 `validation_failed` (`field`/`field_invalid`, `value`/`invalid`, `value`/`unchanged`), `invalid_rally`, `invalid_outcome`, `scorebook_full`; 429 `rate_limited` | ST-031, ST-032 |
+| `POST /matches/{id}/undo` | none (any body is ignored) | 200 `{version, sheet}` | 409 `nothing_to_undo`; 422 `scorebook_full`; 429 `rate_limited` | ST-031 |
+| `GET /matches/{id}/corrections?limit=&cursor=` | none | 200 `{"items": […], "next_cursor"}` (§2.2) | 422 `validation_failed` (`limit`/`invalid`, `cursor`/`invalid`) | ST-031 |
+| `POST /matches/{id}/rallies/{rally_id}/resolution` | `{"decision": "withdraw" \| "move_to_next_game" \| "move_to_previous_game"}` | 200 `{version, sheet}` | 409 `game_not_started` (move with no next game); 422 `validation_failed` (`decision`/`decision_invalid`, `decision`/`not_needed`, `decision`/`no_previous_game`, `decision`/`previous_game_over`, `decision`/`not_first_in_game`), `scorebook_full`; 429 `rate_limited` | ST-032 (provisional) |
 | `GET /matches/{id}/rallies/{rally_id}/media` | none | 200 `{"url", "expires_in_s", "start_ms": <rally start>}` | 409 `match_not_ready` | ST-037 |
 | `GET /matches/{id}/video` | none | 200 `{"url", "expires_in_s", "start_ms": 0}` | 409 `match_not_ready` | ST-037, FR-UX-60 (T-01) |
 
 Notes:
 
-- **Correctable fields:** `winning_side`, `ending`, `responsible_player`, `fault_kind`, `start_ms`, `end_ms`, `withdrawn`. `{"field": "withdrawn", "value": true}` withdraws a kept rally (audited `withdrawal`); any other `withdrawn` value is 422 `value`/`invalid`. The whole outcome is re-validated after the change (§4.2), and changed times are re-checked against the video length and the other kept rallies. Later rallies are re-scored in the same step by the projection (FR-053, C-01).
+- **Correctable fields:** `winning_side`, `ending`, `responsible_player`, `fault_kind`, `outcome`, `start_ms`, `end_ms`, `withdrawn`. `{"field": "outcome", "value": {"ending", "winning_side"?, "responsible_player"?, "fault_kind"?}}` sets the whole outcome input in one command (a missing key is `null`), audited as ONE `correction` whose old and new values are the outcome objects; it is the only way between `replay` and a scored ending, since every one-field step there is an invalid outcome (PE-S2-R1-03, review round 1). A value that is not an object is 422 `invalid_outcome` with `{"field": null, "code": "invalid"}`; the same outcome as now is `value`/`unchanged`. `{"field": "withdrawn", "value": true}` withdraws a kept rally (audited `withdrawal`); any other `withdrawn` value is 422 `value`/`invalid`. The whole outcome is re-validated after the change (§4.2), and changed times are re-checked against the video length and the other kept rallies. Later rallies are re-scored in the same step by the projection (FR-053, C-01).
 - **Undo** reverses the newest change not yet undone: a correction, withdrawal, resolution or game start, or the newest tag (which becomes a withdrawal). Repeated undo walks back one change at a time; there is no redo in R1 (match-aggregate §8 Q4).
-- **Resolution** applies only to a kept rally the sheet marks `needs_decision`; `move_to_next_game` needs the next game started first. There is no `keep_in_game` decision: a rally after the end of its game can never be scored in that game.
+- **Resolution** applies only to a kept rally the sheet marks `needs_decision`; `move_to_next_game` needs the next game started first. `move_to_previous_game` (C-03: a rally of game *n*+1 while game *n* is not over, typically after a correction reopened game *n*) needs game *n* not over and applies to the earliest kept rally of game *n*+1 only, so the games keep their order on the video (PE-S2-R1-02, review round 1; provisional, `@needs-verification`, match-aggregate §8 Q1). There is no `keep_in_game` decision: a rally after the end of its game can never be scored in that game, and a rally of a game after an unfinished one cannot be scored before that game ends.
+- **The current game** for a tag is the first game the projection says is not over. When a correction reopens game *n* after game *n*+1 was started but before it has a rally, the next tag goes to game *n* (PE-S2-R1-02).
+- **Limits** (SEC-S2-R1-01, review round 1): commands that change a scorebook count against a per-account rate of `SCOREBOOK_COMMAND_LIMIT_PER_MINUTE` (default 300) over a rolling minute (429 `rate_limited` with `retry_at` and `Retry-After`; a refused command is not counted, since it writes nothing). A match holds at most `SCOREBOOK_MAX_RALLIES` stored rallies (default 500, withdrawn ones included) and `SCOREBOOK_MAX_CHANGES` audit rows (default 2000); the command past a cap is 422 `scorebook_full` with `{"field": null, "code": "too_many_rallies" | "too_many_changes"}`.
 - **Order of checks** on a command: a missing or malformed `If-Match` (409 `stale_match`), then the body's shape and values (422), then, under the match row lock, the version (409 `stale_match`), the received video (`match_not_ready`), the game and match state, and last the rally times against the video length and the other kept rallies. Nothing is written on any refusal (IT-02-02).
 - **Media links (ST-037):** a fresh presigned GET of the received original, signed for `S3_PUBLIC_ENDPOINT_URL` (the web origin behind `web-tls`, SRE-MEDIA), valid `MEDIA_URL_TTL_SECONDS` (default 300, never more than 900; NFR-055). Responses send `Cache-Control: no-store` and `Referrer-Policy: no-referrer`; the URL never carries the session token and is never logged (NFR-069). `GET /matches/{id}/media` keeps its api-sprint-00 §5.2 meaning (the probed facts), so the whole-video link is the separate `/video` route.
 
@@ -106,6 +109,8 @@ Notes:
 | `decision_needed` | 409 | a tag while rallies are marked `needs_decision` |
 | `nothing_to_undo` | 409 | undo with no open change and no kept tag |
 | `rules_unavailable` | 409 | the match's (`rules_version`, `format`) pair has no preset (today: singles until ST-035), so no game starts and no rally is tagged. Added for PE-S2-R1-05 (senior-backend-engineer); applies to `POST …/games` and `POST …/rallies` from the commit that lands it |
+| `scorebook_full` | 422 | the match holds its cap of rallies or of audit rows (§3 Limits; fields below). Added for SEC-S2-R1-01 |
+| `rate_limited` | 429 | more scorebook commands than the per-account rate (§3 Limits); api-sprint-01 §2.4 shape |
 | `invalid_rally` | 422 | the rally's times (fields below) |
 | `invalid_outcome` | 422 | the rally's outcome (fields below) |
 
@@ -113,14 +118,15 @@ Notes:
 
 | Field | Codes |
 |---|---|
-| `start_ms`, `end_ms` | `time_invalid` (not an integer ms in range), `end_before_start` (on `end_ms`), `overlaps_rally` (on `start_ms`), `time_after_video` (on `end_ms`: the rally ends after the probed video length; `end_ms` is exclusive, so it may equal the length) |
+| `start_ms`, `end_ms` | `time_invalid` (not an integer ms in range), `end_before_start` (on `end_ms`), `overlaps_rally` (on `start_ms`), `out_of_game_order` (on `start_ms`: a rally of game *g* must start after every kept rally of an earlier game ends and end before every kept rally of a later game starts; PE-S2-R1-04, match-aggregate I5), `time_after_video` (on `end_ms`: the rally ends after the probed video length; `end_ms` is exclusive, so it may equal the length) |
 | `ending` | `ending_invalid` (not one of `winner`, `unforced_error`, `forced_error`, `fault`, `replay`) |
 | `winning_side` | `side_invalid`, `side_required`, `replay_has_no_side` |
 | `responsible_player` | `player_invalid` (not a slot of the match format: doubles `A1 A2 B1 B2`, singles `A1 B1`), `replay_has_no_player`, `must_be_on_winning_side` (`winner`), `must_be_on_losing_side` (errors and faults) |
 | `fault_kind` | `fault_kind_invalid` (not one of `serve`, `foot`, `two_bounce`, `nvz`, `other`), `only_for_fault` |
 | `first_serving_side` | `side_invalid` |
-| `field`, `value`, `decision` | `field_invalid`, `invalid`, `unchanged`, `decision_invalid`, `not_needed` |
-| `null` | `unknown_field`, `invalid` |
+| `field`, `value`, `decision` | `field_invalid`, `invalid`, `unchanged`, `decision_invalid`, `not_needed`, `no_previous_game`, `previous_game_over`, `not_first_in_game` |
+| `limit`, `cursor` (history query) | `invalid` |
+| `null` | `unknown_field`, `invalid`, `too_many_rallies`, `too_many_changes` |
 
 The responsible-player side rules are provisional until the pickleball-domain-coach answers match-aggregate §8 Q2.
 
@@ -139,7 +145,9 @@ The inventory test must see these 9 routes (BE-QA-01: the inventory walk was emp
 
 ## 7. Configuration
 
-`MEDIA_URL_TTL_SECONDS` (default 300, max 900) and `S3_PUBLIC_ENDPOINT_URL` (the web origin in dev and in the evidence stack, SRE-MEDIA). No other new setting.
+`MEDIA_URL_TTL_SECONDS` (default 300, max 900) and `S3_PUBLIC_ENDPOINT_URL` (the web origin in dev and in the evidence stack, SRE-MEDIA). Review round 1 (SEC-S2-R1-01): `SCOREBOOK_COMMAND_LIMIT_PER_MINUTE` (300), `SCOREBOOK_MAX_RALLIES` (500), `SCOREBOOK_MAX_CHANGES` (2000), each at least 1.
+
+Media links (QA-RV1-05, review round 1): the original is stored with `Content-Type: video/mp4` and the presigned GET is signed with `response-content-type=video/mp4`, so the store answers the media request as a video also for originals stored before the change.
 
 ## 8. Not decided here (owners)
 

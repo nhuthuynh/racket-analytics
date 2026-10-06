@@ -4,6 +4,7 @@ from racket.matches.scorebook.domain.book import (
     Change,
     CommandContext,
     GameStart,
+    Limits,
     Rally,
     Scorebook,
 )
@@ -16,6 +17,8 @@ from racket.matches.scorebook.domain.errors import (
     MatchNotReady,
     NothingToUndo,
     RallyNotFound,
+    RulesUnavailable,
+    ScorebookFull,
     StaleMatch,
 )
 from racket.matches.scorebook.domain.projection import (
@@ -46,6 +49,7 @@ __all__ = [
     "GameStart",
     "InvalidOutcome",
     "InvalidRally",
+    "Limits",
     "MatchIsOver",
     "MatchNotReady",
     "NothingToUndo",
@@ -53,7 +57,9 @@ __all__ = [
     "Rally",
     "RallyNotFound",
     "RallyTimes",
+    "RulesUnavailable",
     "Scorebook",
+    "ScorebookFull",
     "StaleMatch",
     "canonical_bytes",
     "project",

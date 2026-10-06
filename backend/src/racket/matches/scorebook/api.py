@@ -11,14 +11,14 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, Header, Request
+from fastapi import APIRouter, Body, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from racket.matches.api import OwnedMatch
 from racket.matches.domain import Match
 from racket.matches.scorebook.domain import MatchNotReady, project
-from racket.matches.scorebook.service import ScorebookService, parse_version
+from racket.matches.scorebook.service import ScorebookService, parse_page, parse_version
 from racket.platform.db import get_session
 from racket.players.api import CurrentAccount, presented_token
 from racket.video_ingest.public import media_link
@@ -30,7 +30,7 @@ def get_scorebook_service(
     request: Request, session: Annotated[Session, Depends(get_session)]
 ) -> ScorebookService:
     """ADR 0012 seam: tests override this to make the service fail (IT-02-02)."""
-    return ScorebookService(session)
+    return ScorebookService(session, settings=request.app.state.settings)
 
 
 Service = Annotated[ScorebookService, Depends(get_scorebook_service)]
@@ -111,8 +111,17 @@ def undo(
 
 
 @router.get("/matches/{match_id}/corrections")
-def correction_history(match: OwnedMatch, service: Service) -> dict[str, Any]:
-    return {"items": service.history(match)}
+def correction_history(
+    match: OwnedMatch,
+    service: Service,
+    limit: Annotated[str | None, Query()] = None,
+    cursor: Annotated[str | None, Query()] = None,
+) -> dict[str, Any]:
+    """FR-052, oldest first, paginated (SEC-S2-R1-01): ``next_cursor`` is ``null`` on the last
+    page."""
+    size, after = parse_page(limit, cursor)
+    items, next_version = service.history(match, limit=size, after=after)
+    return {"items": items, "next_cursor": None if next_version is None else str(next_version)}
 
 
 @router.post("/matches/{match_id}/rallies/{rally_id}/resolution")

@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable, Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ from racket.matches.domain import Match, MatchStatus
 from racket.matches.scorebook.domain import (
     CommandContext,
     InvalidRally,
+    Limits,
     OutcomeInput,
     RallyNotFound,
     RallyTimes,
@@ -29,6 +30,8 @@ from racket.matches.scorebook.domain import (
 )
 from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import FieldError, ValidationFailed
+from racket.platform.ratelimit import RateLimited, RateLimiter
+from racket.platform.settings import Settings
 from racket.sports.pickleball.rules import Side
 from racket.video_ingest.public import media_summary
 
@@ -37,6 +40,7 @@ TAG_KEYS = frozenset(
     {"start_ms", "end_ms", "ending", "winning_side", "responsible_player", "fault_kind"}
 )
 START_KEYS = frozenset({"first_serving_side", "ends_switched"})
+HISTORY_PAGE_MAX = 200
 
 
 def parse_version(raw: str | None) -> int:
@@ -57,10 +61,35 @@ def _object(body: Any, keys: frozenset[str], error: type[ValidationFailed]) -> M
 
 
 class ScorebookService:
-    def __init__(self, session: Session, clock: Callable[[], datetime] | None = None) -> None:
+    def __init__(
+        self,
+        session: Session,
+        clock: Callable[[], datetime] | None = None,
+        settings: Settings | None = None,
+    ) -> None:
         self.session = session
         self.books = ScorebookRepository(session)
         self.clock = clock or (lambda: datetime.now(UTC))
+        self.settings = settings or Settings.from_env()
+        self.limits = Limits(
+            max_rallies=self.settings.scorebook_max_rallies,
+            max_changes=self.settings.scorebook_max_changes,
+        )
+
+    def _count_command(self, actor_id: uuid.UUID) -> None:
+        """SEC-S2-R1-01 (ASVS 5.0 2.4.1): commands that change a scorebook count against the
+        account's rate. The hit is written in the command's own transaction, so a refused
+        command (422, 409) writes nothing at all, the hit included (IT-02-02, IT-02-10;
+        decision-log 2026-10-06). The advisory lock of the hit is held to the commit, so
+        parallel commands cannot both take the last slot."""
+        now = self.clock()
+        retry_at = RateLimiter(self.session, clock=lambda: now).hit(
+            f"scorebook:command:{actor_id}",
+            limit=self.settings.scorebook_command_limit_per_minute,
+            window=timedelta(minutes=1),
+        )
+        if retry_at is not None:
+            raise RateLimited(retry_at, now)
 
     def _video_ms(self, match: Match) -> int | None:
         """The probed duration of the match video, or ``None`` when it is not known yet
@@ -76,9 +105,10 @@ class ScorebookService:
     def _run(
         self, match: Match, actor_id: uuid.UUID, command: Callable[..., Any], event: str
     ) -> tuple[Scorebook, Any]:
-        before = self.books.load(match.id.value, lock=True)
-        ctx = CommandContext(actor_id=actor_id, at=self.clock())
         try:
+            self._count_command(actor_id)
+            before = self.books.load(match.id.value, lock=True)
+            ctx = CommandContext(actor_id=actor_id, at=self.clock(), limits=self.limits)
             result = command(before, ctx, match.status is MatchStatus.VIDEO_RECEIVED)
         except Exception:
             self.session.rollback()
@@ -185,11 +215,18 @@ class ScorebookService:
             raise RallyNotFound("no such rally in this match")
         return rally.times.start_ms
 
-    def history(self, match: Match) -> list[dict[str, Any]]:
-        """FR-052: every change, oldest first, with the rally's current sheet number. Values
-        are tag values only (sides, slots, enums, integers): no names, no free text."""
+    def history(
+        self, match: Match, *, limit: int = HISTORY_PAGE_MAX, after: int = 0
+    ) -> tuple[list[dict[str, Any]], int | None]:
+        """FR-052: the changes after version ``after``, oldest first, at most ``limit``, with
+        the rally's current sheet number, and the cursor of the next page (``None`` on the
+        last page; SEC-S2-R1-01). Values are tag values only (sides, slots, enums,
+        integers): no names, no free text."""
         book = self.books.load(match.id.value)
         numbers = {row["rally_id"]: row["number"] for row in project(book)["rows"]}
+        later = [c for c in book.changes if c.version > after]
+        page = later[:limit]
+        cursor = page[-1].version if len(later) > limit else None
         return [
             {
                 "id": str(c.id),
@@ -205,11 +242,31 @@ class ScorebookService:
                 .isoformat(timespec="milliseconds")
                 .replace("+00:00", "Z"),
             }
-            for c in book.changes
-        ]
+            for c in page
+        ], cursor
 
 
 CORRECTION_KEYS = frozenset({"field", "value"})
+
+
+def parse_page(limit: str | None, cursor: str | None) -> tuple[int, int]:
+    """``?limit=1..200`` (default 200) and ``?cursor=<opaque>`` of the history (SEC-S2-R1-01).
+    The cursor is the version of the last change of the previous page."""
+    problems = []
+    size = HISTORY_PAGE_MAX
+    if limit is not None:
+        size = int(limit) if limit.isascii() and limit.isdigit() and len(limit) <= 3 else 0
+        if not 1 <= size <= HISTORY_PAGE_MAX:
+            problems.append(FieldError("limit", "invalid"))
+    after = 0
+    if cursor is not None:
+        if cursor.isascii() and cursor.isdigit() and len(cursor) <= 9:
+            after = int(cursor)
+        else:
+            problems.append(FieldError("cursor", "invalid"))
+    if problems:
+        raise ValidationFailed("paging is not valid", problems)
+    return size, after
 
 
 def _rally_id(raw: str) -> uuid.UUID:

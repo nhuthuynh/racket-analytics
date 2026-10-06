@@ -10,7 +10,7 @@ Pure: the clock and the id factory come in through ``CommandContext`` (ddd-guide
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Self
@@ -24,10 +24,12 @@ from racket.matches.scorebook.domain.errors import (
     MatchNotReady,
     NothingToUndo,
     RallyNotFound,
+    RulesUnavailable,
+    ScorebookFull,
     StaleMatch,
 )
-from racket.matches.scorebook.domain.projection import play
-from racket.matches.scorebook.domain.values import OutcomeInput, RallyTimes
+from racket.matches.scorebook.domain.projection import play, rules_for
+from racket.matches.scorebook.domain.values import InvalidOutcome, OutcomeInput, RallyTimes
 from racket.platform.errors import FieldError, ValidationFailed
 from racket.sports.pickleball.rules import Side
 
@@ -35,10 +37,20 @@ BEST_OF = frozenset({1, 3})
 
 
 @dataclass(frozen=True, slots=True)
+class Limits:
+    """SEC-S2-R1-01 caps per match (decision-log 2026-10-06): stored rallies, withdrawn ones
+    included, and audit rows. A decided best-of-3 is about 70-150 rallies (judgment)."""
+
+    max_rallies: int = 500
+    max_changes: int = 2000
+
+
+@dataclass(frozen=True, slots=True)
 class CommandContext:
     actor_id: uuid.UUID
     at: datetime
     new_id: Callable[[], uuid.UUID] = uuid.uuid4
+    limits: Limits = Limits()
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,8 +116,12 @@ class Scorebook:
             raise StaleMatch("version changed")
         if not ready:
             raise MatchNotReady("video not received")
+        if rules_for(self.rules_version, self.format) is None:
+            raise RulesUnavailable("no rules preset for this format")  # PE-S2-R1-05
 
     def _change(self, ctx: CommandContext, kind: str, **fields: Any) -> Change:
+        if len(self.changes) >= ctx.limits.max_changes:
+            raise ScorebookFull("change cap", [FieldError(None, "too_many_changes")])
         return Change(ctx.new_id(), kind, self.version + 1, ctx.actor_id, ctx.at, **fields)
 
     # ------------------------------------------------------------ commands
@@ -160,15 +176,23 @@ class Scorebook:
             raise MatchIsOver("match is decided")
         if not self.games:
             raise GameNotStarted("no game started")
+        if len(self.rallies) >= ctx.limits.max_rallies:
+            raise ScorebookFull("rally cap", [FieldError(None, "too_many_rallies")])
         if played.needs_decision:
             raise DecisionNeeded("rallies wait for the player's decision")
-        if played.games[-1].over:
+        # I7, PE-S2-R1-02: the current game is the first one the projection says is not over.
+        # After a correction reopens game n, an empty game n+1 waits; its rallies, if any, are
+        # marked and refused above (C-03).
+        current = next((g for g in played.games if not g.over), None)
+        if current is None:
             raise GameIsOver("current game is over")
+        game_number = current.number
         times.check_within(video_ms)
         times.check_after(r.times for r in self.kept)
+        times.check_game_order(game_number, ((r.game_number, r.times) for r in self.kept))
         rally = Rally(
             id=ctx.new_id(),
-            game_number=self.games[-1].number,
+            game_number=game_number,
             seq=max((r.seq for r in self.rallies), default=0) + 1,
             times=times,
             outcome=outcome,
@@ -219,7 +243,11 @@ class Scorebook:
             kind = "correction"
             if field in ("start_ms", "end_ms"):
                 changed.times.check_within(video_ms)
-                changed.times.check_after(r.times for r in self.kept if r.id != rally.id)
+                others = [r for r in self.kept if r.id != rally.id]
+                changed.times.check_after(r.times for r in others)
+                changed.times.check_game_order(
+                    rally.game_number, ((r.game_number, r.times) for r in others)
+                )
         change = self._change(
             ctx,
             kind,
@@ -304,12 +332,17 @@ class Scorebook:
         if not isinstance(decision, str) or decision not in DECISIONS:
             raise ValidationFailed("unknown decision", [FieldError("decision", "decision_invalid")])
         rally = self._rally(rally_id)
-        marked = {row["rally_id"] for row in play(self).rows if row["marker"] is not None}
+        played = play(self)
+        marked = {row["rally_id"] for row in played.rows if row["marker"] is not None}
         if rally.withdrawn or str(rally.id) not in marked:
             raise ValidationFailed("no decision needed", [FieldError("decision", "not_needed")])
         old: int | bool
         if decision == "withdraw":
             field, old, changed = "withdrawn", False, replace(rally, withdrawn=True)
+        elif decision == "move_to_previous_game":
+            self._check_move_back(rally, played)
+            field, old = "game_number", rally.game_number
+            changed = replace(rally, game_number=rally.game_number - 1)
         else:
             target = rally.game_number + 1
             if target not in {g.number for g in self.games}:
@@ -332,14 +365,32 @@ class Scorebook:
             changes=(*self.changes, change),
         )
 
+    def _check_move_back(self, rally: Rally, played: Any) -> None:
+        """C-03 (PE-S2-R1-02), provisional (§8 Q1): a rally of game n+1 moves back into game n
+        only while game n is not over, and only the earliest kept rally of its game, so the
+        games keep their order on the video (I5)."""
+        previous = next((g for g in played.games if g.number == rally.game_number - 1), None)
+        if previous is None:
+            raise ValidationFailed("no previous game", [FieldError("decision", "no_previous_game")])
+        if previous.over:
+            raise ValidationFailed(
+                "previous game is over", [FieldError("decision", "previous_game_over")]
+            )
+        same_game = [r for r in self.kept if r.game_number == rally.game_number]
+        if min(same_game, key=lambda r: (r.times.start_ms, r.seq)).id != rally.id:
+            raise ValidationFailed(
+                "not the first rally of its game", [FieldError("decision", "not_first_in_game")]
+            )
 
-DECISIONS = frozenset({"withdraw", "move_to_next_game"})
+
+DECISIONS = frozenset({"withdraw", "move_to_next_game", "move_to_previous_game"})
 CORRECTABLE = frozenset(
     {
         "winning_side",
         "ending",
         "responsible_player",
         "fault_kind",
+        "outcome",
         "start_ms",
         "end_ms",
         "withdrawn",
@@ -352,10 +403,19 @@ def _value(rally: Rally, field: str) -> Any:
         return getattr(rally.times, field)
     if field in ("withdrawn", "game_number"):
         return getattr(rally, field)
+    if field == "outcome":
+        return rally.outcome.as_json()
     return rally.outcome.as_json()[field]
 
 
 def _changed(rally: Rally, field: str, value: Any, format: str, *, validate: bool = True) -> Rally:
+    if field == "outcome":  # PE-S2-R1-03: the whole outcome input at once (I6 on the result)
+        if not isinstance(value, Mapping):
+            raise InvalidOutcome("outcome is not an object", [FieldError(None, "invalid")])
+        outcome = OutcomeInput.parse(value, format=format)
+        if validate and outcome == rally.outcome:
+            raise ValidationFailed("value unchanged", [FieldError("value", "unchanged")])
+        return replace(rally, outcome=outcome)
     if validate and value == _value(rally, field):
         raise ValidationFailed("value unchanged", [FieldError("value", "unchanged")])
     if field == "game_number":

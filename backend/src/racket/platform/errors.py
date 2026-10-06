@@ -58,6 +58,8 @@ CODE_MESSAGES.update(
         "match_over": "This match is over.",
         "decision_needed": "Some rallies need your decision first.",
         "nothing_to_undo": "There is nothing to undo.",
+        "rules_unavailable": "Scoring for this match format is not available yet.",
+        "scorebook_full": "This match cannot hold more rallies or changes.",
         "client_closed_request": "The connection closed before the request was complete.",
     }
 )
