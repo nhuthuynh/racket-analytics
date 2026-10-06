@@ -1,4 +1,4 @@
-// ST-031 undo on the tagging screen: "Undo" button and the Z key (FR-052, FR-UX-61). Negative
+// ST-031 undo on the tagging screen: "Undo last change" button and the Z key (FR-052, FR-UX-61). Negative
 // case first: nothing to undo leaves the score as it was.
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -34,7 +34,7 @@ describe('QuickTag undo (ST-031)', () => {
   it('nothing to undo says so and keeps the score', async () => {
     const api = setup();
     api.undo.mockRejectedValueOnce(new ApiError(409, 'nothing_to_undo'));
-    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Undo last change' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('There is nothing to undo.');
     expect(within(screen.getByRole('group', { name: 'Score' })).getByText('1-0-2')).toBeVisible();
   });
