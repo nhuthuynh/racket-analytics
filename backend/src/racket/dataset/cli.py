@@ -8,6 +8,8 @@ Exit codes: 0 intact, 1 integrity problems, 2 malformed or unreadable manifest.
 A manifest with ``"schema": "gold-set-manifest/v1"`` is also checked as a gold set (ST-040,
 ``racket.dataset.gold_set``): QD §8 fields, venue split, agreement gates, consent and its
 Full Tag label files (``full-tag-labels/v1``).
+Every set: a clip with ``shows_people: true`` that git tracks or could commit fails
+(``people_in_git``; SEC-S2-TM-06): footage of people lives in the team's private store.
 In CI, ``--base-manifest`` is the manifest from the merge base (``git show``), which enforces
 "no hash change without a version bump".
 """
@@ -23,12 +25,18 @@ from pathlib import Path
 from racket.dataset.filesystem import (
     MANIFEST_NAME,
     SymlinkInSetError,
+    git_exposed,
     hash_set,
     load_labels,
     load_manifest,
 )
 from racket.dataset.gold_set import GoldSetCheck, gold_set_of
-from racket.dataset.manifest import CheckResult, ManifestCheck, ManifestFormatError
+from racket.dataset.manifest import (
+    CheckResult,
+    FootageStorageCheck,
+    ManifestCheck,
+    ManifestFormatError,
+)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -59,6 +67,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"FAIL {set_dir}: {exc}: symbolic links are not allowed in a set [symlink]")
             worst = max(worst, 1)
             continue
+        people = manifest.people_clip_paths
+        storage = FootageStorageCheck.check(people, git_exposed(set_dir, people))
+        result = CheckResult(result.problems + storage.problems)
         if base is not None:
             bump = ManifestCheck.check_version_bump(base=base, head=manifest)
             result = CheckResult(result.problems + bump.problems)

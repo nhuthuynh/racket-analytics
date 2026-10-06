@@ -1,9 +1,13 @@
-"""Filesystem adapter for the dataset context: hashes the files of a fixture or gold set."""
+"""Filesystem adapter for the dataset context: hashes the files of a fixture or gold set and
+asks git which of them it tracks or could commit."""
 
 from __future__ import annotations
 
 import hashlib
 import json
+import shutil
+import subprocess
+from collections.abc import Iterable
 from pathlib import Path
 
 from racket.dataset.gold_set import GoldSet
@@ -55,3 +59,40 @@ def load_labels(root: Path, gold: GoldSet) -> dict[str, object]:
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             labels[label_file] = UnreadableLabels(str(exc))
     return labels
+
+
+def git_exposed(root: Path, paths: Iterable[str]) -> frozenset[str]:
+    """The ``paths`` (relative to ``root``) that git tracks or does not ignore.
+
+    Outside any git work tree nothing is exposed. ``git check-ignore`` (without
+    ``--no-index``) never reports a tracked file as ignored, so a tracked file stays exposed
+    even when a ``.gitignore`` matches it. Fails closed: if git is missing or errors, every
+    path counts as exposed (SEC-S2-TM-06).
+    """
+    wanted = sorted(set(paths))
+    if not wanted:
+        return frozenset()
+    git = shutil.which("git")
+    if git is None:
+        return frozenset(wanted)
+    try:
+        inside = subprocess.run(  # noqa: S603 - fixed argv; root is the set directory checked
+            [git, "-C", str(root), "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if inside.returncode != 0 or inside.stdout.strip() != "true":
+            return frozenset()
+        ignored = subprocess.run(  # noqa: S603 - fixed argv; paths go via stdin
+            [git, "-C", str(root), "check-ignore", "-z", "--stdin"],
+            input="\0".join(wanted) + "\0",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return frozenset(wanted)
+    if ignored.returncode not in (0, 1):
+        return frozenset(wanted)
+    return frozenset(wanted) - set(ignored.stdout.split("\0"))

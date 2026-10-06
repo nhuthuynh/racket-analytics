@@ -8,13 +8,16 @@ Rules (testing-strategy §6, QD §8):
 * a file whose hash differs from the manifest, an unlisted file or a missing file fails;
 * a manifest may change a hash, add or remove a file only together with a higher version;
 * a clip entry (optional ``clips`` list, ST-025) that shows people must carry a consent record
-  (OQ-06, ADR 0023): ``shows_people: true`` with a null or blank ``consent_record`` fails.
+  (OQ-06, ADR 0023): ``shows_people: true`` with a null or blank ``consent_record`` fails;
+* a clip that shows people is never stored where git can commit it (``people_in_git``,
+  ``FootageStorageCheck``): the repository is public, the consent form promises private
+  storage (docs/data/gold-capture-protocol.md §2 step 6, §3 item 4; SEC-S2-TM-06).
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -26,6 +29,7 @@ ProblemKind = Literal[
     "version_decreased",
     "consent_missing",
     "clip_not_in_files",
+    "people_in_git",
     # gold-set manifest v1 (ST-040, racket.dataset.gold_set)
     "held_out_venues",
     "unknown_venue",
@@ -138,6 +142,11 @@ class Manifest:
             clips=clips,
         )
 
+    @property
+    def people_clip_paths(self) -> tuple[str, ...]:
+        """Paths of the clips that show people (gold-set clips are ``clips`` entries too)."""
+        return tuple(c.path for c in self.clips if c.shows_people)
+
 
 @dataclass(frozen=True)
 class IntegrityProblem:
@@ -154,6 +163,8 @@ class IntegrityProblem:
             "version_decreased": "manifest version went backwards",
             "consent_missing": "clip shows people but has no consent record (OQ-06)",
             "clip_not_in_files": "clip entry names a file that is not in the manifest files",
+            "people_in_git": "clip shows people but git tracks it or could commit it; keep it "
+            "in the team's private store or a git-ignored directory (consent form item 4)",
             "held_out_venues": "vision gold set needs at least 3 held-out (test) venues with clips",
             "unknown_venue": "clip names a venue that is not in the manifest venues",
             "double_label_share": "vision gold set needs at least 20% of clips double-labelled",
@@ -213,3 +224,21 @@ class ManifestCheck:
             if base.files.get(path) != head.files.get(path)
         )
         return CheckResult(tuple(IntegrityProblem("version_not_bumped", p) for p in changed))
+
+
+class FootageStorageCheck:
+    """Footage that shows people stays out of git (SEC-S2-TM-06, QA-RV2-12).
+
+    ``exposed_to_git`` holds the set paths git tracks or does not ignore; the filesystem
+    adapter (``racket.dataset.filesystem.git_exposed``) finds them.
+    """
+
+    @staticmethod
+    def check(people_paths: Iterable[str], exposed_to_git: Collection[str]) -> CheckResult:
+        return CheckResult(
+            tuple(
+                IntegrityProblem("people_in_git", path)
+                for path in sorted(set(people_paths))
+                if path in exposed_to_git
+            )
+        )

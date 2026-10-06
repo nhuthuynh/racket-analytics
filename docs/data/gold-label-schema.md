@@ -52,6 +52,7 @@ Clip entry:
 | `kappa_below_gate` | an admitted shot facet has κ ≥ 0.7 on n ≥ 300; an admitted `ending` κ ≥ 0.6 | all | QD-TX-03; QD X3 |
 | `facet_not_admitted` | label files carry only admitted shot facets | all | QD-TX-03 |
 | `consent_contradiction`, `consent_jurisdiction` | §2 clip table | all | OQ-06, ADR 0023 |
+| `people_in_git` | a clip with `shows_people: true` is not tracked by git and is git-ignored (or outside any repository); git missing or failing counts as exposed | all sets, fixture manifests too | consent form item 4 (gold-capture-protocol §2 step 6); SEC-S2-TM-06 |
 | `label_not_in_files`, `label_invalid` | every label file is in the set and valid against §4, and names its own clip | all | FR-150, FR-151 |
 
 `hit`, `bounce`, `hitter`, `rally_boundaries` and `winning_side` agreement rows may be recorded; no gate is set for them yet (the engineering targets CV-T05..T11 measure models, not labellers). A gate for them needs an ADR.
