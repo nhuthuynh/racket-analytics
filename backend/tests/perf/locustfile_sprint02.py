@@ -10,8 +10,11 @@ copy of the routes: they live only in ``tagcontract.py``). Then:
   ``If-Match`` version of the previous answer (NFR-013 correction round trip). One user only,
   so its versions never race.
 
-At the end the sheet must be byte-identical to the one after seeding (C-04), and the state
-goes to ``RA_PERF_STATE`` (JSON) for ``scripts/ci/perf_verdict.py``.
+When the run's time limit stops the correction user with a correction in flight, the server
+may still apply it with no undo to follow; ``perf_restore`` undoes that one correction (version
+parity) before the check (CI run 37505286086). At the end the sheet must be byte-identical
+to the one after seeding (C-04), and the state goes to ``RA_PERF_STATE`` (JSON) for
+``scripts/ci/perf_verdict.py``.
 
     MAILPIT_API_URL=http://127.0.0.1:8025 RA_ORIGIN=https://localhost:3000 RA_CACERT=root.crt \
     RA_PERF_STATE=reports/perf/perf_state.json \
@@ -41,6 +44,9 @@ import taglib as t  # noqa: E402
 from live_goal import new_match  # noqa: E402
 from live_tagging import Session, _tag_all, upload_video  # noqa: E402
 from livehttp import Client, sign_in, ssl_context  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from perf_restore import restore_orphan_correction  # noqa: E402
 
 FIXTURE = MEASURE.parents[1] / "fixtures" / "clips" / "synthetic-60s" / "clip.mp4"
 STATE: dict[str, Any] = {"seeded": False}
@@ -82,6 +88,7 @@ def seed(environment: Any, **_: Any) -> None:
             match_id=match_id,
             rally_ids=tagged["rally_ids"],
             version=s.version,
+            seed_version=s.version,
             baseline=t.canonical_bytes(sheet).decode(),
         )
     except Exception as exc:  # noqa: BLE001 - any seeding failure stops the run, fail closed
@@ -93,12 +100,30 @@ def seed(environment: Any, **_: Any) -> None:
         c.close()
 
 
+def _server_version(c: Client) -> int:
+    method, path = k.path("sheet", match_id=STATE["match_id"])
+    r = c.request(method, path)
+    if r.status != 200:
+        raise RuntimeError(f"score sheet {r.status}")
+    return int(str(r.headers.get("ETag", "")).strip('"'))
+
+
+def _undo(c: Client, version: int) -> None:
+    method, path = k.path("undo", match_id=STATE["match_id"])
+    r = c.request(method, path, headers={k.VERSION_HEADER: str(version)})
+    if r.status != 200:
+        raise RuntimeError(f"undo {r.status}")
+
+
 @events.quitting.add_listener
 def write_state(environment: Any, **_: Any) -> None:
     if STATE.get("seeded"):
         c = _client(environment.host)
         c.cookie = STATE["cookie"]
         try:
+            STATE["orphan_undone"] = restore_orphan_correction(
+                lambda: _server_version(c), lambda v: _undo(c, v), STATE["seed_version"]
+            )
             _, sheet = Session(c, STATE["match_id"]).sheet()
             STATE["restored_byte_identical"] = (
                 t.canonical_bytes(sheet).decode() == STATE["baseline"]
@@ -109,7 +134,7 @@ def write_state(environment: Any, **_: Any) -> None:
     if out:
         public = {
             key: STATE[key]
-            for key in ("seeded", "error", "restored_byte_identical", "pairs")
+            for key in ("seeded", "error", "restored_byte_identical", "pairs", "orphan_undone")
             if key in STATE
         }
         Path(out).parent.mkdir(parents=True, exist_ok=True)
@@ -153,10 +178,6 @@ class CorrectionUser(_Base):
     fixed_count = 1
     wait_time = constant_throughput(1)
 
-    def on_start(self) -> None:
-        super().on_start()
-        self.pending_undo = False
-
     def _command(self, name: str, body: Any = None, rally_id: str = "") -> bool:
         method, path = k.path(name, match_id=STATE["match_id"], rally_id=rally_id)
         headers = {**self.headers, k.VERSION_HEADER: str(STATE["version"])}
@@ -173,12 +194,6 @@ class CorrectionUser(_Base):
     def correct_then_undo(self) -> None:
         # Rally 2's winner to A: the journey's own correction (G02-01 step 7), valid for its
         # ending and player, so a refusal here is a real failure, never a bad sample.
-        if self._command("correct", CORRECTION, STATE["rally_ids"][1]):
-            self.pending_undo = True
-            if self._command("undo"):
-                self.pending_undo = False
-                STATE["pairs"] = STATE.get("pairs", 0) + 1
-
-    def on_stop(self) -> None:
-        if self.pending_undo:  # stopped between the two halves: put the sheet back
-            self._command("undo")
+        # A pair cut by the run's end is put back after the run (perf_restore, version parity).
+        if self._command("correct", CORRECTION, STATE["rally_ids"][1]) and self._command("undo"):
+            STATE["pairs"] = STATE.get("pairs", 0) + 1
