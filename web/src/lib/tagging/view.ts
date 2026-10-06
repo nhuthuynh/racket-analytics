@@ -1,6 +1,6 @@
 // Display helpers for the tagging screens (ST-027, ST-029, ST-030). Pure.
 import type { Match, ParticipantSlot } from '@/lib/api/types';
-import { ENDING_LABELS, sideOfSlot, type Ending, type HistoryItem, type ScoreSheet, type SheetRow, type Side } from './types';
+import { ENDING_LABELS, sideOfSlot, type Ending, type HistoryItem, type HistoryValue, type OutcomeValue, type ScoreSheet, type SheetRow, type Side } from './types';
 
 export interface SideNames {
   mySide: Side;
@@ -84,7 +84,23 @@ const FIELD_WORDS: Readonly<Record<string, string>> = {
   fault_kind: 'fault type',
 };
 
-function valueWords(field: string, value: HistoryItem['old_value'], names: SideNames): string {
+const OUTCOME_FIELDS = ['winning_side', 'ending', 'responsible_player', 'fault_kind'] as const;
+
+/** "won by changed from your side to the other side, player changed from Carlos to not tagged". */
+function outcomeChangeWords(old: HistoryValue, now: HistoryValue, names: SideNames): string {
+  if (!isOutcome(old) || !isOutcome(now)) return `outcome changed`;
+  const parts = OUTCOME_FIELDS.filter((f) => old[f] !== now[f]).map(
+    (f) => `${FIELD_WORDS[f]} changed from ${valueWords(f, old[f], names)} to ${valueWords(f, now[f], names)}`,
+  );
+  return parts.length ? parts.join(', ') : 'outcome changed';
+}
+
+function isOutcome(v: HistoryValue): v is OutcomeValue {
+  return typeof v === 'object' && v !== null;
+}
+
+function valueWords(field: string, value: HistoryValue, names: SideNames): string {
+  if (isOutcome(value)) return 'an outcome';
   if (value === null) return field === 'responsible_player' ? 'not tagged' : 'nothing';
   if (field === 'winning_side') return value === names.mySide ? 'your side' : 'the other side';
   if (field === 'ending' && typeof value === 'string' && value in ENDING_LABELS) {
@@ -100,6 +116,7 @@ export function historyText(item: HistoryItem, all: readonly HistoryItem[], name
   const rally = item.rally_number ? `Rally ${item.rally_number}` : 'The match';
   switch (item.kind) {
     case 'correction': {
+      if (item.field === 'outcome') return `${rally}: ${outcomeChangeWords(item.old_value, item.new_value, names)}`;
       const field = item.field ?? 'value';
       return `${rally}: ${FIELD_WORDS[field] ?? field} changed from ${valueWords(field, item.old_value, names)} to ${valueWords(field, item.new_value, names)}`;
     }

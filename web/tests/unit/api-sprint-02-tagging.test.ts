@@ -138,6 +138,26 @@ describe('correction history and rally media', () => {
     await expect(client.corrections(ID)).rejects.toMatchObject({ code: 'invalid_response' });
   });
 
+  it('PD-S2R1-01: reads an outcome correction (old and new outcome objects) and refuses free text inside one', async () => {
+    const outcome = { id: RALLY, kind: 'correction', rally_id: RALLY, rally_number: 3, field: 'outcome',
+      old_value: { ending: 'forced_error', winning_side: 'A', responsible_player: 'B1', fault_kind: null },
+      new_value: { ending: 'forced_error', winning_side: 'B', responsible_player: null, fault_kind: null },
+      undoes: null, at: '2026-10-06T10:00:00Z' };
+    const bad = { ...outcome, new_value: { ...outcome.new_value, responsible_player: '<b>Carlos</b>' } };
+    const extra = { ...outcome, new_value: { ...outcome.new_value, note: 'x' } };
+    const { client } = clientWith(json(200, { items: [bad] }), json(200, { items: [extra] }), json(200, { items: [outcome] }));
+    await expect(client.corrections(ID)).rejects.toMatchObject({ code: 'invalid_response' });
+    await expect(client.corrections(ID)).rejects.toMatchObject({ code: 'invalid_response' });
+    expect(await client.corrections(ID)).toEqual([outcome]);
+  });
+
+  it('PD-S2R1-01: sends a whole-outcome correction as {field: "outcome", value: {…}}', async () => {
+    const { client, fetchFn } = clientWith(json(200, { version: 5, sheet }));
+    const value = { ending: 'winner' as const, winning_side: 'B' as const, responsible_player: null, fault_kind: null };
+    await client.correctRally(ID, 4, RALLY, 'outcome', value);
+    expect(JSON.parse(fetchFn.mock.calls[0]![1]?.body as string)).toEqual({ field: 'outcome', value });
+  });
+
   it('media: refuses a URL that is not https or same-origin path, or a TTL over 15 minutes', async () => {
     const { client } = clientWith(
       json(200, { url: 'javascript:alert(1)', expires_in_s: 600, start_ms: 0 }),

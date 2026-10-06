@@ -63,17 +63,93 @@ describe('rally corrections on the score sheet (ST-032)', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Rally 2 corrected. The score sheet is up to date.');
   });
 
-  it('two keys change the ending: focus the ending list, choose', async () => {
-    const api = setup(sheet([row(1)]));
-    api.correctRally.mockResolvedValueOnce({ version: 8, sheet: sheet([row(1, { ending: 'forced_error', corrected_by_user: true })]) });
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Rally 1 ending' }), 'Forced error');
-    expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(1), 'ending', 'forced_error');
+  it('PD-S2R1-02: moving through the ending or player options with the keyboard saves nothing', async () => {
+    const api = setup(sheet([row(1, { ending: 'unforced_error', winning_side: 'B' })]));
+    expect(screen.queryByRole('combobox')).toBeNull();
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'Change ending, rally 1' }));
+    await u.keyboard('{Tab}{ArrowDown}{ArrowDown}{Tab}{ArrowUp}');
+    await u.click(screen.getByRole('button', { name: 'Change player, rally 1' }));
+    await u.keyboard('{Tab}{ArrowDown}{Tab}');
+    expect(api.correctRally).not.toHaveBeenCalled();
   });
 
-  it('the player can be set or cleared', async () => {
+  it('PD-S2R1-01: switching the winner of a rally with a tagged player also clears the player, in one command', async () => {
+    const api = setup(sheet([row(1, { responsible_player: 'A1' })]));
+    api.correctRally.mockResolvedValueOnce({ version: 8, sheet: sheet([row(1, { winning_side: 'B', corrected_by_user: true })]) });
+    await userEvent.click(screen.getByRole('button', { name: 'Rally 1: change the winner to the other side' }));
+    expect(api.correctRally).toHaveBeenCalledTimes(1);
+    expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(1), 'outcome', {
+      ending: 'winner', winning_side: 'B', responsible_player: null, fault_kind: null,
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('Rally 1 corrected. The score sheet is up to date.');
+  });
+
+  it('two taps change the ending: open "Change ending", choose', async () => {
+    const api = setup(sheet([row(1)]));
+    api.correctRally.mockResolvedValueOnce({ version: 8, sheet: sheet([row(1, { ending: 'forced_error', winning_side: 'A', corrected_by_user: true })]) });
+    const u = userEvent.setup();
+    const toggle = screen.getByRole('button', { name: 'Change ending, rally 1' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await u.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const group = screen.getByRole('group', { name: 'Rally 1 ending' });
+    expect(within(group).getByRole('button', { name: 'Winner' })).toHaveAttribute('aria-pressed', 'true');
+    await u.click(within(group).getByRole('button', { name: 'Unforced error' }));
+    expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(1), 'ending', 'unforced_error');
+    expect(screen.queryByRole('group', { name: 'Rally 1 ending' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Change ending, rally 1' })).toHaveFocus();
+  });
+
+  it('an ending that no longer fits the tagged player clears the player in the same command', async () => {
+    const api = setup(sheet([row(1, { responsible_player: 'A1' })]));
+    api.correctRally.mockResolvedValueOnce({ version: 8, sheet: sheet([row(1, { ending: 'forced_error', corrected_by_user: true })]) });
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'Change ending, rally 1' }));
+    await u.click(within(screen.getByRole('group', { name: 'Rally 1 ending' })).getByRole('button', { name: 'Forced error' }));
+    expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(1), 'outcome', {
+      ending: 'forced_error', winning_side: 'A', responsible_player: null, fault_kind: null,
+    });
+  });
+
+  it('a scored rally becomes a replay in one command (no winner, no player)', async () => {
+    const api = setup(sheet([row(1, { responsible_player: 'A1' })]));
+    api.correctRally.mockResolvedValueOnce({ version: 8, sheet: sheet([row(1, { ending: 'replay', winning_side: null, corrected_by_user: true })]) });
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'Change ending, rally 1' }));
+    await u.click(within(screen.getByRole('group', { name: 'Rally 1 ending' })).getByRole('button', { name: 'Replay' }));
+    expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(1), 'outcome', {
+      ending: 'replay', winning_side: null, responsible_player: null, fault_kind: null,
+    });
+  });
+
+  it('the player can be set or cleared, and only players who fit the winner and the ending are offered', async () => {
     const api = setup(sheet([row(1, { responsible_player: 'A1' })]));
     api.correctRally.mockResolvedValue({ version: 8, sheet: sheet([row(1)]) });
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Rally 1 player' }), 'Not tagged');
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'Change player, rally 1' }));
+    const group = screen.getByRole('group', { name: 'Rally 1 player' });
+    expect(within(group).getByRole('button', { name: 'Ivy' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(group).queryByRole('button', { name: 'Carlos' })).toBeNull();
+    await u.click(within(group).getByRole('button', { name: 'Not tagged' }));
     expect(api.correctRally).toHaveBeenCalledWith(ID, 7, rid(1), 'responsible_player', null);
+  });
+
+  it('choosing the value it already has saves nothing and closes the options', async () => {
+    const api = setup(sheet([row(1)]));
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'Change ending, rally 1' }));
+    await u.click(within(screen.getByRole('group', { name: 'Rally 1 ending' })).getByRole('button', { name: 'Winner' }));
+    expect(api.correctRally).not.toHaveBeenCalled();
+    expect(screen.queryByRole('group', { name: 'Rally 1 ending' })).toBeNull();
+  });
+
+  it('Esc closes the options and returns focus to the button that opened them', async () => {
+    setup(sheet([row(1)]));
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'Change ending, rally 1' }));
+    await u.keyboard('{Tab}{Escape}');
+    expect(screen.queryByRole('group', { name: 'Rally 1 ending' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Change ending, rally 1' })).toHaveFocus();
   });
 });

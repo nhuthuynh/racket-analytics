@@ -39,7 +39,8 @@ test.describe('@M0 @story-ST-031 Undo and correction history', () => {
     const matchId = await receivedMatch(page);
     await tagJourneyByApi(page, matchId);
     await page.goto(`/matches/${matchId}/sheet`);
-    await page.getByRole('combobox', { name: 'Rally 6 ending' }).selectOption('forced_error');
+    await page.getByRole('button', { name: 'Change ending, rally 6' }).click();
+    await page.getByRole('group', { name: 'Rally 6 ending' }).getByRole('button', { name: 'Forced error', exact: true }).click();
     await expect(
       page.getByRole('list', { name: 'Correction history' }).getByText('Rally 6: ending changed from winner to forced error'),
     ).toBeVisible();

@@ -76,6 +76,20 @@ export function sideOfSlot(slot: ParticipantSlot): Side {
 export const HISTORY_KINDS = ['game_started', 'correction', 'withdrawal', 'undo', 'resolution'] as const;
 export type HistoryKind = (typeof HISTORY_KINDS)[number];
 
+/**
+ * The whole outcome input of one rally, as `{"field": "outcome", "value": …}` sends it and as an
+ * outcome correction's old and new values hold it (api-sprint-02 §2, §3 "Correctable fields").
+ */
+export interface OutcomeValue {
+  ending: Ending;
+  winning_side: Side | null;
+  responsible_player: ParticipantSlot | null;
+  fault_kind: string | null;
+}
+
+/** A history value: a tag value, or for `field = "outcome"` an outcome object of tag values. */
+export type HistoryValue = string | number | boolean | null | OutcomeValue;
+
 /** One audit row of GET /matches/{id}/corrections (FR-052; match-aggregate §2 `Correction`). */
 export interface HistoryItem {
   id: string;
@@ -84,8 +98,8 @@ export interface HistoryItem {
   rally_number: number | null;
   field: string | null;
   /** Tag values only (sides, slots, enums, integers): never names or free text (§6). */
-  old_value: string | number | boolean | null;
-  new_value: string | number | boolean | null;
+  old_value: HistoryValue;
+  new_value: HistoryValue;
   undoes: string | null;
   at: string;
 }
@@ -100,7 +114,10 @@ export interface RallyMedia {
 export const MAX_MEDIA_TTL_S = 900;
 
 /** Correctable fields (ST-031/ST-032; match-aggregate §4 `correct_rally`). */
-export type CorrectableField = 'winning_side' | 'ending' | 'responsible_player' | 'start_ms' | 'end_ms' | 'fault_kind';
+export type CorrectableField = 'winning_side' | 'ending' | 'responsible_player' | 'start_ms' | 'end_ms' | 'fault_kind' | 'outcome';
+
+/** The value sent with a correction: a tag value, or the whole outcome for `outcome`. */
+export type CorrectionValue = string | number | null | OutcomeValue;
 
 export interface Versioned {
   version: number;

@@ -10,7 +10,7 @@ import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
 import { commandProblem } from '@/lib/tagging/messages';
 import type { Match } from '@/lib/api/types';
-import type { CorrectableField, HistoryItem, RallyMedia, ScoreSheet, SheetRow, Versioned } from '@/lib/tagging/types';
+import type { CorrectableField, CorrectionValue, HistoryItem, RallyMedia, ScoreSheet, SheetRow, Versioned } from '@/lib/tagging/types';
 import { sideNames } from '@/lib/tagging/view';
 import { CorrectionHistory } from './CorrectionHistory';
 import { RallyCorrections } from './RallyCorrections';
@@ -122,7 +122,7 @@ export function ScoreSheetView({
     }
   }
 
-  function correct(row: SheetRow, field: CorrectableField, value: string | null) {
+  function correct(row: SheetRow, field: CorrectableField, value: CorrectionValue) {
     void run(
       'Correction',
       (v) => api.correctRally(match.id, v, row.rally_id, field, value),

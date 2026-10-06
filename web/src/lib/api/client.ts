@@ -20,6 +20,7 @@ import {
 } from '@/lib/tagging/parse';
 import type {
   CorrectableField,
+  CorrectionValue,
   HistoryItem,
   RallyMedia,
   ScoreSheet,
@@ -236,7 +237,7 @@ export function createApiClient(options: ApiClientOptions) {
       version: number,
       rallyId: string,
       field: CorrectableField,
-      value: string | number | null,
+      value: CorrectionValue,
     ): Promise<Versioned> {
       const path = `${matchPath(id)}/rallies/${rallyPath(rallyId)}`;
       return parsed(await request('PATCH', path, { field, value }, ifMatch(version)), parseVersioned);

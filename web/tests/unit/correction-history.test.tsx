@@ -46,6 +46,19 @@ describe('CorrectionHistory (H-01)', () => {
     expect(items[1]).toContain('Undone: Rally 5: ending changed from winner to forced error');
   });
 
+  it('PD-S2R1-01: an outcome correction says, in words, each part that changed', () => {
+    const outcome: HistoryItem = {
+      ...change, id: hid(3), rally_number: 3, field: 'outcome',
+      old_value: { ending: 'forced_error', winning_side: 'A', responsible_player: 'B1', fault_kind: null },
+      new_value: { ending: 'forced_error', winning_side: 'B', responsible_player: null, fault_kind: null },
+    };
+    const back: HistoryItem = { ...undo, id: hid(4), undoes: hid(3) };
+    render(<CorrectionHistory items={[outcome, back]} match={match} />);
+    const items = within(screen.getByRole('list', { name: 'Correction history' })).getAllByRole('listitem').map((li) => li.textContent);
+    expect(items[0]).toContain('Rally 3: won by changed from your side to the other side, player changed from Carlos to not tagged');
+    expect(items[1]).toContain('Undone: Rally 3: won by changed from your side to the other side, player changed from Carlos to not tagged');
+  });
+
   it('names sides and players in words, and a removed rally', () => {
     render(<CorrectionHistory match={match} items={[
       { ...change, field: 'winning_side', old_value: 'B', new_value: 'A' },

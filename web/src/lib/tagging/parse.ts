@@ -9,6 +9,8 @@ import {
   SIDES,
   type Ending,
   type HistoryItem,
+  type HistoryValue,
+  type OutcomeValue,
   type RallyMedia,
   type ScoreSheet,
   type SheetGame,
@@ -139,6 +141,29 @@ function scalarOrNull(o: Obj, key: string, path: string): string | number | bool
   throw new ResponseShapeError(`${path}.${key}`);
 }
 
+const OUTCOME_KEYS = ['ending', 'winning_side', 'responsible_player', 'fault_kind'] as const;
+const TOKEN = /^[A-Za-z0-9_-]{1,32}$/;
+
+/** An outcome correction's value: exactly the four outcome keys, each a tag value (PD-S2R1-01). */
+function outcomeValue(v: unknown, path: string): OutcomeValue {
+  const o = obj(v, path);
+  if (Object.keys(o).some((k) => !(OUTCOME_KEYS as readonly string[]).includes(k))) throw new ResponseShapeError(path);
+  const kind = o.fault_kind ?? null;
+  if (kind !== null && (typeof kind !== 'string' || !TOKEN.test(kind))) throw new ResponseShapeError(`${path}.fault_kind`);
+  return {
+    ending: one<Ending>(o, 'ending', ENDINGS, path),
+    winning_side: oneOrNull<Side>(o, 'winning_side', SIDES, path),
+    responsible_player: oneOrNull<ParticipantSlot>(o, 'responsible_player', SLOTS, path),
+    fault_kind: kind as string | null,
+  };
+}
+
+function historyValue(o: Obj, key: string, path: string, field: string | null): HistoryValue {
+  return field === 'outcome' && o[key] !== null && o[key] !== undefined
+    ? outcomeValue(o[key], `${path}.${key}`)
+    : scalarOrNull(o, key, path);
+}
+
 export function parseHistory(value: unknown): HistoryItem[] {
   const o = obj(value, 'history');
   const items = o.items;
@@ -157,8 +182,8 @@ export function parseHistory(value: unknown): HistoryItem[] {
       rally_id: nullablePublicId(it, 'rally_id', path),
       rally_number: num === null ? null : int(it, 'rally_number', path, 1),
       field: field as string | null,
-      old_value: scalarOrNull(it, 'old_value', path),
-      new_value: scalarOrNull(it, 'new_value', path),
+      old_value: historyValue(it, 'old_value', path, field as string | null),
+      new_value: historyValue(it, 'new_value', path, field as string | null),
       undoes: nullablePublicId(it, 'undoes', path),
       at: str(it, 'at', path),
     };
