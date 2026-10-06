@@ -261,3 +261,110 @@ def grant_labeller(api: ApiDriver, user: str) -> None:
 def record_consent(match_id: str, ref: str = "CONSENT-TEAM-SYNTHETIC-001") -> None:
     rc = LABELLER_ADMIN.load()(["consent", "--match", match_id, "--record", ref])
     assert rc == 0, f"consent exit {rc}"
+
+
+# ------------------------------------------------------------------ scenario scripts (QA-ACC-3)
+def _win(side: str) -> dict[str, Any]:
+    return {
+        "winning_side": side,
+        "ending": "winner",
+        "fault_kind": None,
+        "responsible_player": None,
+    }
+
+
+def receive_script(n: int, won: int, receiver: str = "A") -> list[dict[str, Any]]:
+    """Games (``[{"first_serving_side", "tags"}]``) where ``receiver`` receives serve in exactly
+    ``n`` counted rallies and wins ``won`` of them (FR-101 examples). The receiver never scores:
+    on its own serve it loses at once (a side-out under side-out scoring), so the server keeps
+    the points and a new game starts only when the server's side reaches 11."""
+    from tests.support.scorebook import taglib
+
+    if not 0 <= won <= n:
+        raise ValueError("won must be between 0 and n")
+    server = "B" if receiver == "A" else "A"
+    games: list[dict[str, Any]] = []
+    tags: list[dict[str, Any]] = []
+    state = taglib.new_doubles_game(server)
+    wins_left, losses_left = won, n - won
+    while wins_left or losses_left:
+        if state.serving_side == receiver:
+            pick = server  # the receiver loses its own serve: side-out, nobody scores
+        elif wins_left and (not losses_left or wins_left * (n - won) >= losses_left * won):
+            pick, wins_left = receiver, wins_left - 1
+        else:
+            pick, losses_left = server, losses_left - 1
+        tags.append(_win(pick))
+        state = taglib.step_doubles(state, pick, target=11)
+        if state.winner is not None:
+            games.append({"first_serving_side": server, "tags": tags})
+            if len(games) == 2:
+                raise ValueError("needs more than two games; the match would be over")
+            tags, state = [], taglib.new_doubles_game(server)
+    if tags:
+        games.append({"first_serving_side": server, "tags": tags})
+    return games
+
+
+def no_score_script(rallies: int) -> list[dict[str, Any]]:
+    """One game in which the serving side always loses: nobody scores, the game never ends,
+    and each side wins every rally it receives (rallies/2 each)."""
+    from tests.support.scorebook import taglib
+
+    state = taglib.new_doubles_game("A")
+    tags: list[dict[str, Any]] = []
+    for _ in range(rallies):
+        pick = "B" if state.serving_side == "A" else "A"
+        tags.append(_win(pick))
+        state = taglib.step_doubles(state, pick, target=11)
+    return [{"first_serving_side": "A", "tags": tags}]
+
+
+def lost_split_script(on_serve: int, on_receive: int, side: str = "A") -> list[dict[str, Any]]:
+    """One game where ``side`` loses ``on_serve`` rallies on its serve and ``on_receive`` on the
+    other side's serve, and wins every other rally it receives (to get the serve back)."""
+    from tests.support.scorebook import taglib
+
+    other = "B" if side == "A" else "A"
+    state = taglib.new_doubles_game(side)
+    tags: list[dict[str, Any]] = []
+    serve_left, receive_left = on_serve, on_receive
+    while serve_left or receive_left:
+        if state.serving_side == side:
+            if serve_left:
+                pick, serve_left = other, serve_left - 1
+            else:
+                pick = side  # (only when every serve loss is used) a point for the side
+        elif receive_left:
+            pick, receive_left = other, receive_left - 1
+        else:
+            pick = side
+        ending = "unforced_error" if pick == other and len(tags) % 2 else "winner"
+        tags.append({**_win(pick), "ending": ending})
+        state = taglib.step_doubles(state, pick, target=11)
+        assert state.winner is None, "the script ended the game; change the numbers"
+    return [{"first_serving_side": side, "tags": tags}]
+
+
+def timed(games: list[dict[str, Any]], duration_ms: int = 59_000) -> list[dict[str, Any]]:
+    """Give every rally of every game its own slot on the 60 s fixture video, in play order."""
+    from tests.support.scorebook import taglib
+
+    flat = [t for g in games for t in g["tags"]]
+    spread = taglib.with_times(flat, duration_ms=duration_ms)
+    out, i = [], 0
+    for g in games:
+        out.append({**g, "tags": spread[i : i + len(g["tags"])]})
+        i += len(g["tags"])
+    return out
+
+
+def tag_games(api: ApiDriver, user: str, games: list[dict[str, Any]], title: str) -> str:
+    """A received doubles match with ``games`` started and tagged in order."""
+    client = api.as_user(user)
+    match_id = api.run(sb.create_doubles(client, title))
+    api.run(sb.receive_video(client, match_id))
+    for game in timed(games):
+        api.run(sb.start_game(client, match_id, game["first_serving_side"]))
+        api.run(sb.tag_all(client, match_id, game["tags"]))
+    return match_id
