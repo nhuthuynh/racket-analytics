@@ -24,7 +24,15 @@ from hypothesis import HealthCheck, settings
 
 from tests.support import contract
 from tests.support.api import ApiDriver, async_client, lifespan
-from tests.support.db import database_url, make_engine, rolled_back_session
+from tests.support.db import (
+    BASE_URL_ENV,
+    ISOLATION_ENV,
+    create_session_database,
+    database_url,
+    drop_session_database,
+    make_engine,
+    rolled_back_session,
+)
 from tests.support.written_keys import WrittenKeys
 
 # ----------------------------------------------------------------- environment
@@ -42,6 +50,44 @@ settings.register_profile(
     print_blob=True,
 )
 settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "dev"))
+
+# ----------------------------------------------------------------- one database per session
+# C-32 (PE-R3-06) / C-31 (PE-R2-04): see tests/support/db.py. Done at configure time, before
+# any module or app reads DATABASE_URL, so the app, its engines and worker subprocesses all
+# use the session's own database.
+_ISOLATED: dict[str, str] = {}
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    base = os.environ.get("DATABASE_URL", "").strip()
+    if not base.startswith("postgresql") or os.environ.get(ISOLATION_ENV, "").lower() == "off":
+        return
+    try:
+        url = create_session_database(base)
+    except Exception as exc:  # noqa: BLE001 - unit-only runs may have no reachable Postgres
+        config.issue_config_time_warning(
+            pytest.PytestWarning(f"per-session test database not created, shared DB used: {exc}"),
+            stacklevel=2,
+        )
+        return
+    _ISOLATED.update(base=base, url=url)
+    os.environ[BASE_URL_ENV] = base
+    os.environ["DATABASE_URL"] = url
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    if not _ISOLATED:
+        return
+    from sqlalchemy.orm import close_all_sessions
+
+    close_all_sessions()
+    try:
+        drop_session_database(_ISOLATED["url"], _ISOLATED["base"])
+    finally:
+        os.environ["DATABASE_URL"] = _ISOLATED["base"]
+        os.environ.pop(BASE_URL_ENV, None)
+        _ISOLATED.clear()
+
 
 # ----------------------------------------------------------------- markers by directory
 _DIR_MARKERS = {
