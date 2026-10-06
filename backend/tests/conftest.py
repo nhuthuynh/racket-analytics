@@ -52,19 +52,22 @@ settings.register_profile(
 settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "dev"))
 
 # ----------------------------------------------------------------- one database per session
-# C-32 (PE-R3-06) / C-31 (PE-R2-04): see tests/support/db.py. Done at configure time, before
-# any module or app reads DATABASE_URL, so the app, its engines and worker subprocesses all
-# use the session's own database.
+# C-32 (PE-R3-06) / C-31 (PE-R2-04): see tests/support/db.py. Done when the first test asks for
+# the database (`raw_db_engine`, which every DB fixture uses), before that test builds the app or
+# starts a worker, so they all read the session's own DATABASE_URL. A run that never asks (the
+# unit suite, G02-12) creates nothing.
 _ISOLATED: dict[str, str] = {}
 
 
-def pytest_configure(config: pytest.Config) -> None:
+def _isolate_session_database(config: pytest.Config) -> None:
     base = os.environ.get("DATABASE_URL", "").strip()
-    if not base.startswith("postgresql") or os.environ.get(ISOLATION_ENV, "").lower() == "off":
+    if _ISOLATED or not base.startswith("postgresql"):
+        return
+    if os.environ.get(ISOLATION_ENV, "").lower() == "off":
         return
     try:
         url = create_session_database(base)
-    except Exception as exc:  # noqa: BLE001 - unit-only runs may have no reachable Postgres
+    except Exception as exc:  # noqa: BLE001 - reported, and the shared database is used
         config.issue_config_time_warning(
             pytest.PytestWarning(f"per-session test database not created, shared DB used: {exc}"),
             stacklevel=2,
@@ -142,8 +145,9 @@ def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
 
 # ----------------------------------------------------------------- database
 @pytest.fixture(scope="session")
-def raw_db_engine() -> Iterator[Any]:
-    """Engine on DATABASE_URL without migrations (harness self-tests)."""
+def raw_db_engine(pytestconfig: pytest.Config) -> Iterator[Any]:
+    """Engine on the session's own database (C-32), without migrations (harness self-tests)."""
+    _isolate_session_database(pytestconfig)
     engine = make_engine(database_url())
     yield engine
     engine.dispose()

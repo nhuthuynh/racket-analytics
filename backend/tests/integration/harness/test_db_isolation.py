@@ -146,3 +146,19 @@ def database_url_for(url: str) -> str:
     finally:
         if saved is not None:
             os.environ["DATABASE_URL"] = saved
+
+
+def test_a_session_that_never_asks_for_the_database_creates_none() -> None:
+    """G02-12: the domain unit run stays under 10 s; it must not pay for a database it does not
+    use. A Postgres URL nothing listens on would make a configure-time creation warn."""
+    env = {**os.environ, "DATABASE_URL": "postgresql://nobody:x@127.0.0.1:1/racket"}
+    env.pop(BASE_URL_ENV, None)
+
+    child = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+         "tests/unit/sports/pickleball/test_rules_server_position.py"],
+        cwd=BACKEND, env=env, capture_output=True, text=True, timeout=300,
+    )  # fmt: skip
+
+    assert child.returncode == 0, child.stdout[-2000:] + child.stderr[-2000:]
+    assert "per-session test database" not in child.stdout + child.stderr
