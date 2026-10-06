@@ -154,6 +154,8 @@ services:
       TRUSTED_PROXY_HOPS: "1"
       # Origin check on state-changing requests (C-18, SEC-R5-S1-03): empty would allow all.
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS (see infra/env.example)}
+      # Media link lifetime (ST-037, NFR-055): the API refuses to start above 900 s.
+      MEDIA_URL_TTL_SECONDS: ${MEDIA_URL_TTL_SECONDS:-300}
       # Per-IP sign-in limits (api-sprint-01 §2.4). Contract defaults; the E2E stack raises them
       # because every Playwright test signs in from one host IP (smoke 2026-10-05).
       AUTH_LINK_LIMIT_PER_IP: ${AUTH_LINK_LIMIT_PER_IP:-20}
@@ -293,6 +295,9 @@ services:
     # session cookie is `__Host-` + Secure, which WebKit drops over plain http. Caddy's internal
     # CA and leaf key are generated at first start into caddy-data; none is committed.
     image: ${DOCKERHUB_REGISTRY:-docker.io}/library/caddy:2.10.2-alpine
+    environment:
+      # The media route /<bucket>/* (SRE-MEDIA, infra/tls/Caddyfile).
+      S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:?set S3_BUCKET_MEDIA}
     ports:
       - 127.0.0.1:${WEB_HOST_PORT:-3000}:443
     volumes:

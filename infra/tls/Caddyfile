@@ -17,7 +17,39 @@
 
 https://localhost {
 	tls internal
-	reverse_proxy web:3000
+
+	# Media on the web origin (SRE-MEDIA; FR-027, NFR-055). The API presigns GETs for
+	# S3_PUBLIC_ENDPOINT_URL = this origin, so the page CSP `media-src 'self'` allows the video
+	# and no CORS rule is needed. A presigned URL signs host and path: both pass unchanged
+	# (Caddy keeps the incoming Host). Range requests pass through (206).
+	@media path /{$S3_BUCKET_MEDIA}/*
+	handle @media {
+		# Only presigned reads reach the store; listing, writes and unsigned reads stop here.
+		@presigned {
+			method GET HEAD
+			query X-Amz-Signature=*
+		}
+		handle @presigned {
+			reverse_proxy objectstore:8333 {
+				# The session cookie and any credential stay at the edge.
+				header_up -Cookie
+				header_up -Authorization
+				# Same origin only: drop every cross-origin grant the store adds (SeaweedFS sends
+				# them on every GET), and its version banner.
+				header_down -Access-Control-Allow-Origin
+				header_down -Access-Control-Allow-Credentials
+				header_down -Access-Control-Allow-Methods
+				header_down -Access-Control-Allow-Headers
+				header_down -Access-Control-Expose-Headers
+				header_down -Server
+			}
+		}
+		respond 403
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
 }
 
 # Container healthcheck only; not published to the host.
