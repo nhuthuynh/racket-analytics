@@ -3,7 +3,7 @@
 // support reference, never "No video yet", and trying again continues from the saved offset.
 import { expect, test } from '@playwright/test';
 import { answerSetup, createAndUpload, paddedClip, signInByLink, uploadPercent } from '../helpers/sprint-01';
-import { expectNoBlockingA11yViolations } from '../helpers/axe';
+import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpers/axe';
 
 test.use({ serviceWorkers: 'block' }); // the spec routes PATCH requests (TCR 2026-10-05)
 
@@ -43,6 +43,7 @@ test.describe('@M0 @story-C-03 Recover from an upload server error', () => {
     const percent = await uploadPercent(page);
     expect(percent).toBeGreaterThan(0);
     await expectNoBlockingA11yViolations(page, testInfo, 'U-01-stopped');
+    await expectTargetsAtLeast24(page, testInfo, 'U-01-stopped'); // C-22 (PD-R2R-08)
 
     failing = false;
     const head = page.waitForRequest((r) => r.method() === 'HEAD' && /\/uploads\//.test(r.url()));
