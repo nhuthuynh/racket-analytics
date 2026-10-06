@@ -22,9 +22,9 @@ x-required-app-env: &app-env
   OTEL_METRICS_EXPORTER: none
   OTEL_LOGS_EXPORTER: none
 
-# Object-store key: only the services that read or write media (api, worker). The mailer never
-# touches media, so it does not get it (SEC-R5-S1-01, threat model S1-F3). A separate DB role
-# and S3 key for the sandboxed worker are ST-042 (gate before any non-dev deployment).
+# Object-store key of the app: only the API reads and writes media with it. The mailer never
+# touches media, so it has no key (SEC-R5-S1-01, threat model S1-F3); the sandboxed worker has
+# its own key, limited to the media bucket (ST-042, below).
 x-media-store-access: &media-store-access
   S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID}
   S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY}
@@ -63,13 +63,19 @@ services:
     environment:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY}
+      WORKER_S3_ACCESS_KEY_ID: ${WORKER_S3_ACCESS_KEY_ID:?set WORKER_S3_ACCESS_KEY_ID}
+      WORKER_S3_SECRET_ACCESS_KEY: ${WORKER_S3_SECRET_ACCESS_KEY:?set WORKER_S3_SECRET_ACCESS_KEY}
+      S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:?set S3_BUCKET_MEDIA}
     entrypoint: ["/bin/sh", "-c"]
+    # Two identities (ST-042): the app's, and the media sandbox worker's with Read/Write on the
+    # media bucket only (no Admin, no List, no other bucket).
     command:
       - |
         set -eu
         mkdir -p /etc/seaweedfs
-        printf '{"identities":[{"name":"racket","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' \
-          "$$S3_ACCESS_KEY_ID" "$$S3_SECRET_ACCESS_KEY" > /etc/seaweedfs/s3.json
+        printf '{"identities":[{"name":"racket","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]},{"name":"racket-worker","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Read:%s","Write:%s"]}]}' \
+          "$$S3_ACCESS_KEY_ID" "$$S3_SECRET_ACCESS_KEY" "$$WORKER_S3_ACCESS_KEY_ID" "$$WORKER_S3_SECRET_ACCESS_KEY" \
+          "$$S3_BUCKET_MEDIA" "$$S3_BUCKET_MEDIA" > /etc/seaweedfs/s3.json
         exec weed server -dir=/data -ip=objectstore -ip.bind=0.0.0.0 -volume.max=0 \
           -master.volumeSizeLimitMB=1024 -filer -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
     ports:
@@ -143,6 +149,45 @@ services:
         condition: service_healthy
     restart: "no"
 
+  db-roles:
+    # One-shot (ST-042): the media sandbox worker's own login, a member of the NOLOGIN group
+    # role racket_media_worker that migration 0012 creates with only the probe stage's grants.
+    # Idempotent; rotates the password to the env value on every start. The password is read
+    # with \getenv, never put on a command line. Refuses the app role and odd names.
+    image: ${DOCKERHUB_REGISTRY:-docker.io}/library/postgres:16-alpine
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:?set POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:?set POSTGRES_DB}
+      WORKER_DB_USER: ${WORKER_DB_USER:?set WORKER_DB_USER (see infra/env.example)}
+      WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:?set WORKER_DB_PASSWORD (see infra/env.example)}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        echo "$$WORKER_DB_USER" | grep -Eq '^[a-z_][a-z0-9_]{0,62}$$' \
+          || { echo "db-roles: WORKER_DB_USER must be a plain lower-case identifier" >&2; exit 2; }
+        if [ "$$WORKER_DB_USER" = "$$PGUSER" ] || [ "$$WORKER_DB_USER" = racket_media_worker ]; then
+          echo "db-roles: WORKER_DB_USER must not be the app role or the group role" >&2; exit 2
+        fi
+        psql -v ON_ERROR_STOP=1 -q <<'SQL'
+        \getenv login WORKER_DB_USER
+        \getenv pw WORKER_DB_PASSWORD
+        SELECT format('CREATE ROLE %I LOGIN', :'login')
+          WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'login') \gexec
+        SELECT format('ALTER ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L', :'login', :'pw') \gexec
+        SELECT format('GRANT racket_media_worker TO %I', :'login') \gexec
+        SQL
+        echo "db-roles: worker login $$WORKER_DB_USER ready (member of racket_media_worker)"
+    networks: [edge]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   api:
     build:
       context: ..
@@ -198,7 +243,12 @@ services:
       args: *backend-build-args
       target: worker
     environment:
-      <<: [*app-env, *media-store-access]
+      <<: *app-env
+      # Own login and S3 key (ST-042, NFR-054): grants of racket_media_worker only (nothing on
+      # accounts, sessions, sign_in_*); Read/Write on the media bucket only.
+      DATABASE_URL: postgresql://${WORKER_DB_USER:?set WORKER_DB_USER}:${WORKER_DB_PASSWORD:?set WORKER_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
+      S3_ACCESS_KEY_ID: ${WORKER_S3_ACCESS_KEY_ID:?set WORKER_S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${WORKER_S3_SECRET_ACCESS_KEY:?set WORKER_S3_SECRET_ACCESS_KEY}
       OTEL_SERVICE_NAME: racket-worker
       # Media stages only: this network has no route to Mailpit, so sign-in email jobs belong
       # to the mailer (ADR 0027).
@@ -225,6 +275,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      db-roles:
         condition: service_completed_successfully
       objectstore-init:
         condition: service_completed_successfully
