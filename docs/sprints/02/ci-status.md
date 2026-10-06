@@ -29,6 +29,21 @@ Branch rule (PO addendum 2026-10-06, `po-input-2026-10-05.md` P1): agents may pu
 
 Evidence: `mcp__github__actions_list list_workflow_jobs 37434214390`; `mcp__github__get_job_logs` for jobs 112171939162 (unit, tail 75), 112171939109 (integration pytest summary) and 112171939346 (Playwright summary and the six error blocks).
 
+## Run 37438997898: head `ffce41d` (all SRE stories through W-01), 2026-10-06
+
+`git push origin sprint-02` (`7470a7b..ffce41d`), dispatch `ci.yml`. Conclusion **failure**; the gates that were red for platform reasons are green. <https://github.com/nhuthuynh/racket-analytics/actions/runs/37438997898>
+
+| Job | Result | Detail | Owner |
+|---|---|---|---|
+| actionlint, Ruff, mypy, fixtures, infra, web checks, secrets/audit, SBOM, flaky report | success | — | — |
+| Python unit suites | **success** (was failure) | domain step 4 s (08:52:19 → 08:52:23) on the NFR-073 paths; property 22 s; whole unit 6 s | — |
+| Locust baseline (new) | **success** | 2,964 requests, 0 failures, availability 1.0, 51.18 RPS, correction p95 410 ms (gate ≤ 1,500), restored byte-identical. **Baseline (not gated):** score sheet p50/p95/p99 290/460/510 ms, history 310/490/580, match 260/390/420, correct 210/410/450, undo 140/330/360. The reads run beside one correction user writing the same match; the read-only open loop (`tag_latency.py` through the origin, sandbox) gave p50 17 ms, so writes on the same match may slow the reads: observation SRE-S2-06 | sre-devops-engineer (baseline); principal-engineer / senior-backend-engineer (SRE-S2-06) |
+| Integration | failure, **gate step green** | `Backend suites with coverage` success (selection `not red_until`); the new red-until step fails as designed on the 5 stale markers (SRE-S2-04) | senior-qa-engineer |
+| E2E | failure | `9 failed, 12 skipped, 161 passed (14.0m)`. Fixed since the last run: the 4 `ffmpeg ENOENT` (stand-in specs pass in both browsers) and **`[webkit]` E2E-02-04 passes: the real H.264 video plays through the web origin (SRE-MEDIA)**. Left: (1) `[chromium]` E2E-02-04 and `timing.spec.ts:210` seek-first-frame, no H.264 in Playwright Chromium (SRE-S2-05); (2) `[webkit]` new Sprint 2 specs: `announcements.spec.ts:8` E2E-02-03 (`Expected: "Rally 1: us. Score 1-0-2."`), `quick-tag.spec.ts:15` (`toBeVisible` failed), `:42` (`toContainText "The player who made the error must be on the side"` failed), `:66` (two devices, `toBeVisible` failed), `timing.spec.ts:97` (`no change seen for end-1 in 10 s`): SRE-S2-07, WebKit first to the FE for product-or-test analysis, as in Sprint 1; (3) `[webkit]` `timing.spec.ts:210` and `:219`: `browserContext.newCDPSession: CDP session is only available in Chromium` (test defect; ST-039 card: WebKit timings out of scope): SRE-S2-08 | (1) senior-qa-engineer; (2) senior-frontend-engineer then senior-qa-engineer; (3) senior-qa-engineer |
+| ci-gate | failure | integration (stale markers), E2E | — |
+
+Evidence: `mcp__github__actions_list list_workflow_jobs 37438997898`; `mcp__github__get_job_logs` for jobs 112187797489 (Locust, verdict JSON) and 112187797479 (Playwright summary and the nine error lines).
+
 ## Next
 
-Push the branch head with C-11, C-18, C-29, SRE-MEDIA, C-13, ST-039 and W-01, dispatch `ci.yml`, and record the run here: expected remaining reds are SRE-S2-04 (stale markers, QA), SRE-S2-05 (H.264 in CI Chromium, QA) and anything the Locust job shows on a clean runner.
+The remaining reds are all owned outside the platform lane: SRE-S2-04, SRE-S2-05, SRE-S2-07, SRE-S2-08. The SRE re-dispatches CI after each of those lands and records the run here.
