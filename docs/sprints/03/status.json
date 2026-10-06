@@ -1,0 +1,703 @@
+{
+  "sprint": "03",
+  "goal": "Starter stats AN-01..AN-07 with n, Wilson intervals, low-sample flags and Show me evidence; match and account deletion with purge; Full Tag and drill lint; the Sprint 2 agent-owned blockers and majors fixed first (docs/sprints/sprint-03.md \u00a71)",
+  "goal_scorecard": "docs/sprints/03/goal-scorecard.md",
+  "dates": {
+    "planned_start": "2026-11-16",
+    "planned_review": "2026-11-27",
+    "work_started": "2026-10-06",
+    "status_written": "2026-10-06 (planning, engineering-manager)"
+  },
+  "owner": "engineering-manager",
+  "branch": "sprint-03",
+  "based_on": "sprint-02@ce91984",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. implemented_units and dod_done_units tracked separately. Status: not_started | in_progress | implemented | done | partial | blocked. Decider tasks (ADR 0037 rule 2) carry dates, not units.",
+  "capacity": {
+    "load_factor": 0.8,
+    "capacity_units_per_lane": 12.8,
+    "committed_units_per_lane": {
+      "BE": 12.5,
+      "FE": 11,
+      "QA": 9.5,
+      "SRE": 7.0,
+      "ML": 3
+    },
+    "committed_units": 43.0,
+    "stretch": [
+      "ST-035",
+      "ST-034",
+      "ST-033",
+      "ST-036",
+      "ST-025 (P3)"
+    ]
+  },
+  "goal_metrics": {
+    "G03-01": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-02": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-03": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-04": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-05": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-06": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-07": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-08": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-09": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-10": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-11": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    },
+    "G03-12": {
+      "met": null,
+      "verified": null,
+      "actual": null
+    }
+  },
+  "open_defects": {
+    "count": 14,
+    "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md",
+    "at": "planning, 2026-10-06"
+  },
+  "decider_tasks": [
+    {
+      "id": "DR-01",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "DR-02",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "DR-02-FE",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "DR-02-COACH",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "DR-02-BA",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "DR-02-PM",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "DR-02-SEC",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "COACH-1",
+      "due": "D1-D2",
+      "status": "not_started"
+    },
+    {
+      "id": "PM-1",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "PE-1",
+      "due": "D1-D2",
+      "status": "not_started"
+    },
+    {
+      "id": "PE-2",
+      "due": "D1 doc, D2 review",
+      "status": "not_started"
+    },
+    {
+      "id": "PE-3",
+      "due": "D1-D2",
+      "status": "not_started"
+    },
+    {
+      "id": "PE-4",
+      "due": "D1",
+      "status": "not_started"
+    },
+    {
+      "id": "PD-1",
+      "due": "D1-D2",
+      "status": "not_started"
+    },
+    {
+      "id": "DR-03",
+      "due": "D3",
+      "status": "not_started"
+    },
+    {
+      "id": "SEC-1",
+      "due": "D1-D2",
+      "status": "not_started"
+    },
+    {
+      "id": "BA-1",
+      "due": "D2, D8",
+      "status": "not_started"
+    }
+  ],
+  "po_items_open": [
+    "P6",
+    "P7",
+    "P8",
+    "P9",
+    "P10",
+    "P11",
+    "P12"
+  ],
+  "stories": [
+    {
+      "id": "C3-01",
+      "kind": "carry_over",
+      "title": "QA-RV3-02: QA decides TCR rows 24-28 of Sprint 2",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-02",
+      "kind": "carry_over",
+      "title": "PE-S2-R3-02: contract amendment not_last_in_game (docs task PE-4)",
+      "units": {},
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-03",
+      "kind": "carry_over",
+      "title": "PE-S2-R3-01: S-01 offers only moves the server accepts",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "C3-02"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-04",
+      "kind": "carry_over",
+      "title": "QA-RV3-04: scripts/dev-chrome.sh (ADR 0036)",
+      "units": {
+        "SRE": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-05",
+      "kind": "carry_over",
+      "title": "PE-S2-R3-03: CI and smoke at the Sprint 2 head; merge chain",
+      "units": {
+        "SRE": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "C3-01"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-06",
+      "kind": "carry_over",
+      "title": "QA-R3-GATE-01 / C-06: manual screen-reader pass (human, P6)",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "P6"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-07",
+      "kind": "carry_over",
+      "title": "SEC-RV3-01: repository visibility (human, P10)",
+      "units": {},
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "P10"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-08",
+      "kind": "carry_over",
+      "title": "BLK-GOLD-01: private footage bucket (after P11)",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "P11"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "C3-09",
+      "kind": "carry_over",
+      "title": "DR family: decider tasks DR-01, DR-02",
+      "units": {},
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-043",
+      "kind": "story",
+      "title": "Metric dictionary in code (FR-102)",
+      "units": {
+        "BE": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "COACH-1",
+        "PE-2"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-044",
+      "kind": "story",
+      "title": "Starter stats AN-01..AN-07 with uncertainty (FR-100, FR-101)",
+      "units": {
+        "BE": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-045",
+      "kind": "story",
+      "title": "Attribution conservation (FR-109)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-044"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-046",
+      "kind": "story",
+      "title": "MetricSnapshot and the stats API",
+      "units": {
+        "BE": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-044",
+        "PE-1",
+        "PE-2"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-047",
+      "kind": "story",
+      "title": "Show me evidence (FR-103)",
+      "units": {
+        "BE": 1,
+        "FE": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-046",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-048",
+      "kind": "story",
+      "title": "Stats dashboard",
+      "units": {
+        "FE": 4
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-046",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-049",
+      "kind": "story",
+      "title": "Golden matches QD-GD-03, gold set GS-AN-1 v1 (NFR-004)",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "COACH-1"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-050",
+      "kind": "story",
+      "title": "Delete a match (FR-006)",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "PE-3",
+        "SEC-1",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-051",
+      "kind": "story",
+      "title": "Delete my account (FR-007)",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-050",
+        "PM-1"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-038",
+      "kind": "story",
+      "title": "Abandoned uploads expire (FR-024), carried",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-050"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-042",
+      "kind": "story",
+      "title": "Least-privilege worker credentials (NFR-054), carried",
+      "units": {
+        "BE": 1,
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-052",
+      "kind": "story",
+      "title": "Full Tag labelling tool (FR-150)",
+      "units": {
+        "ML": 2,
+        "FE": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "PE-1",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-053",
+      "kind": "story",
+      "title": "Drill JSON Schema and CI lint (FR-140)",
+      "units": {
+        "ML": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "ST-054",
+      "kind": "story",
+      "title": "E2E journey v2 and stats performance baseline",
+      "units": {
+        "QA": 2,
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-048",
+        "ST-047"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-ACC-3",
+      "kind": "story",
+      "title": "Acceptance first: steps, IT-03, E2E-03 red",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "PE-1",
+        "PD-1"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-FUZZ-3",
+      "kind": "story",
+      "title": "Rule L11 on new JSON fields; limit concurrency",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-DRY-3",
+      "kind": "story",
+      "title": "Scorecard dry-runs",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "QA-MIN-3",
+      "kind": "story",
+      "title": "QA minors QA-RV3-06, SEC-RV3-03",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "SRE-PURGE",
+      "kind": "story",
+      "title": "Purge job scheduled in Compose (NFR-066 c)",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-050"
+      ],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "SRE-SMOKE-3",
+      "kind": "story",
+      "title": "Integration smoke before review and at the close head",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    },
+    {
+      "id": "SRE-MIN-3",
+      "kind": "story",
+      "title": "SRE minors",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_started",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": []
+    }
+  ],
+  "totals": {
+    "planned_units": 43.0,
+    "implemented_units": 0,
+    "dod_done_units": 0,
+    "implemented_ratio": 0.0
+  },
+  "goal_met": null
+}
