@@ -142,7 +142,11 @@ def junit_rate(
 
 # Any upper-case prefix, optional letter-bearing segments, then a number that may be dotted:
 # PE-R1-S1-02, QA-R2V-01, S-07, BLK-ASVS-6.3.3 (PE-R2-S1-02: the old pattern dropped the last two).
-_FINDING_ID = re.compile(r"\b[A-Z]{1,5}\d*(?:-(?=[A-Z0-9]*[A-Z])[A-Z0-9]+)*-\d+(?:\.\d+)*\b")
+_FINDING_ID = re.compile(
+    r"\b[A-Z]{1,5}\d*(?:-(?=[A-Z0-9]*[A-Z])[A-Z0-9]+)*-\d+(?:\.\d+)*\b"
+    # routed ids with a role suffix after a numbered segment: PD-RV2-DR-FE (PD-R3S2-04)
+    r"|\b[A-Z]{1,5}-[A-Z]+\d+[A-Z0-9]*(?:-[A-Z]+)+\b"
+)
 _OPEN_SEVERITY = re.compile(r"\b(blocker|blocking|major)\b")
 _OPEN_DISPOSITION = re.compile(r"^(open|not re-verified|not fixed|partly)")
 
@@ -169,8 +173,10 @@ def open_defects(text: str) -> list[dict[str, Any]]:
     "Open", "Not re-verified", "Not fixed" or "Partly" (fail closed, ADR 0014, ADR 0030).
     Ids named in one row are aliases of one finding (``PE-R3-05 / QA-R3-05``); a finding is
     open when the latest row of any of its ids is open, and it is reported once, with all
-    its ids. A text without any such table, or a severity row without a finding id, is
-    refused, so a wrong file never reads as 0 and no row is skipped silently.
+    its ids. A row of a table that has a Severity column but no disposition column counts
+    as open (PD-R3S2-04). A text without any table that has both columns, or a severity row
+    without a finding id, is refused, so a wrong file never reads as 0 and no row is
+    skipped silently.
     """
     rows: list[dict[str, Any]] = []
     latest: dict[str, int] = {}
@@ -188,8 +194,12 @@ def open_defects(text: str) -> list[dict[str, Any]]:
             disp_col = _disposition_column(header)
             if sev_col is not None and disp_col is not None and disp_col != sev_col:
                 tables += 1
+            elif sev_col is None:
+                disp_col = None
             else:
-                sev_col = disp_col = None
+                # A Severity column with no disposition column (PD-R3S2-04): its rows count
+                # as open, never skipped (ADR 0033 rule 1: absent means open).
+                disp_col = -1
             continue
         if sev_col is None or disp_col is None or set("".join(cells)) <= set("-: "):
             continue
@@ -199,7 +209,10 @@ def open_defects(text: str) -> list[dict[str, Any]]:
         if not ids:
             raise ValueError(f"line {number}: severity row with no finding id: {cells[0]!r}")
         severity = cells[sev_col].replace("*", "").strip().lower()
-        disposition = cells[disp_col].replace("*", "").strip()
+        if disp_col == -1:
+            disposition = "Open (table has no disposition column)"
+        else:
+            disposition = cells[disp_col].replace("*", "").strip()
         rows.append({"ids": ids, "severity": severity, "disposition": disposition, "line": number})
         for finding in ids:
             latest[finding] = len(rows) - 1

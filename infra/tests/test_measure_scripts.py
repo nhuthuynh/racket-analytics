@@ -385,3 +385,56 @@ def test_open_defects_a_finding_closed_in_one_alias_stays_open_in_the_other() ->
     assert len(m.open_defects(text)) == 1
     closed = text.replace("Open, escalated: no CI", "Fixed: duplicate of PE-R3-05")
     assert m.open_defects(closed) == []
+
+
+# PD-R3S2-04 (Sprint 2 review round 3): a table with a Severity column but no disposition
+# column was skipped silently, so a blocker filed there read as 0 open. Absent means open
+# (ADR 0033 rule 1): such rows count as open until a later row with a disposition closes them.
+def test_open_defects_counts_severity_rows_of_a_table_without_a_disposition_column() -> None:
+    text = """
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| YY-01 | major | Fixed | a | b |
+
+| Finding | Severity | Owner | Cells to fill |
+|---|---|---|---|
+| XX-01 | blocker | fe | R2-2 |
+| XX-02 | minor | fe | R2-3 |
+"""
+    rows = m.open_defects(text)
+    assert [r["ids"] for r in rows] == [["XX-01"]]
+    assert rows[0]["disposition"].startswith("Open")
+
+
+def test_open_defects_a_later_disposition_row_closes_a_no_disposition_row() -> None:
+    text = """
+| Finding | Severity | Owner | Cells to fill |
+|---|---|---|---|
+| XX-01 | blocker | fe | R2-2 |
+
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| XX-01 | blocker | Fixed: cell filled | a | b |
+"""
+    assert m.open_defects(text) == []
+
+
+def test_open_defects_still_refuses_a_text_with_only_severity_tables() -> None:
+    # A wrong file (no disposition anywhere) must not read as a count at all.
+    with pytest.raises(ValueError, match="no review table"):
+        m.open_defects("| Finding | Severity |\n|---|---|\n| XX-01 | blocker |\n")
+
+
+def test_open_defects_reads_routed_ids_that_end_in_a_role_suffix() -> None:
+    # The chair's routed rows are named PD-RV2-DR-FE ... PD-RV2-DR-SEC (Sprint 2 round 2).
+    text = """
+| Finding | Severity | Owner | Cells to fill |
+|---|---|---|---|
+| PD-RV2-DR-FE | blocker | fe | R2-2 |
+| PD-RV2-DR-SEC | major | sec | R2-6 |
+
+| Finding | Severity | Disposition | Files | Evidence |
+|---|---|---|---|---|
+| PD-RV2-DR-SEC | major | Fixed: cell filled | a | b |
+"""
+    assert [r["ids"] for r in m.open_defects(text)] == [["PD-RV2-DR-FE"]]
