@@ -90,7 +90,7 @@ export function ScoreSheetTable({
                       playerText(r, names),
                     ];
                     return (
-                      <tr key={r.rally_id} role="row" className={r.marker ? 'score-sheet__row--conflict' : undefined}>
+                      <tr key={r.rally_id} role="row" data-rally-id={r.rally_id} className={r.marker ? 'score-sheet__row--conflict' : undefined}>
                         <th role="rowheader" scope="row" data-label="Rally">{`Rally ${r.number}`}</th>
                         {cells.map((text, i) => (
                           <td key={COLUMNS[i + 1]} role="cell" data-label={COLUMNS[i + 1]}>
