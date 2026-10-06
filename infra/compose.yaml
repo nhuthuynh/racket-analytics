@@ -16,6 +16,11 @@ x-required-app-env: &app-env
   S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:?set S3_BUCKET_MEDIA}
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tracing:4318
   OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+  # Jaeger takes traces only. FastAPI's automatic telemetry would also send metrics and logs
+  # to this endpoint and get 404 every minute (C-13, SRE-G2-01). The SLI metrics still export
+  # when OTEL_EXPORTER_OTLP_METRICS_ENDPOINT names a collector (docs/ops/sli-metrics.md).
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
 
 # Object-store key: only the services that read or write media (api, worker). The mailer never
 # touches media, so it does not get it (SEC-R5-S1-01, threat model S1-F3). A separate DB role

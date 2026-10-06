@@ -205,3 +205,25 @@ def test_rendered_media_endpoint_follows_a_remapped_web_origin(tmp_path) -> None
     rendered = yaml.safe_load(res.stdout)["services"]
     assert rendered["api"]["environment"]["S3_PUBLIC_ENDPOINT_URL"] == "https://localhost:33000"
     assert rendered["web-tls"]["environment"]["S3_BUCKET_MEDIA"] == "racket-media"
+
+
+# ---------------------------------------------------------------- C-13 (SRE-G2-01)
+# FastAPI's automatic telemetry (fastapi/telemetry/_runtime.py) derives
+# {OTEL_EXPORTER_OTLP_ENDPOINT}/v1/metrics and /v1/logs and exports there. Jaeger takes traces
+# only, so every minute the API logged "Failed to export metrics batch code: 404" (measured
+# live 2026-10-06 on racket-sre02). The dev stack has no metrics backend: those two signals are
+# off. The SLI metrics still export when OTEL_EXPORTER_OTLP_METRICS_ENDPOINT names a collector
+# (racket.platform.slis.configure_metrics reads only that variable).
+@pytest.mark.unit
+@pytest.mark.parametrize("signal", ["OTEL_METRICS_EXPORTER", "OTEL_LOGS_EXPORTER"])
+def test_signals_jaeger_cannot_take_are_off_for_every_app_service(signal: str) -> None:
+    for name in ("api", "worker", "mailer"):
+        env = services()[name]["environment"]
+        assert env.get(signal) == "none", (name, signal)
+
+
+@pytest.mark.unit
+def test_traces_still_go_to_jaeger() -> None:
+    env = services()["api"]["environment"]
+    assert env["OTEL_EXPORTER_OTLP_ENDPOINT"] == "http://tracing:4318"
+    assert env.get("OTEL_TRACES_EXPORTER", "otlp") != "none"
