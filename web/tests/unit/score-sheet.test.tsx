@@ -88,6 +88,12 @@ describe('ScoreSheetTable (S-01)', () => {
 
   it('names the rules version under the label', () => {
     render(<ScoreSheetTable match={match} sheet={sheet([row(1)])} />);
-    expect(screen.getByText('Rules: PROVISIONAL-UNVERIFIED')).toBeVisible();
+    // TCR 2026-10-06 (DR-02 R2-2, PD-FL2-03): plain words for the provisional preset.
+    expect(screen.getByText('Rules: provisional, not yet checked against the rulebook')).toBeVisible();
+  });
+
+  it('prints any other rules version as given (PD-FL2-03)', () => {
+    render(<ScoreSheetTable match={match} sheet={{ ...sheet([row(1)]), rules_version: 'USAP-2026.1' }} />);
+    expect(screen.getByText('Rules: USAP-2026.1')).toBeVisible();
   });
 });

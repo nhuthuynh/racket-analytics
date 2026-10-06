@@ -49,7 +49,7 @@ export function ScoreSheetTable({
   return (
     <div className="stack">
       {sheet.unofficial ? <p className="notice notice--warning score-sheet__label">{UNOFFICIAL_LABEL}</p> : null}
-      <p className="score-sheet__rules">{`Rules: ${sheet.rules_version}`}</p>
+      <p className="score-sheet__rules">{`Rules: ${rulesWords(sheet.rules_version)}`}</p>
       {sheet.rows.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state__title">No rallies tagged yet.</p>
@@ -117,4 +117,12 @@ export function ScoreSheetTable({
       )}
     </div>
   );
+}
+
+/**
+ * The rules line in words (flows-sprint-02 §9 PD-FL2-03, DR-02 R2-2): the provisional preset is
+ * not shown by its internal id; a verified preset (after OQ-01) is shown by its name.
+ */
+function rulesWords(rulesVersion: string): string {
+  return rulesVersion === 'PROVISIONAL-UNVERIFIED' ? 'provisional, not yet checked against the rulebook' : rulesVersion;
 }
