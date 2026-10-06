@@ -130,6 +130,37 @@ The committed `infra/tls/Caddyfile`, with only the upstream address, site port a
 
 Before the fix: the QA-RV2-08 probe got 206 with `Seaweed-X-Amz-Owner: admin`, `X-Seaweedfs-Upload-Id` and no nosniff, CSP or Cache-Control; the new integration test, red at `063c2f4`'s Caddyfile, got the stub store's `text/html` and `cache-control: public, max-age=3600` through with no nosniff.
 
-## Sprint-close head
+## Sprint-close head (C3-05, PE-S2-R3-03; filled 2026-10-06 in Sprint 3)
 
-To be filled by the SRE at the sprint-close head (C-12 rule; Sprint 1 §7): tree, stack, suites, verdict.
+- **Run by:** sre-devops-engineer. **Head:** `sprint-02` at `c4c66b1` (QA's TCR decisions 24-28 and the EM's PR #2 size waiver; docs only after `3ee3af1`). Local part: a clean detached worktree (`git worktree add --detach .local/smoke-s2close/tree c4c66b1`, `git status --short` → 0 lines), removed after the run.
+- **Isolation:** own `RA_DEV_STATE=.local/smoke-s2close/svc` Postgres (`/tmp/racket-pg.Vep4oQ`) and object store, own Mailpit container `s2close-mailpit` (49325/49425). All stopped and removed at the end (`dev-postgres: stopped and removed`, `dev-objectstore: stopped and removed`, container removed). The shared dev object store `/tmp/racket-s3.m6I9Oj` (9.7 GB, written within the hour by another lane) was left alone.
+- **Disk:** `bash scripts/disk-precheck.sh /` → `12 GB free on / (floor 10 GB)`. That is under the 16 GB build floor of `evidence.sh up`, so the fresh-volume Compose part comes from CI at the same commit (below), as in smokes 1 and 3.
+
+### Verdict
+
+**The Sprint 2 close head is green end to end on CI and merged.** `ci-gate` is green on PR #2 at `c4c66b1`; the PO merged PR #2 into `main`, the push run on the merge commit is green, and the first `nightly-quality.yml` run is green. Locally, every suite gives the same result as smoke 3: the only reds are the 21 known `red_until` rows.
+
+### CI at the head and the merge chain
+
+| Step | Run | Result |
+|---|---|---|
+| PR #2 at `c4c66b1` (`pull_request`) | 37514696229 | **ci-gate success**. Every job is green: PR policy (labels `qa-approved-test-change`, `size-waiver`), Ruff, mypy, actionlint, fixtures, infra, web, secrets/audit, SBOM, unit, integration on Compose, E2E Chromium (Chrome channel) + WebKit on a fresh stack, and the Locust baseline. Flaky report skipped (schedule/dispatch only). Runs 37514626510 and 37514696166 at the same head were cancelled by the concurrency group (superseded) |
+| Merge | PR #2 → `main`, merge commit `d427649` (2026-10-06 19:12, by the PO) | Merged. PR #1 (`sprint-01`) is closed unmerged: its commits are in PR #2 (stacked branch), and the only one missing, `d1ce633`, is docs only (Sprint 1 CI re-check). The planned `sprint-02` → `sprint-01`, PR #1 → `main` chain was replaced by this single merge |
+| `main` push CI | 37517222513 at `d427649` | **success** |
+| First nightly | `nightly-quality.yml` 37517279967 (`workflow_dispatch`, `main` at `d427649`) | **success**; the bot committed `a6a26b4` "chore(nightly): quality results 2026-10-06 [skip ci]" |
+
+Evidence: `mcp__github__pull_request_read get` 2 → `merged: true`, `merged_at 2026-10-06T19:12:28Z`; `get_check_runs` 2 (ci-gate job 112452557670 `success`); `actions_list list_workflow_runs` (runs above); `list_commits main` (`a6a26b4`, `d427649`, `c4c66b1`).
+
+### Suites (local worktree at `c4c66b1`)
+
+| Suite | Command | Result |
+|---|---|---|
+| Infra | `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run pytest -q -p no:cacheprovider` | **477 passed** (63.1 s) |
+| Web types, lint | `pnpm exec tsc --noEmit`; `pnpm exec eslint --max-warnings=0 .` (`pipefail`) | rc 0; rc 0 |
+| Web unit | `pnpm exec vitest run --coverage` | **55 files, 458 passed**; lines 91.7% |
+| Backend, full (own services) | `env -u APP_ENV uv run pytest -q -p no:cacheprovider -rfE tests --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py` with own `DATABASE_URL`, `S3_*`, `MAILPIT_API_URL`, `MAIL_SMTP_URL` | **21 failed, 2070 passed, 3 skipped** (348 s). The 21 are exactly the `red_until` rows: ST-035 SOS-01..18 (18), ST-025 phone fixtures (2), ST-024 nightly (1) |
+| Fresh Compose stack, worker sandbox, integration on Compose, E2E both browsers, Locust | CI run 37514696229 (same commit) | success each (above) |
+
+### Reds and owners
+
+None new. The 21 `red_until` rows stay as in smoke 3 (ST-035 stretch; ST-024/ST-025 waiting on the PO). The Sprint 2 findings still open are carried as Open rows in `docs/sprints/03/review-rounds.md`.
