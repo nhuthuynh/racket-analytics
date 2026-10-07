@@ -18,12 +18,15 @@ Log lines hold ids and the pseudonymous account id only (NFR-057).
 
 from __future__ import annotations
 
+import argparse
 import logging
+import os
+import sys
 import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from botocore.exceptions import ClientError
@@ -31,7 +34,7 @@ from botocore.exceptions import ClientError
 from racket.analysis_jobs import public as analysis_jobs
 from racket.analytics import public as analytics
 from racket.matches import public as matches
-from racket.platform.logs import user_id_var
+from racket.platform.logs import configure_logging, user_id_var
 from racket.video_ingest import public as video_ingest
 
 log = logging.getLogger("racket.purge")
@@ -42,8 +45,26 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+def _env_int(name: str, default: int, minimum: int, maximum: int | None = None) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    if not raw.isascii() or not raw.isdigit():
+        raise ValueError(f"{name} must be a whole number")
+    value = int(raw)
+    if value < minimum or (maximum is not None and value > maximum):
+        raise ValueError(f"{name} is out of range")
+    return value
+
+
 class ContextPorts:
     """Each step through the owning context's published port (context map rule 1)."""
+
+    def expire_uploads(self, session: Any, store: Any, now: datetime) -> int:
+        return 0
+
+    def tombstone_deleted_accounts(self, session: Any, now: datetime) -> list[uuid.UUID]:
+        return []
 
     def due_matches(self, session: Any, limit: int) -> list[matches.DueMatch]:
         return matches.due_for_purge(session, limit)
@@ -60,10 +81,35 @@ class ContextPorts:
         rows += video_ingest.purge_match(session, match_id)
         return rows + matches.purge_match(session, match_id)  # root last; FKs cascade
 
+    def orphan_snapshot_ids(self, session: Any) -> list[uuid.UUID]:
+        orphans: list[uuid.UUID] = []
+        after = None
+        while True:
+            page = list(analytics.snapshot_match_ids(session, after, ORPHAN_PAGE))
+            if not page:
+                return orphans
+            alive = matches.existing_ids(session, page)
+            orphans += [m for m in page if m not in alive]
+            after = page[-1]
+
+    def purge_orphan_snapshot(self, session: Any, match_id: uuid.UUID) -> None:
+        analytics.purge_match(session, match_id)
+
+    def due_accounts(self, session: Any, limit: int) -> list[uuid.UUID]:
+        return []
+
+    def claim_account(self, session: Any, account_id: uuid.UUID) -> bool:
+        return False
+
+    def purge_account(self, session: Any, account_id: uuid.UUID) -> None:
+        return None
+
 
 @dataclass
 class PassResult:
     matches: int = 0
+    accounts: int = 0
+    uploads: int = 0
     failed: int = 0
 
     @property
@@ -97,12 +143,14 @@ class PurgeJob:
         ports: Any = None,
         clock: Callable[[], datetime] = _now,
         batch: int = 100,
+        alert_after: timedelta = timedelta(seconds=518_400),
     ) -> None:
         self.session_factory = session_factory
         self.store = store
         self.ports = ports or ContextPorts()
         self.clock = clock
         self.batch = batch
+        self.alert_after = alert_after
 
     def _failed(self, kind: str, item: uuid.UUID, stage: str, exc: BaseException) -> None:
         log.error(
@@ -114,17 +162,47 @@ class PurgeJob:
     def run_once(self) -> PassResult:
         started = time.perf_counter()
         result = PassResult()
+        now = self.clock()
+        self._step("upload", lambda s: self._expire(s, now, result), result)
+        self._step("account", lambda s: self.ports.tombstone_deleted_accounts(s, now), result)
         with self.session_factory() as session:
             due = list(self.ports.due_matches(session, self.batch))
             session.rollback()
         for item in due:
+            age = now - item.deleted_at
+            if age > self.alert_after:
+                log.error(
+                    "purge overdue",
+                    extra={"event": "purge.overdue", "kind": "match",
+                           "match_id": str(item.match_id), "age_s": int(age.total_seconds())},
+                )  # fmt: skip
             self._purge_match(item.match_id, item.owner_id, result)
+        self._step("snapshot", self._sweep_orphans, result)
+        self._purge_accounts(result)
         log.info(
             "purge pass",
-            extra={"event": "purge.pass", "matches": result.matches, "failed": result.failed,
+            extra={"event": "purge.pass", "matches": result.matches, "accounts": result.accounts,
+                   "uploads": result.uploads, "failed": result.failed,
                    "duration_ms": round((time.perf_counter() - started) * 1000)},
         )  # fmt: skip
         return result
+
+    def _step(self, kind: str, work: Callable[[Any], Any], result: PassResult) -> None:
+        with self.session_factory() as session:
+            try:
+                work(session)
+                session.commit()
+            except Exception as exc:  # noqa: BLE001 - one failed step never stops the pass
+                session.rollback()
+                result.failed += 1
+                log.error(
+                    "purge step failed",
+                    extra={"event": "purge.failed", "kind": kind, "stage": "rows",
+                           "error": type(exc).__name__},
+                )  # fmt: skip
+
+    def _expire(self, session: Any, now: datetime, result: PassResult) -> None:
+        result.uploads += self.ports.expire_uploads(session, self.store, now)
 
     def _purge_match(self, match_id: uuid.UUID, owner_id: uuid.UUID, result: PassResult) -> None:
         token = user_id_var.set(str(owner_id))
@@ -154,3 +232,68 @@ class PurgeJob:
             )  # fmt: skip
         finally:
             user_id_var.reset(token)
+
+    def _sweep_orphans(self, session: Any) -> None:
+        for match_id in self.ports.orphan_snapshot_ids(session):
+            self.ports.purge_orphan_snapshot(session, match_id)
+            log.info(
+                "orphan swept",
+                extra={"event": "purge.orphan_swept", "kind": "snapshot",
+                       "match_id": str(match_id)},
+            )  # fmt: skip
+
+    def _purge_accounts(self, result: PassResult) -> None:
+        with self.session_factory() as session:
+            due = list(self.ports.due_accounts(session, self.batch))
+            session.rollback()
+        for account_id in due:
+            token = user_id_var.set(str(account_id))
+            try:
+                with self.session_factory() as session:
+                    try:
+                        if not self.ports.claim_account(session, account_id):
+                            session.rollback()
+                            continue
+                        self.ports.purge_account(session, account_id)
+                        session.commit()
+                    except Exception as exc:  # noqa: BLE001 - the account stays due
+                        session.rollback()
+                        result.failed += 1
+                        self._failed("account", account_id, "rows", exc)
+                        continue
+                result.accounts += 1
+                log.info("account purged", extra={"event": "account.purged"})
+            finally:
+                user_id_var.reset(token)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m racket.platform.purge", exit_on_error=False)
+    parser.add_argument("--once", action="store_true", required=True)
+    try:
+        parser.parse_args(sys.argv[1:] if argv is None else argv)
+    except (argparse.ArgumentError, SystemExit):
+        return 2
+    try:
+        from racket.platform.db import engine_for, session_factory
+        from racket.platform.settings import Settings
+        from racket.platform.storage import ObjectStore
+
+        settings = Settings.from_env()
+        configure_logging(settings.log_level)
+        job = PurgeJob(
+            session_factory(engine_for(settings.database_url)),
+            ObjectStore.from_settings(settings),
+            batch=_env_int("PURGE_BATCH", 100, 1),
+            alert_after=timedelta(seconds=_env_int("PURGE_ALERT_AFTER_S", 518_400, 1)),
+        )
+    except Exception as exc:  # noqa: BLE001 - configuration problems are exit 2
+        log.error(
+            "purge not configured", extra={"event": "purge.config", "error": type(exc).__name__}
+        )
+        return 2
+    return job.run_once().exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

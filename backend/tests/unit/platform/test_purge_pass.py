@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from racket.platform.purge import PurgeJob
+from racket.platform.purge import PurgeJob, main
 from racket.video_ingest.public import MultipartRef, OriginalKey, StagingPrefix, UnsafeObjectRef
 
 pytestmark = [pytest.mark.unit]
@@ -53,6 +53,12 @@ class FakePorts:
         self.log, self.refs, self.due = log, refs, due
         self.claimed: set[uuid.UUID] = set()
 
+    def expire_uploads(self, session: Any, store: Any, now: datetime) -> int:
+        return 0
+
+    def tombstone_deleted_accounts(self, session: Any, now: datetime) -> list[uuid.UUID]:
+        return []
+
     def due_matches(self, session: Any, limit: int) -> list[Due]:
         return self.due[:limit]
 
@@ -68,6 +74,21 @@ class FakePorts:
     def purge_rows(self, session: Any, match_id: uuid.UUID) -> int:
         self.log.append(f"rows {match_id.int}")
         return 3
+
+    def orphan_snapshot_ids(self, session: Any) -> list[uuid.UUID]:
+        return []
+
+    def purge_orphan_snapshot(self, session: Any, match_id: uuid.UUID) -> None:
+        self.log.append(f"orphan {match_id.int}")
+
+    def due_accounts(self, session: Any, limit: int) -> list[uuid.UUID]:
+        return []
+
+    def claim_account(self, session: Any, account_id: uuid.UUID) -> bool:
+        return True
+
+    def purge_account(self, session: Any, account_id: uuid.UUID) -> None:
+        self.log.append("account")
 
 
 class FakeStore:
@@ -148,3 +169,18 @@ def test_a_match_another_pass_holds_is_skipped() -> None:
     result = _job(ports, FakeStore(log), log).run_once()
     assert [e for e in log if e not in ("commit", "rollback")] == []
     assert (result.matches, result.exit_code) == (0, 0)
+
+
+def test_a_tombstone_older_than_six_days_is_reported_overdue(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    log: list[str] = []
+    ports = FakePorts(log, {A: UnsafeObjectRef("bad")}, [Due(A, timedelta(days=6, hours=1))])
+    _job(ports, FakeStore(log), log).run_once()
+    overdue = [r for r in caplog.records if getattr(r, "event", "") == "purge.overdue"]
+    assert [(r.levelname, r.match_id) for r in overdue] == [("ERROR", str(A))]
+
+
+@pytest.mark.parametrize("argv", [[], ["--twice"], ["--once", "extra"]])
+def test_usage_errors_exit_2(argv: list[str]) -> None:
+    assert main(argv) == 2
