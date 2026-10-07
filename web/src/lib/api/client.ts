@@ -18,6 +18,8 @@ import {
   parseTagged,
   parseVersioned,
 } from '@/lib/tagging/parse';
+import { parseLabelDocument, parseLabelSaved, parseLabelSession } from '@/lib/label/parse';
+import type { EventLabel, LabelDocument, LabelSaved, LabelSession, RallyLabel } from '@/lib/label/types';
 import { parseEvidence, parseStats } from '@/lib/stats/parse';
 import type { Evidence, Stats } from '@/lib/stats/types';
 import type {
@@ -313,6 +315,17 @@ export function createApiClient(options: ApiClientOptions) {
     /** X-02 (ST-051): the account, every match and every session (§4.2). */
     async deleteAccount(): Promise<void> {
       await request('DELETE', '/me', { confirm: 'delete' });
+    },
+    // Full Tag (ST-052): api-sprint-03 §5. Every route answers 404 to a non-labeller.
+    async labelSession(id: string): Promise<LabelSession> {
+      return parsed(await request('GET', `/label${matchPath(id)}`), parseLabelSession);
+    },
+    /** One label per request: a rally (with its outcome), then its hits and bounces. */
+    async labelEvent(id: string, label: RallyLabel | EventLabel): Promise<LabelSaved> {
+      return parsed(await request('POST', `/label${matchPath(id)}/events`, label), parseLabelSaved);
+    },
+    async labelExport(id: string): Promise<LabelDocument> {
+      return parsed(await request('GET', `/label${matchPath(id)}/export`), (v) => parseLabelDocument(v));
     },
     /** E-01/E-02: up to 10 rallies behind a metric and side, in video order; `cursor` pages on. */
     async evidence(id: string, metricId: string, side: Side, cursor: string | null = null): Promise<Evidence> {
