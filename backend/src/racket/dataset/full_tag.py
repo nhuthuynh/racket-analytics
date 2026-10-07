@@ -103,7 +103,7 @@ class FullTagSession:
         if not isinstance(body, Mapping):
             raise LabelRefused("a label must be a JSON object")
         kind = body.get("type")
-        if kind not in _FIELDS:
+        if not isinstance(kind, str) or kind not in _FIELDS:
             raise LabelRefused(f"type: must be one of {sorted(_FIELDS)}")
         if extra := sorted(set(body) - _FIELDS[kind]):
             raise LabelRefused(f"unknown field(s): {', '.join(map(str, extra))}")
