@@ -27,9 +27,11 @@ def test_routes_without_path_parameters_are_not_in_the_inventory() -> None:
 
 
 def test_each_method_on_an_id_route_needs_its_own_entry() -> None:
-    app = _app_with(("GET", "/matches/{match_id}"), ("DELETE", "/matches/{match_id}"))
+    # PUT: a method on a probed path that has no MATRIX entry (DELETE has one since Sprint 3).
+    app = _app_with(("GET", "/matches/{match_id}"), ("PUT", "/matches/{match_id}"))
 
-    assert uncovered_routes(app) == ["DELETE /matches/{match_id}"]
+    assert ("PUT", "/matches/{match_id}") not in MATRIX
+    assert uncovered_routes(app) == ["PUT /matches/{match_id}"]
 
 
 def test_exempt_route_is_not_reported() -> None:
