@@ -108,6 +108,11 @@ export function MatchDetail({
               Score sheet
             </Link>
           </li>
+          <li>
+            <Link href={`/matches/${match.id}/stats`} className="button button--secondary">
+              Stats
+            </Link>
+          </li>
         </ul>
       ) : null}
       {showUpload ? (

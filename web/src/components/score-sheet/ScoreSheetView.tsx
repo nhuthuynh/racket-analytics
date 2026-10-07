@@ -25,11 +25,14 @@ export function ScoreSheetView({
   initialSheet,
   initialVersion,
   api = browserApi,
+  initialPlay,
 }: {
   match: Match;
   initialSheet: ScoreSheet;
   initialVersion: number;
   api?: SheetApi;
+  /** `?play=<rally_id>` from "Show me" (E-01, ADR 0043): open V-01 for that rally on arrival. */
+  initialPlay?: string;
 }) {
   const [sheet, setSheet] = useState(initialSheet);
   const [version, setVersion] = useState(initialVersion);
@@ -170,7 +173,7 @@ export function ScoreSheetView({
     };
   }
 
-  async function watch(row: SheetRow, opener: HTMLElement) {
+  async function watch(row: SheetRow, opener: HTMLElement | null) {
     watchOpener.current = opener;
     setProblem(null);
     try {
@@ -183,6 +186,20 @@ export function ScoreSheetView({
       setProblem(`The video for rally ${row.number} could not be opened. Try again.${ref}`);
     }
   }
+
+  // Opened from "Show me" (ST-047): scroll the rally's row into view and open its video once.
+  const played = useRef(false);
+  useEffect(() => {
+    if (played.current || !initialPlay) return;
+    played.current = true;
+    const target = initialSheet.rows.find((r) => r.rally_id === initialPlay);
+    if (!target) return;
+    const tr = rootRef.current?.querySelector<HTMLElement>(`tr[data-rally-id="${CSS.escape(target.rally_id)}"]`);
+    tr?.scrollIntoView?.({ block: 'center' });
+    const opener = tr?.querySelector<HTMLElement>('button') ?? null;
+    void watch(target, opener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
 
   function correct(row: SheetRow, field: CorrectableField, value: CorrectionValue) {
     void run(
