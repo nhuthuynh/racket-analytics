@@ -62,6 +62,7 @@ test.describe('@M0 @story-ST-054 @needs-verification Journey v2', () => {
       await expect(dialog).toContainText(what);
     }
     await expectNoBlockingA11yViolations(page, testInfo, SCREEN.deleteMatch);
+    await expectTargetsAtLeast24(page, testInfo, SCREEN.deleteMatch); // NFR-028 on X-01 too (PD-R1S3-03)
     const typed = dialog.getByRole('textbox');
     if (await typed.count()) await typed.fill('delete');
     await dialog.getByRole('button', { name: /Delete/ }).last().click();

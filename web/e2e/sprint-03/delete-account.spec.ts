@@ -3,7 +3,7 @@
 // confirmation that states the consequences; both devices are signed out; signing in again
 // with the same address shows no matches (PM-1 default). UI assumptions: helpers/sprint-03.ts.
 import { expect, test } from '@playwright/test';
-import { expectNoBlockingA11yViolations } from '../helpers/axe';
+import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpers/axe';
 import { SIGNED_IN_URL, signInByLink, uniqueEmail } from '../helpers/sprint-01';
 import { ACCOUNT_PATH, SCREEN, signInWithNthLink } from '../helpers/sprint-03';
 
@@ -27,6 +27,7 @@ test.describe('@M0 @story-ST-051 @nfr-066 Delete my account', () => {
     const dialog = phone.getByRole('dialog');
     for (const what of [/matches/i, /videos?/i, /cannot be (undone|restored)/i, /signed out/i]) await expect(dialog).toContainText(what);
     await expectNoBlockingA11yViolations(phone, testInfo, SCREEN.deleteAccount);
+    await expectTargetsAtLeast24(phone, testInfo, SCREEN.deleteAccount); // NFR-028 on X-02 (PD-R1S3-03)
     const typed = dialog.getByRole('textbox');
     if (await typed.count()) await typed.fill('delete');
     await dialog.getByRole('button', { name: /Delete/ }).last().click();

@@ -5,7 +5,7 @@
 // UI assumptions: e2e/helpers/sprint-03.ts.
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { expectNoBlockingA11yViolations } from '../helpers/axe';
+import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpers/axe';
 import { signInByLink, uniqueEmail } from '../helpers/sprint-01';
 import { receivedMatch } from '../helpers/sprint-02';
 import { SCREEN, admin, labelPath } from '../helpers/sprint-03';
@@ -32,6 +32,7 @@ test.describe('@M0 @story-ST-052 @fr-150 Full Tag', () => {
     await labeller.keyboard.press(',');
     await expect(frame).toContainText(`Frame ${before}`);
     await expectNoBlockingA11yViolations(labeller, testInfo, SCREEN.fullTag);
+    await expectTargetsAtLeast24(labeller, testInfo, SCREEN.fullTag); // NFR-028 on L-01 (PD-R1S3-03)
 
     await labeller.getByRole('button', { name: /Rally start/ }).click();
     for (let i = 0; i < 10; i += 1) await labeller.keyboard.press('.');

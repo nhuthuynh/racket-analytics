@@ -26,6 +26,28 @@ export const statsPath = (matchId: string): string => `/matches/${matchId}/stats
 export const labelPath = (matchId: string): string => `/label/matches/${matchId}`;
 export const ACCOUNT_PATH = '/settings/account';
 
+// D-01 and E-01 states (ST-048 card: "empty, loading, error and low-sample states"; PD-R1S3-03).
+// ASSUMPTIONS until PD-1/DR-03, one edit here when the design says otherwise:
+// - D-01 and E-01 fetch their numbers in the browser from the API (NFR-039 "no layout shift when
+//   values load"), so a spec can hold or fail that request with page.route;
+// - loading: a region inside <main> with aria-busy="true" or role="status" while the request is
+//   held; error: a role="alert" message and a "Try again" button that loads again; empty (a match
+//   with its video received and no rally tagged): a sentence saying no rally is tagged yet and a
+//   "Tag rallies" link.
+export const STATE_COPY = {
+  empty: /no rall(y|ies) (is |are )?tagged yet|no tagged rallies yet/i,
+  error: /could not be (loaded|shown)/i,
+  retry: 'Try again',
+  tagRallies: 'Tag rallies',
+} as const;
+const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** The browser request for D-01's numbers (api-sprint-03 §2). */
+export const statsApi = (matchId: string): RegExp => new RegExp(`/api/matches/${escapeRe(matchId)}/stats(\\?.*)?$`);
+/** The browser request for an E-01 list (api-sprint-03 §3.1). */
+export const evidenceApi = (matchId: string): RegExp => new RegExp(`/api/matches/${escapeRe(matchId)}/stats/[^/?]+/evidence\\?`);
+/** The loading region of D-01 or E-01. */
+export const loadingRegion = (page: Page): Locator => page.locator('main [aria-busy="true"], main [role="status"]').first();
+
 export const METRIC_NAMES: Record<string, string> = {
   'AN-01': 'Rallies won on serve',
   'AN-02': 'Rallies won when receiving',
