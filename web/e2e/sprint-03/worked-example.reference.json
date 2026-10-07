@@ -1,0 +1,49 @@
+{
+ "_source": "generated from scripts/measure/statslib.py (STATS_TAGS, starter_stats) by backend/tests/support/stats.py write_e2e_reference; never edit by hand (guard: backend/tests/regression/test_e2e_reference.py)",
+ "tags": [
+  {"winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A1"},
+  {"winning_side": "B", "ending": "fault", "fault_kind": "serve", "responsible_player": "A2"},
+  {"winning_side": "B", "ending": "winner", "fault_kind": null, "responsible_player": null},
+  {"winning_side": "B", "ending": "unforced_error", "fault_kind": null, "responsible_player": "A1"},
+  {"winning_side": "A", "ending": "forced_error", "fault_kind": null, "responsible_player": "B2"},
+  {"winning_side": "A", "ending": "fault", "fault_kind": "nvz", "responsible_player": "B1"},
+  {"winning_side": "A", "ending": "winner", "fault_kind": null, "responsible_player": "A2"},
+  {"winning_side": null, "ending": "replay", "fault_kind": null, "responsible_player": null},
+  {"winning_side": "A", "ending": "unforced_error", "fault_kind": null, "responsible_player": null},
+  {"winning_side": "B", "ending": "unforced_error", "fault_kind": null, "responsible_player": "A2"},
+  {"winning_side": "A", "ending": "fault", "fault_kind": null, "responsible_player": null},
+  {"winning_side": "B", "ending": "fault", "fault_kind": "serve", "responsible_player": "A1"},
+  {"winning_side": "B", "ending": "winner", "fault_kind": null, "responsible_player": "B1"},
+  {"winning_side": "B", "ending": "winner", "fault_kind": null, "responsible_player": "B2"}
+ ],
+ "metrics": {
+  "AN-01": {
+   "A": {"k": 4, "n": 7, "value": 0.5714, "ci_low": 0.2505, "ci_high": 0.8418, "low_sample": true, "rallies": [1, 2, 7, 9, 10, 11, 12]},
+   "B": {"k": 4, "n": 6, "value": 0.6667, "ci_low": 0.3, "ci_high": 0.9032, "low_sample": true, "rallies": [3, 4, 5, 6, 13, 14]}
+  },
+  "AN-02": {
+   "A": {"k": 2, "n": 6, "value": 0.3333, "ci_low": 0.0968, "ci_high": 0.7, "low_sample": true, "rallies": [3, 4, 5, 6, 13, 14]},
+   "B": {"k": 3, "n": 7, "value": 0.4286, "ci_low": 0.1582, "ci_high": 0.7495, "low_sample": true, "rallies": [1, 2, 7, 9, 10, 11, 12]}
+  },
+  "AN-03": {
+   "A": {"points": 4, "turns": 2, "value": 2.0, "low_sample": true, "rallies": [1, 7, 9, 11]},
+   "B": {"points": 4, "turns": 2, "value": 2.0, "low_sample": true, "rallies": [3, 4, 13, 14]}
+  },
+  "AN-04": {
+   "A": {"count": 2, "games": 1, "value": 2.0, "by_player": {"A1": 1, "A2": 1}, "player_not_tagged": 0, "low_sample": true, "rallies": [4, 10]},
+   "B": {"count": 1, "games": 1, "value": 1.0, "by_player": {}, "player_not_tagged": 1, "low_sample": true, "rallies": [9]}
+  },
+  "AN-05": {
+   "A": {"k": 2, "n": 7, "value": 0.2857, "ci_low": 0.0822, "ci_high": 0.6411, "low_sample": true, "rallies": [2, 12], "fault_type_not_tagged": 0},
+   "B": {"k": 0, "n": 6, "value": 0.0, "ci_low": 0.0, "ci_high": 0.3903, "low_sample": true, "rallies": [], "fault_type_not_tagged": 0}
+  },
+  "AN-06": {
+   "A": {"longest": 3, "histogram": {"1": 1, "2": 0, "3": 1, "4": 0, "5+": 0}, "n": 4, "low_sample": false, "rallies": [1, 7, 9, 11]},
+   "B": {"longest": 2, "histogram": {"1": 0, "2": 2, "3": 0, "4": 0, "5+": 0}, "n": 4, "low_sample": false, "rallies": [3, 4, 13, 14]}
+  },
+  "AN-07": {
+   "A": {"n": 6, "counts": {"winner": 2, "unforced_error": 2, "forced_error": 0, "fault": 2}, "low_sample": true, "rallies": [1, 2, 4, 7, 10, 12]},
+   "B": {"n": 7, "counts": {"winner": 3, "unforced_error": 1, "forced_error": 1, "fault": 2}, "low_sample": true, "rallies": [3, 5, 6, 9, 11, 13, 14]}
+  }
+ }
+}

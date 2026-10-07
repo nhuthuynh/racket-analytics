@@ -12,6 +12,7 @@ test whose story has not landed fails with "RED until ST-0xx" instead of breakin
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable, Sequence
 from typing import Any
 
@@ -21,6 +22,7 @@ import sqlalchemy as sa
 from tests.support import scorebook as sb
 from tests.support.api import ApiDriver
 from tests.support.contract import Seam
+from tests.support.paths import REPO
 
 statscontract = sb._load("statscontract")
 statslib = sb._load("statslib")
@@ -48,6 +50,54 @@ def reference(tags: Sequence[dict[str, Any]], first_side: str = "A") -> dict[str
     games = [{"first_serving_side": first_side, "tags": [dict(t) for t in tags]}]
     stats: dict[str, Any] = statslib.starter_stats(games)
     return stats
+
+
+# The browser specs' copy of the worked example and its stats (E2E-03-01..06, timing spec).
+E2E_REFERENCE = REPO / "web" / "e2e" / "sprint-03" / "worked-example.reference.json"
+_TAG_FIELDS = ("winning_side", "ending", "fault_kind", "responsible_player")
+
+
+def _rounded(x: Any) -> Any:
+    if isinstance(x, float):
+        return round(x, 4)
+    if isinstance(x, dict):
+        return {k: _rounded(v) for k, v in x.items()}
+    if isinstance(x, list | tuple):
+        return [_rounded(v) for v in x]
+    return x
+
+
+def e2e_reference_text() -> str:
+    """The exact text of ``E2E_REFERENCE``: worked-example tags and statslib stats (4 places)."""
+    source = (
+        "generated from scripts/measure/statslib.py (STATS_TAGS, starter_stats) by "
+        "backend/tests/support/stats.py write_e2e_reference; never edit by hand "
+        "(guard: backend/tests/regression/test_e2e_reference.py)"
+    )
+    tags = [{k: t[k] for k in _TAG_FIELDS} for t in WORKED_EXAMPLE]
+    metrics = _rounded(json.loads(json.dumps(reference(WORKED_EXAMPLE))))
+
+    def one(x: Any) -> str:
+        return json.dumps(x, separators=(", ", ": "))
+
+    # One rally per line and one metric-side per line, so a reviewer can read it like the
+    # golden scripts (ST-049) and a diff names the metric and side that moved.
+    lines = ["{", f' "_source": {one(source)},', ' "tags": [']
+    lines += [f"  {one(t)}{',' if i < len(tags) - 1 else ''}" for i, t in enumerate(tags)]
+    lines += [" ],", ' "metrics": {']
+    for i, (metric, sides) in enumerate(metrics.items()):
+        lines.append(f"  {one(metric)}: {{")
+        lines += [
+            f"   {one(side)}: {one(v)}{',' if j < len(sides) - 1 else ''}"
+            for j, (side, v) in enumerate(sides.items())
+        ]
+        lines.append("  }" + ("," if i < len(metrics) - 1 else ""))
+    lines += [" }", "}"]
+    return "\n".join(lines) + "\n"
+
+
+def write_e2e_reference() -> None:
+    E2E_REFERENCE.write_text(e2e_reference_text(), encoding="utf-8")
 
 
 def corrected_example() -> list[dict[str, Any]]:
