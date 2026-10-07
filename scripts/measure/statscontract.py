@@ -21,7 +21,9 @@ ROUTES = {
 # Stats body (api-sprint-03 §2.1): {"match_id", "sheet_version", "rules_version",
 #   "metric_def_version", "unofficial": bool, "label": str, "low_sample_rule": {...},
 #   "metrics": {"AN-01": {"entry": {...}, "A": {...}, "B": {...}}, ...}}; per-side fields are
-# statslib.COMPARED. Only coach-reviewed or verified entries appear (FR-102).
+# statslib.COMPARED. Only coach-reviewed or verified entries appear (FR-102). AN-06 per side
+# carries `longest_by_game` (longest run per game, play order) besides `longest` (PE-R2S3-04).
+AN06_PER_GAME_KEY = "longest_by_game"
 METRICS_KEY = "metrics"
 DEF_VERSION_KEY = "metric_def_version"
 RULES_VERSION_KEY = "rules_version"
