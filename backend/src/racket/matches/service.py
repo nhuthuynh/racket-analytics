@@ -21,8 +21,9 @@ from racket.matches.schemas import (
     RejectionOut,
     UploadOut,
 )
-from racket.platform.errors import NotFound
+from racket.platform.errors import NotFound, Unauthenticated
 from racket.platform.logs import SECURITY_LOGGER
+from racket.players import public as players
 from racket.video_ingest.public import (
     UploadStatus,
     close_for_deleted_match,
@@ -52,6 +53,9 @@ class MatchService:
     def create(self, owner: OwnerId, body: object, *, today: date | None = None) -> Match:
         """``POST /matches`` (api-sprint-01 §5.1): every field problem is reported at once."""
         setup = MatchSetup.parse(body, today=today or datetime.now(UTC).date())
+        if not players.lock_live_account(self.session, owner.value):  # SEC-S3-TM-05
+            self.session.rollback()
+            raise Unauthenticated("the account was deleted")
         match = Match.set_up(owner_id=owner, setup=setup)
         self.matches.add(match)
         self.session.commit()

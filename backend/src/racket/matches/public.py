@@ -15,11 +15,15 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from racket.matches.deletion import Tombstone, confirm_deletion
 from racket.matches.domain import MatchId, OwnerId
 from racket.matches.repository import MatchRepository, matches
 from racket.matches.scorebook.domain import project
 from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import NotFound
+from racket.video_ingest.public import close_for_deleted_match
+
+__all__ = ["Tombstone", "confirm_deletion"]  # the deletion rules Identity & Players reuses
 
 
 def owns_match(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> bool:
@@ -142,3 +146,27 @@ def existing_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:
         return set()
     found = session.execute(sa.select(matches.c.id).where(matches.c.id.in_(ids))).scalars()
     return {uuid.UUID(str(i)) for i in found}
+
+
+def tombstone_owned_by(session: Session, owner_id: uuid.UUID, at: datetime) -> list[uuid.UUID]:
+    """Tombstone every live match of an owner and close their uploads, in the caller's
+    transaction (``DELETE /me`` step 3; the pass's second net, SEC-S3-TM-05). Returns the ids."""
+    ids = [
+        uuid.UUID(str(i))
+        for i in session.execute(
+            sa.update(matches)
+            .where(matches.c.owner_id == owner_id, matches.c.deleted_at.is_(None))
+            .values(deleted_at=at, updated_at=at)
+            .returning(matches.c.id)
+        ).scalars()
+    ]
+    for match_id in ids:
+        close_for_deleted_match(session, match_id, at)
+    return ids
+
+
+def owner_has_matches(session: Session, owner_id: uuid.UUID) -> bool:
+    """Any ``matches`` row (live or tombstoned) of this owner: an account is purged only after
+    every one of its matches (deletion-and-purge.md §4.2)."""
+    found = session.execute(sa.select(matches.c.id).where(matches.c.owner_id == owner_id).limit(1))
+    return found.first() is not None

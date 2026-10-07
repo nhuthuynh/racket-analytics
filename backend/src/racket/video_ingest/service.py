@@ -33,12 +33,14 @@ from racket.platform.errors import (
     LengthRequired,
     NotFound,
     PayloadTooLarge,
+    Unauthenticated,
 )
 from racket.platform.logs import SECURITY_LOGGER
 from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
 from racket.platform.slis import SLIRecorder, UploadEvent
 from racket.platform.storage import ObjectStore, is_missing_upload
+from racket.players import public as players
 from racket.video_ingest.domain import (
     ExpiryPolicy,
     ObjectKeyPolicy,
@@ -256,6 +258,9 @@ class UploadService:
         # The quota is read under the owner's lock, held to the commit, so parallel creations
         # see each other's sessions (C-02, PE-R3R-01; READ COMMITTED reads after the lock).
         self.uploads.lock_owner(owner_id)
+        if not players.lock_live_account(self.session, owner_id):  # SEC-S3-TM-05
+            self.session.rollback()
+            raise Unauthenticated("the account was deleted")
         self._check_quota(owner_id, length, now)
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
             f"upload:create:{owner_id}",
