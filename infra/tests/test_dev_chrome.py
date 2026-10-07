@@ -39,6 +39,16 @@ def sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
+def is_cft(chrome: Path) -> bool:
+    """True when ``chrome`` is a Chrome for Testing build (what dev-chrome.sh installs)."""
+    if not chrome.exists():
+        return False
+    res = subprocess.run(
+        [str(chrome), "--version"], capture_output=True, text=True, timeout=30, check=False
+    )
+    return res.stdout.startswith("Google Chrome for Testing ")
+
+
 def run(
     install_dir: Path, zip_url: str, sha256: str, *args: str
 ) -> subprocess.CompletedProcess[str]:
@@ -133,7 +143,28 @@ def test_defaults_are_the_adr_0036_pins() -> None:
     assert "/opt/google/chrome" in text
 
 
-@pytest.mark.skipif(not Path("/opt/google/chrome/chrome").exists(), reason="no local CfT install")
+def fake_chrome(tmp: Path, line: str) -> Path:
+    chrome = tmp / "chrome"
+    chrome.write_text(f'#!/bin/sh\necho "{line}"\n')
+    chrome.chmod(0o755)
+    return chrome
+
+
+# PE-R1S3-07: CI run 37640321145 (attempt 2) ran the real-install check on a runner whose
+# /opt/google/chrome is the image's Google Chrome 154, not the ADR 0036 evidence browser.
+def test_a_stable_chrome_is_not_the_evidence_install(tmp_path: Path) -> None:
+    assert not is_cft(fake_chrome(tmp_path, "Google Chrome 154.0.8037.57"))
+
+
+def test_a_missing_chrome_is_not_the_evidence_install(tmp_path: Path) -> None:
+    assert not is_cft(tmp_path / "chrome")
+
+
+def test_a_chrome_for_testing_build_is_the_evidence_install(tmp_path: Path) -> None:
+    assert is_cft(fake_chrome(tmp_path, f"Google Chrome for Testing {VERSION} "))
+
+
+@pytest.mark.skipif(not is_cft(Path("/opt/google/chrome/chrome")), reason="no local CfT install")
 def test_real_install_passes_check_mode() -> None:
     res = subprocess.run(
         ["bash", str(SCRIPT), "check"], capture_output=True, text=True, timeout=60, check=False
