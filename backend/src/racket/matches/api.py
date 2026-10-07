@@ -64,6 +64,18 @@ def get_match(match: OwnedMatch, service: Service) -> MatchOut:
     return service.view(match)
 
 
+@router.delete("/matches/{match_id}", status_code=202)
+def delete_match(
+    match: OwnedMatch, service: Service, body: Annotated[Any, Body()] = None
+) -> JSONResponse:
+    """FR-006 (api-sprint-03 §4.1): 202 once hidden; the purge removes every row and object
+    by ``purge_due_by``. 404 for anyone else and for an already deleted match."""
+    tombstone = service.delete(match, body)
+    return JSONResponse(
+        tombstone.response(), status_code=202, headers={"Cache-Control": "no-store"}
+    )
+
+
 @router.get(
     "/matches/{match_id}/media",
     response_model=MediaOut,

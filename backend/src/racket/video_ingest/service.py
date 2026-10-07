@@ -356,6 +356,8 @@ class UploadService:
         """Ownership first (404 for others, T-UV-8), then expiry (410 for the owner, §6.4)."""
         upload_id = parse_upload_id(raw_upload_id)
         upload = None if upload_id is None else self.uploads.get_owned(upload_id, owner_id)
+        if upload is not None and not matches.owns_match(self.session, upload.match_id, owner_id):
+            upload = None  # the match was deleted: its uploads are gone too (ST-050)
         if upload is None:
             self._deny(owner_id, route, method)
             raise UploadNotFound("no such upload for this owner")
