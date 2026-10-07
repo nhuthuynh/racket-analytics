@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from racket.platform.settings import Settings
 from racket.platform.storage import ObjectStore
-from racket.video_ingest.domain import MediaFacts, MediaUrlPolicy, UploadStatus
+from racket.video_ingest.domain import ExpiryPolicy, MediaFacts, MediaUrlPolicy, UploadStatus
 from racket.video_ingest.domain.object_refs import (
     STAGING_CHUNK,
     MultipartRef,
@@ -37,6 +37,7 @@ from racket.video_ingest.repository import (
 # Part of the port: other contexts name upload states through here, never through the domain
 # package (context map rule 1, R2-02).
 __all__ = [
+    "AbandonedUpload",
     "MediaFacts",
     "MediaLink",
     "MediaSummary",
@@ -47,7 +48,9 @@ __all__ = [
     "StagingPrefix",
     "UnsafeObjectRef",
     "UploadStatus",
+    "abandoned_uploads",
     "close_for_deleted_match",
+    "forget_upload",
     "media_link",
     "media_summary",
     "object_refs",
@@ -221,3 +224,47 @@ def purge_match(session: Session, match_id: uuid.UUID) -> int:
     ):
         rows += int(session.execute(statement).rowcount)  # type: ignore[attr-defined]
     return rows
+
+
+@dataclass(frozen=True)
+class AbandonedUpload:
+    upload_id: uuid.UUID
+    match_id: uuid.UUID
+    owner_id: uuid.UUID
+    refs: tuple[ObjectRef, ...]  # the open multipart upload, then the staging folder
+
+
+def abandoned_uploads(
+    session: Session, now: datetime, idle: timedelta, limit: int = 100
+) -> list[AbandonedUpload]:
+    """Uploads the purge frees (ST-038; deletion-and-purge.md §4.4), each row locked
+    (``SKIP LOCKED``) until the caller commits. Refs are typed and built from the row's ids."""
+    policy = ExpiryPolicy(idle=idle, max_age=max(idle, timedelta(seconds=1)))
+    rows = session.execute(
+        sa.select(
+            upload_sessions.c.id,
+            upload_sessions.c.match_id,
+            upload_sessions.c.owner_id,
+            upload_sessions.c.object_key,
+            upload_sessions.c.s3_upload_id,
+            upload_sessions.c.status,
+            upload_sessions.c.updated_at,
+            upload_sessions.c.expires_at,
+        )
+        .where(upload_sessions.c.status != UploadStatus.COMPLETE)
+        .order_by(upload_sessions.c.updated_at)
+        .limit(limit)
+        .with_for_update(skip_locked=True)
+    ).all()
+    found = []
+    for row in rows:
+        if policy.is_abandoned(row.status.value, row.updated_at, row.expires_at, now=now):
+            refs = (MultipartRef(row.object_key, row.s3_upload_id), StagingPrefix.of(row.id))
+            found.append(AbandonedUpload(row.id, row.match_id, row.owner_id, refs))
+    return found
+
+
+def forget_upload(session: Session, upload_id: uuid.UUID) -> None:
+    """Delete the session row once its bytes are gone: no longer listed or resumable (HEAD and
+    PATCH then answer 404, IT-03-09). In the caller's transaction."""
+    session.execute(sa.delete(upload_sessions).where(upload_sessions.c.id == upload_id))
