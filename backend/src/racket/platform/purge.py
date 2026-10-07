@@ -61,8 +61,23 @@ def _env_int(name: str, default: int, minimum: int, maximum: int | None = None) 
 class ContextPorts:
     """Each step through the owning context's published port (context map rule 1)."""
 
+    def __init__(self, upload_idle: timedelta = timedelta(hours=24)) -> None:
+        self.upload_idle = upload_idle
+
     def expire_uploads(self, session: Any, store: Any, now: datetime) -> int:
-        return 0
+        """ST-038: bytes first, then the row (no orphan); one transaction for the step."""
+        freed = 0
+        for upload in video_ingest.abandoned_uploads(session, now, self.upload_idle):
+            for ref in upload.refs:
+                _delete(store, ref)
+            video_ingest.forget_upload(session, upload.upload_id)
+            freed += 1
+            log.info(
+                "upload expired",
+                extra={"event": "upload.expired", "upload_id": str(upload.upload_id),
+                       "match_id": str(upload.match_id), "user_id": str(upload.owner_id)},
+            )  # fmt: skip
+        return freed
 
     def tombstone_deleted_accounts(self, session: Any, now: datetime) -> list[uuid.UUID]:
         """SEC-S3-TM-05 second net: a live match of a deleted account becomes due now."""
@@ -299,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
         job = PurgeJob(
             session_factory(engine_for(settings.database_url)),
             ObjectStore.from_settings(settings),
+            ports=ContextPorts(upload_idle=timedelta(seconds=settings.upload_expiry_seconds)),
             batch=_env_int("PURGE_BATCH", 100, 1),
             alert_after=timedelta(seconds=_env_int("PURGE_ALERT_AFTER_S", 518_400, 1)),
         )
