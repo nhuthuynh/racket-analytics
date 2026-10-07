@@ -10,8 +10,11 @@ runs ``racket-drill-lint ../content/drills`` from ``backend`` and is part of ``c
 
 from __future__ import annotations
 
+import pytest
 import yaml
 from conftest import REPO_ROOT
+
+pytestmark = pytest.mark.unit  # CI selects -m "unit or integration" (PE-R1S3-07)
 
 CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
