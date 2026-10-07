@@ -258,10 +258,11 @@ class UploadService:
         # The quota is read under the owner's lock, held to the commit, so parallel creations
         # see each other's sessions (C-02, PE-R3R-01; READ COMMITTED reads after the lock).
         self.uploads.lock_owner(owner_id)
-        if not players.lock_live_account(self.session, owner_id):  # SEC-S3-TM-05
+        self._check_quota(owner_id, length, now)
+        # SEC-S3-TM-05: the account row FOR SHARE, held to the commit, before anything is written
+        if not players.lock_live_account(self.session, owner_id):
             self.session.rollback()
             raise Unauthenticated("the account was deleted")
-        self._check_quota(owner_id, length, now)
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
             f"upload:create:{owner_id}",
             limit=self.settings.upload_create_limit_per_hour,
