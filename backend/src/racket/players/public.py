@@ -8,11 +8,20 @@ import uuid
 from datetime import datetime
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from racket.platform.ratelimit import rate_limit_events
 from racket.players.deletion import ERASED
-from racket.players.models import accounts, sessions, sign_in_links, sign_in_requests
+from racket.players.models import (
+    account_roles,
+    accounts,
+    sessions,
+    sign_in_links,
+    sign_in_requests,
+)
+
+ROLES = frozenset({"labeller"})  # FR-150: the Full Tag tool exists only for this role
 
 
 def lock_live_account(session: Session, account_id: uuid.UUID) -> bool:
@@ -80,9 +89,48 @@ def purge_account(session: Session, account_id: uuid.UUID) -> None:
     """Delete a claimed account tombstone (§4.2, after all its matches): its sessions, its
     rate-limit keys and the row."""
     session.execute(sa.delete(sessions).where(sessions.c.account_id == account_id))
+    session.execute(sa.delete(account_roles).where(account_roles.c.account_id == account_id))
     session.execute(
         sa.delete(rate_limit_events).where(rate_limit_events.c.key.like(f"%:{account_id}"))
     )
     session.execute(
         sa.delete(accounts).where(accounts.c.id == account_id, accounts.c.deleted_at.is_not(None))
     )
+
+
+def has_role(session: Session, account_id: uuid.UUID, role: str) -> bool:
+    """Whether a live account holds ``role`` (Dataset reads the labeller role only here)."""
+    found = session.execute(
+        sa.select(account_roles.c.role)
+        .join(accounts, accounts.c.id == account_roles.c.account_id)
+        .where(
+            account_roles.c.account_id == account_id,
+            account_roles.c.role == role,
+            accounts.c.deleted_at.is_(None),
+        )
+    ).first()
+    return found is not None
+
+
+def grant_role(session: Session, account_id: uuid.UUID, role: str, at: datetime) -> bool:
+    """Give a live account a role (operator CLI). ``False`` for an unknown or deleted account
+    or an unknown role. Idempotent."""
+    if role not in ROLES or not lock_live_account(session, account_id):
+        return False
+    session.execute(
+        pg_insert(account_roles)
+        .values(account_id=account_id, role=role, granted_at=at)
+        .on_conflict_do_nothing(index_elements=["account_id", "role"])
+    )
+    return True
+
+
+def revoke_role(session: Session, account_id: uuid.UUID, role: str) -> bool:
+    if role not in ROLES:
+        return False
+    session.execute(
+        sa.delete(account_roles).where(
+            account_roles.c.account_id == account_id, account_roles.c.role == role
+        )
+    )
+    return True

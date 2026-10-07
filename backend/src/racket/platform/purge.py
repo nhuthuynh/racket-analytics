@@ -33,6 +33,7 @@ from botocore.exceptions import ClientError
 
 from racket.analysis_jobs import public as analysis_jobs
 from racket.analytics import public as analytics
+from racket.dataset import public as dataset
 from racket.matches import public as matches
 from racket.platform.logs import configure_logging, user_id_var
 from racket.players import public as players
@@ -119,6 +120,7 @@ class ContextPorts:
 
     def purge_rows(self, session: Any, match_id: uuid.UUID) -> int:
         rows = analytics.purge_match(session, match_id)
+        rows += dataset.purge_match(session, match_id)
         rows += analysis_jobs.purge_match(session, match_id)
         rows += video_ingest.purge_match(session, match_id)
         return rows + matches.purge_match(session, match_id)  # root last; FKs cascade
