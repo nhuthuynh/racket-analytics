@@ -114,10 +114,11 @@ def test_the_shipped_dictionary_has_an_01_to_an_07_v0_1() -> None:
 
 
 def test_the_shipped_statuses_match_the_review_record() -> None:
-    """Only the coach moves an entry (metric-dictionary §3); on 2026-10-06 every entry is draft."""
+    """Only the coach moves an entry (metric-dictionary §3); since 2026-10-07 (COACH-1, ADR 0044)
+    every entry is coach-reviewed (TCR row PD-R2S3-01 / PE-R2S3-05)."""
     dictionary = load_dictionary()
     assert {e.id: e.status for e in dictionary.entries} == dict.fromkeys(
-        [f"AN-0{i}" for i in range(1, 8)], "draft"
+        [f"AN-0{i}" for i in range(1, 8)], "coach-reviewed"
     )
 
 

@@ -235,7 +235,9 @@ def starter_stats(games: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, dic
         stats["AN-05"][side] = an05
 
         runs: list[int] = []
+        longest_by_game: list[int] = []  # dictionary AN-06: per side per game, play order
         for recs in per_game:
+            game_runs: list[int] = []
             run_side, length = None, 0
             for r in recs:
                 if r["excluded"] or r["point_to"] is None:
@@ -244,15 +246,18 @@ def starter_stats(games: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, dic
                     length += 1
                     continue
                 if run_side == side:
-                    runs.append(length)
+                    game_runs.append(length)
                 run_side, length = r["point_to"], 1
             if run_side == side:
-                runs.append(length)
+                game_runs.append(length)
+            runs.extend(game_runs)
+            longest_by_game.append(max(game_runs, default=0))
         hist = dict.fromkeys(("1", "2", "3", "4", "5+"), 0)
         for length in runs:
             hist[_bucket(length)] += 1
         stats["AN-06"][side] = {
             "longest": max(runs, default=0),
+            "longest_by_game": longest_by_game,
             "histogram": hist,
             "n": sum(runs),
             "low_sample": False,
@@ -264,7 +269,8 @@ def starter_stats(games: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, dic
         stats["AN-07"][side] = {
             "n": len(ended),
             "counts": counts,
-            "low_sample": len(ended) < MIN_PROPORTION_N,
+            # rule 0.3 on each of the four shares: n < 20 or any interval wider than 30 points
+            "low_sample": any(proportion_flag(k, len(ended)) for k in counts.values()),
             "rallies": [r["ref"] for r in ended],
         }
     return stats
@@ -315,7 +321,7 @@ COMPARED = {
     "AN-03": ("points", "turns", "value", "low_sample"),
     "AN-04": ("count", "games", "value", "by_player", "player_not_tagged", "low_sample"),
     "AN-05": ("k", "n", "value", "ci_low", "ci_high", "fault_type_not_tagged", "low_sample"),
-    "AN-06": ("longest", "histogram", "n", "low_sample"),
+    "AN-06": ("longest", "longest_by_game", "histogram", "n", "low_sample"),
     "AN-07": ("n", "counts", "low_sample"),
 }
 

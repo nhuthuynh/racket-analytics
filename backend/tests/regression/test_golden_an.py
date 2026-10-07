@@ -1,4 +1,4 @@
-"""Golden matches GS-AN-1 v1 (ST-049; QD-GD-03; NFR-004 exact, FR-151 / NFR-078 frozen set).
+"""Golden matches GS-AN-1 v2 (ST-049; QD-GD-03; NFR-004 exact, FR-151 / NFR-078 frozen set).
 
 Three tag scripts under the provisional preset (``golden_matches/*.script.json``):
 
@@ -15,9 +15,11 @@ and match; a difference names all three (NFR-004). The expected values are also 
 from the independent reference ``scripts/measure/statslib.py``, so a wrong frozen file cannot
 pass, and the set is checked by ``racket-manifest-check`` (no change without a version bump).
 
-The expected values are the coach's hand counts only once COACH-1 has counted the scripts
-(QD-AN-03) into ``docs/domain/hand-counts/GS-AN-1-v1.json``, a file the coach owns; until it
-exists and equals the frozen values, the last test stays red (``red_until COACH-1``).
+The expected values are the coach's hand counts: COACH-1 counted the scripts (QD-AN-03) into
+``docs/domain/hand-counts/GS-AN-1-v1.json`` (d59d156), a file the coach owns, and the last test
+gates every compared field against it. v2 (QA-R2S3-01) changes no script: it corrects AN-07
+``low_sample`` to rule 0.3 on each share (PE-R1S3-05; gm1 A and gm2 A become true, as the hand
+count says) and freezes AN-06 ``longest_by_game`` (PE-R1S3-06).
 AN-01, AN-02, AN-03, AN-05 and AN-06 read the provisional score sequence, so their rows
 carry ``needs_verification`` and are reported on their own line (QD-QG-P5, scorecard G03-08).
 """
@@ -188,25 +190,37 @@ def test_golden_an_manifest_is_intact() -> None:
     assert manifest_cli.main([str(SET_DIR)]) == 0
     manifest = json.loads((SET_DIR / "manifest.json").read_text())
     assert manifest["id"] == "GS-AN-1"
-    assert manifest["version"] == 1
+    assert manifest["version"] == 2  # v2: AN-07 rule 0.3 per share, AN-06 longest_by_game
     assert manifest["rules_version"] == "PROVISIONAL-UNVERIFIED"
     assert manifest["metric_dict_version"] == "0.1"
     assert manifest["labellers"], "the labeller role is recorded (FR-151)"
 
 
-@pytest.mark.red_until(story="COACH-1")
+def hand_counted(record: dict[str, Any], match: str) -> dict[str, Any]:
+    """The coach's count of one match, ``{metric: {side: {field: value}}}``. A field the coach
+    counted but recorded under ``not_compared`` as ``"<metric> <field>"`` (d59d156: AN-06
+    ``longest_by_game``, which v1 did not compare) is read from there, so it is compared too."""
+    counted = copy.deepcopy(record["matches"][match])
+    for side, extra in record.get("not_compared", {}).get(match, {}).items():
+        for label, value in extra.items():
+            metric, _, field = label.partition(" ")
+            if metric in METRICS and field in statslib.COMPARED[metric]:
+                counted.setdefault(metric, {}).setdefault(side, {}).setdefault(field, value)
+    return counted
+
+
 @pytest.mark.parametrize("match", MATCHES)
 def test_golden_an_frozen_values_are_the_coachs_hand_count(match: str) -> None:
     """QD-AN-03: the coach hand-counts each script on paper and records the count, in the
     frozen file's shape, in ``docs/domain/hand-counts/GS-AN-1-v1.json`` (``{"by", "date",
     "matches": {match: {metric: {side: {field: value}}}}}``; ``rallies`` optional). Every
-    counted field must equal the frozen value; a difference is a finding for QA and the coach,
-    never an edit to make this pass."""
-    assert HAND_COUNTS.exists(), f"no hand count yet: {HAND_COUNTS.relative_to(REPO)} (COACH-1)"
+    compared field must be counted and equal the frozen value; a difference is a finding for
+    QA and the coach, never an edit to make this pass. Gated since COACH-1 (QA-R2S3-02)."""
+    assert HAND_COUNTS.exists(), f"no hand count: {HAND_COUNTS.relative_to(REPO)} (COACH-1)"
     record = json.loads(HAND_COUNTS.read_text())
     assert record.get("by") == "pickleball-domain-coach"
     assert record.get("date")
-    counted = record["matches"][match]
+    counted = hand_counted(record, match)
     want = expected(match)["metrics"]
     missing = [
         f"{m} {side} {k}"
