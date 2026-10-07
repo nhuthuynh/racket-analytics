@@ -1,6 +1,7 @@
 # 0040. Metric snapshots are recomputed after the scoring commit, with read repair as the retry (no outbox in R1)
 
 - **Status:** Accepted (principal-engineer, 2026-10-07, Sprint 3 review round 1, PE-R1S3-03). Design review D3 (BE, QA, coach, security) may amend it before ST-046 merges.
+- **Amended by:** ADR 0045 (2026-10-07, review round 2), consequences: snapshot writes need the tombstone-aware `FOR SHARE` read and the purge sweeps orphans (SEC-S3-TM-02).
 - **Date:** 2026-10-07
 - **Deciders:** principal-engineer
 - **Consulted (review D3, open):** senior-backend-engineer, senior-qa-engineer, pickleball-domain-coach, security-privacy-engineer
