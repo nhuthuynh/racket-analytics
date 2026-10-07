@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "drill/v1",
+  "title": "Drill v1 (FR-140, QD-DR-01)",
+  "description": "One file per drill version. Content edits bump version; drills are deprecated (deprecated_by), never deleted. Cross-file rules (known metrics and drills, cycles, durations <= 45, a number in the criterion, source or rationale, lock) are in lint.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "version", "name", "summary", "skills", "target_metrics", "level_min", "level_max",
+    "duration_min", "duration_max", "players", "needs", "equipment", "setup",
+    "success_criterion", "progressions", "regressions", "safety_notes", "review_status"
+  ],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"},
+    "version": {"type": "integer", "minimum": 1},
+    "name": {"type": "string", "minLength": 1},
+    "summary": {"type": "string", "minLength": 1},
+    "skills": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "target_metrics": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^AN-[0-9]{2}$"}
+    },
+    "level_min": {"enum": ["beginner", "intermediate", "advanced"]},
+    "level_max": {"enum": ["beginner", "intermediate", "advanced"]},
+    "duration_min": {"type": "integer", "minimum": 1},
+    "duration_max": {"type": "integer", "minimum": 1},
+    "players": {"type": "integer", "minimum": 1, "maximum": 4},
+    "needs": {
+      "type": "array", "uniqueItems": true,
+      "items": {"enum": ["wall", "half_court", "full_court", "ball_machine", "partner_feeder"]}
+    },
+    "equipment": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "setup": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "success_criterion": {"type": "string"},
+    "progressions": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "regressions": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "safety_notes": {"type": "string"},
+    "source": {"type": "string"},
+    "coach_rationale": {"type": "string"},
+    "review_status": {"enum": ["draft", "coach-reviewed", "verified"]},
+    "deprecated_by": {"type": "string", "pattern": "^[a-z0-9.-]+@[1-9][0-9]*$"}
+  }
+}
