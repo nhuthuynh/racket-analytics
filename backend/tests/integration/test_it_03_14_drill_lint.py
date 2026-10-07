@@ -12,7 +12,7 @@
   has no file (deprecate, never delete).
 
 The CLI is ``racket-drill-lint`` (``racket.coaching.drills.lint:main``), per ST-053's card.
-Written red first (QA-ACC-3): ``red_until`` ST-053.
+Written red first (QA-ACC-3, ``red_until`` ST-053); green since `bac3d81`, marker removed.
 """
 
 from __future__ import annotations
@@ -26,8 +26,6 @@ import pytest
 
 from tests.support.contract import Seam
 from tests.support.paths import REPO
-
-pytestmark = [pytest.mark.red_until(story="ST-053")]
 
 LINT = Seam("racket.coaching.drills.lint:main", "ST-053", "main(argv: list[str]) -> int")
 LIBRARY = REPO / "content" / "drills"
