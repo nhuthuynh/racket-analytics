@@ -82,3 +82,43 @@ Three runs are planned: a **build-phase baseline** (this section, before the Spr
 
 - WebKit (CI only). Locust on stats and evidence (no routes; ST-054 SRE half). The purge service and a live `--once` (SRE-PURGE (b)/(c); ST-050).
 - Container hardening on the live stack (no Compose build this run, see Disk); green at the baseline on Compose.
+
+## Review-round-2 smoke on the round-1 fix head, 2026-10-07 (sre-devops-engineer; QA-R2S3-04)
+
+- **Why:** ADR 0022 smoke before review. The last smoke was at `316a514`. 33 commits followed (`git log --oneline 316a514..8e25478 | wc -l`), among them migration `0013_media_worker_column_grants`, the analytics changes `fee4fa3` (`starter_stats.py`, `sheet.py`, `metrics.json`), GS-AN-1 v2 (`7a6ffe5`), the new red-first E2E-03-08 (`47c34e8`) and the CI change `606edcd` (ADR 0046).
+- **Tree:** `sprint-03` at `8e25478` as a clean, **locked** detached worktree (`git worktree add --detach <scratch>/sre-smoke-r2 8e25478; git worktree lock …`). A first attempt at `606edcd` was lost mid-run because another lane's cleanup removed every worktree of the shared repository (blockers.md row of today). The commits after `8e25478` (`9726add`, …) change `docs/` only (`git diff --name-only 8e25478 HEAD | grep -v '^docs/'` → nothing at the time of writing).
+- **Disk:** `df -Pk /` → 15.87 GB free when the stack was due and 16 GB (`df -h`) at the end. That is under the 16 GB Compose build floor (`RA_UP_MIN_FREE_GB`), so the floor was kept and there was **no image build**. The run used the same topology as the pre-review smoke: the Compose services as local processes behind the **committed `infra/tls/Caddyfile`** (only its upstreams rewritten), with Postgres and the object store from `scripts/dev-*.sh` and mailpit, jaeger and caddy from images already on disk (`<scratch>/sre-smoke-r2-stack.sh up|down`, project `racket-sre3r2`, https://localhost:63300). It does not cover container hardening (read-only, cap_drop, the `sandbox` network). That is covered by `infra/tests/test_compose_*.py` (green below) and was green on Compose at the baseline.
+
+### Verdict
+
+**Platform green on the fix head. The gate's backend selection is green, and the Sprint 0-2 journeys work over HTTPS, migration 0013 included. Every red is a `red_until` row or a red-first Sprint 3 E2E spec. No new gate red.** The CI integration job's red (QA-R2S3-01, run 37643676432) no longer reproduces: 0 failed. **The Sprint 3 goal is still not demonstrated:** G03-01..03 fail closed (no stats, evidence, delete or purge routes) until ST-046/047/050/051 land (QA-R1S3-06).
+
+### Suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Web types, lint | `pnpm exec tsc --noEmit`; `pnpm exec eslint --max-warnings=0 .` | rc 0; rc 0 |
+| Web unit | `pnpm exec vitest run` | **59 files, 477 passed** |
+| Infra | `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run --no-sync pytest -q -p no:cacheprovider -rfE` | **610 passed, 1 skipped** in 113 s (gitleaks binary not set). Pre-review: 1 failed (SRE-S3-02, fixed since) |
+| Workflow lint | `actionlint .github/workflows/ci.yml` | rc 0 |
+| Backend, **CI integration-job selection**, own Postgres and object store | `env -u APP_ENV uv run --no-sync pytest -q -p no:cacheprovider -m "(unit or integration or scenario or regression) and not nightly and not red_until" --ignore=…worker_sandbox.py --ignore=…worker_sandbox_strict.py` | **2351 passed, 19 skipped, 157 deselected, 0 failed** in 274 s. At `09f1f67` (ci-status.md) it was 2 failed (GS-AN-1 AN-07 `low_sample`, QA-R2S3-01) |
+| Backend `red_until` rows (listed, not gated) | `… pytest -q -p no:cacheprovider -m "red_until and not nightly" --junitxml=…`; `python3 ../scripts/ci/red_until_report.py --junit … --root .` | pytest `106 failed, 50 errors` (expected). Report rc 0, **"No stale markers."** Per story (failed / error): ST-024 1, ST-025 2, ST-035 18, ST-038 3, ST-046 25, ST-047 21, ST-050 14 / 50, ST-051 4, ST-052 18. COACH-1 has no rows left (QA-R2S3-02 gated it) |
+
+### Live checks (stack `racket-sre3r2`, https://localhost:63300)
+
+| Check | Command | Result |
+|---|---|---|
+| Stack up | `bash <scratch>/sre-smoke-r2-stack.sh up` | rc 0 in 52 s; `migrate: database is at head`; `select version_num from alembic_version` → `0013` |
+| TLS front door (ADR 0029) | `curl http://localhost:63300/`; `curl --cacert root.crt https://localhost:63300/` | 400; 200 |
+| API health, direct and through TLS | `curl http://127.0.0.1:63800/healthz`; `curl --cacert root.crt https://localhost:63300/api/healthz` | 200 `{"status":"ok"}`; 200 |
+| ST-042 in the running stack | `psql -U racket_worker -c 'select count(*) from sessions'` / `accounts` / `jobs`; `/proc/<pid>/environ` of the workers | permission denied; permission denied; `0` (allowed). Probe worker: `DATABASE_URL` user `racket_worker`, `WORKER_STAGES=probe`. Mailer: `racket`, `send_sign_in_link` |
+| **Migration 0013 (column grants), live** | as `racket_worker`: `update matches set owner_id = owner_id where false`; `update media_assets set object_key = object_key where false`; `update matches set status = status where false`; `update media_assets set probe_status = probe_status where false` | permission denied; permission denied; `UPDATE 0`; `UPDATE 0`. **The probe stage still works under the narrowed grants:** worker log `job.claimed` 2, `probe.done` 2, `job.done` 2, 0 `permission denied`; both matches `video_received` with `probe_status = probed` |
+| C-13 | `grep -ciE 'permission denied\|Traceback\|"level": *"error"'` and `grep -ci 'failed to export'` over the api, worker and mailer logs | 0 and 0 in each |
+| Sprint 2 journey on the fix head (G02-01 method) | `python3 scripts/measure/live_tagging.py --api https://localhost:63300/api --origin https://localhost:63300 --mailpit http://127.0.0.1:63025 --cacert root.crt --file fixtures/clips/synthetic-60s/clip.mp4 --runs 1 --json …` | rc 0, `runs_passed 1/1`; tag→sheet p50 12.0 ms / p95 13.0 ms (n 6, target ≤ 5,000 ms); tag server p50 17.6 ms / p95 24.5 ms (n 8). Mail-link sign-in, tus upload, probe as `racket_worker` and tagging all ran end to end over https |
+| Sprint 3 journey (G03-01..03 method, informative) | `python3 scripts/measure/live_stats.py … --runs 1 --psql "psql -h 127.0.0.1 -p <pg> -U racket -d racket -At -F\|" --purge-cmd "uv run --no-sync --project <wt>/backend python -m racket.platform.purge --once" --json …` | rc 1, `runs_passed 0/1`. It fails closed, the same as the pre-review smoke: `setup` ok, `other_account` ok (404, 404); `tag_to_stats` 404 after each of the 14 rallies; `stats` "no metrics in the response"; `evidence` "no items list" for each metric and side; `correction` 404; `delete_match` 405; `delete_account` 405; purge rc 1 (`No module named racket.platform.purge`), so all rows are left; G03-02 n = 0 for (a), (b) and (c). It waits on ST-046, ST-047, ST-050 and ST-051 |
+| Playwright, every spec, Chromium (Chrome for Testing, ADR 0036) | `PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=http://127.0.0.1:63025 PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers BASE_URL=https://localhost:63300 PW_PROJECTS=chromium PLAYWRIGHT_JSON_OUTPUT_NAME=… bash scripts/ci/evidence.sh e2e <run> --workers=1 --reporter=line,junit,json` | rc 1 in 14.7 min: **97 passed, 16 failed, 6 skipped, 0 flaky** of 119. **Sprint 0-2: 0 failures** (counted from the JSON report: failures outside `sprint-03/` = 0). The 6 skips are the Sprint 1 rows, each naming its API binding. **Sprint 3, all red-first:** E2E-03-01, -02 (timeout), -03, -06 keyboard/320/360 and both timing tests stop where there is no stats page or coach-reviewed metric. E2E-03-04 times out (no account deletion, ST-051). E2E-03-05: "E2E_ADMIN_CMD is not set" (ST-052). E2E-03-06 not-found at 320/360: targets below 24x24 (**QA-R1S3-01**, still Open). **New since the pre-review smoke:** E2E-03-08 `states.spec.ts` (4, red-first from `47c34e8`, ST-048). Once QA tags these 16 with `@red-until-<id>` (TCR row of today, ADR 0046), the gated selection is the 97 passed + 6 skipped |
+| Self-cleaning (C-15) | `bash <scratch>/sre-smoke-r2-stack.sh down` | rc 0; 0 `racket-sre3r2` containers, 0 volumes, 0 stack processes; the dev Postgres and object store were stopped; `df -h /` 16 GB free |
+
+### Not covered by this run
+
+- WebKit (CI only). Container hardening on the live stack (no Compose build: disk under the floor). Locust on stats and evidence (no routes yet). The purge service and a live `--once` (ST-050).
