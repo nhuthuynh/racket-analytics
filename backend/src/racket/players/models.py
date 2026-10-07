@@ -51,3 +51,12 @@ sign_in_requests = sa.Table(
     sa.Column("email_key", sa.String(64), nullable=False),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
+
+account_roles = sa.Table(
+    "account_roles",
+    metadata,
+    sa.Column("account_id", sa.Uuid(), sa.ForeignKey("accounts.id", ondelete="CASCADE"),
+              primary_key=True),
+    sa.Column("role", sa.String(32), primary_key=True),
+    sa.Column("granted_at", sa.DateTime(timezone=True), nullable=False),
+)  # fmt: skip
