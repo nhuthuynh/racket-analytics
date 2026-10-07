@@ -1,6 +1,7 @@
 # 0042. Deletion hides with a tombstone in the request; the purge deletes stored objects before database rows, in idempotent passes
 
 - **Status:** Accepted (principal-engineer, 2026-10-07, Sprint 3 review round 1, PE-R1S3-04). SEC-1 threat notes (security-privacy-engineer) may amend it before ST-050 merges.
+- **Amended by:** ADR 0045 (2026-10-07, review round 2), consequences: fail-closed purge keys (SEC-S3-TM-01), owned writes lock the live account and the pass tombstones matches of deleted accounts (SEC-S3-TM-05), orphan snapshot sweep (SEC-S3-TM-02).
 - **Date:** 2026-10-07
 - **Deciders:** principal-engineer
 - **Consulted:** security-privacy-engineer (SEC-1, pending), senior-backend-engineer (ST-050, ST-051, ST-038), sre-devops-engineer (ADR 0038), senior-qa-engineer (IT-03-06..09, IT-03-13)
