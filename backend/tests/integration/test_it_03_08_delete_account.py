@@ -39,7 +39,8 @@ def test_it_03_08_no_typed_confirmation_deletes_nothing(api: ApiDriver, committe
     me = st.me_id(api, "ivy")
     before = st.rows_holding(committed_db, [me, match_id])
     response = st.delete_account(api, "ivy", body={})
-    assert 400 <= response.status_code < 500, response.text
+    # api-sprint-03 §4.2: exactly 422 confirmation_required; a missing route (404/405) is not it.
+    assert st.refusal(response) == st.CONFIRMATION_REQUIRED, response.text
     assert st.rows_holding(committed_db, [me, match_id]) == before
     assert st.request(api, "ivy", "me").status_code == 200
 

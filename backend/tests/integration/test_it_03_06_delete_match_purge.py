@@ -1,9 +1,10 @@
 """IT-03-06 (ST-050; FR-006, NFR-066 a/b, ADR 0006): API <-> DB <-> object store, delete a match.
 
 Negative cases first: Carlos's DELETE of Ivy's match is a 404 and changes nothing; a DELETE
-without the typed confirmation (DES FR-UX-90) is a 4xx and deletes nothing. Then Ivy deletes:
-every read of the match answers 404 at once (match, stats, evidence, score sheet, video, rally
-media) and the list no longer shows it; a second DELETE does not fail (idempotent). After one
+without the typed confirmation (DES FR-UX-90) is 422 ``confirmation_required`` (api-sprint-03
+§4.1; not any 4xx, so an unbuilt route cannot pass, QA-R1S3-05) and deletes nothing. Then Ivy
+deletes: every read of the match answers 404 at once (match, stats, evidence, score sheet, video,
+rally media) and the list no longer shows it; a second DELETE does not fail (idempotent). After one
 purge pass no row in any table of the schema holds the match id (information-schema inventory,
 so a new table is caught; risk row in sprint-03 §10) and no object the database knew for the
 match is left in the store.
@@ -64,7 +65,8 @@ def test_it_03_06_no_typed_confirmation_deletes_nothing(
     method, url = st.statscontract.path("delete_match", match_id=match_id)
     kwargs = {} if body is None else {"json": body}
     response = api.request("ivy", method, url, **kwargs)
-    assert 400 <= response.status_code < 500, response.text
+    # api-sprint-03 §4.1: exactly 422 confirmation_required; a missing route (404/405) is not it.
+    assert st.refusal(response) == st.CONFIRMATION_REQUIRED, response.text
     assert st.rows_holding(committed_db, [match_id]) == before
     assert _listed(api, "ivy", match_id)
 
