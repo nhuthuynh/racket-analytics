@@ -2,6 +2,8 @@
 // NFR-033; PD-R1S3-03). The ST-048 card asks for "empty, loading, error and low-sample states;
 // 360 px": low sample is E2E-03-03 (definitions.spec.ts). Here, on the stack under test:
 // - D-01 empty: a match with its video received and no rally tagged says so and links to tagging;
+// - E-01 empty (n = 0): not reachable by design (flows-sprint-03 §3 "E states"): the side of a card
+//   with n = 0 has no "Show me"; the evidence family's empty copy is on E-02 for that side;
 // - D-01 and E-01 loading: while the API request is held, a busy region is shown, then the numbers;
 // - D-01 and E-01 error: when the API request fails, an alert says so with "Try again", which
 //   loads the numbers once the API answers again;
@@ -18,7 +20,7 @@ import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpe
 import { playableVideo, receivedMatch } from '../helpers/sprint-02';
 import {
   METRIC_NAMES, PUBLISHED, SCREEN, STATE_COPY, evidenceApi, loadingRegion, metricCard, noSidewaysScroll,
-  statsApi, statsPath, tagWorkedExampleByApi,
+  sideOf, statsApi, statsPath, tagWorkedExampleByApi,
 } from '../helpers/sprint-03';
 
 // page.route does not see requests of a service-worker-controlled page in WebKit (TCR
@@ -159,6 +161,46 @@ test.describe('@M0 @story-ST-048 @nfr-027 @nfr-028 Dashboard and evidence states
     expect(asked, 'S-01 asked for a rally video although the play id is no rally of the sheet').toEqual([]);
     await expect(page.getByRole('heading', { name: /^Rally \d+ video$/ })).toHaveCount(0);
     await expect(page.locator('video')).toHaveCount(0);
+  });
+
+  test('E2E-03-08 E-01 empty: a side with n = 0 has no "Show me"; E-02 for it says no rallies are behind it', async ({ page }, testInfo) => {
+    // One rally, served and won by side A: side A never received, so "Rallies won when
+    // receiving" (AN-02) has n = 0 for side A and n = 1 for side B (metric-dictionary AN-02).
+    const matchId = await receivedMatch(page, 'E2E-03-08 E empty');
+    const sheet = async (): Promise<string> =>
+      (await page.request.get(`/api/matches/${matchId}/score-sheet`)).headers()['etag'] ?? '"0"';
+    const game = await page.request.post(`/api/matches/${matchId}/games`, {
+      headers: { 'If-Match': await sheet() }, data: { first_serving_side: 'A', ends_switched: false },
+    });
+    expect(game.status(), await game.text()).toBe(201);
+    const rally = await page.request.post(`/api/matches/${matchId}/rallies`, {
+      headers: { 'If-Match': await sheet() },
+      data: { start_ms: 0, end_ms: 3000, winning_side: 'A', ending: 'winner', responsible_player: null, fault_kind: null },
+    });
+    expect(rally.status(), await rally.text()).toBe(201);
+    const api = (await (await page.request.get(`/api/matches/${matchId}/stats`)).json()) as {
+      metrics: Record<string, Record<'A' | 'B', { n: number }>>;
+    };
+    expect([api.metrics['AN-02']?.A.n, api.metrics['AN-02']?.B.n], 'AN-02 sample sizes (A, B)').toEqual([0, 1]);
+
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.goto(statsPath(matchId));
+    const card = metricCard(page, 'AN-02');
+    await expect(card).toBeVisible();
+    await expect(sideOf(card, 'A').getByRole('button', { name: /Show me/ }), 'E-01 opened for n = 0').toHaveCount(0);
+    await expect(sideOf(card, 'B').getByRole('button', { name: /Show me/ })).toHaveCount(1);
+    await noSidewaysScroll(page);
+    await expectNoBlockingA11yViolations(page, testInfo, `${SCREEN.evidence}-empty`);
+    await expectTargetsAtLeast24(page, testInfo, `${SCREEN.evidence}-empty`);
+
+    const answer = await page.goto(`${statsPath(matchId)}/AN-02/evidence?side=A`);
+    expect(answer?.status(), 'E-02 for a published metric with n = 0 is a page, not not-found').toBe(200);
+    await expect(page.getByText('No rallies are behind this stat yet.')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Rally \d+/ })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Back to the stats' })).toBeVisible();
+    await noSidewaysScroll(page);
+    await expectNoBlockingA11yViolations(page, testInfo, 'E-02-empty');
+    await expectTargetsAtLeast24(page, testInfo, 'E-02-empty');
   });
 
   // ---------------------------------------------------------------- loading
