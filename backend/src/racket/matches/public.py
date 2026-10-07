@@ -94,3 +94,51 @@ def lock_live_sheet(session: Session, match_id: uuid.UUID) -> LiveSheet | None:
         return None
     book = ScorebookRepository(session).load(match_id)
     return LiveSheet(book.version, uuid.UUID(str(owner)), project(book))
+
+
+@dataclass(frozen=True)
+class DueMatch:
+    match_id: uuid.UUID
+    owner_id: uuid.UUID
+    deleted_at: datetime
+
+
+def due_for_purge(
+    session: Session, limit: int, *, older_than: datetime | None = None
+) -> list[DueMatch]:
+    """Tombstoned matches, oldest deletion first (deletion-and-purge.md §4.2)."""
+    query = sa.select(matches.c.id, matches.c.owner_id, matches.c.deleted_at).where(
+        matches.c.deleted_at.is_not(None)
+    )
+    if older_than is not None:
+        query = query.where(matches.c.deleted_at <= older_than)
+    rows = session.execute(query.order_by(matches.c.deleted_at, matches.c.id).limit(limit)).all()
+    return [DueMatch(uuid.UUID(str(r.id)), uuid.UUID(str(r.owner_id)), r.deleted_at) for r in rows]
+
+
+def claim_for_purge(session: Session, match_id: uuid.UUID) -> bool:
+    """Lock one tombstoned match for this pass; ``False`` when another pass holds it or it is
+    gone (``FOR UPDATE SKIP LOCKED``, so parallel passes split the work, IT-03-07)."""
+    found = session.execute(
+        sa.select(matches.c.id)
+        .where(matches.c.id == match_id, matches.c.deleted_at.is_not(None))
+        .with_for_update(skip_locked=True)
+    ).first()
+    return found is not None
+
+
+def purge_match(session: Session, match_id: uuid.UUID) -> int:
+    """Delete the match root of a claimed tombstone; the foreign keys cascade to participants,
+    games, rallies and the correction trail. Runs last, in the caller's transaction."""
+    result = session.execute(
+        sa.delete(matches).where(matches.c.id == match_id, matches.c.deleted_at.is_not(None))
+    )
+    return int(result.rowcount)  # type: ignore[attr-defined]
+
+
+def existing_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """Which of ``ids`` still have a ``matches`` row, live or tombstoned (orphan sweep)."""
+    if not ids:
+        return set()
+    found = session.execute(sa.select(matches.c.id).where(matches.c.id.in_(ids))).scalars()
+    return {uuid.UUID(str(i)) for i in found}

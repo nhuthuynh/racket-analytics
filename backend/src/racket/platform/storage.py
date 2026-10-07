@@ -7,6 +7,7 @@ Presigned URLs are bearer secrets: never log them (NFR-055, NFR-069).
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -18,6 +19,12 @@ from botocore.exceptions import ClientError
 from racket.platform.settings import MissingSettingError, Settings
 
 PRESIGN_MAX_SECONDS = 15 * 60  # NFR-055
+# The only prefix a bulk delete may name: one upload's staging folder (deletion-and-purge §4.6).
+_STAGING_PREFIX = re.compile(r"staging/[0-9a-f]{32}/")
+
+
+class UnsafeObjectKey(ValueError):
+    """A bulk delete was asked for a prefix that is not one upload's staging folder."""
 
 
 @dataclass(frozen=True)
@@ -93,6 +100,19 @@ class ObjectStore:
 
     def delete(self, key: str) -> None:
         self._client.delete_object(Bucket=self.bucket, Key=key)
+
+    def delete_prefix(self, prefix: str) -> int:
+        """Delete every object under one upload's staging folder; a missing folder is a success.
+        The shape is checked before anything is listed, and a listed key outside the prefix
+        stops the delete (SEC-S3-TM-01 / T-DL-3, defence in depth). Returns the count."""
+        if not isinstance(prefix, str) or _STAGING_PREFIX.fullmatch(prefix) is None:
+            raise UnsafeObjectKey("refused bulk delete prefix")
+        keys = list(self.list_keys(prefix=prefix))
+        if any(not key.startswith(prefix) for key in keys):
+            raise UnsafeObjectKey("the store listed a key outside the prefix")
+        for key in keys:
+            self.delete(key)
+        return len(keys)
 
     def size_of(self, key: str) -> int | None:
         try:
