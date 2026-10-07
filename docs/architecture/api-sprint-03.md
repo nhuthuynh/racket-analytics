@@ -51,10 +51,10 @@ Example: the coach's worked example (metric-dictionary §2, 14 rallies), AN-01 o
 | AN-03 | `points`, `turns`, `value`, `low_sample` |
 | AN-04 | `count`, `games`, `value`, `by_player` (slot → count, slots only, never names), `player_not_tagged`, `low_sample` |
 | AN-05 | `k`, `n`, `value`, `ci_low`, `ci_high`, `fault_type_not_tagged`, `low_sample` |
-| AN-06 | `longest`, `histogram` (`"1"`, `"2"`, `"3"`, `"4"`, `"5+"`), `n`, `low_sample` (always `false`) |
+| AN-06 | `longest` (match-wide), `longest_by_game` (the longest run of that side in each game in scope, games in play order, 0 for a game without a run; dictionary AN-06, the value the coach defined), `histogram` (`"1"`, `"2"`, `"3"`, `"4"`, `"5+"`), `n`, `low_sample` (always `false`) |
 | AN-07 | `n`, `counts` (`winner`, `unforced_error`, `forced_error`, `fault`), `shares` (per category `k`, `value`, `ci_low`, `ci_high`), `low_sample` |
 
-  These are exactly `starter_stats()` (ST-044) without the `rallies` lists, which `…/evidence` serves. The harness compares `statslib.COMPARED` keys only.
+  These are exactly `starter_stats()` (ST-044) without the `rallies` lists, which `…/evidence` serves; `backend/tests/unit/analytics/test_stats_contract_doc.py` fails when the domain output and this table differ (PE-R2S3-04, 2026-10-07: `longest_by_game` added after `fee4fa3`). The harness compares `statslib.COMPARED` keys only, and `COMPARED["AN-06"]` must hold `longest_by_game` (owner: senior-qa-engineer, QA-R2S3-01).
 - Refusals: 401; 404 (§1.1). No other.
 
 ### 2.2 Read latency
