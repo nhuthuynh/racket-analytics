@@ -18,6 +18,8 @@ import {
   parseTagged,
   parseVersioned,
 } from '@/lib/tagging/parse';
+import { parseLabelDocument, parseLabelSaved, parseLabelSession } from '@/lib/label/parse';
+import type { EventLabel, LabelDocument, LabelSaved, LabelSession, RallyLabel } from '@/lib/label/types';
 import type {
   CorrectableField,
   CorrectionValue,
@@ -291,6 +293,17 @@ export function createApiClient(options: ApiClientOptions) {
     },
     async rallyMedia(id: string, rallyId: string): Promise<RallyMedia> {
       return parsed(await request('GET', `${matchPath(id)}/rallies/${rallyPath(rallyId)}/media`), parseRallyMedia);
+    },
+    // Full Tag (ST-052): api-sprint-03 §5. Every route answers 404 to a non-labeller.
+    async labelSession(id: string): Promise<LabelSession> {
+      return parsed(await request('GET', `/label${matchPath(id)}`), parseLabelSession);
+    },
+    /** One label per request: a rally (with its outcome), then its hits and bounces. */
+    async labelEvent(id: string, label: RallyLabel | EventLabel): Promise<LabelSaved> {
+      return parsed(await request('POST', `/label${matchPath(id)}/events`, label), parseLabelSaved);
+    },
+    async labelExport(id: string): Promise<LabelDocument> {
+      return parsed(await request('GET', `/label${matchPath(id)}/export`), (v) => parseLabelDocument(v));
     },
   };
 }
