@@ -21,6 +21,7 @@ export type StatsApi = Pick<ApiClient, 'stats' | 'evidence'>;
 const RESERVED_CARDS = 7;
 
 type State =
+  | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'error'; message: string; retrying: boolean }
   | { kind: 'gone' }
@@ -44,11 +45,14 @@ export function StatsDashboard({
 }) {
   const hasVideo = match.status === 'video_received';
   const empty = !hasVideo || rallyCount === 0;
-  const [state, setState] = useState<State>({ kind: 'loading' });
+  // 'idle' in the server HTML: the space is reserved, but nothing claims to load until the browser
+  // has asked (E2E-03-08 checks that the busy region means a request is under way).
+  const [state, setState] = useState<State>({ kind: 'idle' });
   const [open, setOpen] = useState<OpenEvidence | null>(null);
   const retry = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async () => {
+    setState((s) => (s.kind === 'idle' ? { kind: 'loading' } : s));
     try {
       const stats = await api.stats(match.id);
       setState({ kind: 'loaded', stats });
@@ -88,10 +92,11 @@ export function StatsDashboard({
     );
   }
 
-  if (state.kind === 'loading') {
+  if (state.kind === 'idle' || state.kind === 'loading') {
+    const busy = state.kind === 'loading';
     return (
-      <div key="loading" className="stats-cards" aria-busy="true">
-        <p role="status">Loading your stats…</p>
+      <div key="loading" className="stats-cards" aria-busy={busy ? 'true' : undefined}>
+        <p role={busy ? 'status' : undefined}>Loading your stats…</p>
         {Array.from({ length: RESERVED_CARDS }, (_, i) => (
           <div key={i} className="stat-card stat-card--reserved" aria-hidden="true" />
         ))}

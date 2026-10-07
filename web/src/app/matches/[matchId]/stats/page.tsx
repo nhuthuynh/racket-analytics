@@ -42,7 +42,9 @@ export default async function StatsPage({ params }: Props) {
       <p>{match.title}</p>
       <p>
         These stats come from the rallies you tagged. Change a rally on the{' '}
-        <Link href={`/matches/${match.id}/sheet`}>score sheet</Link> and they change too.
+        <Link href={`/matches/${match.id}/sheet`} className="inline-target">
+          score sheet
+        </Link> and they change too.
       </p>
       <StatsDashboard match={match} rallyCount={rallyCount} />
     </div>
