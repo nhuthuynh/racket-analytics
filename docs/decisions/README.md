@@ -143,5 +143,6 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0040 | [Metric snapshots are recomputed after the scoring commit, with read repair as the retry](0040-metric-snapshots-recompute-after-commit-with-read-repair.md) | Accepted (principal-engineer, PE-2; review D3 open) | 2026-10-07 |
 | 0041 | [The low-sample thresholds have one source: the versioned metric dictionary](0041-low-sample-thresholds-come-from-the-metric-dictionary.md) | Accepted (principal-engineer, PE-2; amends ADR 0005's "config" clause) | 2026-10-07 |
 | 0042 | [Deletion hides with a tombstone; the purge deletes objects before rows, in idempotent passes](0042-deletion-tombstones-now-purge-objects-before-rows.md) | Accepted (principal-engineer, PE-3; SEC-1 may amend) | 2026-10-07 |
+| 0043 | [Sprint 3 UX: deletion confirmed in a dialog without a typed word; "Show me" rallies open on the score sheet; a Full Tag rally is saved only with its ending](0043-sprint-3-ux-deletion-dialog-evidence-opens-score-sheet-full-tag-ending-saves.md) | Proposed (principal-designer, PD-1; Accepted when DR-03 holds) | 2026-10-07 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.
