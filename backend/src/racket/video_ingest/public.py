@@ -10,13 +10,29 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from racket.platform.settings import Settings
 from racket.platform.storage import ObjectStore
 from racket.video_ingest.domain import MediaFacts, MediaUrlPolicy, UploadStatus
+from racket.video_ingest.domain.object_refs import (
+    STAGING_CHUNK,
+    MultipartRef,
+    ObjectRef,
+    OriginalKey,
+    StagingPrefix,
+    UnsafeObjectRef,
+)
 from racket.video_ingest.domain.uploads import ORIGINAL_CONTENT_TYPE
-from racket.video_ingest.repository import PROBE_FAILED, MediaRepository, UploadRepository
+from racket.video_ingest.repository import (
+    PROBE_FAILED,
+    MediaRepository,
+    UploadRepository,
+    media_assets,
+    media_facts,
+    upload_sessions,
+)
 
 # Part of the port: other contexts name upload states through here, never through the domain
 # package (context map rule 1, R2-02).
@@ -24,11 +40,18 @@ __all__ = [
     "MediaFacts",
     "MediaLink",
     "MediaSummary",
+    "MultipartRef",
+    "ObjectRef",
+    "OriginalKey",
     "PendingUpload",
+    "StagingPrefix",
+    "UnsafeObjectRef",
     "UploadStatus",
     "close_for_deleted_match",
     "media_link",
     "media_summary",
+    "object_refs",
+    "purge_match",
 ]
 
 
@@ -136,3 +159,65 @@ def close_for_deleted_match(session: Session, match_id: uuid.UUID, at: datetime)
         upload.status = UploadStatus.EXPIRED
         upload.file = None
         upload.updated_at = at
+
+
+def _shared(session: Session, key: str, match_id: uuid.UUID) -> bool:
+    """True when a row of another match names the same object key (§4.6 (2))."""
+    names = sa.union_all(
+        sa.select(media_assets.c.match_id).where(media_assets.c.object_key == key),
+        sa.select(upload_sessions.c.match_id).where(upload_sessions.c.object_key == key),
+    ).subquery()
+    others = session.execute(
+        sa.select(sa.func.count(sa.distinct(names.c.match_id))).where(names.c.match_id != match_id)
+    ).scalar_one()
+    return bool(others)
+
+
+def object_refs(session: Session, match_id: uuid.UUID) -> list[ObjectRef]:
+    """Every stored object of this match, as typed refs built from this match's rows only
+    (SEC-S3-TM-01, deletion-and-purge.md §4.6). Raises ``UnsafeObjectRef`` before the caller
+    makes any store call when a key has another shape or another match names it too. Order:
+    open multipart uploads, then staging folders, then originals."""
+    assets = session.execute(
+        sa.select(media_assets.c.object_key).where(media_assets.c.match_id == match_id)
+    ).all()
+    uploads = session.execute(
+        sa.select(
+            upload_sessions.c.id,
+            upload_sessions.c.object_key,
+            upload_sessions.c.s3_upload_id,
+            upload_sessions.c.status,
+            upload_sessions.c.staged,
+        ).where(upload_sessions.c.match_id == match_id)
+    ).all()
+    multipart: list[ObjectRef] = []
+    staging: list[ObjectRef] = []
+    for upload in uploads:
+        prefix = StagingPrefix.of(upload.id)
+        for chunk in upload.staged:
+            if STAGING_CHUNK.fullmatch(str(chunk.key)) is None or not chunk.key.startswith(
+                prefix.prefix
+            ):
+                raise UnsafeObjectRef("a staged chunk outside its upload's folder")
+        staging.append(prefix)
+        if upload.status is not UploadStatus.COMPLETE:
+            multipart.append(MultipartRef(upload.object_key, upload.s3_upload_id))
+    originals = sorted({str(r.object_key) for r in assets} | {str(u.object_key) for u in uploads})
+    refs: list[ObjectRef] = [*multipart, *staging]
+    for key in originals:
+        refs.append(OriginalKey(key))
+        if _shared(session, key, match_id):
+            raise UnsafeObjectRef("another match names the same object")
+    return refs
+
+
+def purge_match(session: Session, match_id: uuid.UUID) -> int:
+    """Delete this context's rows of the match, in the caller's transaction. Rows deleted."""
+    rows = 0
+    for statement in (
+        sa.delete(media_facts).where(media_facts.c.match_id == match_id),
+        sa.delete(media_assets).where(media_assets.c.match_id == match_id),
+        sa.delete(upload_sessions).where(upload_sessions.c.match_id == match_id),
+    ):
+        rows += int(session.execute(statement).rowcount)  # type: ignore[attr-defined]
+    return rows
