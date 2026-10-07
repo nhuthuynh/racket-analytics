@@ -105,8 +105,17 @@ class Client:
         raise RuntimeError("unreachable")
 
 
+# Tokens already handed out. A magic link is single use, so a second sign-in with the same
+# address must wait for its own (newer) email, never reuse a spent link (BE-GR1-01).
+_RETURNED_TOKENS: set[str] = set()
+
+
 def mailpit_token(mailpit: str, address: str, timeout_s: float = 30.0) -> str | None:
-    """The sign-in token from the newest email to ``address`` in Mailpit, or None."""
+    """The newest sign-in token to ``address`` in Mailpit not returned before, or None.
+
+    Mailpit lists the newest message first; the new email can arrive about 1 s after the
+    request, so a spent token on top means "not yet" and the helper keeps polling (fail closed).
+    """
     deadline = time.monotonic() + timeout_s
     query = urllib.parse.urlencode({"query": f'to:"{address}"'})
     while time.monotonic() < deadline:
@@ -117,7 +126,10 @@ def mailpit_token(mailpit: str, address: str, timeout_s: float = 30.0) -> str | 
                 f"{mailpit}/api/v1/message/{messages[0]['ID']}", timeout=10
             ) as r:
                 msg = json.load(r)
-            return token_from(f"{msg.get('Text', '')}\n{msg.get('HTML', '')}")
+            token = token_from(f"{msg.get('Text', '')}\n{msg.get('HTML', '')}")
+            if token and token not in _RETURNED_TOKENS:
+                _RETURNED_TOKENS.add(token)
+                return token
         time.sleep(0.2)
     return None
 
