@@ -26,7 +26,12 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from racket.analytics.attribution import attribute_lost_rallies, check_conservation
-from racket.analytics.sheet import SIDES, CountedRally, counted_rallies, games_in_scope
+from racket.analytics.sheet import (
+    SIDES,
+    CountedRally,
+    counted_rallies,
+    game_numbers_in_scope,
+)
 from racket.analytics.uncertainty import LowSamplePolicy, wilson
 
 METRICS = ("AN-01", "AN-02", "AN-03", "AN-04", "AN-05", "AN-06", "AN-07")
@@ -64,15 +69,15 @@ def _turns(counted: Sequence[CountedRally], side: str) -> int:
     return turns
 
 
-def _runs(counted: Sequence[CountedRally], side: str) -> list[int]:
-    """Lengths of maximal point runs of ``side``; serve-only rallies do not break a run, a game
-    end does (AN-06)."""
-    runs: list[int] = []
+def _runs(counted: Sequence[CountedRally], side: str) -> list[tuple[int, int]]:
+    """``(game, length)`` of each maximal point run of ``side``; serve-only rallies do not break
+    a run, a game end does (AN-06)."""
+    runs: list[tuple[int, int]] = []
     holder, length, game = None, 0, None
     for r in counted:
         if r.game != game:
-            if holder == side:
-                runs.append(length)
+            if holder == side and game is not None:
+                runs.append((game, length))
             holder, length, game = None, 0, r.game
         if r.point_to is None:
             continue
@@ -80,16 +85,17 @@ def _runs(counted: Sequence[CountedRally], side: str) -> list[int]:
             length += 1
             continue
         if holder == side:
-            runs.append(length)
+            runs.append((game, length))
         holder, length = r.point_to, 1
-    if holder == side:
-        runs.append(length)
+    if holder == side and game is not None:
+        runs.append((game, length))
     return runs
 
 
 def _side_stats(
-    counted: Sequence[CountedRally], side: str, games: int, policy: LowSamplePolicy
+    counted: Sequence[CountedRally], side: str, game_numbers: Sequence[int], policy: LowSamplePolicy
 ) -> dict[str, dict[str, Any]]:
+    games = len(game_numbers)
     served = [r for r in counted if r.serving_side == side]
     received = [r for r in counted if r.serving_side != side]
     out: dict[str, dict[str, Any]] = {}
@@ -131,12 +137,17 @@ def _side_stats(
     an05["low_sample"] = an05["low_sample"] or untyped > 0  # a lower bound (dictionary AN-05)
     out["AN-05"] = an05
 
-    runs = _runs(counted, side)
+    game_runs = _runs(counted, side)
+    runs = [length for _, length in game_runs]
     histogram = dict.fromkeys(RUN_BUCKETS, 0)
     for length in runs:
         histogram["5+" if length >= 5 else str(length)] += 1
     out["AN-06"] = {
         "longest": max(runs, default=0),
+        # dictionary AN-06: the longest run per side per game, games in scope in play order
+        "longest_by_game": [
+            max((n for g, n in game_runs if g == number), default=0) for number in game_numbers
+        ],
         "histogram": histogram,
         "n": sum(runs),
         "low_sample": False,  # descriptive, never flagged (dictionary AN-06)
@@ -146,14 +157,16 @@ def _side_stats(
     ended = [r for r in counted if r.actor == side]
     counts = {c: sum(r.ending == c for r in ended) for c in CATEGORIES}
     shares = {}
+    flagged = False
     for category, k in counts.items():
         p = proportion(k, [r.number for r in ended], policy)
         shares[category] = {key: p[key] for key in ("k", "value", "ci_low", "ci_high")}
+        flagged = flagged or p["low_sample"]  # rule 0.3: n or any share's width (PE-R1S3-05)
     out["AN-07"] = {
         "n": len(ended),
         "counts": counts,
         "shares": shares,
-        "low_sample": len(ended) < policy.min_proportion_n,
+        "low_sample": flagged,
         "rallies": [r.number for r in ended],
     }
     return out
@@ -164,7 +177,7 @@ def starter_stats(sheet: Mapping[str, Any], policy: LowSamplePolicy | None = Non
     rules = policy or LowSamplePolicy()
     counted = counted_rallies(sheet)
     check_conservation(counted, attribute_lost_rallies(counted))  # FR-109, every computation
-    games = games_in_scope(sheet)
+    games = game_numbers_in_scope(sheet)
     stats: Stats = {m: {} for m in METRICS}
     for side in SIDES:
         for metric, value in _side_stats(counted, side, games, rules).items():

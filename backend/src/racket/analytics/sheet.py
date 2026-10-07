@@ -73,4 +73,9 @@ def counted_rallies(sheet: Mapping[str, Any]) -> list[CountedRally]:
 def games_in_scope(sheet: Mapping[str, Any]) -> int:
     """Completed games plus the current one (dictionary AN-04); a game the sheet cannot score
     because an earlier game is unfinished is not in scope (C-03)."""
-    return sum(1 for g in sheet.get("games", ()) if g.get("score_a") is not None)
+    return len(game_numbers_in_scope(sheet))
+
+
+def game_numbers_in_scope(sheet: Mapping[str, Any]) -> list[int]:
+    """The numbers of the games in scope (``games_in_scope``), in play order (AN-06)."""
+    return [g["number"] for g in sheet.get("games", ()) if g.get("score_a") is not None]
