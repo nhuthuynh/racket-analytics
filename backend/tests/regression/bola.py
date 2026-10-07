@@ -81,9 +81,9 @@ MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
 # Sprint 3 routes (IT-03-05; NFR-051), as ``scripts/measure/statscontract.py`` assumes them until
 # api-sprint-03 (PE-1). Kept out of MATRIX while the routes do not exist, because the inventory's
-# positive control requires every MATRIX route to be served; they count as covered in
-# ``uncovered_routes`` so a Sprint 3 route that lands is not reported twice. When a route is
-# served, QA moves its probe into MATRIX (TCR row), and IT-03-05 already probes it.
+# positive control requires every MATRIX route to be served. They do NOT count as covered in
+# ``uncovered_routes``: when a route is served, the inventory reports it until QA moves its probe
+# into MATRIX (TCR row), and IT-03-05 already probes it meanwhile.
 # ``DELETE`` changes state, so IT-03-05 runs the owner's positive control last.
 MATCH_ID_ROUTES_03 = {
     ("GET", "/matches/{match_id}/stats"): lambda: {},
@@ -137,5 +137,4 @@ def uncovered_routes(
     exempt: Mapping[RouteKey, str] | None = None,
 ) -> list[str]:
     covered = set(MATRIX if matrix is None else matrix) | set(EXEMPT if exempt is None else exempt)
-    covered |= set(MATCH_ID_ROUTES_03)
     return sorted(f"{m} {p}" for (m, p) in id_routes(app) - covered)
