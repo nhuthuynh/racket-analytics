@@ -51,3 +51,13 @@
 | Goal | **Not met.** Stats, evidence and delete routes are not served; G03-01 smoke 0/1 (QA-R1S3-06) | openapi check at `15a7551`; smoke.md pre-review |
 | Open defects (G03-12) | rc=1, open 9 (was 11). SEC-RV3-01, BLK-GOLD-01 and C-06 moved to sprint-DoD rows (P12 b); QA-R1S3-02 deferred to T-SEC-RV3-02 | `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md` |
 | Size | Five commits over 400 lines recorded as breaches. Waivers for the ticket PRs decided before they open | decision-log 2026-10-07 |
+
+## Review round 2: EM status step, 2026-10-07 (ADR 0030 rule 2)
+
+| Item | Result | Evidence |
+|---|---|---|
+| Ticket PRs (PO rule) | Still 0 opened. Slice brief for ST-046a … ST-052c (each ≤ 400 lines, no waiver) and the orchestrator runbook are written. Waiting on principal-engineer bases, then the orchestrator | `mcp__github__list_pull_requests state=all` → #1-#3 closed; `list_branches` → no `s3/*`; decision-log and blockers.md round-2 EM rows |
+| Goal | **Not met.** No stats, evidence or label path; `/matches/{match_id}` and `/me` GET only; no `racket.platform.purge` (QA-R1S3-06) | openapi check and `import racket.platform.purge` → `ModuleNotFoundError` at `7a6ffe5` |
+| TDD order (QA-R1S3-09/10) | Accepted breach for six commits, deferred to retro-3 input R3-IN-1 (sprint-03 §13). Not claimed as test-first | `git log --format=%B -1 <sha> \| grep -c '^Red:'` → 0 ×6 |
+| Screen-reader pass (QA-R3-GATE-01 / C-06) | Reconciled: deferred to S3-DoD-P6 only. No longer counted in G03-12. 0 of 38 rows run | a11y-manual §4, scorecard G03-10 note |
+| Open defects (G03-12) | rc=1, **open 8** (was 11): PD-R1S3-01, PD-R1-06 family, SEC-S3-TM-01/02/05, PE-R1S3-07/QA-R1S3-07, QA-R1S3-06, PE-R1S3-01/QA-R1S3-04 | `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md` |

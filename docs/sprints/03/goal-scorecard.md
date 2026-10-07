@@ -240,7 +240,7 @@ jq -r '[.. | objects | select(has("attachments")) | .attachments[] | select(.nam
 
 - Screen families D (dashboard), E (evidence), X (deletion), L (Full Tag) with the screen ids of `flows-sprint-03.md` (PD-1). E2E-03-05, E2E-03-06 and the 320/360 px cases must be among the passed cases of `e2e-rate.json`.
 - (b) counts only when every family D, E, X, L has a `targets-` attachment and the D-01/E-01 empty, loading and error states have theirs (E2E-03-08; PD-R1S3-03, decision-log 2026-10-07); a family without one is "no", not 0.
-- The manual screen-reader pass (NFR-027 b, C3-06) is a human item; while open it counts in G03-12. PO P12 option (b) moved it out of the goal: it is sprint-DoD row S3-DoD-P6 "not met: waiting on P6" and not in G03-12 (decision-log 2026-10-07).
+- The manual screen-reader pass (NFR-027 b, C3-06) is a human item. Under PO P12 option (b) it is **deferred** (ADR 0030 rule 1) to sprint-DoD row S3-DoD-P6 "not met: waiting on P6" and is **not counted in G03-12** (decision-log 2026-10-07; EM reconciliation in review round 2, review-rounds.md). It is not part of G03-10's pass either: G03-10 counts only the automated checks, and NFR-027 (b) stays not met for Sprint 3.
 
 ### G03-11: test strength, coverage and speed
 

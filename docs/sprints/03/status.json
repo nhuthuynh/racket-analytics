@@ -97,21 +97,25 @@
     }
   },
   "open_defects": {
-    "count": 9,
+    "count": 8,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md",
-    "at": "review round 1 EM step, 2026-10-07 (rc=1)",
+    "at": "review round 2 EM step, 2026-10-07, head 7a6ffe5 + EM round-2 rows (rc=1)",
     "ids": [
-      "PE-S2-R3-02",
+      "PD-R1S3-01",
       "PD-R1-06 family (DR-01/DR-02)",
-      "PD-RV2-DR-COACH",
-      "PD-RV2-DR-BA",
-      "PD-RV2-DR-PM",
-      "PD-RV2-DR-SEC",
-      "SRE-S3-02",
-      "PE-R1S3-01 / QA-R1S3-04",
-      "QA-R1S3-06"
+      "SEC-S3-TM-01",
+      "SEC-S3-TM-02",
+      "SEC-S3-TM-05",
+      "PE-R1S3-07 / QA-R1S3-07",
+      "QA-R1S3-06",
+      "PE-R1S3-01 / QA-R1S3-04"
     ],
-    "note": "counts only rows in the file; review-round-1 ids from other reviewers that have no row yet are not included until the reconciliation"
+    "deferred_this_round": {
+      "QA-R1S3-09": "accepted TDD-order breach -> retro-3 input R3-IN-1 (EM + SRE, Sprint 4)",
+      "QA-R1S3-10": "accepted TDD-order breach -> retro-3 input R3-IN-1",
+      "QA-R3-GATE-01 / C-06": "sprint-DoD row S3-DoD-P6 (not met: waiting on P6), not counted in G03-12"
+    },
+    "note": "was 11 before the EM round-2 rows; counts only rows in the file"
   },
   "decider_tasks": [
     {
@@ -851,7 +855,8 @@
     "rule": "ADR 0039: one PR per ticket into main, principal-engineer + senior-engineer verdict on the head SHA before merge; no sprint-wide PR",
     "opened": [],
     "map": "docs/decisions/0039-sprint-3-tickets-ship-as-ticket-prs-with-principal-and-senior-review.md",
-    "status": "none opened (2026-10-07; list_pull_requests state=all -> #1, #2, #3 only)"
+    "status": "none opened (re-checked 2026-10-07 review round 2: list_pull_requests state=all -> #1, #2, #3 only, all closed; list_branches -> no s3/*). Slice brief for new builds and orchestrator runbook written (decision-log, blockers.md round 2); waiting on principal-engineer bases and orchestrator",
+    "pr_description_note": "T-ST-043/044/045/053/052a PRs must state 'TDD order not shown: reconstruction only (QA-R1S3-09/10)'"
   },
   "goal_met_note": "not met at review round 1: stats/evidence/delete routes not served (QA-R1S3-06); not a verifier result"
 }
