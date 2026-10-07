@@ -562,6 +562,8 @@ The PO moved these items out of the goal metric (`po-input-2026-10-05.md`, adden
 - **Date:** 2026-11-27. **File:** `docs/retros/2026-11-27-sprint-03.md` from [`docs/retros/TEMPLATE.md`](../retros/TEMPLATE.md).
 - **Format:** Start/Stop/Continue. **Focus:** did ADR 0037 work: reconciliation counts, decider tasks on time, the PO's answers to human-gated items.
 - Review retro 2 action items first [EP/ENG-15].
+- **Retro-3 inputs recorded during the sprint (ADR 0030 rule 1 deferrals; each needs an owned, dated action in the retro):**
+  - **R3-IN-1** (engineering-manager, review round 2, 2026-10-07; QA-R1S3-09, QA-R1S3-10): six code commits (`bd7593c`, `783cfd2`, `a678a01`, `70fa33f`, `1955d74`, `98f4c7c`) have no recorded red step. This is an accepted TDD-order breach, and only a reconstruction exists. Proposed action: a CI check, run as a deterministic hook (EP/ENG-24), that fails a story commit adding `backend/src` code unless it has a `Red:` body line or comes after a test-only commit. Owner: engineering-manager with sre-devops-engineer. Sprint 4.
 
 ## 14. Story specifications and Definition of Ready (business-analyst with engineering-manager, 2026-10-06)
 
