@@ -3,6 +3,9 @@ NFR-004). Numbers are the coach's hand count of the worked example (metric-dicti
 are also compared with the independent reference ``statslib``. Every dictionary entry is
 published for these scenarios; which entries are shown is metric_dictionary.feature's concern.
 Written red first: ``red_until`` ST-046 (the stats route).
+
+Marker ``red_until`` ST-046 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -15,8 +18,6 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-046")]
 
 scenarios("starter_stats.feature")
 
@@ -94,6 +95,12 @@ def change_rally_3(ctx: dict[str, Any]) -> None:
     opens_stats(ctx)
 
 
-@then(parsers.parse('"{name}" shows {pct} with "n = {n:d}"'))
+# Anchored on a bare percentage so it never also matches the "for her side" line above (two
+# patterns matched it and pytest-bdd took this one, reading pct as "57% for her side"; TCR row
+# 2026-10-07, G03-08).
+@then(
+    parsers.re(r'"(?P<name>[^"]+)" shows (?P<pct>\d+%) with "n = (?P<n>\d+)"'),
+    converters={"n": int},
+)
 def shows(ctx: dict[str, Any], name: str, pct: str, n: int) -> None:
     shows_for_her_side(ctx, name, pct, n)

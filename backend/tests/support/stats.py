@@ -327,6 +327,15 @@ def grant_labeller(api: ApiDriver, user: str) -> None:
     assert rc == 0, f"grant-labeller exit {rc}"
 
 
+def probe_videos() -> None:
+    """Run the worker until idle, so every received video is probed (fps, duration). The label
+    routes answer 409 ``match_not_ready`` for an unprobed video (api-sprint-03 §5.1); a
+    labeller's match in the Full Tag tests is a probed one (TCR row 2026-10-07, G03-04)."""
+    from tests.support import contract
+
+    contract.WORKER_RUN_UNTIL_IDLE.load()()
+
+
 def record_consent(match_id: str, ref: str = "CONSENT-TEAM-SYNTHETIC-001") -> None:
     rc = LABELLER_ADMIN.load()(["consent", "--match", match_id, "--record", ref])
     assert rc == 0, f"consent exit {rc}"

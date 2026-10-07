@@ -25,7 +25,10 @@ class Probe:
 
     method: str
     template: str
-    resource: str  # which of Ivy's resources the route addresses: "match" | "upload" | "rally"
+    # Which of Ivy's resources the route addresses: "match" | "upload" | "rally" | "metric"
+    # (a match and a published metric id) | "label" (a match, both users holding the labeller
+    # role, so the owner filter is what refuses the attacker; api-sprint-03 §5.1).
+    resource: str
     kwargs: Callable[[], Mapping[str, Any]] = lambda: {}
 
 
@@ -77,14 +80,11 @@ RALLY_ID_ROUTES_02 = {
 }
 _PROBES += [Probe(m, t, "match", k) for (m, t), k in MATCH_ID_ROUTES_02.items()]
 _PROBES += [Probe(m, t, "rally", k) for (m, t), k in RALLY_ID_ROUTES_02.items()]
-MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
-# Sprint 3 routes (IT-03-05; NFR-051), as ``scripts/measure/statscontract.py`` assumes them until
-# api-sprint-03 (PE-1). Kept out of MATRIX while the routes do not exist, because the inventory's
-# positive control requires every MATRIX route to be served. They do NOT count as covered in
-# ``uncovered_routes``: when a route is served, the inventory reports it until QA moves its probe
-# into MATRIX (TCR row), and IT-03-05 already probes it meanwhile.
-# ``DELETE`` changes state, so IT-03-05 runs the owner's positive control last.
+# Sprint 3 routes (IT-03-05; NFR-051; api-sprint-03 §7). Served since ST-046/ST-047/ST-050
+# (TCR row 2026-10-07, G03-04), so their probes are in MATRIX and count as covered. IT-03-05
+# still parametrizes over MATCH_ID_ROUTES_03 with a tagged match. ``DELETE`` changes state, so
+# every probe runs the owner's positive control after the attacker's call.
 MATCH_ID_ROUTES_03 = {
     ("GET", "/matches/{match_id}/stats"): lambda: {},
     ("GET", "/matches/{match_id}/stats/{metric_id}/evidence"): lambda: {
@@ -92,6 +92,22 @@ MATCH_ID_ROUTES_03 = {
     },
     ("DELETE", "/matches/{match_id}"): lambda: {"json": {"confirm": "delete"}},
 }
+# Full Tag label routes (ST-052; api-sprint-03 §5). For a labeller's own match without a consent
+# record the owner gets 409 ``no_consent`` (a positive control: not 404/405); the attacker, also
+# a labeller, gets the 404 of a missing match.
+LABEL_ROUTES_03 = {
+    ("GET", "/label/matches/{match_id}"): lambda: {},
+    ("POST", "/label/matches/{match_id}/events"): lambda: {
+        "json": {"type": "hit", "frame": 1, "hitter": "A1"}
+    },
+    ("GET", "/label/matches/{match_id}/export"): lambda: {},
+}
+_PROBES += [
+    Probe(m, t, "metric" if "{metric_id}" in t else "match", k)
+    for (m, t), k in MATCH_ID_ROUTES_03.items()
+]
+_PROBES += [Probe(m, t, "label", k) for (m, t), k in LABEL_ROUTES_03.items()]
+MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
 # Routes with a path parameter that is not an owned resource ID. Each needs a reason.
 EXEMPT: dict[RouteKey, str] = {}

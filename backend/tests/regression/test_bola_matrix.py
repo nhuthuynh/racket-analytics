@@ -3,6 +3,11 @@ AQS/SEC-09, AQS/SEC-03). Never deleted.
 
 User B (Carlos) gets the same 404 as for a missing resource on every route that takes one of
 user A's (Ivy's) resource IDs, and the endpoint inventory has no uncovered route.
+
+The attacker calls first and the owner's positive control runs last, so a state-changing route
+(``DELETE /matches/{match_id}``) is probed against the intact resource. For the Full Tag label
+routes both users hold the labeller role, so the owner filter, not the role check, refuses
+Carlos (api-sprint-03 §5.1, SEC-S3-TM-08).
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ import pytest
 from tests.regression.bola import MATRIX, Probe, all_routes, id_routes, uncovered_routes
 from tests.support import contract, scorebook, tus
 from tests.support.api import async_client, lifespan, sign_in
+from tests.support.stats import LABELLER_ADMIN
 
 
 @pytest.fixture
@@ -44,9 +50,19 @@ async def ivy_resources(users: dict[str, httpx.AsyncClient]) -> dict[str, str]:
     return {"match": match_id, "upload_url": upload.url, "tagged": tagged, "rally": rally_id}
 
 
+async def _grant_labeller(client: httpx.AsyncClient) -> None:
+    me = await client.get("/me")
+    assert me.status_code == 200, me.text
+    assert LABELLER_ADMIN.load()(["grant-labeller", "--account", str(me.json()["id"])]) == 0
+
+
 def _url(probe: Probe, resources: dict[str, str], missing: bool) -> str:
-    if probe.resource == "match":
+    if probe.resource in ("match", "label"):
         return probe.template.format(match_id=uuid.uuid4() if missing else resources["match"])
+    if probe.resource == "metric":
+        return probe.template.format(
+            match_id=uuid.uuid4() if missing else resources["match"], metric_id="AN-01"
+        )
     if probe.resource == "rally":
         return probe.template.format(
             match_id=uuid.uuid4() if missing else resources["tagged"], rally_id=resources["rally"]
@@ -69,12 +85,15 @@ async def test_other_user_gets_the_same_404_as_for_a_missing_resource(
     probe: Probe, users: dict[str, httpx.AsyncClient], ivy_resources: dict[str, str]
 ) -> None:
     carlos, ivy = users["carlos"], users["ivy"]
+    if probe.resource == "label":
+        await _grant_labeller(ivy)
+        await _grant_labeller(carlos)
 
-    owner = await ivy.request(probe.method, _url(probe, ivy_resources, False), **probe.kwargs())
     attacker = await carlos.request(
         probe.method, _url(probe, ivy_resources, False), **probe.kwargs()
     )
     missing = await carlos.request(probe.method, _url(probe, ivy_resources, True), **probe.kwargs())
+    owner = await ivy.request(probe.method, _url(probe, ivy_resources, False), **probe.kwargs())
 
     assert owner.status_code not in (404, 405), f"positive control failed: {owner.status_code}"
     assert attacker.status_code == 404
