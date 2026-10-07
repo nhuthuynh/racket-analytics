@@ -102,6 +102,7 @@ def no_consent(ctx: dict[str, Any]) -> None:
 @then("they are told the match cannot be labelled")
 def cannot_be_labelled(ctx: dict[str, Any]) -> None:
     response = ctx["response"]
-    assert 400 <= response.status_code < 500, response.text
+    # api-sprint-03 §5.1: exactly 409 no_consent (QA-R1S3-05).
+    assert st.refusal(response)[:2] == (409, "no_consent"), response.text
     assert response.status_code != 404
     assert "consent" in response.text.lower()

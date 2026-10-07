@@ -2,8 +2,10 @@
 
 For every metric and side with n > 0 of the worked example: at most 10 items, ``total`` = n
 ("see all n"), every item is a rally behind the metric (the independent reference's list), no
-rally twice, ordered by rally time. A limit above 10 is refused (4xx). The first item's rally
-video link (the Sprint 2 rally media route) answers a Range request with 206 from the store.
+rally twice, ordered by rally time. A limit above 10 is 422 ``limit``/``invalid``; an unknown
+metric is 404 ``not_found`` and a bad side 422 ``side_invalid`` (api-sprint-03 §3.1), with the
+route proven to exist first (QA-R1S3-05). The first item's rally video link (the Sprint 2 rally
+media route) answers a Range request with 206 from the store.
 
 Written red first (QA-ACC-3): ``red_until`` ST-047.
 """
@@ -36,13 +38,24 @@ def example(api: ApiDriver, published: None) -> str:
 
 
 def test_it_03_04_a_limit_above_ten_is_refused(api: ApiDriver, example: str) -> None:
+    # api-sprint-03 §3.1: 422 limit/invalid; a missing route (404/405) is not it (QA-R1S3-05).
     response = st.evidence(api, "ivy", example, "AN-01", "A", limit=11)
-    assert 400 <= response.status_code < 500, response.text
+    assert st.refusal(response) == (422, "validation_failed", [("limit", "invalid")]), response.text
 
 
 def test_it_03_04_an_unknown_metric_or_side_is_a_4xx(api: ApiDriver, example: str) -> None:
-    assert 400 <= st.evidence(api, "ivy", example, "AN-99", "A").status_code < 500
-    assert 400 <= st.evidence(api, "ivy", example, "AN-01", "C").status_code < 500
+    # Positive control first: the route exists, so the refusals below come from the contract.
+    control = st.evidence(api, "ivy", example, "AN-01", "A")
+    assert control.status_code == 200, control.text
+    # api-sprint-03 §3.1: an unpublished metric id is 404 not_found; a bad side is 422.
+    unknown = st.evidence(api, "ivy", example, "AN-99", "A")
+    assert st.refusal(unknown) == (404, "not_found", []), unknown.text
+    bad_side = st.evidence(api, "ivy", example, "AN-01", "C")
+    assert st.refusal(bad_side) == (
+        422,
+        "validation_failed",
+        [("side", "side_invalid")],
+    ), bad_side.text
 
 
 @pytest.mark.parametrize("side", st.SIDES)

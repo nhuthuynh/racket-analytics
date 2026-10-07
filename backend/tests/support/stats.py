@@ -157,6 +157,25 @@ def delete_account(api: ApiDriver, user: str, body: Any = None) -> httpx.Respons
     )
 
 
+def refusal(response: httpx.Response) -> tuple[int, str | None, list[tuple[Any, Any]]]:
+    """(status, error code, [(field, code)]) of an error envelope (api-sprint-00 §errors).
+
+    A missing route (FastAPI's 404/405 ``{"detail": ...}``) has no envelope, so its code is
+    ``None`` and it never equals a contract refusal (QA-R1S3-05).
+    """
+    try:
+        error = response.json().get("error")
+    except ValueError:
+        error = None
+    if not isinstance(error, dict):
+        return response.status_code, None, []
+    fields = [(f.get("field"), f.get("code")) for f in error.get("fields") or []]
+    return response.status_code, error.get("code"), fields
+
+
+CONFIRMATION_REQUIRED = (422, "validation_failed", [("confirm", "confirmation_required")])
+
+
 def tagged_example(api: ApiDriver, user: str, title: str = "IT-03") -> str:
     """A doubles match with its video received and the worked example tagged."""
     return sb.ready_tagged_match(api, user, tags=WORKED_EXAMPLE, title=title)

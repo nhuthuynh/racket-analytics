@@ -84,10 +84,11 @@ def test_it_03_11_a_labeller_is_refused_a_match_without_consent(
     before = _label_rows(committed_db)
     opened = st.fulltag(api, "dana", "label_match", match_id=match_id)
     tagged = st.fulltag(api, "dana", "label_events", json_body=HIT, match_id=match_id)
-    assert 400 <= opened.status_code < 500, opened.text
+    # api-sprint-03 §5.1: exactly 409 no_consent (QA-R1S3-05: any 4xx let a missing route pass).
+    assert st.refusal(opened)[:2] == (409, "no_consent"), opened.text
     assert opened.status_code != 404, "a labeller is told why, not 'not found'"
     assert "consent" in opened.text.lower(), "the refusal must say why (no consent record)"
-    assert 400 <= tagged.status_code < 500, tagged.text
+    assert st.refusal(tagged)[:2] == (409, "no_consent"), tagged.text
     assert _label_rows(committed_db) == before
 
 
@@ -109,7 +110,8 @@ def test_it_03_11_an_invalid_label_is_refused(
     st.record_consent(match_id)
     before = _label_rows(committed_db)
     response = st.fulltag(api, "dana", "label_events", json_body=event, match_id=match_id)
-    assert 400 <= response.status_code < 500, response.text
+    # api-sprint-03 §5.4: exactly 422 invalid_label (QA-R1S3-05: a missing route is 404/405).
+    assert st.refusal(response)[:2] == (422, "invalid_label"), response.text
     assert _label_rows(committed_db) == before
 
 
