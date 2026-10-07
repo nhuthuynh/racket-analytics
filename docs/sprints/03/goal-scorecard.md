@@ -95,7 +95,7 @@ Start `dockerd` first if `docker info` fails; images come through `mirror.gcr.io
 python3 scripts/measure/live_stats.py --api "$API" --origin "$WEB" --mailpit "$MAILPIT" \
   --cacert "$RA_DEV_STATE/root.crt" --file fixtures/clips/synthetic-60s/clip.mp4 --runs 5 \
   --psql "$DC exec -T postgres psql -U racket -d racket -At -F|" \
-  --purge-cmd "$DC exec -T worker python -m racket.platform.purge --once" \
+  --purge-cmd "$DC exec -T api python -m racket.platform.purge --once" \
   --json "$GOAL/live-stats.json"; echo rc=$?
 jq '.summary | {runs, runs_passed, tag_to_stats, correction_to_stats, delete_hidden, purge}' "$GOAL/live-stats.json"
 jq -r '.runs[] | to_entries[] | select(.value.ok != true) | .key' "$GOAL/live-stats.json"   # must print nothing
@@ -146,6 +146,8 @@ python3 scripts/measure/stats_latency.py --api http://127.0.0.1:48000 --seed-api
 ### G03-06: E2E pass rate (and G03-10)
 
 ```bash
+# labeller-admin CLI for E2E-03-05 (QA proposal; ST-052 names it). Absolute compose path: Playwright runs it from web/
+export E2E_ADMIN_CMD="docker compose -p racket-goal03 -f $PWD/infra/compose.yaml --env-file $RA_DEV_STATE/goal.env exec -T api python -m racket.dataset.admin"
 cd web
 flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
   BASE_URL=$WEB PW_PROJECTS=chromium \
@@ -157,7 +159,7 @@ python3 scripts/measure/junit_rate.py --include '.' --allow-skips \
   $(for i in 01 02 03 04 05 06; do printf -- '--require E2E-02-%s ' $i; done) \
   --require 'E2E-01-02' --require 'E2E-01-03' --require 'walking-skeleton|walking skeleton' \
   --json "$GOAL/e2e-rate.json" "$GOAL/e2e.xml"; echo rc=$?
-jq -r '[.. | objects | select(has("annotations")) | .annotations[]? | select(.type=="skip") | .description] | .[]' "$GOAL/e2e.json"
+jq -r '[.. | objects | select(has("annotations")) | .annotations[]? | select(.type=="skip") | .description] | unique | .[]' "$GOAL/e2e.json"   # each reason once (the report repeats a test's annotations per result)
 (cd web && flock ../.local/evidence-e2e.lock env PW_CHROMIUM_CHANNEL=chrome MAILPIT_API_URL=$MAILPIT PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
   BASE_URL=$WEB PW_PROJECTS=chromium PLAYWRIGHT_JUNIT_OUTPUT_NAME="$GOAL/e2e-repeat.xml" \
   pnpm exec playwright test --repeat-each=3 --workers=1 --output "$GOAL/pw-out-repeat" --reporter=line,junit)
@@ -188,16 +190,20 @@ python3 scripts/measure/pw_timings.py "$GOAL/e2e-timing.json" --min-n 20 \
 
 ```bash
 cd backend
+eval "$(bash ../scripts/dev-postgres.sh url)"; eval "$(bash ../scripts/dev-objectstore.sh env)"   # the scenarios run the API on Postgres (QA-RV3-06)
 env -u APP_ENV uv run pytest -q -rs -m "golden_an" --junitxml="$GOAL/golden-an.xml"; echo rc=$?
 env -u APP_ENV uv run pytest -q -rs -m "analytics and scenario" --junitxml="$GOAL/analytics-scenarios.xml"; echo rc=$?
-HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs -m "conservation" --junitxml="$GOAL/conservation.xml"; echo rc=$?
-env -u APP_ENV uv run racket-manifest-check tests/regression/golden_matches/manifest.json; echo rc=$?
+HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs -m "conservation" --junitxml="$GOAL/conservation.xml"; echo rc=$?   # the FR-109 scenario
+HYPOTHESIS_PROFILE=ci env -u APP_ENV uv run pytest -q -rs tests/unit/analytics/test_attribution.py -k property \
+  --hypothesis-show-statistics --junitxml="$GOAL/conservation-property.xml" | tee "$GOAL/conservation-property.txt"; echo rc=$?
+grep -E '[0-9]+ passing, 0 failing|max_examples=' "$GOAL/conservation-property.txt"            # (c): >= 1,000 passing, 0 failing
+env -u APP_ENV uv run racket-manifest-check tests/regression/golden_matches; echo rc=$?   # the CLI takes the set directory
 cd ..
 python3 scripts/measure/junit_rate.py --include '.' --require 'GS-AN-1|golden_an' --json "$GOAL/golden-an-rate.json" "$GOAL/golden-an.xml"; echo rc=$?
-python3 scripts/measure/junit_rate.py --include '.' --require 'Low-sample|low_sample' --require 'Draft metric hidden|draft' \
+python3 scripts/measure/junit_rate.py --include '.' --require 'Low-sample|low_sample|lowsample' --require 'Draft metric hidden|draft' \
   --require 'Definition shown|definition' --json "$GOAL/analytics-rate.json" "$GOAL/analytics-scenarios.xml"; echo rc=$?
-python3 scripts/measure/junit_rate.py --include '.' --require 'conservation' --json "$GOAL/conservation-rate.json" "$GOAL/conservation.xml"; echo rc=$?
-grep -nE '^\| (before|20[0-9]{2}-)' docs/domain/metric-dictionary.md | grep -c 'coach-reviewed'   # (e): one row per shown entry
+python3 scripts/measure/junit_rate.py --include '.' --require 'conservation' --require 'property_every_lost_rally' --json "$GOAL/conservation-rate.json" "$GOAL/conservation.xml" "$GOAL/conservation-property.xml"; echo rc=$?
+grep -nE '^\| 20[0-9]{2}-' docs/domain/metric-dictionary.md | grep 'coach-reviewed' | grep -vc 'planned'   # (e): one dated row per shown entry; the undated "(planned)" row does not count
 ```
 
 - The `golden_an`, `analytics`, `scenario` and `conservation` markers are registered by QA in `backend/pyproject.toml` (QA-ACC-3, ST-049); the conservation property prints its example count, which must be ≥ 1,000 under `HYPOTHESIS_PROFILE=ci`.
