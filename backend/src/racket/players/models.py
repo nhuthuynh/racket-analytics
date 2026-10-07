@@ -17,6 +17,8 @@ accounts = sa.Table(
     # Log and rate-limit pseudonym only (ADR 0025); not unique since ADR 0032.
     sa.Column("email_key", sa.String(64), nullable=True, index=True),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    # Tombstone (ST-051): personal columns are NULL from the deletion on; purged later.
+    sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
 )
 
 sessions = sa.Table(

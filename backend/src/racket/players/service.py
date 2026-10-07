@@ -24,10 +24,12 @@ from sqlalchemy.orm import Session
 
 from racket.analysis_jobs.domain import JobKey
 from racket.analysis_jobs.queue import JobQueue
-from racket.platform.errors import AppError, FieldError, ValidationFailed
+from racket.matches import public as matches
+from racket.platform.errors import AppError, FieldError, Unauthenticated, ValidationFailed
 from racket.platform.logs import SECURITY_LOGGER, user_id_var
 from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
+from racket.players import public as players
 from racket.players.domain import (
     LinkExpired,
     MagicLinkToken,
@@ -155,7 +157,11 @@ class IdentityService:
                 sessions.c.last_seen_at,
             )
             .join(sessions, sessions.c.account_id == accounts.c.id)
-            .where(sessions.c.token_sha256 == token_digest(token), sessions.c.expires_at > now)
+            .where(
+                sessions.c.token_sha256 == token_digest(token),
+                sessions.c.expires_at > now,
+                accounts.c.deleted_at.is_(None),
+            )
         ).one_or_none()  # fmt: skip
         if row is None:
             return None
@@ -193,11 +199,18 @@ class IdentityService:
             self._delete_session(previous_token)
         row = None
         if username in DEV_USERS:
-            row = self.session.execute(
-                sa.select(accounts.c.id, accounts.c.display_name).where(
-                    accounts.c.username == username
-                )
-            ).one_or_none()
+            query = sa.select(accounts.c.id, accounts.c.display_name).where(
+                accounts.c.username == username
+            )
+            row = self.session.execute(query).one_or_none()
+            if row is None:  # deleted (ST-051): the name signs in to a new, empty account
+                self.session.execute(
+                    insert(accounts)
+                    .values(id=uuid.uuid4(), username=username,
+                            display_name=DEV_USERS[username], created_at=self.clock())
+                    .on_conflict_do_nothing(index_elements=["username"])
+                )  # fmt: skip
+                row = self.session.execute(query).one_or_none()
         if row is None:
             self.session.commit()
             return None
@@ -364,3 +377,39 @@ class MagicLinkService:
             .returning(accounts.c.id, accounts.c.display_name)
         ).one()
         return Account(created.id, created.display_name), True
+
+
+class AccountDeletion:
+    """``DELETE /me`` (ST-051; FR-007; deletion-and-purge.md §3.2): one transaction under the
+    account row lock. Every match is tombstoned, the address and names are erased, every
+    session is deleted. Nothing is written on a refusal."""
+
+    def __init__(self, session: Session, clock: Callable[[], datetime] = _utcnow) -> None:
+        self.session = session
+        self.clock = clock
+
+    def delete(self, account_id: uuid.UUID, body: object) -> matches.Tombstone:
+        try:
+            matches.confirm_deletion(body)
+            if not players.lock_for_deletion(self.session, account_id):
+                raise Unauthenticated("account already deleted")
+            at = self.clock()
+            match_ids = matches.tombstone_owned_by(self.session, account_id, at)
+            players.erase_and_sign_out(self.session, account_id, at)
+            self.session.commit()
+        except BaseException:
+            self.session.rollback()
+            raise
+        log = logging.getLogger(__name__)
+        for match_id in match_ids:
+            log.info(
+                "match deleted",
+                extra={"event": "match.deleted", "match_id": str(match_id),
+                       "user_id": str(account_id)},
+            )  # fmt: skip
+        log.info(
+            "account deleted",
+            extra={"event": "account.deleted", "user_id": str(account_id),
+                   "matches": len(match_ids)},
+        )  # fmt: skip
+        return matches.Tombstone(at)
