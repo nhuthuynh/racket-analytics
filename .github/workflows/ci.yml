@@ -353,11 +353,25 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium webkit
       - name: Playwright journeys; axe 0 serious/critical (NFR-027)
+        # Gated: every spec except the red-first ones tagged @red-until-<story> (ADR 0046).
         working-directory: web
         env:
           # web-tls (ADR 0029): Secure `__Host-` cookies need https in WebKit.
           BASE_URL: https://localhost:3000
-        run: pnpm exec playwright test --reporter=github,html
+        run: pnpm exec playwright test --grep-invert "@red-until-" --reporter=github,html
+      - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
+        # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).
+        # BASE_URL: playwright.config.ts defaults to https://localhost:3000, the same origin.
+        working-directory: web
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ../reports/e2e-red-until.json
+        run: |
+          pnpm exec playwright test --grep "@red-until-" --reporter=json \
+            || echo "playwright rc=$? (red-until tests are expected to fail)"
+      - name: Stale-tag check for the red-until E2E tests
+        run: |
+          python3 scripts/ci/e2e_red_until_report.py --json reports/e2e-red-until.json \
+            --summary "$GITHUB_STEP_SUMMARY"
       - name: Service logs on failure
         if: failure()
         run: $COMPOSE logs --no-color --tail=300
