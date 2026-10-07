@@ -97,7 +97,7 @@ Start `dockerd` first if `docker info` fails; images come through `mirror.gcr.io
 python3 scripts/measure/live_stats.py --api "$API" --origin "$WEB" --mailpit "$MAILPIT" \
   --cacert "$RA_DEV_STATE/root.crt" --file fixtures/clips/synthetic-60s/clip.mp4 --runs 5 \
   --psql "$DC exec -T postgres psql -U racket -d racket -At -F|" \
-  --purge-cmd "$DC exec -T api python -m racket.platform.purge --once" \
+  --purge-cmd "$DC exec -T purge python -m racket.platform.purge --once" \
   --json "$GOAL/live-stats.json"; echo rc=$?
 jq '.summary | {runs, runs_passed, tag_to_stats, correction_to_stats, delete_hidden, purge}' "$GOAL/live-stats.json"
 jq -r '.runs[] | to_entries[] | select(.value.ok != true) | .key' "$GOAL/live-stats.json"   # must print nothing

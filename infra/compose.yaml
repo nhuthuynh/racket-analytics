@@ -325,6 +325,44 @@ services:
     stop_signal: SIGTERM
     stop_grace_period: 12s
 
+  purge:
+    # Scheduled purge/expiry job (SRE-PURGE, ADR 0038; ST-050, ST-051, ST-038; NFR-066 c).
+    # API image, app identity (never the media sandbox worker's, ST-042), edge network.
+    # purge_schedule.py runs the job at start, then every PURGE_INTERVAL_S seconds; it refuses
+    # anything above 86400 (at least daily). On demand:
+    #   docker compose -f infra/compose.yaml exec -T purge python -m racket.platform.purge --once
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+      args: *backend-build-args
+      target: api
+    command: ["python", "/opt/racket/purge_schedule.py", "python", "-m", "racket.platform.purge", "--once"]
+    environment:
+      <<: [*app-env, *media-store-access]
+      OTEL_SERVICE_NAME: racket-purge
+      PURGE_INTERVAL_S: ${PURGE_INTERVAL_S:-86400}
+    restart: unless-stopped
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      objectstore-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/purge-heartbeat && test $$(( $$(date +%s) - $$(stat -c %Y /tmp/purge-heartbeat) )) -lt 60"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+
   web:
     build:
       context: ..
