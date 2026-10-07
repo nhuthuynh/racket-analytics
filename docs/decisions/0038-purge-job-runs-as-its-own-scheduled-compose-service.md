@@ -1,6 +1,6 @@
 # 0038. The purge/expiry job runs as its own scheduled Compose service with the app identity
 
-- **Status:** Proposed (sre-devops-engineer, 2026-10-07). Accepted when the principal-engineer's deletion/purge design (PE-3) adopts it and the security-privacy-engineer agrees the identity (SEC-1)
+- **Status:** Accepted (principal-engineer, PE-3, 2026-10-07, Sprint 3 review round 1, PE-R1S3-04): adopted by `docs/architecture/deletion-and-purge.md` §4.1 and ADR 0042. Proposed by the sre-devops-engineer on 2026-10-07. The identity is the API's existing app role and app S3 key, so it grants nothing new; the security-privacy-engineer's SEC-1 notes may still narrow it (a dedicated purge role, deletion-and-purge.md §7), by a new ADR
 - **Date:** 2026-10-07
 - **Deciders:** principal-engineer (PE-3), security-privacy-engineer (SEC-1)
 - **Consulted:** sre-devops-engineer (author), senior-backend-engineer (ST-050 job, ST-038 expiry)
@@ -77,3 +77,7 @@ Proposed service (slice b):
 - The job (ST-050) must be safe when a scheduled pass and an on-demand pass overlap (IT-03-07 "parallel passes" already asks for it).
 - Spans: the job sets up tracing as the other entry points do; `OTEL_SERVICE_NAME=racket-purge` names them in Jaeger. The scheduler itself only logs.
 - Rollback: remove the `purge` service; nothing else depends on it.
+
+## Notes
+
+- **2026-10-07 (principal-engineer, PE-3):** Accepted. The job is `python -m racket.platform.purge --once` with exit codes 0 (every due item done), 1 (an item failed, retried next pass), 2 (usage/config); one pass also expires abandoned uploads (ST-038). The G03-03 on-demand command is `$DC exec -T purge python -m racket.platform.purge --once` (api-sprint-03 §4.4). Slice (b) may start once QA decides the `test_compose_registry.py` TCR row.
