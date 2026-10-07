@@ -4,6 +4,10 @@ TDD order (sprint-03 §5 ``FullTagAccess``, ``LabelExport``), negative cases fir
 
 1. a player (no labeller role) gets 404 on every label route, as for a missing match
    (FR-150 "not available"), even on a consented match;
+1b. a labeller who names another account's match gets the same 404 ``not_found`` as for an
+   unknown match on every label route, with and without a consent record on it, never
+   409 ``no_consent`` (that would tell them the match exists: T-BO-3, SEC-S3-TM-08); the owner
+   filter runs before the consent check (api-sprint-03 §5.1 order of checks); nothing is stored;
 2. a labeller on a match without a consent record is refused, and nothing is stored;
 3. a label with an unknown player, or a frame outside the clip, is refused;
 4. with consent, a hit by B1 at frame 1,840 is stored and the export validates against
@@ -17,6 +21,7 @@ out of range for it and is used as the out-of-range case; the in-range hit is at
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 import pytest
@@ -74,6 +79,34 @@ def test_it_03_11_a_player_gets_404_on_every_label_route(api: ApiDriver, route: 
     body = HIT if route == "label_events" else None
     response = st.fulltag(api, "ivy", route, json_body=body, match_id=match_id)
     assert response.status_code == 404, response.text
+
+
+@pytest.mark.parametrize("consented", [True, False], ids=["with-consent", "without-consent"])
+@pytest.mark.parametrize("route", sorted(st.FULLTAG_ROUTES))
+def test_it_03_11_a_labeller_gets_404_on_another_accounts_match(
+    api: ApiDriver, committed_db: Any, route: str, consented: bool
+) -> None:
+    """SEC-S3-TM-08 (T-BO-3, BOLA): Ivy owns the match; Dana is a labeller. Every label route
+    answers Dana exactly as for an unknown match id, whether or not Ivy's match has a consent
+    record. Positive control first: Dana's own consented match opens (200), because a route
+    that is not served is also a 404 ``not_found`` envelope and would pass vacuously."""
+    st.grant_labeller(api, "dana")
+    own = _received(api, "dana", "IT-03-11 own (control)")
+    st.record_consent(own)
+    control = st.fulltag(api, "dana", "label_match", match_id=own)
+    assert control.status_code == 200, f"positive control: {control.status_code} {control.text}"
+
+    ivys = _received(api, "ivy", "IT-03-11 another account's match")
+    if consented:
+        st.record_consent(ivys)
+    body = HIT if route == "label_events" else None
+    unknown = st.fulltag(api, "dana", route, json_body=body, match_id=str(uuid.uuid4()))
+    before = _label_rows(committed_db)
+    response = st.fulltag(api, "dana", route, json_body=body, match_id=ivys)
+    assert st.refusal(response)[:2] == (404, "not_found"), response.text
+    assert st.refusal(response) == st.refusal(unknown), "must equal the unknown-match answer"
+    assert "consent" not in response.text.lower(), "the consent check must not be reached"
+    assert _label_rows(committed_db) == before
 
 
 def test_it_03_11_a_labeller_is_refused_a_match_without_consent(
