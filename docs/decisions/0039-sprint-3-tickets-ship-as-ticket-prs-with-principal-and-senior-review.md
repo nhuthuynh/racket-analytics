@@ -1,6 +1,7 @@
 # 0039. Sprint 3 tickets ship as ticket PRs, each reviewed by the principal engineer and a senior engineer before merge
 
 - **Status:** Accepted (engineering-manager is R/A for sprint process, working-agreement §4). The human product owner may change the start date (blockers.md item P13); until they do, this ADR applies.
+- **Bases confirmed:** principal-engineer, 2026-10-07, review round 2 (PE-R1S3-01, PE-R2S3-03): the ticket map below replaces the round-1 proposal, built and tested from `main` `259a0a8`.
 - **Date:** 2026-10-07 (review round 1, Sprint 3)
 - **Deciders:** engineering-manager
 - **Consulted:** review round 1 findings PE-R1S3-01 (principal-engineer) and QA-R1S3-04 (senior-qa-engineer); `po-input-2026-10-05.md` addendum "Ticket-level PRs and reviews"
@@ -37,31 +38,54 @@ Chosen option: **1**.
 5. **Secret-scan fingerprint.** A cherry-pick gets a new commit hash, so the `.gitleaksignore` fingerprint for `9ca52fe` does not match the cherry-picked copy. The `T-SEC-RV3-02` PR carries the synthetic key and an ignore entry for **its own** commit hash, guarded by `infra/tests/test_gitleaks_ignore.py` (which requires the commit to exist in the scanned repository). This is also what ends the red nightly on `main` (QA-R1S3-02): it merges first.
 6. **Work that is not built yet** (ST-046/047/048/050/051/038, ST-052 b/c and the rest) is built on a ticket branch from `main` and opened as a PR from the start, not committed to `sprint-03` first.
 
-### Ticket map (proposal; the principal-engineer confirms the bases before the first PR)
+### Ticket map (confirmed by the principal-engineer, 2026-10-07, review round 2; replaces the round-1 proposal)
 
-| Ticket PR | `sprint-03` commits (in order) | Base | Reviewers (principal + senior) |
+The round-1 proposal could not be applied as written (PE-R2S3-03): `fee4fa3` (`fix(ST-044)`) changes `analytics/sheet.py`, which `a678a01` (T-ST-045) creates, and it changes the output that T-ST-049 freezes; `e54b754`, `8b451d9`, `15a7551`, `8d805d0`, `921ed53`, `d59d156` and `7a6ffe5` had no row. Almost every code commit also edits the shared record files, and several tests read files that only "docs" commits created (`docs/domain/metric-dictionary.md`, `docs/sprints/03/goal-scorecard.md`). The map below fixes all of this. It was **built and tested**, not only read (Evidence, last four rows).
+
+**How a ticket branch is built (the orchestrator does exactly this).** `git worktree add --detach <dir> <base head>` (no branch switch on `sprint-03`), then, for each entry of the row in order:
+- a bare SHA: `git cherry-pick -x -n <sha>`;
+- `<sha> (only …)` / `<sha> (all but …)`: the same cherry-pick, then the paths outside (or inside) the list go back to the base state (`git checkout HEAD -- <path>`, or `git rm --cached` plus delete for a new file). This is a **path split** of a commit that spans tickets;
+- `<path> as of <sha>`: `git checkout <sha> -- <path>`, committed on its own ("read by this ticket's tests");
+- then, for every entry: **record paths** go back to the base state: `docs/sprints/02/**`, `docs/sprints/03/**`, `docs/design/**`, `docs/decisions/README.md`. T-S3-RECORDS carries them. Nothing else is dropped. A cherry-pick that conflicts outside the record paths stops the build: that is a map defect for the principal-engineer, not something to resolve by hand;
+- commit with the original message plus `(cherry picked from commit <full sha>)`; an entry left empty (record paths only: `78644f3`, `d0ac61c`, `a200f1a`) is skipped and named in the PR body.
+
+Then `git switch -c s3/<ticket>` **inside the worktree**, push, and open the PR into its base branch (`main`, or `s3/<base ticket>`, a stacked PR). When a base PR merges, GitHub retargets the next PR to `main`.
+
+**Why one long stack.** File and import dependencies chain almost every ticket: the `analytics` pytest marker comes from `c371369` (T-ST-049), which T-QA-ACC-3 needs; `4d8af6d` (T-ST-053) edits `ci.yml` lines from `c7a6443` (T-ST-054); `8b451d9` edits files of `4d8af6d` and `c0fb6ad`; migration `0013` (`e54b754`) needs `0012` (`61dbdd5`), and the new migration `0014` of ST-046a needs both; the FE stories need the C3-03/C3-10/DR-02-FE screen changes and the QA E2E specs. Only four tickets have nothing above them that needs them, and they stay on `main`.
+
+| Ticket PR | `sprint-03` commits (in order) | Base | Reviewers |
 |---|---|---|---|
-| T-SEC-RV3-02 (first; ends the red nightly) | `9ca52fe`, `e7e86ef` (fingerprint re-made for the new hash) | `main` | principal-engineer + security-privacy-engineer |
+| T-SEC-RV3-02 | `9ca52fe`, `e7e86ef` | `main` | principal-engineer + security-privacy-engineer |
 | T-HARNESS-3 | `75338b9` | `main` | principal-engineer + senior-qa-engineer |
 | T-C3-01 | `1c1535d` | `main` | principal-engineer + senior-backend-engineer |
 | T-C3-02 | `bd770f8` | `main` | principal-engineer + senior-frontend-engineer |
-| T-C3-03 | `6059930`, `975338e`, `c5f7049` | `main` | principal-engineer + senior-qa-engineer |
-| T-C3-04 | `c0fb6ad` | `main` | principal-engineer + senior-qa-engineer |
-| T-C3-10 | `954e7bd`, `984d1d4`, `3f13b05`, `e5324cc` | `main` | principal-engineer + senior-frontend-engineer |
-| T-DR-02-FE | `a200f1a`, `1265966`, `9c18697`, `c2be16e` | `main` | principal-engineer + senior-qa-engineer |
-| T-ST-042 | `61dbdd5`, `a1bf473` | `main` | principal-engineer + sre-devops-engineer |
-| T-ST-043 | `bd7593c` | `main` | principal-engineer + senior-backend-engineer |
-| T-ST-044 | `783cfd2` | `main` | principal-engineer + senior-qa-engineer |
+| T-ST-043 | `bd7593c` | T-HARNESS-3 | principal-engineer + senior-backend-engineer |
+| T-ST-044 | `783cfd2` | T-ST-043 | principal-engineer + senior-qa-engineer |
 | T-ST-045 | `a678a01` | T-ST-044 | principal-engineer + senior-qa-engineer |
-| T-ST-053 | `70fa33f`, `1955d74`, `2408bff`, `bac3d81`, `b5cd5ac`, `4d8af6d`, `f493c02` | `main` | principal-engineer + senior-backend-engineer |
-| T-ST-052a | `98f4c7c` | `main` | principal-engineer + senior-backend-engineer |
-| T-SRE-PURGE-a | `ecee023` | `main` | principal-engineer + senior-backend-engineer |
-| T-QA-ACC-3 (red-first tests) | `79ad8c3`, `979b23c`, `8880b55`, `5ffce1c`, `152c57c`, `de1b894`, `00430c4`, `8745dd5`, `ab0c279`, `20ad39e`, `5421ce7`, `99a711f` | T-HARNESS-3 | principal-engineer + senior-backend-engineer |
-| T-ST-049 | `c371369`, `39f624a` | T-ST-044 | principal-engineer + senior-backend-engineer |
-| T-ST-054 (so far) | `78644f3`, `d0ac61c`, `c7a6443`, `9c64d79` | T-QA-ACC-3 | principal-engineer + sre-devops-engineer |
-| T-S3-RECORDS (plan, scorecard, smoke, records) | every `docs(...)` commit not listed above, `ccc2fe9` first | `main` | principal-engineer + senior-qa-engineer |
+| T-ST-044-b | `fee4fa3` | T-ST-045 | principal-engineer + senior-qa-engineer |
+| T-COACH-1 | `d59d156` | T-ST-044-b | principal-engineer + senior-qa-engineer |
+| T-ST-043-b | `921ed53`, `7a6ffe5` (only `test_metric_dictionary.py`) | T-COACH-1 | principal-engineer + senior-qa-engineer |
+| T-ST-049 | `c371369`, `39f624a`, `7a6ffe5` (only 7 paths: `gm1-two-games.json`, `gm2-three-games.json`, `gm3-corrections-needs-decision.json`, `manifest.json`, `test_golden_an.py`, `statslib.py`, `test_measure_sprint03.py`) | T-ST-043-b | principal-engineer + senior-backend-engineer |
+| T-QA-ACC-3 | `79ad8c3`, `979b23c`, `8880b55`, `5ffce1c`, `152c57c`, `de1b894`, `00430c4`, `8745dd5`, `ab0c279`, `20ad39e`, `5421ce7`, `99a711f`, `39eb73c`, `7a6ffe5` (only 4 paths: `test_it_03_02_stats_recompute.py`, `test_it_03_11_full_tag.py`, `full-tag.spec.ts`, `worked-example.reference.json`) | T-ST-049 | principal-engineer + senior-backend-engineer |
+| T-ST-054 | `78644f3`, `d0ac61c`, `9c64d79`, `c7a6443`, `docs/sprints/03/goal-scorecard.md` as of `6f3bfce`, `6f3bfce` | T-QA-ACC-3 | principal-engineer + sre-devops-engineer |
+| T-ST-053 | `70fa33f`, `1955d74`, `2408bff`, `bac3d81`, `b5cd5ac`, `f493c02`, `4d8af6d` | T-ST-054 | principal-engineer + senior-backend-engineer |
+| T-ST-052a | `98f4c7c`, `8d805d0` | T-ST-053 | principal-engineer + senior-backend-engineer |
+| T-QA-R1S3-11 | `15a7551` | T-ST-052a | principal-engineer + senior-backend-engineer |
+| T-C3-04 | `c0fb6ad`, `8b451d9`, `09f1f67` | T-QA-R1S3-11 | principal-engineer + senior-qa-engineer |
+| T-ST-048-tests | `47c34e8` | T-C3-04 | principal-engineer + senior-frontend-engineer |
+| T-SRE-PURGE-a | `ecee023` | T-ST-048-tests | principal-engineer + senior-backend-engineer |
+| T-ST-042 | `61dbdd5`, `a1bf473`, `e54b754` | T-SRE-PURGE-a | principal-engineer + sre-devops-engineer |
+| T-C3-03 | `6059930`, `975338e`, `c5f7049` | T-ST-042 | principal-engineer + senior-qa-engineer |
+| T-C3-10 | `954e7bd`, `984d1d4`, `3f13b05`, `e5324cc` | T-C3-03 | principal-engineer + senior-frontend-engineer |
+| T-DR-02-FE | `a200f1a`, `1265966`, `9c18697`, `c2be16e` | T-C3-10 | principal-engineer + senior-qa-engineer |
+| T-PE-DESIGN-3 | `86d7839`, `38b5da4`, `99d08e9` | T-DR-02-FE | author: principal-engineer; reviewers: senior-backend-engineer + security-privacy-engineer (a design PR cannot be approved by its author) |
+| T-S3-RECORDS (last) | every commit not listed above (30 `docs(...)` commits, `ccc2fe9` first, all record or docs-only paths), plus the record-path parts of every commit above | `main` after every PR above has merged | principal-engineer + senior-qa-engineer |
 
-Commits made after `94cdb99` go into the ticket their message names.
+**T-S3-RECORDS** is one commit made last: `git checkout <sprint-03 head> -- $(git diff --name-only main <sprint-03 head>)`, except `docs/sprints/02/test-change-requests.md`, where `main` has the QA decisions of `c4c66b1` for the same rows 24-28 that `1c1535d` decided on `sprint-03`. Those rows are merged by hand: keep `main`'s rows and append any sentence only `sprint-03` has. Confirmation: after it merges, `git diff main <sprint-03 head> --stat` lists only that file.
+
+**Bases for the work not built yet** (the EM's slice brief, decision-log round 2): ST-046a, ST-050a and ST-052b start from **T-PE-DESIGN-3**, not from T-ST-045, `main` or T-ST-052a. Only that branch has the contracts and designs (ADR 0045), the coach's statuses, `longest_by_game`, QA's red-first ITs that the slices turn green, and migration `0013`. Their stacks are unchanged: ST-046a → ST-046b → ST-047-API; ST-050a → ST-050b → ST-051-API; ST-052b → ST-052c. FE stories (ST-047 UI, ST-048) start from the top of whichever backend stack they call, for their E2E.
+
+**Commits after `99d08e9`.** Each one names exactly one ticket of this map, or a new ticket whose base row the principal-engineer adds here **before** the commit. A commit that edits a file another ticket created goes into a ticket stacked above that one. A commit that spans tickets is path-split here, as `7a6ffe5` is. A new build is committed on its `s3/<ticket>` branch (rule 6), not on `sprint-03`.
 
 ## Pros and cons of the options
 
@@ -81,7 +105,7 @@ Commits made after `94cdb99` go into the ticket their message names.
 
 - **Good:** Sprint 3 meets the PO rule before anything merges, and the record no longer claims a PO date the PO did not give.
 - **Trade-offs accepted:** sprint-DoD-done stays 0 until ticket PRs merge. Each cherry-pick may conflict on shared record files (decision log, blockers, scorecard). Those files go in T-S3-RECORDS, which merges last.
-- **Follow-up work:** the principal-engineer confirms the bases (EM brief, blockers row 2026-10-07). The orchestrator opens the PRs in the table's order. The EM tracks each PR's verdicts in `status.json` (`ticket_prs`). Retro 3 counts the missed rule.
+- **Follow-up work:** the principal-engineer confirmed the bases (review round 2, ticket map above). New size waivers are needed before the PRs open: T-COACH-1 (1,530 lines; 1,166 of them the coach's hand-count JSON), T-PE-DESIGN-3 (898), T-ST-042 (894; 797 waived), T-ST-054 (642, with the scorecard snapshot), T-ST-049 (641), T-ST-052a (466). Measured with the slice-brief command; the EM decides them. The orchestrator opens the PRs in the table's order. The EM tracks each PR's verdicts in `status.json` (`ticket_prs`). Retro 3 counts the missed rule.
 
 ## Evidence
 
@@ -90,6 +114,10 @@ Commits made after `94cdb99` go into the ticket their message names.
 | The start date was written by the agent | `git show 94cdb99` → Author: Claude; the row "Effective from \| **Sprint 4.**" | data |
 | No Sprint 3 ticket PR exists | `mcp__github__list_pull_requests state=all` (2026-10-07) → #1 `sprint-01`, #2 `sprint-02`, #3 `hotfix/gitleaks-ignore`, all closed | data |
 | Commits are interleaved on one branch | `git log --reverse --format='%h %s' ce91984..HEAD` | data |
+| Every ticket branch builds from `main` (`259a0a8`) with no conflict outside record paths | `<scratch>/build.sh <scratch> 259a0a8` (the procedure above over this table) → all 24 rows `conflicts=[]`; empty entries only `78644f3`, `d0ac61c` (T-ST-054) and `a200f1a` (T-DR-02-FE) | test result |
+| Every non-record path reaches its `sprint-03` state | `git diff --name-only <T-PE-DESIGN-3 head> 7a6ffe5 -- . ':!docs/sprints' ':!docs/design' ':!docs/decisions/README.md'` → only the files of T-SEC-RV3-02, T-C3-01 and T-C3-02 (checked equal blob by blob) and the docs of records-only commits (ADR 0039, 0043, `functional-requirements.md`, `po-input-2026-10-05.md`, `threat-model-sprint-03.md`) | data |
+| Each ticket is green on its own (unit) | per worktree `cd backend && env -u APP_ENV uv run pytest -q -m unit` and `cd infra && uv run pytest -q -m unit`: every row passes, from T-SEC-RV3-02 (backend 1475 passed, infra 466) to T-PE-DESIGN-3 (backend 1670 passed, infra 567). `cd web && npx vitest run` on T-SEC-RV3-02 (458), T-C3-03 (465), T-C3-10 (472), T-DR-02-FE (477), T-PE-DESIGN-3 (477): all pass. `tests/regression/test_golden_an.py` on T-ST-049 → 31 passed | test result |
+| The top of the stack is green with integration tests | isolated services (`RA_DEV_STATE=<scratch>/iso-top`, `dev-postgres.sh` + `dev-objectstore.sh`), T-PE-DESIGN-3: `uv run pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until"` → 2349 passed, 24 skipped (Mailpit 18, Compose 5, P3 1) | test result |
 | A cherry-picked fingerprint needs its commit in the repo | blockers.md row 2026-10-07 (PR #3, CI run 37629664958, `test_every_entry_names_a_commit_in_this_repository`) | test result |
 
 ## Confirmation
