@@ -10,11 +10,12 @@ import logging
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from racket.analytics import service
+from racket.analytics.evidence import EvidenceQuery, evidence_page
 from racket.analytics.snapshot import DEFAULT_MAX_INTERVAL_WIDTH
 from racket.matches import public as matches
 from racket.platform.db import get_session
@@ -76,5 +77,34 @@ def get_stats(match_id: OwnedMatchId, session: DbSession) -> JSONResponse:
         "label": found.sheet.get("label"),
         "low_sample_rule": {"max_interval_width": DEFAULT_MAX_INTERVAL_WIDTH},
         "metrics": found.snapshot.published_view(dictionary),
+    }
+    return JSONResponse(body, headers=NO_STORE)
+
+
+@router.get("/matches/{match_id}/stats/{metric_id}/evidence")
+def get_evidence(
+    match_id: OwnedMatchId,
+    metric_id: str,
+    session: DbSession,
+    side: Annotated[str | None, Query()] = None,
+    limit: Annotated[str | None, Query()] = None,
+    cursor: Annotated[str | None, Query()] = None,
+) -> JSONResponse:
+    """FR-103: up to 10 rallies behind a published metric and side, "see all n" by cursor.
+    An unpublished metric id (unknown, draft, deprecated) is the same 404 as a missing one."""
+    if not metrics.load_dictionary().is_published(metric_id):
+        raise StatsNotFound("no such published metric")
+    query = EvidenceQuery.parse(side=side, limit=limit, cursor=cursor)
+    found = _current(session, match_id)
+    items, total, next_cursor = evidence_page(
+        found.sheet.get("rows", ()), found.snapshot.rallies(metric_id, query.side), query
+    )
+    body = {
+        "metric_id": metric_id,
+        "side": query.side,
+        "total": total,
+        "sheet_version": found.sheet_version,
+        "items": items,
+        "next_cursor": next_cursor,
     }
     return JSONResponse(body, headers=NO_STORE)
