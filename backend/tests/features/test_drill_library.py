@@ -1,7 +1,8 @@
 """CLI binding of tests/features/drill_library.feature (QA-ACC-3 for ST-053; FR-140). Each
 Examples row maps to the negative fixture named by its rule (IT-03-14's interface:
 ``backend/tests/fixtures/drills-invalid/<rule>.json``); the deprecated-drill scenario reads the
-fixture library ``content/drills``. Written red first: ``red_until`` ST-053.
+fixture library ``content/drills``. Written red first (``red_until`` ST-053); green since ST-053
+slice (d) `bac3d81`, marker removed.
 """
 
 from __future__ import annotations
@@ -13,8 +14,6 @@ import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.integration.test_it_03_14_drill_lint import INVALID, LIBRARY, LINT, _drills
-
-pytestmark = [pytest.mark.red_until(story="ST-053")]
 
 scenarios("drill_library.feature")
 
