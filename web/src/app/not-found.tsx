@@ -12,7 +12,9 @@ export default async function NotFound() {
       <h1>Page not found</h1>
       <p>We could not find that page. If you typed the address, check it is correct.</p>
       <p>
-        <Link href="/matches">Go to your matches</Link>
+        <Link href="/matches" className="touch-link">
+          Go to your matches
+        </Link>
       </p>
     </div>
   );
