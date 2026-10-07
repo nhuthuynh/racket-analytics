@@ -38,3 +38,16 @@
 | QA | 9.5 | 0 | 0 | C3-01 first; QA-FUZZ-3; ST-049 with COACH-1 |
 | SRE | 7.0 | 0 | 0 | C3-04, C3-05 |
 | ML | 3.0 | 0 | 0 | ST-053 |
+
+## Review round 1: EM status step, 2026-10-07 (ADR 0030 rule 2; QA-R1S3-12)
+
+| Item | Result | Evidence |
+|---|---|---|
+| Ticket PRs (PO rule) | The "from Sprint 4" date was the agent's, not the PO's, and is retracted. **ADR 0039:** Sprint 3 goes to `main` as ticket PRs only, each with a principal-engineer and a senior-engineer verdict before merge. There is no sprint PR. 0 ticket PRs opened so far | `git show 94cdb99` (author Claude); `list_pull_requests state=all` → #1-#3 only; blockers.md P13 and the ticket-PR row |
+| Implemented | 12 of 30 items, 12.0 of 43.0 units (0.279): C3-01..C3-05, ST-042, ST-044, ST-045, ST-053, QA-ACC-3, QA-FUZZ-3, QA-MIN-3 | `status.json` stories (evidence commits per item) |
+| In progress | C3-09, ST-043, ST-049, ST-052 (a), ST-054, QA-DRY-3, SRE-PURGE (a), SRE-SMOKE-3 | `status.json` |
+| Blocked | ST-046, ST-047, ST-048, ST-050, ST-051, ST-038 (PE-1/2/3, SEC-1, PM-1, PD-1, DR-03, COACH-1); C3-06/07/08 (P6/P10/P11, now sprint-DoD rows §9.1) | blockers.md rows 2, 4, 7 |
+| DoD-done | 0. Nothing has merged to `main`. Under ADR 0039 a unit counts only after its ticket PR merges | `status.json` totals |
+| Goal | **Not met.** Stats, evidence and delete routes are not served; G03-01 smoke 0/1 (QA-R1S3-06) | openapi check at `15a7551`; smoke.md pre-review |
+| Open defects (G03-12) | rc=1, open 9 (was 11). SEC-RV3-01, BLK-GOLD-01 and C-06 moved to sprint-DoD rows (P12 b); QA-R1S3-02 deferred to T-SEC-RV3-02 | `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md` |
+| Size | Five commits over 400 lines recorded as breaches. Waivers for the ticket PRs decided before they open | decision-log 2026-10-07 |

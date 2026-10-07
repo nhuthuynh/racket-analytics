@@ -1,12 +1,12 @@
 {
   "sprint": "03",
-  "goal": "Starter stats AN-01..AN-07 with n, Wilson intervals, low-sample flags and Show me evidence; match and account deletion with purge; Full Tag and drill lint; the Sprint 2 agent-owned blockers and majors fixed first (docs/sprints/sprint-03.md \u00a71)",
+  "goal": "Starter stats AN-01..AN-07 with n, Wilson intervals, low-sample flags and Show me evidence; match and account deletion with purge; Full Tag and drill lint; the Sprint 2 agent-owned blockers and majors fixed first (docs/sprints/sprint-03.md §1)",
   "goal_scorecard": "docs/sprints/03/goal-scorecard.md",
   "dates": {
     "planned_start": "2026-11-16",
     "planned_review": "2026-11-27",
     "work_started": "2026-10-06",
-    "status_written": "2026-10-06 (planning, engineering-manager)"
+    "status_written": "2026-10-07 (review round 1 EM status step, engineering-manager, at 15a7551)"
   },
   "owner": "engineering-manager",
   "branch": "sprint-03",
@@ -35,17 +35,20 @@
     "G03-01": {
       "met": null,
       "verified": null,
-      "actual": null
+      "actual": null,
+      "last_observed": "pre-review smoke 316a514: live_stats.py rc 1, runs_passed 0/1, GET stats 404"
     },
     "G03-02": {
       "met": null,
       "verified": null,
-      "actual": null
+      "actual": null,
+      "last_observed": "not measurable: no stats route"
     },
     "G03-03": {
       "met": null,
       "verified": null,
-      "actual": null
+      "actual": null,
+      "last_observed": "not measurable: DELETE match 405, DELETE /me 405, no purge module"
     },
     "G03-04": {
       "met": null,
@@ -94,9 +97,21 @@
     }
   },
   "open_defects": {
-    "count": 14,
+    "count": 9,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md",
-    "at": "planning, 2026-10-06"
+    "at": "review round 1 EM step, 2026-10-07 (rc=1)",
+    "ids": [
+      "PE-S2-R3-02",
+      "PD-R1-06 family (DR-01/DR-02)",
+      "PD-RV2-DR-COACH",
+      "PD-RV2-DR-BA",
+      "PD-RV2-DR-PM",
+      "PD-RV2-DR-SEC",
+      "SRE-S3-02",
+      "PE-R1S3-01 / QA-R1S3-04",
+      "QA-R1S3-06"
+    ],
+    "note": "counts only rows in the file; review-round-1 ids from other reviewers that have no row yet are not included until the reconciliation"
   },
   "decider_tasks": [
     {
@@ -112,7 +127,10 @@
     {
       "id": "DR-02-FE",
       "due": "D1",
-      "status": "not_started"
+      "status": "done",
+      "evidence": [
+        "a200f1a"
+      ]
     },
     {
       "id": "DR-02-COACH",
@@ -162,7 +180,10 @@
     {
       "id": "PE-4",
       "due": "D1",
-      "status": "not_started"
+      "status": "done",
+      "evidence": [
+        "bd770f8"
+      ]
     },
     {
       "id": "PD-1",
@@ -192,7 +213,7 @@
     "P9",
     "P10",
     "P11",
-    "P12"
+    "P13"
   ],
   "stories": [
     {
@@ -203,12 +224,16 @@
         "QA": 0.5
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 0.5,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "1c1535d"
+      ],
+      "note": "QA decisions on TCR rows 24-28 recorded",
+      "ticket_pr": null
     },
     {
       "id": "C3-02",
@@ -216,12 +241,16 @@
       "title": "PE-S2-R3-02: contract amendment not_last_in_game (docs task PE-4)",
       "units": {},
       "committed": true,
-      "status": "not_started",
+      "status": "implemented",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "bd770f8"
+      ],
+      "note": "PE-4 contract amendment; awaiting re-check of PE-S2-R3-02",
+      "ticket_pr": null
     },
     {
       "id": "C3-03",
@@ -231,14 +260,20 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [
         "C3-02"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "6059930",
+        "975338e",
+        "c5f7049"
+      ],
+      "note": "pending principal-designer and QA re-check",
+      "ticket_pr": null
     },
     {
       "id": "C3-04",
@@ -248,12 +283,16 @@
         "SRE": 0.5
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 0.5,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "c0fb6ad"
+      ],
+      "note": "QA re-check closed QA-RV3-04 (fb69a7d)",
+      "ticket_pr": null
     },
     {
       "id": "C3-05",
@@ -263,14 +302,18 @@
         "SRE": 0.5
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 0.5,
       "dod_done_units": 0,
       "depends_on": [
         "C3-01"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "ece0f30"
+      ],
+      "note": "QA re-check closed PE-S2-R3-03 (fb69a7d)",
+      "ticket_pr": null
     },
     {
       "id": "C3-06",
@@ -280,14 +323,18 @@
         "QA": 0.5
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
         "P6"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "610e853"
+      ],
+      "note": "S3-DoD-P6: not met, waiting on P6 (0 of 38 rows run)",
+      "ticket_pr": null
     },
     {
       "id": "C3-07",
@@ -295,14 +342,16 @@
       "title": "SEC-RV3-01: repository visibility (human, P10)",
       "units": {},
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
         "P10"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "S3-DoD-P10: not met, waiting on P10",
+      "ticket_pr": null
     },
     {
       "id": "C3-08",
@@ -312,14 +361,16 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
         "P11"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "S3-DoD-P11: not met, waiting on P11",
+      "ticket_pr": null
     },
     {
       "id": "C3-09",
@@ -327,12 +378,17 @@
       "title": "DR family: decider tasks DR-01, DR-02",
       "units": {},
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "a200f1a",
+        "1265966"
+      ],
+      "note": "DR-02 FE cells done; other decider cells and DR-01 not held",
+      "ticket_pr": null
     },
     {
       "id": "ST-043",
@@ -342,7 +398,7 @@
         "BE": 0.5
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -350,7 +406,11 @@
         "PE-2"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "bd7593c"
+      ],
+      "note": "dictionary in code; no entry coach-reviewed yet (COACH-1)",
+      "ticket_pr": null
     },
     {
       "id": "ST-044",
@@ -360,12 +420,15 @@
         "BE": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "783cfd2"
+      ],
+      "ticket_pr": null
     },
     {
       "id": "ST-045",
@@ -375,14 +438,17 @@
         "BE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [
         "ST-044"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "a678a01"
+      ],
+      "ticket_pr": null
     },
     {
       "id": "ST-046",
@@ -392,7 +458,7 @@
         "BE": 2
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -401,7 +467,9 @@
         "PE-2"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "waits on PE-1, PE-2 review, COACH-1",
+      "ticket_pr": null
     },
     {
       "id": "ST-047",
@@ -412,7 +480,7 @@
         "FE": 2
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -420,7 +488,9 @@
         "DR-03"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "waits on PE-1, PD-1, DR-03, ST-046",
+      "ticket_pr": null
     },
     {
       "id": "ST-048",
@@ -430,7 +500,7 @@
         "FE": 4
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -438,7 +508,9 @@
         "DR-03"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "waits on PD-1, DR-03, ST-046",
+      "ticket_pr": null
     },
     {
       "id": "ST-049",
@@ -448,14 +520,19 @@
         "QA": 2
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
         "COACH-1"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "c371369",
+        "39f624a"
+      ],
+      "note": "hand count waits on COACH-1",
+      "ticket_pr": null
     },
     {
       "id": "ST-050",
@@ -466,7 +543,7 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -475,7 +552,9 @@
         "DR-03"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "waits on PE-1, PE-3, SEC-1",
+      "ticket_pr": null
     },
     {
       "id": "ST-051",
@@ -486,7 +565,7 @@
         "FE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -494,7 +573,9 @@
         "PM-1"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "waits on PE-1, PE-3, SEC-1, PM-1",
+      "ticket_pr": null
     },
     {
       "id": "ST-038",
@@ -504,14 +585,16 @@
         "BE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "blocked",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
         "ST-050"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "note": "waits on PE-3 and the ST-050 purge job",
+      "ticket_pr": null
     },
     {
       "id": "ST-042",
@@ -522,12 +605,17 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "61dbdd5",
+        "a1bf473"
+      ],
+      "note": "grants and Compose half",
+      "ticket_pr": null
     },
     {
       "id": "ST-052",
@@ -538,7 +626,7 @@
         "FE": 2
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -546,7 +634,11 @@
         "DR-03"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "98f4c7c"
+      ],
+      "note": "slice (a) domain done; (b)/(c) wait on PE-1, SEC-1",
+      "ticket_pr": null
     },
     {
       "id": "ST-053",
@@ -556,12 +648,22 @@
         "ML": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "70fa33f",
+        "1955d74",
+        "2408bff",
+        "bac3d81",
+        "b5cd5ac",
+        "4d8af6d",
+        "f493c02"
+      ],
+      "note": "drill-lint CI job in ci-gate",
+      "ticket_pr": null
     },
     {
       "id": "ST-054",
@@ -572,7 +674,7 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
@@ -580,7 +682,14 @@
         "ST-047"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "78644f3",
+        "d0ac61c",
+        "c7a6443",
+        "9c64d79"
+      ],
+      "note": "Locust and timing wait on ST-046/047/048",
+      "ticket_pr": null
     },
     {
       "id": "QA-ACC-3",
@@ -590,15 +699,30 @@
         "QA": 2
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 2,
       "dod_done_units": 0,
       "depends_on": [
         "PE-1",
         "PD-1"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "79ad8c3",
+        "979b23c",
+        "8880b55",
+        "5ffce1c",
+        "152c57c",
+        "de1b894",
+        "00430c4",
+        "8745dd5",
+        "ab0c279",
+        "20ad39e",
+        "5421ce7",
+        "99a711f"
+      ],
+      "note": "tests written red first; they turn green with the stories",
+      "ticket_pr": null
     },
     {
       "id": "QA-FUZZ-3",
@@ -608,12 +732,15 @@
         "QA": 1
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "152c57c"
+      ],
+      "ticket_pr": null
     },
     {
       "id": "QA-DRY-3",
@@ -623,12 +750,18 @@
         "QA": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "a69ff7d",
+        "9562871",
+        "f621c51"
+      ],
+      "note": "dry-run 1 done; final dry-run after PE-1/PE-3",
+      "ticket_pr": null
     },
     {
       "id": "QA-MIN-3",
@@ -638,12 +771,15 @@
         "QA": 0.5
       },
       "committed": true,
-      "status": "not_started",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 0.5,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "e5324cc"
+      ],
+      "ticket_pr": null
     },
     {
       "id": "SRE-PURGE",
@@ -653,14 +789,18 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [
         "ST-050"
       ],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "ecee023"
+      ],
+      "note": "slice (a) done; (b)/(c) wait on ADR 0038, ST-050",
+      "ticket_pr": null
     },
     {
       "id": "SRE-SMOKE-3",
@@ -670,12 +810,17 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "not_started",
+      "status": "in_progress",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [
+        "4fff02c",
+        "01811d1"
+      ],
+      "note": "pre-review smoke done at 316a514; close smoke pending",
+      "ticket_pr": null
     },
     {
       "id": "SRE-MIN-3",
@@ -690,14 +835,23 @@
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
-      "evidence": []
+      "evidence": [],
+      "ticket_pr": null
     }
   ],
   "totals": {
     "planned_units": 43.0,
-    "implemented_units": 0,
+    "implemented_units": 12.0,
     "dod_done_units": 0,
-    "implemented_ratio": 0.0
+    "implemented_ratio": 0.279,
+    "dod_note": "0: nothing from Sprint 3 merged to main; per ADR 0039 a unit is DoD-done only after its ticket PR merges with principal + senior verdicts"
   },
-  "goal_met": null
+  "goal_met": false,
+  "ticket_prs": {
+    "rule": "ADR 0039: one PR per ticket into main, principal-engineer + senior-engineer verdict on the head SHA before merge; no sprint-wide PR",
+    "opened": [],
+    "map": "docs/decisions/0039-sprint-3-tickets-ship-as-ticket-prs-with-principal-and-senior-review.md",
+    "status": "none opened (2026-10-07; list_pull_requests state=all -> #1, #2, #3 only)"
+  },
+  "goal_met_note": "not met at review round 1: stats/evidence/delete routes not served (QA-R1S3-06); not a verifier result"
 }
