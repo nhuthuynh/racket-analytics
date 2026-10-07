@@ -41,6 +41,8 @@
 
 **Overall:** the Sprint 3 goal is met only when all 12 rows are "yes". A row whose method could not run is "no", never "n/a" (fail closed, ADR 0014). `@needs-verification` results never count toward a Must FR (QD-QG-P5): metrics that read the provisional score sequence (AN-01, AN-02, AN-03, AN-05, AN-06) are reported on their own line in G03-08. Human-gated rows (sprint-03 §0.4) stay in G03-12 unless the PO chose option (b) in writing before the verifier runs.
 
+**Status note (engineering-manager, review round 1, 2026-10-07; not a verifier result):** the goal is **not met**. The stats, evidence, delete-match and delete-account routes are not served at `15a7551` (openapi: no `/stats` or `/evidence` path; `/matches/{match_id}` and `/me` have only `get`), and `api-sprint-03.md` and `flows-sprint-03.md` do not exist. The pre-review smoke at `316a514` gives `live_stats.py` rc 1, runs passed 0/1 (QA-R1S3-06). G03-12 at this step: `open_defects.py` rc=1, open 9. Under PO P12 (b), C-06, SEC-RV3-01 and BLK-GOLD-01 are sprint-DoD rows (sprint-03 §9.1), not G03-12 rows.
+
 ## 3. Rules for the verifier
 
 1. **Live stack, isolated (ADR 0030, ADR 0033).**

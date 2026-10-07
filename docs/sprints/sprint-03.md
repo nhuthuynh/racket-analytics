@@ -513,6 +513,17 @@ Story and sprint levels as in `docs/process/definition-of-done.md`. Sprint 3 add
 - [ ] Every review and verification round has an EM reconciliation row (ADR 0037 rule 1).
 - [ ] Every decider task of §3.3 has its output, or an escalation row, by its date (ADR 0037 rule 2).
 - [ ] Human-gated items handled as the PO chose (§0.4), or still counted in G03-12 if the PO did not answer.
+- [ ] **Every Sprint 3 ticket reached `main` as its own PR**, with a principal-engineer and a senior-engineer "Verdict: APPROVE" on the merged head SHA, and with Gherkin, integration and unit tests and TDD/DDD checked by the reviewers. No sprint-wide PR (PO rule; ADR 0039; added by the engineering-manager in review round 1, 2026-10-07).
+
+### 9.1 Sprint-DoD rows for human-gated items (PO P12 option (b), 2026-10-07)
+
+The PO moved these items out of the goal metric (`po-input-2026-10-05.md`, addendum P12). Each is a named sprint-DoD row, reported "not met: waiting on P-n" in every sprint report until a human supplies the input. G03-12 does not count them (`review-rounds.md` review round 1, EM rows). They stay out of the goal only. The rules behind them still apply: until P10 is answered, treat the repository as public, so footage that shows people never goes into git or Git LFS, and no such footage is stored before the private bucket exists.
+
+| DoD row | Item | Finding | Waits on | Owner when supplied | Status (2026-10-07) |
+|---|---|---|---|---|---|
+| S3-DoD-P6 | Manual VoiceOver/TalkBack pass, `docs/sprints/03/a11y-manual.md` (38 rows) | QA-R3-GATE-01 / C-06 | P6 (human tester) | senior-qa-engineer with the tester | **not met: waiting on P6** (0 of 38 rows run) |
+| S3-DoD-P10 | Repository visibility: private, or the PO confirms public | SEC-RV3-01 | P10 (PO) | engineering-manager records; security-privacy-engineer re-checks | **not met: waiting on P10** (GitHub reports `"visibility": "public"`, 2026-10-07) |
+| S3-DoD-P11 | Private footage bucket with access policy, retention and deletion (ADR 0006) | BLK-GOLD-01 | P11 (provider) | sre-devops-engineer builds (C3-08); security-privacy-engineer reviews the policy | **not met: waiting on P11** |
 
 ## 10. Risks for this sprint
 

@@ -138,5 +138,6 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0034 | [Deployment edge acceptance criteria (HSTS, forwarded headers, exposed ports)](0034-deployment-edge-acceptance-criteria.md) | Proposed (sre-devops-engineer; PO accepts before the first non-dev deployment) | 2026-10-06 |
 | 0035 | [Gold-set manifest v1 and Full Tag labels v1, checked by racket-manifest-check](0035-gold-set-manifest-v1-and-full-tag-labels-v1.md) | Proposed (senior-ml-cv-engineer, ST-040) | 2026-10-06 |
 | 0036 | [Local goal evidence runs in Chrome for Testing, a browser that decodes H.264](0036-local-h264-evidence-browser-chrome-for-testing.md) | Accepted (EM, review round 2, SRE-S2-05 / QA-RV1-07) | 2026-10-06 |
+| 0039 | [Sprint 3 tickets ship as ticket PRs, each reviewed by the principal engineer and a senior engineer before merge](0039-sprint-3-tickets-ship-as-ticket-prs-with-principal-and-senior-review.md) | Accepted (EM, review round 1, PE-R1S3-01 / QA-R1S3-04; PO may change the start via P13) | 2026-10-07 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.
