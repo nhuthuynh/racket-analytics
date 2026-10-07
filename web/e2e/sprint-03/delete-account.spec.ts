@@ -31,6 +31,9 @@ test.describe('@M0 @story-ST-051 @nfr-066 Delete my account', () => {
     const typed = dialog.getByRole('textbox');
     if (await typed.count()) await typed.fill('delete');
     await dialog.getByRole('button', { name: /Delete/ }).last().click();
+    // X-03 is shown once DELETE /me has answered; check the sessions only then, not while the
+    // request is in flight (G03-FE-R1-02; TCR row 2026-10-07).
+    await expect(phone.getByRole('heading', { level: 1 })).toHaveText('Your account has been deleted');
 
     for (const device of [phone, laptop]) {
       expect((await device.request.get('/api/me')).status()).toBe(401);

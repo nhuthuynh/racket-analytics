@@ -28,6 +28,9 @@ test.describe('@M0 @story-ST-047 @nfr-038 Evidence crawl', () => {
         const refs = REFERENCE[entry.id]?.[side].rallies ?? [];
         const list = page.getByRole('list', { name: new RegExp(METRIC_NAMES[entry.id] ?? entry.id) });
         const shown = Math.min(10, refs.length);
+        // E-01 fetches its rallies in the browser: wait for the first item before counting
+        // (G03-FE-R1-01; TCR row 2026-10-07). A list that never fills still fails below.
+        if (shown > 0) await list.getByRole('listitem').first().waitFor().catch(() => undefined);
         if ((await list.getByRole('listitem').count()) !== shown) problems.push(`${entry.id} ${side}: items != ${shown}`);
         if (refs.length > 10 && !(await page.getByText(`See all ${refs.length}`).count())) {
           problems.push(`${entry.id} ${side}: no "See all ${refs.length}"`);
