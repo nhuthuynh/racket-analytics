@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from racket.matches.domain import Match, MatchStatus
+from racket.matches.events import ScoreSheetChanged
 from racket.matches.scorebook.domain import (
     CommandContext,
     InvalidRally,
@@ -29,6 +30,7 @@ from racket.matches.scorebook.domain import (
     project,
 )
 from racket.matches.scorebook.repository import ScorebookRepository
+from racket.platform import events
 from racket.platform.errors import FieldError, ValidationFailed
 from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
@@ -119,6 +121,11 @@ class ScorebookService:
         log.info(
             "scorebook changed",
             extra={"event": event, "match_id": str(match.id), "version": after.version},
+        )
+        # After the commit: a consumer failure can never undo the command (ADR 0040).
+        events.publish(
+            ScoreSheetChanged(match.id.value, after.version, match.owner_id.value, event),
+            self.session.get_bind(),
         )
         return after, extra
 

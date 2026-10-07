@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
@@ -93,6 +95,12 @@ class MatchRepository:
             else:
                 match.participants = None
         return found
+
+    @staticmethod
+    def live(match_id: object) -> tuple[Any, ...]:
+        """The filter of a match that is still there (one place for every read, R1)."""
+        value = match_id.value if isinstance(match_id, MatchId) else match_id
+        return (matches.c.id == value,)
 
     def get_owned(
         self, match_id: MatchId, owner_id: OwnerId, *, for_update: bool = False
