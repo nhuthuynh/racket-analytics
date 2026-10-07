@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 
-from racket.matches.repository import matches
+from racket.matches.repository import MatchRepository, matches
 from racket.matches.scorebook.domain import (
     Change,
     Ending,
@@ -25,7 +25,12 @@ from racket.matches.scorebook.domain import (
     StaleMatch,
 )
 from racket.platform.db import metadata
+from racket.platform.errors import NotFound
 from racket.sports.pickleball.rules import FaultKind, Side
+
+
+class MatchGone(NotFound):
+    pass
 
 
 def _match_fk() -> sa.ForeignKey:
@@ -111,8 +116,10 @@ class ScorebookRepository:
         the match row lock first, so commands on one match run one at a time (IT-02-04)."""
         query = sa.select(
             matches.c.rules_version, matches.c.format, matches.c.best_of, matches.c.version
-        ).where(matches.c.id == match_id)
-        head = self.session.execute(query.with_for_update() if lock else query).one()
+        ).where(*MatchRepository.live(match_id))
+        head = self.session.execute(query.with_for_update() if lock else query).one_or_none()
+        if head is None:  # deleted after the owner filter ran (ST-050; IT-03-12 race)
+            raise MatchGone("the match was deleted")
         fmt = str(getattr(head.format, "value", head.format))
         games = tuple(
             GameStart(r.number, Side(r.first_serving_side), r.ends_switched, r.created_version)

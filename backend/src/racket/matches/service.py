@@ -11,6 +11,7 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy.orm import Session
 
+from racket.matches.deletion import Tombstone, confirm_deletion
 from racket.matches.domain import InvalidId, Match, MatchId, MatchSetup, MatchStatus, OwnerId
 from racket.matches.repository import MatchRepository
 from racket.matches.schemas import (
@@ -22,7 +23,7 @@ from racket.matches.schemas import (
 )
 from racket.platform.errors import NotFound
 from racket.platform.logs import SECURITY_LOGGER
-from racket.video_ingest.public import UploadStatus, media_summary
+from racket.video_ingest.public import UploadStatus, close_for_deleted_match, media_summary
 
 security_log = logging.getLogger(SECURITY_LOGGER)
 log = logging.getLogger(__name__)
@@ -71,6 +72,29 @@ class MatchService:
             )  # fmt: skip
             raise MatchNotFound("no such match for this owner")
         return match
+
+    def delete(self, match: Match, body: object, *, now: datetime | None = None) -> Tombstone:
+        """``DELETE /matches/{id}`` (ST-050; deletion-and-purge.md §3.1): one transaction under
+        the match row lock. Hidden from every read at the commit; the purge comes later.
+        Nothing is written on a refusal."""
+        try:
+            locked = self.matches.get_owned(match.id, match.owner_id, for_update=True)
+            if locked is None:  # deleted by a parallel request while this one waited
+                raise MatchNotFound("no such match for this owner")
+            confirm_deletion(body)
+            at = now or datetime.now(UTC)
+            self.matches.tombstone(match.id, at)
+            close_for_deleted_match(self.session, match.id.value, at)
+            self.session.commit()
+        except BaseException:
+            self.session.rollback()
+            raise
+        log.info(
+            "match deleted",
+            extra={"event": "match.deleted", "match_id": str(match.id),
+                   "user_id": str(match.owner_id)},
+        )  # fmt: skip
+        return Tombstone(at)
 
     def view(self, match: Match) -> MatchOut:
         summary = media_summary(self.session, match.id.value)
