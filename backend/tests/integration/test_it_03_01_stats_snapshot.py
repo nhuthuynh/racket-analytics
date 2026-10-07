@@ -10,6 +10,9 @@ A 30-rally game is checked the same way. The response and the stored snapshot ca
 Every dictionary entry is published for this test (``stats.with_statuses``), so the numbers
 are tested independently of COACH-1's data change; IT-03-03 tests the shipped statuses.
 Written red first (QA-ACC-3): ``red_until`` ST-046.
+
+Marker ``red_until`` ST-046 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-046"), pytest.mark.needs_verification]
+pytestmark = [pytest.mark.needs_verification]
 
 WINNERS_30 = "BABBBABABABABBABAAAAAABABBBBBB"  # IT-02-01 (10-7-1 after rally 30, game not over)
 

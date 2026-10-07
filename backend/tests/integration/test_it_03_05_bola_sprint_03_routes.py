@@ -8,6 +8,9 @@ probe in ``tests/regression/bola.py`` (Sprint 2 table or ``MATCH_ID_ROUTES_03``)
 
 ``DELETE /me`` has no id in its path (it acts on the caller) and is covered by IT-03-08.
 Written red first (QA-ACC-3): ``red_until`` ST-046 (the first Sprint 3 route).
+
+Marker ``red_until`` ST-046 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -21,8 +24,6 @@ from tests.regression.bola import MATCH_ID_ROUTES_03, MATRIX, id_routes
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-046")]
 
 ROUTES = sorted(MATCH_ID_ROUTES_03.items())
 

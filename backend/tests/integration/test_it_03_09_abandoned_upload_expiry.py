@@ -10,6 +10,9 @@ times; nothing else changes). Order of the TDD plan (sprint-03 §5 ``UploadExpir
 3. a completed upload is never expired by this rule.
 
 Written red first (QA-ACC-3): ``red_until`` ST-038.
+
+Marker ``red_until`` ST-038 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -17,7 +20,6 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-import pytest
 import sqlalchemy as sa
 
 from tests.support import scorebook as sb
@@ -25,8 +27,6 @@ from tests.support import stats as st
 from tests.support import tus
 from tests.support.api import ApiDriver
 from tests.support.paths import SYNTHETIC_CLIP
-
-pytestmark = [pytest.mark.red_until(story="ST-038")]
 
 CHUNK = 1024 * 1024  # below the 5 MiB part minimum, so the bytes are staged as an object
 

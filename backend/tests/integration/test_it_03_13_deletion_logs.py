@@ -6,6 +6,9 @@ Positive control: a deletion line, a purge line and an account-deletion line exi
 ``match_id`` / ``user_id``. Event names are matched by stem (``delet``, ``purg``) until PE-3
 names them. The labelling half joins when ST-052 lands (its own test, same rules).
 Written red first (QA-ACC-3): ``red_until`` ST-050.
+
+Marker ``red_until`` ST-050 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -18,8 +21,6 @@ import pytest
 from tests.support import logscan
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 TITLE = "Secret Saturday title"
 NICKNAMES = ("Ivy", "Dana", "Carlos", "Sam")

@@ -13,6 +13,9 @@ match is kept); parallel purge passes are in IT-03-07.
 
 Generators and the "still bad where the server reads it" filter come from IT-02-10, so both
 files test the same input domain. Written red first: ``red_until`` ST-050 (first route).
+
+Marker ``red_until`` ST-050 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -29,8 +32,6 @@ from tests.integration.test_it_02_10_json_string_fuzz import ANY_JSON, SETTINGS,
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 OUTCOME: dict[str, Any] = {"ending": "winner", "winning_side": "B", "responsible_player": "B1"}
 RALLY_EVENT: dict[str, Any] = {
@@ -74,6 +75,7 @@ class Target:
         st.grant_labeller(api, "dana")
         self.label_match = api.run(sb.create_doubles(api.as_user("dana"), "IT-03-12 label"))
         api.run(sb.receive_video(api.as_user("dana"), self.label_match))
+        st.probe_videos()
         st.record_consent(self.label_match)
 
     def snapshot(self) -> dict[str, int]:

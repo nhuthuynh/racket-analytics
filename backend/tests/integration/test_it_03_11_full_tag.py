@@ -17,6 +17,9 @@ The synthetic 60 s clip has 3,600 frames (60 fps), so the plan's frame 18,402 (s
 out of range for it and is used as the out-of-range case; the in-range hit is at 1,840
 (decision-log 2026-10-06). Routes and the labeller-admin CLI are QA proposals in
 ``tests/support/stats.py`` until PE-1. Written red first (QA-ACC-3): ``red_until`` ST-052.
+
+Marker ``red_until`` ST-052 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -30,8 +33,6 @@ import sqlalchemy as sa
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-052")]
 
 HIT = {"type": "hit", "frame": 1840, "hitter": "B1"}
 # The rally the hit belongs to (rally boundary + outcome), in full-tag-labels/v1 terms.
@@ -52,6 +53,7 @@ def _received(api: ApiDriver, user: str, title: str) -> str:
     client = api.as_user(user)
     match_id = api.run(sb.create_doubles(client, title))
     api.run(sb.receive_video(client, match_id))
+    st.probe_videos()
     return match_id
 
 

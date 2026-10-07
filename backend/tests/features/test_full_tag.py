@@ -3,6 +3,9 @@
 the labeller role) marks the rally and the hit through the label routes, and the export is
 validated against ``full-tag-labels/v1``. Routes and the admin CLI are the QA proposals in
 ``tests/support/stats.py`` until PE-1. Written red first: ``red_until`` ST-052.
+
+Marker ``red_until`` ST-052 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -16,8 +19,6 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-052")]
-
 scenarios("full_tag.feature")
 
 
@@ -30,6 +31,7 @@ def _received(ctx: dict[str, Any], user: str) -> str:
     api = ctx["api"]
     match_id = api.run(sb.create_doubles(api.as_user(user), "Full Tag"))
     api.run(sb.receive_video(api.as_user(user), match_id))
+    st.probe_videos()
     return str(match_id)
 
 

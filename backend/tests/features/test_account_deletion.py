@@ -1,6 +1,9 @@
 """API binding of tests/features/account_deletion.feature (QA-ACC-3 for ST-051; FR-007,
 NFR-066). Two devices are two signed-in clients of the same dev user. The re-sign-in rule is
 the PM-1 default (a new, empty account). Written red first: ``red_until`` ST-051.
+
+Marker ``red_until`` ST-051 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -14,8 +17,6 @@ from pytest_bdd import given, scenarios, then, when
 
 from tests.support import stats as st
 from tests.support.api import BASE_URL, ApiDriver, sign_in
-
-pytestmark = [pytest.mark.red_until(story="ST-051")]
 
 scenarios("account_deletion.feature")
 

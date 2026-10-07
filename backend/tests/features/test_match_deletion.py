@@ -4,6 +4,9 @@ screen copy (browser binding E2E-03-01, dialog X-01). "Anywhere in her account":
 its stats, score sheet and video answer 404 and the list omits it. "No stored file or record":
 the information-schema inventory and the object keys the database knew (IT-03-06's checks).
 Written red first: ``red_until`` ST-050.
+
+Marker ``red_until`` ST-050 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -17,8 +20,6 @@ from pytest_bdd import given, scenario, then, when
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 FEATURE = "match_deletion.feature"
 

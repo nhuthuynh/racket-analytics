@@ -7,6 +7,9 @@ stored. Signing in again with the same address gives a new, empty account (PM-1 
 sprint-03 §3.4 ST-051; a different PM-1 decision is a TCR row). Carlos's data is untouched.
 
 Written red first (QA-ACC-3): ``red_until`` ST-051.
+
+Marker ``red_until`` ST-051 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -14,12 +17,9 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-import pytest
 
 from tests.support import stats as st
 from tests.support.api import BASE_URL, ApiDriver, sign_in
-
-pytestmark = [pytest.mark.red_until(story="ST-051")]
 
 
 def _second_device(api: ApiDriver, username: str) -> httpx.AsyncClient:

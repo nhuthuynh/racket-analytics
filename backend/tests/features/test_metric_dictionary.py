@@ -1,6 +1,9 @@
 """API binding of tests/features/metric_dictionary.feature (QA-ACC-3 for ST-043; FR-102, FR-055).
 "How is this measured?" is the entry's plain-language definition in the stats response (the
 browser shows it, E2E-03-03). Written red first: ``red_until`` ST-046 (the stats route).
+
+Marker ``red_until`` ST-046 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -14,8 +17,6 @@ from pytest_bdd import given, scenarios, then, when
 
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-046")]
 
 scenarios("metric_dictionary.feature")
 

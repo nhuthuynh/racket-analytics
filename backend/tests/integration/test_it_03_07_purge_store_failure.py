@@ -6,6 +6,9 @@ still knows it (a later pass can find it); rows are never gone while their objec
 The next pass completes (no row, no object), and a third pass is a no-op.
 
 Written red first (QA-ACC-3): ``red_until`` ST-050.
+
+Marker ``red_until`` ST-050 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -17,8 +20,6 @@ import pytest
 
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 
 def _purge_tolerating_failure() -> None:

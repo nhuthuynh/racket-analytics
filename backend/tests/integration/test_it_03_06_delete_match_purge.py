@@ -10,6 +10,9 @@ so a new table is caught; risk row in sprint-03 §10) and no object the database
 match is left in the store.
 
 Written red first (QA-ACC-3): ``red_until`` ST-050.
+
+Marker ``red_until`` ST-050 removed (VR2-S3-01, TCR row 2026-10-07): the story is built and
+every row passes, so the file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -21,8 +24,6 @@ import pytest
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 
 def _reads(match_id: str, rally_id: str) -> list[tuple[str, str]]:
