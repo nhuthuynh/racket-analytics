@@ -23,6 +23,7 @@ dependencies = [
 
 [project.scripts]
 racket-manifest-check = "racket.dataset.cli:main"
+racket-drill-lint = "racket.coaching.drills.lint:main"
 
 [dependency-groups]
 dev = [

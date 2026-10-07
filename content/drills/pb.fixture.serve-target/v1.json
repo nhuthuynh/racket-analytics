@@ -1,0 +1,22 @@
+{
+  "id": "pb.fixture.serve-target",
+  "version": 1,
+  "name": "Serve to a target (fixture)",
+  "summary": "Lint fixture for ST-053, not library content: drills are written and coach-reviewed in Sprint 4 (FR-141).",
+  "skills": ["AN-05", "serve"],
+  "target_metrics": ["AN-05", "AN-01"],
+  "level_min": "beginner",
+  "level_max": "advanced",
+  "duration_min": 5,
+  "duration_max": 10,
+  "players": 1,
+  "needs": ["half_court"],
+  "equipment": ["balls", "paddle", "cones"],
+  "setup": ["Cones 1 m inside the receiving baseline", "Serve 20 balls from the right, 20 from the left"],
+  "success_criterion": "At most 2 faults in 20 serves",
+  "progressions": [],
+  "regressions": [],
+  "safety_notes": "",
+  "coach_rationale": "Fixture rationale for the lint, not coaching advice (judgment)",
+  "review_status": "draft"
+}
