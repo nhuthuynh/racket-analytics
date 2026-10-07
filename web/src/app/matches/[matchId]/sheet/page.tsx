@@ -9,7 +9,11 @@ import { getMatchForRequest, serverApi } from '@/lib/api/server';
 import type { Match } from '@/lib/api/types';
 import type { ScoreSheet } from '@/lib/tagging/types';
 
-type Props = { params: Promise<{ matchId: string }> };
+type Props = {
+  params: Promise<{ matchId: string }>;
+  /** `play`: a rally to open on arrival, from "Show me" on the stats (ST-047, ADR 0043). */
+  searchParams?: Promise<{ play?: string | string[] }>;
+};
 
 function onApiError(e: unknown): never {
   if (e instanceof ApiError && e.status === 404) notFound();
@@ -17,8 +21,9 @@ function onApiError(e: unknown): never {
   throw e;
 }
 
-export default async function SheetPage({ params }: Props) {
+export default async function SheetPage({ params, searchParams }: Props) {
   const { matchId } = await params;
+  const play = (await searchParams)?.play;
   let match: Match;
   let loaded: { version: number | null; sheet: ScoreSheet };
   try {
@@ -37,7 +42,17 @@ export default async function SheetPage({ params }: Props) {
       </p>
       <h1>Score sheet</h1>
       <p>{match.title}</p>
-      <ScoreSheetView match={match} initialSheet={loaded.sheet} initialVersion={loaded.version ?? 0} />
+      <ScoreSheetView
+        match={match}
+        initialSheet={loaded.sheet}
+        initialVersion={loaded.version ?? 0}
+        initialPlay={typeof play === 'string' ? play : undefined}
+      />
+      <p>
+        <Link href={`/matches/${match.id}/stats`} className="touch-link">
+          See the stats
+        </Link>
+      </p>
     </div>
   );
 }
