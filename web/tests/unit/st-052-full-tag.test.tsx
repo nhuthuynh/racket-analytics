@@ -187,6 +187,17 @@ async function markRallyWithHit(): Promise<void> {
 }
 
 describe('L-01 tagging and saving (ADR 0043: the ending saves the rally)', () => {
+  it('"Rally end" before "Rally start", or at its frame, is refused in words and asks nothing', async () => {
+    const { a } = setup();
+    await userEvent.click(screen.getByRole('button', { name: /Rally end/ }));
+    expect(screen.getByText('Press Rally start first.')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: /Rally start/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Rally end/ }));
+    expect(screen.getByText('Rally end must be after its start.')).toBeVisible();
+    expect(screen.queryByRole('group', { name: /^How did rally/ })).toBeNull();
+    expect(a.labelEvent).not.toHaveBeenCalled();
+  });
+
   it('nothing is saved at "Rally end": the outcome question appears and the marks are listed', async () => {
     const { a } = setup();
     await markRallyWithHit();
