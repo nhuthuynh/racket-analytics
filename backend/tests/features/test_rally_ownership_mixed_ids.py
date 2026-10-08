@@ -59,7 +59,7 @@ def two_owners(api: ApiDriver, ctx: dict[str, Any]) -> None:
 )
 def carlos_mixes_ids(api: ApiDriver, ctx: dict[str, Any], action: str) -> None:
     method, template = ACTIONS[action]
-    kwargs = RALLY_ID_ROUTES_02[(method, template)]
+    kwargs: Any = RALLY_ID_ROUTES_02[(method, template)]
     match = ctx["carlos_match"]
     version = api.run(sb.version_of(api.as_user("carlos"), match))
     headers = {sb.tagcontract.VERSION_HEADER: f'"{version}"'}
