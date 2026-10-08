@@ -38,8 +38,8 @@
    "B": {"k": 0, "n": 6, "value": 0.0, "ci_low": 0.0, "ci_high": 0.3903, "low_sample": true, "rallies": [], "fault_type_not_tagged": 0}
   },
   "AN-06": {
-   "A": {"longest": 3, "histogram": {"1": 1, "2": 0, "3": 1, "4": 0, "5+": 0}, "n": 4, "low_sample": false, "rallies": [1, 7, 9, 11]},
-   "B": {"longest": 2, "histogram": {"1": 0, "2": 2, "3": 0, "4": 0, "5+": 0}, "n": 4, "low_sample": false, "rallies": [3, 4, 13, 14]}
+   "A": {"longest": 3, "longest_by_game": [3], "histogram": {"1": 1, "2": 0, "3": 1, "4": 0, "5+": 0}, "n": 4, "low_sample": false, "rallies": [1, 7, 9, 11]},
+   "B": {"longest": 2, "longest_by_game": [2], "histogram": {"1": 0, "2": 2, "3": 0, "4": 0, "5+": 0}, "n": 4, "low_sample": false, "rallies": [3, 4, 13, 14]}
   },
   "AN-07": {
    "A": {"n": 6, "counts": {"winner": 2, "unforced_error": 2, "forced_error": 0, "fault": 2}, "low_sample": true, "rallies": [1, 2, 4, 7, 10, 12]},
