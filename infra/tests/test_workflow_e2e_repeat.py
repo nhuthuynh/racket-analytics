@@ -1,13 +1,5 @@
-"""CI-FLAKE-RESUMABLE (NFR-074): an E2E repeat workflow for flake triage in CI.
-
-A flaky E2E is triaged with ``--repeat-each`` on the CI runner, where it failed, not only
-locally (blockers.md 2026-10-08, CI run 37715576115). ``.github/workflows/e2e-repeat.yml`` runs
-``scripts/ci/e2e_repeat.sh`` on the Compose stack: one spec, N repeats, one browser, no retries,
-and the job fails on a flaky test (``flaky_report.py --fail-on-flaky``) or on a test that fails
-every time (Playwright's exit code). It runs on demand (``workflow_dispatch``) and on a PR that
-changes it, the script, the upload-hold helper or the spec it was built for. The verdicts
-themselves are bound in tests/features/e2e_repeat_triage.feature.
-"""
+"""CI-FLAKE-RESUMABLE (NFR-074): .github/workflows/e2e-repeat.yml runs scripts/ci/e2e_repeat.sh
+to repeat one E2E spec in CI. Its verdicts are bound in tests/features/e2e_repeat_triage.feature."""
 
 from __future__ import annotations
 
@@ -40,7 +32,6 @@ def steps() -> list[dict]:
 
 def run_script(env: dict[str, str], tmp_path: Path) -> subprocess.CompletedProcess[str]:
     assert SCRIPT.is_file(), f"{SCRIPT.relative_to(REPO_ROOT)} is missing"
-    # PATH without pnpm: an input that is refused must stop before Playwright is called.
     return subprocess.run(
         ["bash", str(SCRIPT)],
         cwd=REPO_ROOT / "web",

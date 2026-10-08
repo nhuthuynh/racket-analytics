@@ -1,9 +1,6 @@
-# E2E repeat run for flake triage (NFR-074; CI-FLAKE-RESUMABLE, blockers.md 2026-10-08).
-# A flaky E2E is repeated on the CI runner, where it failed, not only locally: one spec, N
-# repeats, one browser, no retries, on the same Compose stack and https origin as the e2e job in
-# ci.yml. The job fails on a flaky test (flaky_report.py --fail-on-flaky) and on a test that
-# fails every time (Playwright's exit code). Not part of ci-gate: it is a triage tool, run on
-# demand and on a PR that changes it, its script, or the spec and helper it was built for.
+# E2E repeat run for flake triage (NFR-074; CI-FLAKE-RESUMABLE): one spec, N repeats, one browser,
+# no retries, on the Compose stack of ci.yml's e2e job; fails on a flaky or a broken test
+# (scripts/ci/e2e_repeat.sh). A triage tool, not part of ci-gate (decision-log 2026-10-08).
 name: E2E repeat (flake triage)
 
 on:
@@ -11,22 +8,18 @@ on:
     inputs:
       spec:
         description: Spec under web/ (e2e/...spec.ts)
-        required: true
         default: e2e/sprint-01/resumable-upload.spec.ts
         type: string
       grep:
         description: Test title filter (Playwright --grep); empty runs the whole spec
-        required: false
         default: "Return after closing the tab|A different file is chosen to resume"
         type: string
       repeat:
         description: Repeats per test (1-99)
-        required: true
         default: "20"
         type: string
       project:
         description: Browser project
-        required: true
         default: chromium
         type: choice
         options:
@@ -49,7 +42,6 @@ concurrency:
 env:
   NODE_VERSION: "22"
   COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
-  FORCE_COLOR: "1"
 
 jobs:
   repeat:
@@ -65,7 +57,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: corepack enable
       - name: Start the full stack
-        # As in ci.yml e2e: every test signs in from this one runner IP.
         env:
           AUTH_LINK_LIMIT_PER_IP: "1000"
           AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
@@ -101,6 +92,5 @@ jobs:
           name: e2e-repeat
           path: |
             reports/
-            web/playwright-report/
             web/test-results/
           if-no-files-found: warn

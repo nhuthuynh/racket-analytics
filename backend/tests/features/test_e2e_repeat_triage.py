@@ -1,10 +1,6 @@
-"""Binds tests/features/e2e_repeat_triage.feature (CI-FLAKE-RESUMABLE; NFR-074).
-
-Runs the real scripts/ci/e2e_repeat.sh and the real scripts/ci/flaky_report.py. Only Playwright
-is a stand-in: a `pnpm` on PATH that checks it was asked for the right spec, repeat count and
-browser, writes the JUnit file a `--repeat-each` run writes (one testcase per repeat under one
-name) and exits 1 when any repeat failed, as Playwright does.
-"""
+"""Binds tests/features/e2e_repeat_triage.feature (CI-FLAKE-RESUMABLE; NFR-074): the real
+scripts/ci/e2e_repeat.sh and flaky_report.py; a stand-in `pnpm` checks the Playwright call, writes
+the JUnit file of a `--repeat-each` run and exits 1 when any repeat failed, as Playwright does."""
 
 from __future__ import annotations
 
@@ -24,20 +20,14 @@ SCRIPT = REPO / "scripts" / "ci" / "e2e_repeat.sh"
 SPEC = "e2e/sprint-01/resumable-upload.spec.ts"
 TITLE = "Resumable upload › Return after closing the tab"
 
-# Stand-in for `pnpm exec playwright test …`: arguments are checked, the outcome per repeat comes
-# from FAKE_FAILS (how many of the repeats fail).
 FAKE_PNPM = r"""#!/usr/bin/env bash
 set -euo pipefail
 [[ "$1 $2 $3" == "exec playwright test" ]] || { echo "unexpected: $*" >&2; exit 97; }
 shift 3
 spec="$1"; shift
 repeat=""
-for a in "$@"; do
-  case "$a" in
-    --repeat-each=*) repeat="${a#--repeat-each=}" ;;
-    --retries*) exit 98 ;;
-  esac
-done
+for a in "$@"; do case "$a" in --repeat-each=*) repeat="${a#--repeat-each=}" ;; esac; done
+[[ "$*" != *--retries* ]] || exit 98
 if [[ "$spec" != "$EXPECT_SPEC" || "$repeat" != "$EXPECT_REPEAT" || "$PW_PROJECTS" != chromium ]]
 then
   echo "wrong call: spec=$spec repeat=$repeat project=$PW_PROJECTS" >&2

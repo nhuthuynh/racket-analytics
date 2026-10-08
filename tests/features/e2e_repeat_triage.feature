@@ -1,8 +1,6 @@
-# CI-FLAKE-RESUMABLE (blockers.md 2026-10-08, CI run 37715576115). Owner: senior-qa-engineer.
-# Written before implementation. Binding: backend/tests/features/test_e2e_repeat_triage.py runs
-# scripts/ci/e2e_repeat.sh (the step of .github/workflows/e2e-repeat.yml) with a stand-in
-# Playwright that writes the JUnit file a --repeat-each run writes; the verdict is the real
-# scripts/ci/flaky_report.py. The workflow file itself is checked by infra/tests.
+# CI-FLAKE-RESUMABLE (CI run 37715576115). Owner: senior-qa-engineer. Written before implementation.
+# Binding: backend/tests/features/test_e2e_repeat_triage.py (real e2e_repeat.sh and flaky_report.py,
+# stand-in Playwright). The workflow file is checked by infra/tests/test_workflow_e2e_repeat.py.
 @ticket-CI-FLAKE-RESUMABLE @nfr-074
 Feature: Repeating an E2E in CI to triage a flaky test
 
