@@ -83,7 +83,7 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 
 ### 2.1 Repository settings a human admin must apply (not possible from code)
 
-1. **Branch protection on `main`:** require the `ci-gate` check, require PRs, and dismiss stale approvals.
+1. **Branch protection on `main`:** require the `ci-gate` check, require PRs, and dismiss stale approvals. Exact settings and the pre-merge check `scripts/ci/merge_ready.py`: `docs/ops/branch-protection.md` (CI-PR-GATE).
 2. **Labels:** create `qa-approved-test-change` (applied only by the senior-qa-engineer), `size-waiver` (EM only) and `skip-claude-review`. GitHub cannot restrict who applies a label. Limit triage/write access, and audit label events in the PR timeline at review (judgment; ADR 0014).
 3. **Secret `ANTHROPIC_API_KEY`** (Settings → Secrets and variables → Actions → New repository secret) for the review bot (§4). Without it, the review job logs a notice and passes.
 4. **Actions → General:** set "Workflow permissions" to "Read repository contents" (the workflows request what they need per job).
