@@ -29,4 +29,5 @@ markers = [
     "unit: no I/O beyond temp dirs and subprocesses of the scripts under test; fast",
     "integration: starts real local services (Postgres, SeaweedFS) or Docker, or drives workflow steps on a real git checkout",
     "bdd_tag(name): a Gherkin tag from tests/features/*.feature, kept for reporting",
+    "scenario: a pytest-bdd scenario generated from tests/features/*.feature",
 ]
