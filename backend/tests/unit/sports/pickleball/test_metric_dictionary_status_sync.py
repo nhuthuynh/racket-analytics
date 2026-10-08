@@ -10,41 +10,12 @@ Negative cases first.
 
 from __future__ import annotations
 
-import re
-
 import pytest
 
 from racket.sports.pickleball.metrics import load_dictionary
-from tests.support.paths import REPO
+from tests.support.metric_status import DICTIONARY_DOC, doc_statuses, mismatches
 
 pytestmark = pytest.mark.unit
-
-DICTIONARY_DOC = REPO / "docs" / "domain" / "metric-dictionary.md"
-_SECTION = re.compile(r"^### (AN-\d{2})\b", re.MULTILINE)
-_STATUS_ROW = re.compile(r"^\| status / source \| `([a-z-]+)`", re.MULTILINE)
-
-
-def doc_statuses(text: str) -> dict[str, str]:
-    """Status per entry from the document's ``### AN-0x`` sections; every section needs one row."""
-    found: dict[str, str] = {}
-    heads = list(_SECTION.finditer(text))
-    for i, head in enumerate(heads):
-        end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
-        body = text[head.end() : end]
-        body = body.split("\n## ", 1)[0]  # a section ends at the next top-level heading
-        rows = _STATUS_ROW.findall(body)
-        if len(rows) != 1:
-            raise ValueError(f"{head.group(1)}: expected one status row, found {len(rows)}")
-        found[head.group(1)] = rows[0]
-    return found
-
-
-def mismatches(shipped: dict[str, str], recorded: dict[str, str]) -> list[str]:
-    return sorted(
-        f"{key}: shipped {shipped.get(key)!r}, recorded {recorded.get(key)!r}"
-        for key in set(shipped) | set(recorded)
-        if shipped.get(key) != recorded.get(key)
-    )
 
 
 # ---------------------------------------------------------------- negative cases first
