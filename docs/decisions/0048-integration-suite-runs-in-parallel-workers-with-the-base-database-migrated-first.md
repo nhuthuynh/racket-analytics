@@ -50,7 +50,7 @@ Rules that follow:
 
 1. The integration job migrates the base database before any parallel worker starts. Guarded by `infra/tests/test_workflows_integ_budget.py`.
 2. The budgeted step and the nightly flaky report keep the same selection. Guarded by the scenario "The budget still times the full selection with coverage".
-3. A migration that creates a cluster-wide object (role, tablespace, cluster setting) must be idempotent when it runs on several databases at once. The CI step makes this hold in CI only. For migration 0012 this is a **hard precondition of the ST-042 ticket PR**: that PR does not merge while 0012 creates its role with plain check-then-create (owner senior-backend-engineer; recorded as an owned row in `docs/sprints/03/decision-log.md`, 2026-10-08, PE-PR15-02).
+3. A migration that creates a cluster-wide object (role, tablespace, cluster setting) must be idempotent when it runs on several databases at once. The CI step makes this hold in CI only. For migration 0012 this is a **hard precondition of the ST-042 ticket PR**: that PR does not merge while 0012 creates its role with plain check-then-create (owner senior-backend-engineer; recorded as an owned row in `docs/sprints/03/decisions/CI-INTEG-BUDGET.md`, 2026-10-08, PE-PR15-02).
 
 ## Pros and cons of the options
 
