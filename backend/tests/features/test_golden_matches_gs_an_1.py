@@ -73,11 +73,7 @@ def check_passes(ctx: dict[str, Any], summary: str) -> None:
     assert summary in ctx["output"]
 
 
-@given(
-    parsers.parse(
-        'golden match "{match}" with its first winner re-tagged as an unforced error'
-    )
-)
+@given(parsers.parse('golden match "{match}" with its first winner re-tagged as an unforced error'))
 def retagged(ctx: dict[str, Any], match: str) -> None:
     s = script(match)
     tag = next(t for g in s["games"] for t in g["tags"] if t["ending"] == "winner")
