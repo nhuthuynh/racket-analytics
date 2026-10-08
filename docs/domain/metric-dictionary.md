@@ -1,9 +1,9 @@
 # Metric dictionary: R1 starter metrics AN-01..AN-07
 
 - **Owner:** pickleball-domain-coach (QD-AN-01)
-- **Status of every entry:** `draft` (2026-10-03). The next step is `coach-reviewed` before Sprint 3 planning (sprint-02 §4), via the QD-AN-03 protocol.
+- **Status of every entry:** `coach-reviewed` (2026-10-07, COACH-1; ADR 0044). Created `draft` 2026-10-03. Moved after the QD-AN-03 hand count on GS-AN-1 v1 (§2b, §3). The next step is `verified` (ADR 0044 rule 3: second recompute, κ check for AN-04/AN-07, verified rules).
   - The coach hand-computes each metric on 3 golden matches (QD-GD-03), and the system must match exactly.
-  - A second coach or a 4.0+ player recomputes 1 match (OQ-20).
+  - A second coach or a 4.0+ player recomputes 1 match (OQ-20). Per ADR 0044 this gates `verified`, not `coach-reviewed`.
   - Users see only `coach-reviewed` or `verified` entries (FR-102).
 - **Requirements:** FR-100 (starter stats), FR-101 (sample size and uncertainty), FR-102 (versioned dictionary), FR-103 ("Show me" evidence); NFR-004 (exact on gold tags); NFR-038; ADR 0005 (Wilson interval and minimum n).
 - **Sources:** formulas start from QD §3.2. **Every definition is (judgment) by the coach. No coaching source is verified** [DOM G2]. Definitions that depend on a scoring rule inherit that rule's **UNVERIFIED** status (`docs/domain/rules-verified.md` §5).
@@ -29,7 +29,7 @@
 
    All thresholds are config.
 4. **Scope:** per side (A, B) per match by default; per player where noted. The "me" side and player come from setup (FR-005).
-5. **Rules dependence:** a metric whose meaning depends on a scoring rule is computed under the match's `rules_version`. While that is `PROVISIONAL-UNVERIFIED`, the metric card carries the same "unofficial scoring" notice as the score sheet (FR-055).
+5. **Rules dependence:** a metric whose meaning depends on a scoring rule is computed under the match's `rules_version`. While that is `PROVISIONAL-UNVERIFIED`, the stats page carries the same "unofficial scoring (rules not yet verified)" notice as the score sheet (FR-055), once, before the first card (flows-sprint-03 §0; DR-03 R3-3, coach accept 2026-10-07).
 6. **Versioning:** a definition change bumps `version`. Old snapshots keep their version (ENG §3.2 `metric_def_version`).
 
 ## 1. Entries
@@ -47,7 +47,7 @@
 | min_sample | n ≥ 20 rallies served (ADR 0005) |
 | scope | per side; per player only as "rallies served by this player" (server identity needs the engine's server number plus the setup slot, judgment) |
 | rules dependence | Under side-out scoring, winning a rally on serve is the same as scoring a point (DOM G1 R2, **UNVERIFIED**). The *formula* is rule-independent, because it counts rallies, not points |
-| status / source | `draft` / (judgment), QD §3.2 |
+| status / source | `coach-reviewed` 2026-10-07 (QD-AN-03, GS-AN-1 v1, §2b; ADR 0044) / (judgment), QD §3.2 |
 | open issues | none |
 
 ### AN-02 Side-out % (receiving rally win %)
@@ -55,15 +55,15 @@
 | Field | Value |
 |---|---|
 | id / version | AN-02 / 0.1 |
-| name (UI) | **Proposed:** "Rallies won when receiving". The current name in FR-100 and FR-101 is "side-out %" |
+| name (UI) | Rallies won when receiving (D-1 decided, option a, 2026-10-07, ADR 0044 rule 5). FR-100 and FR-101 still say "side-out %"; their wording is the business-analyst's to change |
 | plain-language definition | "Of the rallies the other side served, the share your side won." |
 | formula | rallies where `winning_side = S` and `serving_side ≠ S` / rallies where `serving_side ≠ S` |
 | unit | %, Wilson 95% interval |
 | data_level | QT |
 | min_sample | n ≥ 20 rallies received |
 | rules dependence | none for the formula |
-| status / source | `draft` / (judgment), QD §3.2 |
-| **open issue D-1 (terminology)** | Under side-out doubles scoring (provisional), winning a receiving rally against server 1 passes the serve to server 2. It is **not** a side-out (SOD-03). Calling this metric "side-out %" therefore misnames it for doubles players. **Options:** (a) rename the UI label to "Rallies won when receiving" and keep the formula; (b) keep "side-out %" but define it as *service turns ended / opponent service turns*, which is a different metric. **Recommendation:** (a). Changing the FR-100/FR-101 label is a requirement change: it goes to the BA and PM, and FR-101's Gherkin label would change with QA approval. Logged in the Sprint 0 decision log; not changed unilaterally |
+| status / source | `coach-reviewed` 2026-10-07 (QD-AN-03, GS-AN-1 v1, §2b; ADR 0044) / (judgment), QD §3.2 |
+| **D-1 (terminology), decided 2026-10-07: option (a)** | Under side-out doubles scoring (provisional), winning a receiving rally against server 1 passes the serve to server 2. It is **not** a side-out (SOD-03). Calling this metric "side-out %" therefore misnames it for doubles players. **Options:** (a) rename the UI label to "Rallies won when receiving" and keep the formula; (b) keep "side-out %" but define it as *service turns ended / opponent service turns*, which is a different metric. **Recommendation:** (a). Changing the FR-100/FR-101 label is a requirement change: it goes to the BA and PM, and FR-101's Gherkin label would change with QA approval. Logged in the Sprint 0 decision log; not changed unilaterally |
 
 ### AN-03 Points per service turn
 
@@ -78,7 +78,7 @@
 | min_sample | ≥ 10 service turns (QD §3.2). Flagged below that |
 | rules dependence | **Depends on unverified rules:** side-out scoring, the doubles server rotation and the first-service exception (rules-verified §5, priorities 1 and 3). Under rally scoring the metric is **undefined** and is not shown ("Not used with rally scoring") |
 | edge cases | The turn in progress at game end counts as a turn (judgment). A mid-game start (FR-046, Sprint 2) counts the first partial turn |
-| status / source | `draft` / (judgment), QD §3.2 |
+| status / source | `coach-reviewed` 2026-10-07 (QD-AN-03, GS-AN-1 v1, §2b; ADR 0044) / (judgment), QD §3.2 |
 
 ### AN-04 Unforced errors per game
 
@@ -92,8 +92,8 @@
 | data_level | QT |
 | min_sample | ≥ 2 games (count metric; FR-101) |
 | rules dependence | none |
-| **open issue D-2 (label reliability)** | "Unforced" vs "forced" is a subjective coaching call (QD X3). **Working definition (judgment, UNVERIFIED):** "an error on a ball the player had time and position to play safely; if the opponent's shot made the ball hard to play, it is forced". Kept only if two labellers reach Cohen's κ ≥ 0.6 on 200 rallies (QD X3). Otherwise v1 merges both into "errors" and AN-04 becomes "errors per game" with a version bump |
-| status / source | `draft` / (judgment), QD §3.2, X3, X10 |
+| **D-2 (label reliability), decided 2026-10-07: keep both** | "Unforced" vs "forced" is a subjective coaching call (QD X3). **Working definition (judgment, UNVERIFIED):** "an error on a ball the player had time and position to play safely; if the opponent's shot made the ball hard to play, it is forced". Kept only if two labellers reach Cohen's κ ≥ 0.6 on 200 rallies (QD X3). Otherwise v1 merges both into "errors" and AN-04 becomes "errors per game" with a version bump. **Decided 2026-10-07 (ADR 0044 rule 4):** kept separate in v0.1, in the Quick Tag buttons and in AN-07; the κ check gates `verified`, not `coach-reviewed`. A later merge loses nothing because both labels are captured |
+| status / source | `coach-reviewed` 2026-10-07 (QD-AN-03, GS-AN-1 v1, §2b; ADR 0044) / (judgment), QD §3.2, X3, X10 |
 
 ### AN-05 Serve fault %
 
@@ -108,7 +108,7 @@
 | min_sample | n ≥ 20 serves |
 | rules dependence | What counts as a serve fault is a rule (DOM G1, **UNVERIFIED**). The metric counts what the user tagged, so the definition is "tagged serve faults" |
 | edge cases | Serving-side faults with no subtype make the value a **lower bound**. The card says "fault type not tagged in x rallies" and is flagged when x > 0 (judgment). One serve per rally is assumed; lets and replays are excluded by rule 0.1 |
-| status / source | `draft` / (judgment), QD §3.2 |
+| status / source | `coach-reviewed` 2026-10-07 (QD-AN-03, GS-AN-1 v1, §2b; ADR 0044) / (judgment), QD §3.2 |
 
 ### AN-06 Longest run and run histogram
 
@@ -122,7 +122,7 @@
 | data_level | QT |
 | min_sample | none: descriptive (QD §3.2). It shows "n = x points" and is never flagged |
 | rules dependence | "Point" depends on the scoring system. Under side-out scoring (provisional) only the server scores. The formula reads points from the engine's score sequence, so it holds under any configured system |
-| status / source | `draft` / (judgment), QD §3.2 |
+| status / source | `coach-reviewed` 2026-10-07 (QD-AN-03, GS-AN-1 v1, §2b; ADR 0044) / (judgment), QD §3.2 |
 
 ### AN-07 Rally-ending mix
 
@@ -134,11 +134,11 @@
 | formula | For S, among rallies whose ending is attributed to S (rule 0.2), the share of each of `winner`, `unforced_error`, `forced_error` and `fault`. n = the number of such rallies. The four shares sum to 100% |
 | unit | % per category, each with a Wilson 95% interval |
 | data_level | QT |
-| min_sample | n ≥ 20 rallies ended by S |
+| min_sample | n ≥ 20 rallies ended by S. Rule 0.3 applies to each of the four shares: the side's AN-07 is flagged when n < 20 or any share's 95% interval is wider than 30 points (a restatement of rule 0.3, not a change; PE-R1S3-05, confirmed by the coach 2026-10-07) |
 | rules dependence | Fault categories depend on fault rules (**UNVERIFIED**); counted as tagged |
 | display | A stacked bar needs a non-colour encoding: printed values per segment (NFR-034; DES FR-UX-72) |
-| open issue | If D-2 merges forced and unforced errors, this becomes 3 categories with a version bump |
-| status / source | `draft` / (judgment), QD §3.2 |
+| open issue | If the κ check of D-2 fails (ADR 0044 rule 3b), this becomes 3 categories with a version bump |
+| status / source | `coach-reviewed` 2026-10-07 (QD-AN-03, GS-AN-1 v1, §2b; ADR 0044) / (judgment), QD §3.2 |
 
 ## 2. Worked example (hand count, for QD-AN-02 unit tests)
 
@@ -177,9 +177,65 @@ The figures were computed with `python3 docs/domain/tools/metric_example.py` (ru
 
 Final score: 4-4, B serving at server 1. The provisional preset target is not reached, so the game is not over.
 
+## 2b. QD-AN-03 hand count on the golden matches GS-AN-1 v1 (COACH-1, 2026-10-07)
+
+The coach counted the three ST-049 tag scripts (`backend/tests/regression/golden_matches/*.script.json`; synthetic, PROVISIONAL-UNVERIFIED preset) from this dictionary's text, rally by rally. The trace is printed by `python3 docs/domain/tools/hand_count_gs_an1.py`, which imports neither the product nor `scripts/measure/statslib.py`. The full record, in the shape `test_golden_an.py` reads, is `docs/domain/hand-counts/GS-AN-1-v1.json` (`--write`).
+
+**Results (2026-10-07):**
+
+- **Product vs hand count:** 0 differences on every compared field of AN-01..AN-07, both sides, all 3 matches, including the evidence rallies and AN-06 per-game longest runs (product path of `test_golden_an.py`, `product_stats`).
+- **Frozen GS-AN-1 v1 (the QA reference's values) vs hand count:** 2 differences, both AN-07 side A `low_sample` (gm1, gm2): hand count `true`, frozen `false`. The hand count applies rule 0.3 to each AN-07 share (gm1 A: n = 21, unforced-error share 5/21 has a 34.5-point interval). This is the reference defect PE-R1S3-05; the fix is QA's TCR row, not a change here (ADR 0044 rule 2).
+- `cd backend && env -u APP_ENV uv run pytest -q tests/regression/test_golden_an.py` → `4 failed, 27 passed`; the four failures are those two cells, seen once against the product and once against the hand count. The hand-count case for gm3 passes.
+
+**Addendum 2026-10-08 (PR #33 review round 1, PE-R1-COACH1-02):** the three results above describe `main` before GS-AN-1 v2 (ST-049, PR #32), which changed no script, set AN-07 `low_sample` by rule 0.3 on each share (so the 2 AN-07 differences are closed) and compares AN-06 `longest_by_game`. The record now holds `longest_by_game` under `matches[m]["AN-06"][side]` and `gold_set_version: 2` (`8766c25`). On the current head: frozen GS-AN-1 v2 vs hand count → 0 differences on every compared field; `cd backend && env -u APP_ENV uv run pytest -q tests/regression/test_golden_an.py` → `31 passed` (gm1, gm2 and gm3 hand-count cases pass). The tables below are unchanged: they already list AN-06 per game.
+
+**gm1-two-games**
+
+| Metric | Side A | Side B |
+|---|---|---|
+| AN-01 | 18/32 = 56.2% [39.3%, 71.8%]; low sample | 13/26 = 50.0% [32.1%, 67.9%]; low sample |
+| AN-02 | 13/26 = 50.0% [32.1%, 67.9%]; low sample | 14/32 = 43.8% [28.2%, 60.7%]; low sample |
+| AN-03 | 18 points / 8 turns = 2.2; low sample | 13 points / 8 turns = 1.6; low sample |
+| AN-04 | 5 in 2 games = 2.5; A2: 2; not tagged 3; not flagged | 11 in 2 games = 5.5; B1: 4, B2: 5; not tagged 2; not flagged |
+| AN-05 | 1/32 = 3.1% [0.5%, 15.7%]; type not tagged 1; low sample | 1/26 = 3.9% [0.7%, 18.9%]; type not tagged 0; not flagged |
+| AN-06 | longest 6 (per game 5, 6); runs 1/2/3/4/5+ = 2/0/0/0/3; n = 18; not flagged | longest 5 (per game 1, 5); runs 1/2/3/4/5+ = 2/1/0/1/1; n = 13; not flagged |
+| AN-07 | n = 21: winner 6, UE 5, FE 6, fault 4; low sample | n = 37: winner 12, UE 11, FE 9, fault 5; not flagged |
+
+**gm2-three-games**
+
+| Metric | Side A | Side B |
+|---|---|---|
+| AN-01 | 24/35 = 68.6% [52.0%, 81.5%]; not flagged | 11/22 = 50.0% [30.7%, 69.3%]; low sample |
+| AN-02 | 11/22 = 50.0% [30.7%, 69.3%]; low sample | 11/35 = 31.4% [18.6%, 48.0%]; not flagged |
+| AN-03 | 24 points / 8 turns = 3.0; low sample | 11 points / 7 turns = 1.6; low sample |
+| AN-04 | 9 in 3 games = 3.0; A1: 2, A2: 4; not tagged 3; not flagged | 6 in 3 games = 2.0; B1: 3, B2: 2; not tagged 1; not flagged |
+| AN-05 | 0/35 = 0.0% [0.0%, 9.9%]; type not tagged 0; not flagged | 0/22 = 0.0% [0.0%, 14.9%]; type not tagged 0; not flagged |
+| AN-06 | longest 11 (per game 11, 1, 11); runs 1/2/3/4/5+ = 2/0/0/0/2; n = 24; not flagged | longest 8 (per game 0, 8, 0); runs 1/2/3/4/5+ = 1/1/0/0/1; n = 11; not flagged |
+| AN-07 | n = 38: winner 21, UE 9, FE 2, fault 6; low sample | n = 19: winner 5, UE 6, FE 3, fault 5; low sample |
+
+**gm3-corrections-needs-decision**
+
+| Metric | Side A | Side B |
+|---|---|---|
+| AN-01 | 11/13 = 84.6% [57.8%, 95.7%]; low sample | 4/6 = 66.7% [30.0%, 90.3%]; low sample |
+| AN-02 | 2/6 = 33.3% [9.7%, 70.0%]; low sample | 2/13 = 15.4% [4.3%, 42.2%]; low sample |
+| AN-03 | 11 points / 2 turns = 5.5; low sample | 4 points / 1 turns = 4.0; low sample |
+| AN-04 | 1 in 1 games = 1.0; A1: 1; not tagged 0; low sample | 1 in 1 games = 1.0; no player tagged; not tagged 1; low sample |
+| AN-05 | 0/13 = 0.0% [0.0%, 22.8%]; type not tagged 0; low sample | 0/6 = 0.0% [0.0%, 39.0%]; type not tagged 0; low sample |
+| AN-06 | longest 11 (per game 11); runs 1/2/3/4/5+ = 0/0/0/0/1; n = 11; not flagged | longest 4 (per game 4); runs 1/2/3/4/5+ = 0/0/0/1/0; n = 4; not flagged |
+| AN-07 | n = 12: winner 9, UE 1, FE 1, fault 1; low sample | n = 7: winner 3, UE 1, FE 1, fault 2; low sample |
+
 ## 3. Review record
 
 | Date | Who | Entries | Status change | Evidence |
 |---|---|---|---|---|
 | 2026-10-03 | pickleball-domain-coach | AN-01..AN-07 | created as `draft` | this file; `python3 docs/domain/tools/metric_example.py` |
-| before Sprint 3 planning | pickleball-domain-coach + second reviewer (OQ-20) | AN-01..AN-07 | → `coach-reviewed` (planned) | QD-AN-03 hand count on 3 golden matches |
+| 2026-10-07 | pickleball-domain-coach | AN-01 Rallies won on serve | `draft` → `coach-reviewed` | QD-AN-03 hand count on GS-AN-1 v1 (3 matches × 2 sides), §2b and `docs/domain/hand-counts/GS-AN-1-v1.json`; product equals the hand count on every compared field (0 differences); second recompute (OQ-20) gates `verified` (ADR 0044). |
+| 2026-10-07 | pickleball-domain-coach | AN-02 Rallies won when receiving | `draft` → `coach-reviewed` | QD-AN-03 hand count on GS-AN-1 v1 (3 matches × 2 sides), §2b and `docs/domain/hand-counts/GS-AN-1-v1.json`; product equals the hand count on every compared field (0 differences); second recompute (OQ-20) gates `verified` (ADR 0044). D-1 decided: UI name "Rallies won when receiving". |
+| 2026-10-07 | pickleball-domain-coach | AN-03 Points per service turn | `draft` → `coach-reviewed` | QD-AN-03 hand count on GS-AN-1 v1 (3 matches × 2 sides), §2b and `docs/domain/hand-counts/GS-AN-1-v1.json`; product equals the hand count on every compared field (0 differences); second recompute (OQ-20) gates `verified` (ADR 0044). |
+| 2026-10-07 | pickleball-domain-coach | AN-04 Unforced errors per game | `draft` → `coach-reviewed` | QD-AN-03 hand count on GS-AN-1 v1 (3 matches × 2 sides), §2b and `docs/domain/hand-counts/GS-AN-1-v1.json`; product equals the hand count on every compared field (0 differences); second recompute (OQ-20) gates `verified` (ADR 0044). D-2 decided: forced and unforced kept separate (ADR 0044 rule 4). |
+| 2026-10-07 | pickleball-domain-coach | AN-05 Serve faults | `draft` → `coach-reviewed` | QD-AN-03 hand count on GS-AN-1 v1 (3 matches × 2 sides), §2b and `docs/domain/hand-counts/GS-AN-1-v1.json`; product equals the hand count on every compared field (0 differences); second recompute (OQ-20) gates `verified` (ADR 0044). |
+| 2026-10-07 | pickleball-domain-coach | AN-06 Longest scoring run | `draft` → `coach-reviewed` | QD-AN-03 hand count on GS-AN-1 v1 (3 matches × 2 sides), §2b and `docs/domain/hand-counts/GS-AN-1-v1.json`; product equals the hand count on every compared field (0 differences); second recompute (OQ-20) gates `verified` (ADR 0044). |
+| 2026-10-07 | pickleball-domain-coach | AN-07 How rallies ended | `draft` → `coach-reviewed` | QD-AN-03 hand count on GS-AN-1 v1 (3 matches × 2 sides), §2b and `docs/domain/hand-counts/GS-AN-1-v1.json`; product equals the hand count on every compared field (0 differences); second recompute (OQ-20) gates `verified` (ADR 0044). The frozen GS-AN-1 v1 `low_sample` for gm1 A and gm2 A disagrees (reference defect PE-R1S3-05, TCR pending with QA); if QA's decision reads rule 0.3 differently, AN-07 returns to `draft` (ADR 0044 rule 2). |
+| 2026-10-08 | pickleball-domain-coach | AN-06, AN-07 (note, PR #33 review round 1) | none (stay `coach-reviewed`) | GS-AN-1 v2 (ST-049, PR #32) closed the AN-07 `low_sample` difference above (PE-R1S3-05: frozen gm1 A and gm2 A are now `true`), so no TCR is pending for it. AN-06 `longest_by_game` is a compared field in v2 and is now in the record (`8766c25`). Frozen v2 vs hand count: 0 differences; `cd backend && env -u APP_ENV uv run pytest -q tests/regression/test_golden_an.py` -> `31 passed` (§2b addendum). |
+| after OQ-20 (P9, 2026-11-16 at the earliest) | second coach or 4.0+ player | AN-01..AN-07 | → `verified` (planned) | recompute 1 golden match; κ ≥ 0.6 for AN-04/AN-07; rules verified (ADR 0044 rule 3) |
