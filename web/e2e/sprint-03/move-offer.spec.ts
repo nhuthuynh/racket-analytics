@@ -24,7 +24,7 @@ test.describe('@M0 @story-C3-03 @needs-verification Only moves the server accept
     for (const [i, side] of [...'AAAAAAAAAABAAA'].entries()) {
       const r = await page.request.post(`/api/matches/${matchId}/rallies`, {
         headers: { 'If-Match': `"${v}"` },
-        data: { start_ms: i * 8000, end_ms: i * 8000 + 4000, winning_side: side, ending: 'winner', responsible_player: null, fault_kind: null },
+        data: { start_ms: i * 4000, end_ms: i * 4000 + 2000, winning_side: side, ending: 'winner', responsible_player: null, fault_kind: null },
       });
       expect(r.status(), await r.text()).toBe(201);
       v = ((await r.json()) as { version: number }).version;
