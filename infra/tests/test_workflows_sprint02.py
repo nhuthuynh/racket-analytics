@@ -56,9 +56,13 @@ def test_perf_job_loads_the_api_port_and_seeds_through_the_https_origin() -> Non
     assert "RA_CACERT" in step_env
 
 
-def test_perf_job_runs_fifty_users_for_sixty_seconds() -> None:
+def test_perf_job_runs_fifty_users_for_a_sixty_second_steady_window_plus_warm_up() -> None:
+    # TCR 2026-10-08 (CI-PERF-GATES): Locust's -t counts seeding and spawn, so the run is
+    # 60 s of steady load + 30 s warm-up allowance, and the verdict fails a steady window
+    # (all 51 users running) shorter than 60 s.
     text = runs("perf-baseline")
-    assert "-u 51 -r 51 -t 60s" in text  # 50 readers at 1 RPS + 1 correction user
+    assert "-u 51 -r 51 -t 90s" in text  # 50 readers at 1 RPS + 1 correction user
+    assert "--history reports/perf/perf_stats_history.csv --users 51" in text
 
 
 def test_perf_job_keeps_its_reports_and_has_a_timeout() -> None:
