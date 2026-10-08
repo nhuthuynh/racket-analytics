@@ -58,24 +58,27 @@ def load_history(path: Path) -> list[dict[str, str]]:
         return [r for r in csv.DictReader(fh) if r["Name"] == "Aggregated"]
 
 
+def _at(sample: dict[str, str], column: str) -> float:
+    """A numeric history cell; missing or "N/A" counts as 0."""
+    return _num(sample.get(column, "")) or 0.0
+
+
 def measurement_window(history: list[dict[str, str]], users: int) -> dict | None:
     """The steady-state window: samples in which all ``users`` are running. ``None`` when
-    the run never had them all running (no steady state to measure)."""
-    steady = [r for r in history if (_num(r.get("User Count")) or 0) >= users]
+    the run never had them all running (no steady state to measure). Everything before the
+    window is the warm-up (seeding and spawn)."""
+    steady = [r for r in history if _at(r, "User Count") >= users]
     if not steady:
         return None
     first, last = steady[0], steady[-1]
-    start, end = int(_num(first["Timestamp"]) or 0), int(_num(last["Timestamp"]) or 0)
+    start, end = int(_at(first, "Timestamp")), int(_at(last, "Timestamp"))
     seconds = end - start
-    requests = int(
-        (_num(last["Total Request Count"]) or 0) - (_num(first["Total Request Count"]) or 0)
-    )
-    origin = int(_num(history[0]["Timestamp"]) or start)
+    requests = int(_at(last, "Total Request Count") - _at(first, "Total Request Count"))
     return {
         "start": start,
         "end": end,
         "seconds": seconds,
-        "warm_up_s": start - origin,
+        "warm_up_s": start - int(_at(history[0], "Timestamp")),
         "requests": requests,
         "rps": round(requests / seconds, 3) if seconds > 0 else 0.0,
     }
