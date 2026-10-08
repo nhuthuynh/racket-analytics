@@ -140,6 +140,65 @@ describe('Full Tag save after a lost response (PE-ST052-R1-04)', () => {
     expect(screen.queryByRole('heading', { name: /so far/ })).toBeNull();
   });
 
+  it('the read after a lost response fails too: the retry sends nothing blindly and says the connection dropped (QA-PR14-R2-01)', async () => {
+    const s = fakeServer([1]);
+    const labelSession = vi.fn(async (): Promise<LabelSession> => {
+      throw new ApiError(0, 'network_error');
+    });
+    render(<FullTag match={match} initial={s.read()} api={{ ...s.api, labelSession }} download={vi.fn()} />);
+    await markRally();
+    await choose('Winner');
+    await screen.findByText('The label was not saved because the connection dropped. Try again.');
+    const before = s.labelEvent.mock.calls.length;
+    const reads = labelSession.mock.calls.length;
+    await choose('Winner', null);
+    await vi.waitFor(() => expect(labelSession.mock.calls.length).toBeGreaterThan(reads));
+    expect(screen.getByText('The label was not saved because the connection dropped. Try again.')).toBeVisible();
+    expect(s.labelEvent).toHaveBeenCalledTimes(before);
+    expect(s.rallies).toHaveLength(1);
+  });
+
+  it('a rally the server holds keeps its span: Rally start and Rally end are refused in words (PE-ST052-R2-01)', async () => {
+    const s = fakeServer([1]);
+    render(<FullTag match={match} initial={s.read()} api={s.api} download={vi.fn()} />);
+    await markRally();
+    await choose('Winner');
+    await screen.findByText('The label was not saved because the connection dropped. Try again.');
+    const held = 'Rally 1 is already saved from frame 0 to 20, and saved labels cannot be changed yet.';
+    press('.');
+    await userEvent.click(screen.getByRole('button', { name: /Rally end/ }));
+    expect(await screen.findByText(held)).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: /Rally start/ }));
+    expect(screen.getByText(held)).toBeVisible();
+    expect(screen.getByText('Rally 1: frames 0 to 20')).toBeVisible();
+    await choose('Winner', null);
+    expect(await screen.findByText('Rally 1: frames 0 to 20, winner, 2 events')).toBeVisible();
+    expect(s.rallies).toEqual([expect.objectContaining({ start_frame: 0, end_frame: 20, events: [HIT, BOUNCE] })]);
+  });
+
+  it('a mark cannot be removed while its rally is being saved, so a removal is never undone and posted (PE-ST052-R1-06)', async () => {
+    const s = fakeServer();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const labelEvent = vi.fn(async (id: string, l: RallyLabel | EventLabel) => {
+      if (l.type === 'rally') await gate;
+      return s.labelEvent(id, l);
+    });
+    render(<FullTag match={match} initial={s.read()} api={{ ...s.api, labelEvent }} download={vi.fn()} />);
+    await markRally();
+    await choose('Winner');
+    const remove = screen.getByRole('button', { name: 'Remove hit at frame 10' });
+    expect(remove).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remove bounce at frame 15' })).toBeDisabled();
+    await act(async () => {
+      release();
+      await gate;
+    });
+    expect(await screen.findByText('Rally 1: frames 0 to 20, winner, 2 events')).toBeVisible();
+  });
+
   it('nothing reached the server (same version): the retry sends the rally and its events as before', async () => {
     const s = fakeServer();
     const lost = vi.fn().mockRejectedValueOnce(new ApiError(0, 'network_error'));
