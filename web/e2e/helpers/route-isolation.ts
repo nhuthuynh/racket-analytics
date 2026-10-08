@@ -9,6 +9,7 @@
 // need (helpers/sprint-02.ts playableVideo). The rule is per file (judgment: no spec mixes both).
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 
 export interface UnisolatedRoute {
   /** Spec path relative to the scanned directory, with "/" separators. */
@@ -17,21 +18,42 @@ export interface UnisolatedRoute {
   line: number;
 }
 
-const ROUTE_CALL = /\.route(?:FromHAR)?\s*\(/;
-const BLOCKS_SERVICE_WORKERS = /serviceWorkers\s*:\s*(['"])block\1/;
+const ROUTE_METHODS = new Set(['route', 'routeFromHAR']);
 
-/** Blanks out comments, keeping line breaks so line numbers stay as in the file. */
-function withoutComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '))
-    .replace(/(^|\s)\/\/.*$/gm, '$1');
+/** True for `serviceWorkers: 'block'` (or "block") as an object property. */
+function blocksServiceWorkers(node: ts.Node): boolean {
+  return (
+    ts.isPropertyAssignment(node) &&
+    (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) &&
+    node.name.text === 'serviceWorkers' &&
+    ts.isStringLiteralLike(node.initializer) &&
+    node.initializer.text === 'block'
+  );
 }
 
-/** Lines of the route calls in a spec that does not block service workers; [] when it is fine. */
+/**
+ * Lines of the route calls in a spec that does not block service workers; [] when it is fine.
+ * Parsed with the TypeScript compiler, so comments are skipped and strings, template literals
+ * and regex literals stay code. A glob such as the uploads glob holds the two block-comment
+ * markers, which a comment-stripping regex took for a comment (review round 1, PE-R1-01 / F1).
+ */
 export function unisolatedRoutes(source: string): number[] {
-  const code = withoutComments(source);
-  if (BLOCKS_SERVICE_WORKERS.test(code)) return [];
-  return code.split('\n').flatMap((text, i) => (ROUTE_CALL.test(text) ? [i + 1] : []));
+  const file = ts.createSourceFile('spec.ts', source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+  const routeLines: number[] = [];
+  let blocked = false;
+  const visit = (node: ts.Node): void => {
+    if (blocksServiceWorkers(node)) blocked = true;
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ROUTE_METHODS.has(node.expression.name.text)
+    ) {
+      routeLines.push(file.getLineAndCharacterOfPosition(node.expression.name.getStart(file)).line + 1);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return blocked ? [] : [...new Set(routeLines)].sort((a, b) => a - b);
 }
 
 /** Every route call under `dir` (recursively, *.spec.ts only) whose spec allows service workers. */
