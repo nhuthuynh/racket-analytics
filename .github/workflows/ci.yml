@@ -50,16 +50,19 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      # Diff from the merge base of HEAD (the merge ref) and the current base branch, never from
+      # pull_request.base.sha: that SHA is frozen at the event, and a merge ref rebuilt on a newer
+      # main would blame main's changes on the PR (CI-POLICY-BASE, CI run 37739461709).
       - name: Test and gold immutability (EP/ENG-28, NFR-078)
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: python3 scripts/ci/check_test_immutability.py --base "$BASE_SHA" --head HEAD
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/ci/check_test_immutability.py --base "origin/$BASE_REF" --head HEAD
       - name: PR size (EP/ENG-04)
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: python3 scripts/ci/check_pr_size.py --base "$BASE_SHA" --head HEAD
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/ci/check_pr_size.py --base "origin/$BASE_REF" --head HEAD
 
   workflow-lint:
     name: Workflow lint (actionlint)
