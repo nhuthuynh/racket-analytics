@@ -22,7 +22,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 from tests.support import scorebook as sb
 from tests.support.api import ApiDriver
 from tests.support.rate_burst import matches_with_video
-from tests.support.slow_store import slow_object_store
+from tests.support.slow_store import CI_WRITE_RATE, slow_object_store
 
 scenarios("ci_it0213_rate_on_a_slow_store.feature")
 
@@ -34,7 +34,7 @@ def ctx() -> dict[str, Any]:
 
 @pytest.fixture
 def slow_store(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    with slow_object_store(os.environ["S3_ENDPOINT_URL"], rate=64 * 1024) as endpoint:
+    with slow_object_store(os.environ["S3_ENDPOINT_URL"], rate=CI_WRITE_RATE) as endpoint:
         monkeypatch.setenv("S3_ENDPOINT_URL", endpoint)
         yield
 
