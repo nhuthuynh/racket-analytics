@@ -164,6 +164,26 @@ def test_an_07_how_rallies_ended(worked: dict[str, Any]) -> None:
     assert sum(s["k"] for s in b["shares"].values()) == b["n"]
 
 
+# PE-R1-ST044-01 / SQA-R1-01: metric-dictionary rule 0.3 (FR-101) flags a proportion when
+# n < min_sample OR its Wilson interval is wider than 30 points; AN-07's four shares are
+# proportions, as AN-01's is. Negative case: n alone (24) passes min_sample.
+WIDE_MIX = [tag("A", "winner"), tag("B", "unforced_error")] * 12  # A ends 24: 12 W, 12 UE
+
+
+def test_an_07_is_low_sample_when_a_share_interval_is_wider_than_the_policy_allows() -> None:
+    stats = stats_of(WIDE_MIX)
+    a = stats["AN-07"]["A"]
+    assert a["n"] == 24  # n alone passes min_sample (20)
+    assert a["shares"]["winner"]["ci_high"] - a["shares"]["winner"]["ci_low"] > 0.30
+    assert a["low_sample"] is True
+    assert a["low_sample"] is stats["AN-01"]["A"]["low_sample"]  # same interval, same flag
+
+
+def test_an_07_interval_width_threshold_comes_from_the_policy() -> None:
+    wider = LowSamplePolicy(max_interval_width=0.40)  # every AN-07 A interval is 0.3714 or less
+    assert starter_stats(one_game(WIDE_MIX), wider)["AN-07"]["A"]["low_sample"] is False
+
+
 def test_every_proportion_of_the_worked_example_is_low_sample(worked: dict[str, Any]) -> None:
     for metric in ("AN-01", "AN-02", "AN-05", "AN-07"):
         for side in SIDES:
@@ -224,6 +244,37 @@ def test_two_games_count_and_runs_reset_at_game_end() -> None:
     assert stats["AN-04"]["A"]["value"] == 0.5
     assert stats["AN-03"]["A"]["turns"] == 2
     assert stats["AN-01"]["A"]["rallies"][-2:] == [12, 13]
+
+
+# PE-R1-ST044-02: dictionary AN-06 outputs "the longest run per side per game" (one value per
+# game in scope, play order) besides the per-match histogram; ``longest`` stays the match maximum.
+def test_an_06_an_empty_sheet_has_no_per_game_longest_run() -> None:
+    stats = starter_stats(sheet([]))
+    assert stats["AN-06"]["A"]["longest_by_game"] == []
+    assert stats["AN-06"]["B"]["longest_by_game"] == []
+
+
+def test_an_06_a_started_game_without_points_has_a_longest_run_of_zero() -> None:
+    stats = starter_stats(sheet([{"first_serving_side": "A", "tags": []}]))
+    assert stats["AN-06"]["A"]["longest_by_game"] == [0]
+
+
+def test_an_06_reports_the_longest_run_per_side_per_game() -> None:
+    played = sheet(
+        [
+            {"first_serving_side": "A", "tags": side_a_wins_game()},
+            {"first_serving_side": "A", "tags": [tag("A", "winner"), tag("B", "unforced_error")]},
+        ]
+    )
+    a, b = starter_stats(played)["AN-06"]["A"], starter_stats(played)["AN-06"]["B"]
+    assert a["longest_by_game"] == [11, 1]
+    assert b["longest_by_game"] == [0, 0]
+    assert a["longest"] == max(a["longest_by_game"])
+
+
+def test_an_06_per_game_longest_run_of_the_worked_example(worked: dict[str, Any]) -> None:
+    assert worked["AN-06"]["A"]["longest_by_game"] == [3]  # dictionary §2: rallies 7, 9, 11
+    assert worked["AN-06"]["B"]["longest_by_game"] == [2]
 
 
 def test_a_game_after_an_unfinished_one_is_not_in_scope() -> None:

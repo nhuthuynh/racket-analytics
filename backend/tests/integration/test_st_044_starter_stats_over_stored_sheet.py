@@ -11,7 +11,7 @@ from typing import Any
 from racket.analytics.starter_stats import starter_stats
 from tests.support import scorebook as sb
 from tests.support.api import ApiDriver
-from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game
+from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game, tag
 
 
 def _stored_stats(api: ApiDriver, tags: list[dict[str, Any]] | None, title: str) -> Any:
@@ -39,3 +39,15 @@ def test_st_044_the_stored_worked_example_matches_the_hand_count(api: ApiDriver)
     assert stats["AN-04"]["B"]["player_not_tagged"] == 1
     assert all(8 not in f["rallies"] for sides in stats.values() for f in sides.values())
     assert stats == starter_stats(one_game(WORKED_EXAMPLE))
+
+
+def test_st_044_stored_wide_mix_flags_an_07_and_reports_runs_per_game(api: ApiDriver) -> None:
+    # PE-R1-ST044-01/02, SQA-R1-01: A ends 24 rallies (12 winners, 12 unforced errors); n passes
+    # min_sample but every share's interval is wider than 30 points (rule 0.3, FR-101).
+    wide_mix = [tag("A", "winner"), tag("B", "unforced_error")] * 12
+    stats = _stored_stats(api, sb.taglib.with_times(wide_mix), "ST-044 wide mix")
+    an07 = stats["AN-07"]["A"]
+    assert (an07["n"], an07["low_sample"]) == (24, True)
+    assert stats["AN-06"]["A"]["longest_by_game"] == [1]
+    assert stats["AN-06"]["B"]["longest_by_game"] == [1]
+    assert stats == starter_stats(one_game(wide_mix))

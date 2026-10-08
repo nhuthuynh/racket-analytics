@@ -14,7 +14,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from racket.analytics.starter_stats import starter_stats
 from racket.analytics.uncertainty import LowSamplePolicy, wilson
-from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game, sheet
+from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game, sheet, tag
 
 scenarios("starter_stats_domain.feature")
 
@@ -34,6 +34,19 @@ def worked_example(ctx: dict[str, Any]) -> None:
     ctx["sheet"] = one_game(WORKED_EXAMPLE)
 
 
+@given(
+    parsers.parse(
+        "a game where side A ends {n:d} rallies, {w:d} with a winner and {ue:d} with an "
+        "unforced error"
+    )
+)
+def side_a_endings(ctx: dict[str, Any], n: int, w: int, ue: int) -> None:
+    # alternate: A wins a rally, then loses one by its own unforced error (no game end)
+    assert w == ue
+    assert w + ue == n
+    ctx["sheet"] = one_game([tag("A", "winner"), tag("B", "unforced_error")] * w)
+
+
 @when("the starter stats are computed")
 def computed(ctx: dict[str, Any]) -> None:
     ctx["stats"] = starter_stats(ctx["sheet"])
@@ -43,6 +56,17 @@ def computed(ctx: dict[str, Any]) -> None:
 def no_value(ctx: dict[str, Any], metric: str, side: str, n: int) -> None:
     got = ctx["stats"][metric][side]
     assert (got["value"], got["ci_low"], got["ci_high"], got["n"]) == (None, None, None, n)
+
+
+@then(parsers.parse('"{metric}" for side {side} ends {n:d} rallies'))
+def ended(ctx: dict[str, Any], metric: str, side: str, n: int) -> None:
+    assert ctx["stats"][metric][side]["n"] == n
+
+
+@then(parsers.parse('the longest run of side {side} per game is "{runs}"'))
+def longest_by_game(ctx: dict[str, Any], side: str, runs: str) -> None:
+    expected = [int(r) for r in runs.split(",") if r.strip()]
+    assert ctx["stats"]["AN-06"][side]["longest_by_game"] == expected
 
 
 @then(parsers.parse('"{metric}" for side {side} is flagged as a low sample'))

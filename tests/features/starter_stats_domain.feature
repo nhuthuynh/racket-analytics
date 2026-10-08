@@ -22,7 +22,19 @@ Feature: Starter stats over the projected score sheet
       And "AN-02" for side A is 2 of 6 with the interval 0.0968 to 0.7
       And no stat counts rally 8, which was a replay
 
+    Scenario: The longest run is reported per side per game (AN-06)
+      Given the worked-example game of the metric dictionary is projected
+      When the starter stats are computed
+      Then the longest run of side A per game is "3"
+      And the longest run of side B per game is "2"
+
   Rule: Small samples are flagged (FR-101)
+
+    Scenario: How rallies ended is flagged when a share's interval is too wide, not only when n is small
+      Given a game where side A ends 24 rallies, 12 with a winner and 12 with an unforced error
+      When the starter stats are computed
+      Then "AN-07" for side A ends 24 rallies
+      And "AN-07" for side A is flagged as a low sample
 
     Scenario Outline: The low-sample flag follows n and the interval width
       Given a proportion of <k> out of <n>
