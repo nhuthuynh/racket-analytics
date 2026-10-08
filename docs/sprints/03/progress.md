@@ -61,3 +61,16 @@
 | TDD order (QA-R1S3-09/10) | Accepted breach for six commits, deferred to retro-3 input R3-IN-1 (sprint-03 §13). Not claimed as test-first | `git log --format=%B -1 <sha> \| grep -c '^Red:'` → 0 ×6 |
 | Screen-reader pass (QA-R3-GATE-01 / C-06) | Reconciled: deferred to S3-DoD-P6 only. No longer counted in G03-12. 0 of 38 rows run | a11y-manual §4, scorecard G03-10 note |
 | Open defects (G03-12) | rc=1, **open 8** (was 11): PD-R1S3-01, PD-R1-06 family, SEC-S3-TM-01/02/05, PE-R1S3-07/QA-R1S3-07, QA-R1S3-06, PE-R1S3-01/QA-R1S3-04 | `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md` |
+
+## Sprint close: EM status step, 2026-10-08 (head `c1fba6a`; VR3 measured `fb920bc`)
+
+| Item | Result | Evidence |
+|---|---|---|
+| Goal | **Not met.** VR3 met 10 of 12 live on a fresh HTTPS stack, and every player-facing promise ran 5/5 in real time. G03-09 (c) has no CI run at the head. G03-12 is **8** after the EM reconciled review round 3 (the verifier counted 3) | scorecard §9.3; `sprint-report.md` §1 |
+| Reconciliation | Review round 3 (`fdeeb53`, run in parallel with VR1) had 0 rows for its 25 new ids. Each is now written and re-checked at the head. VR3-S3-01..03 written (minor) | review-rounds "Sprint close: engineering-manager"; `open_defects.py` → rc=1, open 3 → 8 |
+| Implemented | 38.5 of 43.0 units (0.895): BE 12.5, FE 11.0, QA 9.0, SRE 3.0, ML 3.0 | `status.json` totals |
+| DoD-done | 0. No Sprint 3 ticket PR (ADR 0039); Sprint 1 + 2 reached `main` by PR #2 (2026-10-06) | `list_pull_requests state=all`; `list_branches` |
+| Tests at the head (EM) | backend unit 1,833 passed, 1 skipped (11.17 s); web 68 files, 580 passed; infra 618 passed, 1 skipped | commands in `sprint-report.md` §5 |
+| Decisions | ADR 0046 accepted with an amendment; ADR 0047 (retro 3); G03-08 wording names GS-AN-1 v2; size breaches `d83ee1b`/`cd8856f`/`96044d9` recorded | decision-log 2026-10-08 rows; ADR 0046 Notes; ADR 0047 |
+| Retro | `docs/retros/2026-11-27-sprint-03.md`: 5 actions (A1 ticket PRs, A2 CI at the head, A3 chair outcomes, A4 security ITs, A5 ADR 0047 + `Red:` check) | retro §7 |
+| Carry-over | C4-PR, C4-CI, C4-DR, C4-SEC, C4-SRE, C4-MIN, human-gated rows, stretch | `sprint-report.md` §8 |
