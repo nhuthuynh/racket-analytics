@@ -4,3 +4,7 @@
 # SEC-RV3-02 positive control: a made-up 32-character AUTH_EMAIL_KEY that shows a non-dev key
 # is accepted in prod. Synthetic test data, never used anywhere. CI run 37521787513.
 9ca52fecb2b322539facb467855c62c2667594ce:backend/tests/unit/platform/test_settings_sprint03.py:generic-api-key:41
+
+# The same SEC-RV3-02 positive control in its cherry-picked copy on the ticket PR (ADR 0039 rule 5;
+# merged with a merge commit so this hash stays on main). Synthetic test data, never used anywhere.
+e6231dbb46a346c7f37286d67398f9c35a7c3edb:backend/tests/unit/platform/test_settings_sprint03.py:generic-api-key:41
