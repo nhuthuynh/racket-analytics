@@ -42,6 +42,17 @@ docker compose -f infra/compose.yaml config | grep -nE 'PURGE_(INTERVAL|SCHEDULE
 | Graceful stop | `docker stop -t 30` | stopped in 1 s, exit 0, last line `purge.schedule.stopped` |
 | Over a day refused | `docker run --rm -e PURGE_INTERVAL_S=90000 … purge_schedule.py …` | `refused: PURGE_INTERVAL_S must be a whole number of seconds from 1 to 86400, got '90000'`, rc 2 |
 
+## Evidence, port to main (PO P13), 2026-10-08
+
+| Check | Command | Result |
+|---|---|---|
+| Scenarios red first (scheduler absent) | `origin/main f4db4e6` + the two new test files: `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run pytest -q tests/test_purge_schedule_scenarios.py` | `3 failed` (`can't find '__main__' module in '/opt/racket/purge_schedule.py'`) |
+| Scenarios + unit green | `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run pytest -q tests/test_purge_schedule_scenarios.py tests/test_purge_schedule.py` | `19 passed` (3 scenarios in a container, 16 unit) |
+| Infra job as CI runs it | `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run pytest -q -m "unit or integration"` | `676 passed, 3 skipped` (gitleaks binary not set) |
+| In the API image, real job command, `PURGE_INTERVAL_S=3`, read-only root, `cap_drop ALL` | `docker build -f infra/docker/backend.Dockerfile --target api …` then `docker run … python /opt/racket/purge_schedule.py python -m racket.platform.purge --once` | runs 1..3 `status: failed, exit_code: 1, level: ERROR, consecutive_failures: 1..3` (`No module named racket.platform.purge`: ST-050 not on main); heartbeat age 0.4 s |
+| Graceful stop | `docker stop -t 30` | 0.77 s, exit 0, last line `purge.schedule.stopped` (`runs: 3`) |
+| Over a day refused | `docker run --rm -e PURGE_INTERVAL_S=90000 … purge_schedule.py …` | `refused: … got '90000'`, rc 2 |
+
 ## Rollback
 
 Remove the `purge` service from `infra/compose.yaml` (slice b) and the `COPY` line in the API stage; nothing else depends on them.
