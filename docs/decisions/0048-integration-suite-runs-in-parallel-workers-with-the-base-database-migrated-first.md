@@ -1,6 +1,6 @@
 # 0048. The integration suite runs in parallel workers on one cluster, with the base database migrated first
 
-- **Status:** Proposed (decider: principal-engineer, on PR review of CI-INTEG-BUDGET)
+- **Status:** Accepted (2026-10-08, principal-engineer, PR #15 review r1)
 - **Date:** 2026-10-08
 - **Deciders:** principal-engineer
 - **Consulted:** sre-devops-engineer (author, implementation), senior-qa-engineer (pytest config and selection owner), senior-backend-engineer (migration 0012 owner)
@@ -50,7 +50,7 @@ Rules that follow:
 
 1. The integration job migrates the base database before any parallel worker starts. Guarded by `infra/tests/test_workflows_integ_budget.py`.
 2. The budgeted step and the nightly flaky report keep the same selection. Guarded by the scenario "The budget still times the full selection with coverage".
-3. A migration that creates a cluster-wide object (role, tablespace, cluster setting) must be idempotent when it runs on several databases at once. The CI step makes this hold in CI. Making it hold everywhere is a follow-up, below.
+3. A migration that creates a cluster-wide object (role, tablespace, cluster setting) must be idempotent when it runs on several databases at once. The CI step makes this hold in CI only. For migration 0012 this is a **hard precondition of the ST-042 ticket PR**: that PR does not merge while 0012 creates its role with plain check-then-create (owner senior-backend-engineer; recorded as an owned row in `docs/sprints/03/decision-log.md`, 2026-10-08, PE-PR15-02).
 
 ## Pros and cons of the options
 
@@ -79,7 +79,7 @@ Rules that follow:
 - Good: the integration job fits its budget with coverage and the same selection, and the run keeps its measured time (`reports/integration-budget.json`, from PR #13).
 - Bad / trade-offs accepted: the job depends on workers sharing one cluster safely. Rule 1 covers CI. A developer running `pytest -n auto` on a fresh local cluster with migration 0012 present still has the race until a follow-up lands.
 - Follow-up work:
-  - senior-backend-engineer: migration 0012 creates its role with an exception handler for `duplicate_object` / `unique_violation`, so it is idempotent under concurrency anywhere (rule 3). This belongs to the ST-042 ticket PR, which brings 0012 to `main`.
+  - senior-backend-engineer (merge precondition, not optional): migration 0012 creates its role with an exception handler for `duplicate_object` / `unique_violation`, so it is idempotent under concurrency anywhere (rule 3). This belongs to the ST-042 ticket PR, which brings 0012 to `main`; that PR cannot merge without it (PE-PR15-02).
   - senior-qa-engineer (optional, TCR): the `db_engine` fixture could serialise worker migrations on the base database with an advisory lock (`pg_advisory_lock` is per database, so the lock must be taken on the base database, not the session one). That fixes local `-n` runs without the CI step.
 
 ## Evidence

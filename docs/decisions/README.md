@@ -138,6 +138,6 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0034 | [Deployment edge acceptance criteria (HSTS, forwarded headers, exposed ports)](0034-deployment-edge-acceptance-criteria.md) | Proposed (sre-devops-engineer; PO accepts before the first non-dev deployment) | 2026-10-06 |
 | 0035 | [Gold-set manifest v1 and Full Tag labels v1, checked by racket-manifest-check](0035-gold-set-manifest-v1-and-full-tag-labels-v1.md) | Proposed (senior-ml-cv-engineer, ST-040) | 2026-10-06 |
 | 0036 | [Local goal evidence runs in Chrome for Testing, a browser that decodes H.264](0036-local-h264-evidence-browser-chrome-for-testing.md) | Accepted (EM, review round 2, SRE-S2-05 / QA-RV1-07) | 2026-10-06 |
-| 0048 | [The integration suite runs in parallel workers on one cluster, with the base database migrated first](0048-integration-suite-runs-in-parallel-workers-with-the-base-database-migrated-first.md) | Proposed (sre-devops-engineer, CI-INTEG-BUDGET; principal-engineer decides) | 2026-10-08 |
+| 0048 | [The integration suite runs in parallel workers on one cluster, with the base database migrated first](0048-integration-suite-runs-in-parallel-workers-with-the-base-database-migrated-first.md) | Accepted (2026-10-08, principal-engineer, PR #15 review r1) | 2026-10-08 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.
