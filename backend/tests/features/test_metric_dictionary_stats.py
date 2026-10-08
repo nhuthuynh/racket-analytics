@@ -1,4 +1,5 @@
-"""API binding of tests/features/metric_dictionary_stats.feature (QA-ACC-3 for ST-043; FR-102, FR-055).
+"""API binding of tests/features/metric_dictionary_stats.feature (QA-ACC-3 for ST-043; FR-102,
+FR-055). The domain rules of the dictionary are bound by test_metric_dictionary.py (ST-043).
 "How is this measured?" is the entry's plain-language definition in the stats response (the
 browser shows it, E2E-03-03). Written red first: ``red_until`` ST-046 (the stats route).
 """
