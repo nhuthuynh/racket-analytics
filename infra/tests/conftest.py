@@ -53,3 +53,9 @@ def project(tmp_path: Path) -> Path:
     proj.mkdir()
     subprocess.run(["git", "init", "-q", str(proj)], check=True)
     return proj
+
+
+def pytest_bdd_apply_tag(tag: str, function: object) -> bool:
+    """Gherkin tags become `bdd_tag(name=...)` markers, so `--strict-markers` stays on."""
+    pytest.mark.bdd_tag(name=tag)(function)
+    return True

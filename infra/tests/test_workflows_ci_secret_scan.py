@@ -1,5 +1,6 @@
 """CI run 37732742355 (NFR-056): `gitleaks git .` ran `git log --all` and failed PR #8 on commits
-only on other branches. Scan what HEAD puts on main (PR: merge commit); see decision-log."""
+only on other branches. Scan what HEAD puts on main (PR: merge commit);
+see docs/sprints/03/decisions/CI-WEBKIT-PD-R3S2-02.md."""
 
 from __future__ import annotations
 
