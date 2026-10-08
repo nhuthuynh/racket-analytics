@@ -49,7 +49,7 @@
 
 **Verification round 3 (2026-10-08, head `fb920bc`; §9): met 10 / 12.** Goal not met: G03-09 (no CI run at the head) and G03-12 (3 open blockers). The table above holds the VR3 values.
 
-**Release CI (sre-devops-engineer, 2026-10-08, PR #4; not a verifier result; decision-log row of this date):** CI metric on the PR head: the `drill-lint` job **succeeded** on runs 37715576115 (`2ba4dd1`) and 37718386760 (`f554edd`), which closes the "no CI run at the head" gap of G03-09 (c) for the job itself. `ci-gate` is **failure** on both runs: PR policy (PR size, no EM size waiver), Integration (600 s NFR-073 budget exceeded, exit 124) and E2E (WebKit PD-R3S2-02 only, at `f554edd`). Per-job detail: `ci-status.md`. Final head result: `ci-status.md` last row.
+**Release CI (sre-devops-engineer, 2026-10-08, PR #4; not a verifier result; decision-log row of this date):** CI metric on the PR head: the `drill-lint` job **succeeded** on runs 37715576115 (`2ba4dd1`) and 37718386760 (`f554edd`), which closes the "no CI run at the head" gap of G03-09 (c) for the job itself. `ci-gate` is **failure** on both runs: PR policy (PR size, no EM size waiver), Integration (600 s NFR-073 budget exceeded, exit 124) and E2E (WebKit PD-R3S2-02 only, at `f554edd`). At `7ef4c50` (run 37719909230) Integration passed (542 s), so `ci-gate` is red on PR policy (size) and the WebKit PD-R3S2-02 E2E test only. Per-job detail: `ci-status.md`. Final head result: `ci-status.md` last row. **CI metric (G03-09 c, `ci-gate` on the PR head): not met.**
 
 ## 3. Rules for the verifier
 
