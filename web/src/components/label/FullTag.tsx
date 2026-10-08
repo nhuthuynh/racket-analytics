@@ -200,6 +200,12 @@ export function FullTag({
   }
 
   function addMark(mark: EventLabel) {
+    if (start === null) {
+      // A mark outside a rally would be sent with the next one and refused as no_rally (PE-ST052-R1-07).
+      setPending(null);
+      return setTagProblem('Press Rally start first.');
+    }
+    setTagProblem(null);
     setMarks((m) => [...m, mark].sort((a, b) => a.frame - b.frame));
     setPending(null);
     setAcross('');

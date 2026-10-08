@@ -3,6 +3,7 @@
 import { arr, bool, num, obj, oneOf, ResponseShapeError, str, type Obj } from '@/lib/api/parse';
 import { ENDINGS, SIDES } from '@/lib/tagging/types';
 import {
+  FACET_KEYS,
   FAULT_KINDS,
   type EventLabel,
   type LabelDocument,
@@ -41,7 +42,8 @@ function event(value: unknown, path: string): EventLabel {
   if (type === 'hit') {
     const f = o.facets === undefined ? {} : obj(o.facets, `${path}.facets`);
     const facets: Record<string, string> = {};
-    for (const k of Object.keys(f)) facets[k] = str(f, k, `${path}.facets`);
+    // Only the schema's facet keys are kept (NFR-052; gold-label-schema §4); others are dropped.
+    for (const k of FACET_KEYS) if (f[k] !== undefined) facets[k] = str(f, k, `${path}.facets`);
     return { type, frame: frame(o, 'frame', path), hitter: slot(o.hitter, `${path}.hitter`), facets };
   }
   let xy: [number, number] | null = null;
