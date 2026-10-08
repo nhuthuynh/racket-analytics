@@ -1,4 +1,7 @@
-"""QD-AN-03 hand count of the golden matches GS-AN-1 v1 (COACH-1, pickleball-domain-coach).
+"""QD-AN-03 hand count of the golden matches GS-AN-1 (COACH-1, pickleball-domain-coach).
+
+GS-AN-1 v2 changed no script, so this count covers v1 and v2; the record is written for v2's
+compared fields (scripts/measure/statslib.py COMPARED), incl. AN-06 ``longest_by_game``.
 
 Documentation tooling only, not product code. It is written from the definitions in
 docs/domain/metric-dictionary.md v0.1 (rules 0.1-0.6 and AN-01..AN-07) and does **not** import
@@ -180,10 +183,11 @@ def count(script: dict, trace: list[str]) -> tuple[dict, dict]:
         hist = {"1": 0, "2": 0, "3": 0, "4": 0, "5+": 0}
         for x in runs:
             hist["5+" if x >= 5 else str(x)] += 1
-        out["AN-06"][s] = {"longest": max(runs, default=0), "histogram": hist, "n": sum(runs),
-                           "low_sample": False,
+        # longest_by_game is a compared field since GS-AN-1 v2 (statslib.COMPARED, ST-049).
+        out["AN-06"][s] = {"longest": max(runs, default=0), "longest_by_game": by_game,
+                           "histogram": hist, "n": sum(runs), "low_sample": False,
                            "rallies": [r["ref"] for r in rows if r["point"] == s]}
-        extra[s] = {"AN-06 longest_by_game": by_game}
+        extra[s] = {}
         ended = [r for r in rows if r["actor"] == s]
         counts = {c: sum(r["ending"] == c for r in ended) for c in CATS}
         n = len(ended)
@@ -196,11 +200,11 @@ def count(script: dict, trace: list[str]) -> tuple[dict, dict]:
 
 
 def main() -> None:
-    record = {"by": "pickleball-domain-coach", "date": "2026-10-07",
+    record = {"by": "pickleball-domain-coach", "date": "2026-10-08",
               "method": "QD-AN-03 hand count from metric-dictionary.md v0.1, traced rally by "
                         "rally with docs/domain/tools/hand_count_gs_an1.py (independent of the "
                         "product and of statslib); PROVISIONAL-UNVERIFIED preset",
-              "gold_set": "GS-AN-1", "gold_set_version": 1, "metric_dict_version": "0.1",
+              "gold_set": "GS-AN-1", "gold_set_version": 2, "metric_dict_version": "0.1",
               "matches": {}, "not_compared": {}}
     for m in MATCHES:
         script = json.loads((SET_DIR / f"{m}.script.json").read_text())
