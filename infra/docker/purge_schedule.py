@@ -14,6 +14,8 @@ Usage (the Compose ``purge`` service):
 * ``PURGE_HEARTBEAT_FILE`` (default ``/tmp/purge-heartbeat``) is touched every
   ``PURGE_TICK_S`` seconds (default 10), also while a run is in progress, for the healthcheck.
 * SIGTERM/SIGINT: an in-flight job gets SIGTERM and is waited for; then the scheduler exits 0.
+  Between runs the wait ends at once (self-pipe), whatever ``PURGE_TICK_S`` is, so a stop always
+  fits Compose's 30 s ``stop_grace_period`` (ADR 0038).
 
 Standard library only: it ships in the API image next to the backend, not inside it.
 """
@@ -23,6 +25,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import select
 import signal
 import subprocess
 import sys
@@ -67,9 +70,15 @@ class Scheduler:
         self.heartbeat = heartbeat
         self.stopping = False
         self.child: subprocess.Popen[bytes] | None = None
+        # Self-pipe: a signal makes the wait between runs return now. A plain time.sleep is
+        # resumed after the handler (PEP 475) and would hold a stop for up to a whole tick.
+        self.wake_r, self.wake_w = os.pipe()
+        os.set_blocking(self.wake_w, False)
 
     def on_signal(self, signum: int, _frame: object) -> None:
         self.stopping = True
+        with contextlib.suppress(OSError):  # a full pipe already wakes the wait
+            os.write(self.wake_w, b"x")
         if self.child is not None and self.child.poll() is None:
             self.child.send_signal(signal.SIGTERM)
 
@@ -103,7 +112,7 @@ class Scheduler:
             if left <= 0:
                 return
             self.beat()
-            time.sleep(min(self.tick, left))
+            select.select([self.wake_r], [], [], min(self.tick, left))
 
     def loop(self) -> None:
         log(

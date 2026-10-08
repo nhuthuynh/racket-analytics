@@ -245,7 +245,8 @@ def second_run(world: dict[str, Any], low: int, high: int, status: str) -> None:
     first, second = _runs(world)[:2]
     gap = (_ts(second) - _ts(first)).total_seconds()
     assert low - 0.5 <= gap <= high, (gap, first, second)
-    assert second["run"] == 2 and second["status"] == status
+    assert second["run"] == 2
+    assert second["status"] == status
 
 
 @then(parsers.parse('the job\'s own output "{text}" passed through for each run'))

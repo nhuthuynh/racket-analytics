@@ -9,7 +9,7 @@ Owner: sre-devops-engineer. Story: SRE-PURGE (NFR-066 c, NFR-047). Design: ADR 0
 | Variable | Default | Rule |
 |---|---|---|
 | `PURGE_INTERVAL_S` | `86400` | whole seconds, 1..86400; anything else exits 2 before any run (NFR-066 c: at least daily) |
-| `PURGE_TICK_S` | `10` | heartbeat period, 1..300 |
+| `PURGE_TICK_S` | `10` | heartbeat period, 1..300; does not delay a stop (a signal ends the wait between runs at once) |
 | `PURGE_HEARTBEAT_FILE` | `/tmp/purge-heartbeat` | the healthcheck reads its age (< 60 s) |
 
 ## Logs (stdout, one JSON line each)
@@ -17,7 +17,7 @@ Owner: sre-devops-engineer. Story: SRE-PURGE (NFR-066 c, NFR-047). Design: ADR 0
 - `purge.schedule.started` (`interval_s`, `program`: the program name only, never the arguments).
 - `purge.run` per run: `status` `ok`/`failed`, `exit_code`, `duration_ms`, `run`, `consecutive_failures`, `next_run_in_s`. Failed runs are `level: ERROR`; the schedule continues.
 - `purge.job.not_started` when the command cannot be executed (counts as a failed run, exit code 127).
-- `purge.schedule.stopped` after SIGTERM/SIGINT; an in-flight job receives SIGTERM first and is waited for.
+- `purge.schedule.stopped` after SIGTERM/SIGINT; an in-flight job receives SIGTERM first and is waited for. Between runs the stop is immediate whatever `PURGE_TICK_S` is, so it fits the 30 s `stop_grace_period` (ADR 0038).
 
 The job's own output passes through unchanged; the scheduler never copies it into its records.
 
@@ -52,6 +52,15 @@ docker compose -f infra/compose.yaml config | grep -nE 'PURGE_(INTERVAL|SCHEDULE
 | In the API image, real job command, `PURGE_INTERVAL_S=3`, read-only root, `cap_drop ALL` | `docker build -f infra/docker/backend.Dockerfile --target api …` then `docker run … python /opt/racket/purge_schedule.py python -m racket.platform.purge --once` | runs 1..3 `status: failed, exit_code: 1, level: ERROR, consecutive_failures: 1..3` (`No module named racket.platform.purge`: ST-050 not on main); heartbeat age 0.4 s |
 | Graceful stop | `docker stop -t 30` | 0.77 s, exit 0, last line `purge.schedule.stopped` (`runs: 3`) |
 | Over a day refused | `docker run --rm -e PURGE_INTERVAL_S=90000 … purge_schedule.py …` | `refused: … got '90000'`, rc 2 |
+
+## Evidence, review round 1 (PE-R1-1, PE-R1-2), 2026-10-08
+
+| Check | Command | Result |
+|---|---|---|
+| New tests red first (on `42473f6`) | `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run pytest -q tests/test_purge_schedule_scenarios.py tests/test_purge_schedule.py` | `2 failed, 21 passed`: both between-runs stop tests (unit: no exit within 5 s of SIGTERM at `PURGE_TICK_S=300`) |
+| Cadence mutant killed | same command with `sleep_until(started + 0)` | `5 failed, 18 passed`, incl. the new unit `test_runs_are_spaced_by_the_interval_not_back_to_back` and scenario `test_the_job_runs_at_start_and_again_after_each_interval` |
+| Green after the self-pipe fix | same command | `23 passed` (5 scenarios in a container, 18 unit); infra job as CI runs it (`-m "unit or integration"`): `680 passed, 3 skipped` (gitleaks binary not set) |
+| Reviewer's host repro | `PURGE_INTERVAL_S=600 PURGE_TICK_S=10` or `300`, `python3 infra/docker/purge_schedule.py true`, SIGTERM 2 s after start | tick 10: rc 0 in 0.015 s; tick 300: rc 0 in 0.010 s; last line `purge.schedule.stopped` |
 
 ## Rollback
 
