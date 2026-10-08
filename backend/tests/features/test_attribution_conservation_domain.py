@@ -83,6 +83,28 @@ def left_out(monkeypatch: pytest.MonkeyPatch, side: str, phase: str) -> None:
     _break_attribution(monkeypatch, drop)
 
 
+@given(
+    parsers.parse(
+        "the attribution puts rally {other:d} in place of rally {number:d} "
+        "that side {side} lost on {phase}"
+    )
+)
+def swapped(
+    monkeypatch: pytest.MonkeyPatch, other: int, number: int, side: str, phase: str
+) -> None:
+    """Keeps the count, changes the identity (QA-ST045-R1-01)."""
+
+    def swap(attributed: Any) -> None:
+        for phases in attributed[side].values():
+            for numbers in phases[phase].values():
+                if number in numbers:
+                    numbers[numbers.index(number)] = other
+                    return
+        raise AssertionError(f"rally {number} is not attributed to side {side} on {phase}")
+
+    _break_attribution(monkeypatch, swap)
+
+
 @when("the starter stats are computed")
 def computed(ctx: dict[str, Any]) -> None:
     try:

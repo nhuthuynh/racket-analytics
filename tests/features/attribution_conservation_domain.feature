@@ -21,6 +21,12 @@ Feature: Attribution conservation per game and serve/receive
       When the starter stats are computed
       Then the computation is refused with "B game 1 receive"
 
+    Scenario: A lost rally swapped for one the side did not lose stops the stats computation
+      Given the worked-example game of the metric dictionary is projected
+      And the attribution puts rally 1 in place of rally 3 that side A lost on receive
+      When the starter stats are computed
+      Then the computation is refused with "A game 1 receive: lost [3, 4, 13, 14]"
+
   Rule: Attributed plus unattributed equals rallies lost, per game, side and phase
 
     Scenario: The worked example conserves every lost rally

@@ -60,6 +60,17 @@ def test_a_rally_of_another_side_or_phase_breaks_the_invariant() -> None:
         check_conservation(counted, attributed)
 
 
+def test_a_lost_rally_swapped_for_one_not_lost_breaks_the_invariant() -> None:
+    """Same count, wrong identity (QA-ST045-R1-01): conservation is per rally, not per count."""
+    counted = _worked()
+    attributed = attribute_lost_rallies(counted)
+    receive = attributed["A"][1]["receive"]
+    receive[UNATTRIBUTED] = [1 if n == 3 else n for n in receive[UNATTRIBUTED]]  # A won rally 1
+    assert sum(len(v) for v in receive.values()) == len(lost_rallies(counted)["A"][1]["receive"])
+    with pytest.raises(AttributionBroken, match=r"A game 1 receive: lost \[3, 4, 13, 14\]"):
+        check_conservation(counted, attributed)
+
+
 # ---------------------------------------------------------------- 2. missing -> error
 def test_a_lost_rally_left_out_breaks_the_invariant() -> None:
     counted = _worked()
