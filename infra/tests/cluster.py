@@ -30,7 +30,8 @@ MIGRATE_MODULE = re.compile(r"\bpython3? -m (racket\.[\w.]+migrate)\b")
 
 
 def integration_steps() -> list[dict[str, Any]]:
-    return yaml.safe_load(CI.read_text())["jobs"]["integration"]["steps"]
+    steps: list[dict[str, Any]] = yaml.safe_load(CI.read_text())["jobs"]["integration"]["steps"]
+    return steps
 
 
 def step_index(steps: list[dict[str, Any]], needle: str | re.Pattern[str]) -> int:
@@ -90,4 +91,5 @@ def run_helper(*args: str, timeout: float = 600) -> dict[str, Any]:
                          env=env, capture_output=True, text=True, timeout=timeout,
                          check=False)  # fmt: skip
     assert res.returncode == 0, (res.stdout + res.stderr)[-3000:]
-    return json.loads(res.stdout.strip().splitlines()[-1])
+    out: dict[str, Any] = json.loads(res.stdout.strip().splitlines()[-1])
+    return out
