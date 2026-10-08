@@ -377,6 +377,8 @@ jobs:
         env:
           # web-tls (ADR 0029): Secure `__Host-` cookies need https in WebKit.
           BASE_URL: https://localhost:3000
+          # E2E-03-05 (ST-052): the labeller-admin CLI in this job's api container.
+          E2E_ADMIN_CMD: docker compose -f ${{ github.workspace }}/infra/compose.yaml --env-file ${{ github.workspace }}/infra/env.example exec -T api python -m racket.dataset.admin
         run: pnpm exec playwright test --grep-invert "@red-until-" --reporter=github,html
       - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
         # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).

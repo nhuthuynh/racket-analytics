@@ -64,3 +64,23 @@ def test_the_drill_lint_job_lints_the_library_with_the_locked_environment() -> N
 
 def test_the_drill_lint_job_is_a_merge_gate() -> None:
     assert "drill-lint" in jobs()["ci-gate"]["needs"]
+
+
+# ---------------------------------------------------------------- CI run 37715576115 (PR #4)
+# E2E-03-05 (ST-052) makes a labeller with the labeller-admin CLI of the stack under test
+# (`web/e2e/helpers/sprint-03.ts` admin()): "E2E_ADMIN_CMD is not set" in Chromium and WebKit.
+# The CLI runs in the api container of the job's own Compose stack, with absolute paths because
+# the Playwright step runs in `web/`.
+def test_the_gated_playwright_step_can_run_the_labeller_admin_cli() -> None:
+    step = next(
+        s for s in jobs()["e2e"]["steps"] if s.get("name", "").startswith("Playwright journeys")
+    )
+    cmd = step.get("env", {}).get("E2E_ADMIN_CMD", "")
+    assert cmd, "E2E_ADMIN_CMD missing on the gated Playwright step"
+    assert cmd.split()[:2] == ["docker", "compose"], cmd
+    assert "-f ${{ github.workspace }}/infra/compose.yaml" in cmd
+    assert "--env-file ${{ github.workspace }}/infra/env.example" in cmd
+    assert cmd.endswith("exec -T api python -m racket.dataset.admin"), cmd
+    # The helper splits on spaces and runs no shell, so quotes would reach docker verbatim.
+    assert "'" not in cmd
+    assert '"' not in cmd
