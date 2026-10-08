@@ -75,6 +75,27 @@ beforeEach(() => {
 
 describe('L-01 server page /label/matches/{id}', () => {
   const params = Promise.resolve({ matchId: ID });
+  // The hoisted fakes keep calls and implementations across tests unless reset (QA-PR14-06).
+  beforeEach(() => {
+    server.getMatch.mockReset();
+    server.labelSession.mockReset();
+  });
+
+  it('the label session is fine but the match read then fails: not-found for 404, the error itself otherwise', async () => {
+    const Page = (await import('@/app/label/matches/[matchId]/page')).default;
+    server.labelSession.mockResolvedValue(session());
+    server.getMatch.mockRejectedValueOnce(new ApiError(404, 'not_found'));
+    await expect(Page({ params })).rejects.toMatchObject({ notFound: true });
+    server.getMatch.mockRejectedValueOnce(new ApiError(500, 'internal_error', REF));
+    await expect(Page({ params })).rejects.toMatchObject({ status: 500, code: 'internal_error' });
+  });
+
+  it('a 409 with a code that has no refusal text is not shown as a refusal: it is thrown', async () => {
+    const Page = (await import('@/app/label/matches/[matchId]/page')).default;
+    server.labelSession.mockRejectedValue(new ApiError(409, 'decision_needed'));
+    server.getMatch.mockResolvedValue(match);
+    await expect(Page({ params })).rejects.toMatchObject({ status: 409, code: 'decision_needed' });
+  });
 
   it('a player, a labeller on another account\'s match, and a deleted match get the not-found page', async () => {
     server.labelSession.mockRejectedValue(new ApiError(404, 'not_found'));
@@ -195,6 +216,21 @@ describe('L-01 tagging and saving (ADR 0043: the ending saves the rally)', () =>
     await userEvent.click(screen.getByRole('button', { name: /Rally end/ }));
     expect(screen.getByText('Rally end must be after its start.')).toBeVisible();
     expect(screen.queryByRole('group', { name: /^How did rally/ })).toBeNull();
+    expect(a.labelEvent).not.toHaveBeenCalled();
+  });
+
+  it('a hit or bounce before Rally start makes no hidden mark: it says "Press Rally start first." (PE-ST052-R1-07)', async () => {
+    const { a } = setup();
+    press('h');
+    await userEvent.click(within(screen.getByRole('group', { name: 'Who hit it?' })).getByRole('button', { name: 'Carlos' }));
+    expect(screen.getByText('Press Rally start first.')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: /^Bounce/ }));
+    await userEvent.click(within(screen.getByRole('group', { name: 'Ball in view?' })).getByRole('button', { name: 'Yes' }));
+    await userEvent.click(screen.getByRole('button', { name: /Rally start/ }));
+    press('.');
+    await userEvent.click(screen.getByRole('button', { name: /Rally end/ }));
+    expect(screen.queryByText(/^Hit by|^Bounce (in|not in) view/)).toBeNull();
+    expect(screen.getByText('Rally 1: frames 0 to 1')).toBeVisible();
     expect(a.labelEvent).not.toHaveBeenCalled();
   });
 

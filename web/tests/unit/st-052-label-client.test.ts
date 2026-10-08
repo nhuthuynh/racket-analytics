@@ -53,6 +53,14 @@ describe('labelSession: GET /label/matches/{id}', () => {
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps only the schema facets (contact, trajectory, intent, technique); others are dropped (PE-ST052-R1-05)', async () => {
+    const facets = { contact: 'volley', position: 'kitchen', nickname: 'Carlos' };
+    const body = sessionBody({ document: doc({ rallies: [{ id: 'r1', start_frame: 1, end_frame: 400, outcome: OUTCOME, events: [{ ...HIT, facets }] }] }) });
+    const { client } = clientWith(json(200, body));
+    const s = await client.labelSession(ID);
+    expect(s.document.rallies[0]?.events[0]).toEqual({ type: 'hit', frame: 150, hitter: 'B1', facets: { contact: 'volley' } });
+  });
+
   it('reads the session; unknown fields are dropped and missing optional ones are filled', async () => {
     const extra = doc({
       consent_ref: 'CR-1',
