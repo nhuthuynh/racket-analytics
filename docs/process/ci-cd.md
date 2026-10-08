@@ -107,7 +107,7 @@ Wired in `.claude/settings.json`; scripts in `.claude/hooks/`; tests in `infra/t
 
 ### 3.1 Test-immutability guard (EP/ENG-28, NFR-078)
 
-`scripts/ci/check_test_immutability.py` (job `pr-policy`) fails a PR that **modifies, deletes or renames** an existing file under `backend/tests/`, `web/e2e/`, `fixtures/gold/` or `tests/features/`. The PR passes when it carries the `qa-approved-test-change` label. Adding new files is always allowed. The job re-runs on `labeled`/`unlabeled` events. Only changes since the merge base count.
+`scripts/ci/check_test_immutability.py` (job `pr-policy`) fails a PR that **modifies, deletes or renames** an existing file under `backend/tests/`, `web/e2e/`, `fixtures/gold/` or `tests/features/`. The PR passes when it carries the `qa-approved-test-change` label. Adding new files is always allowed. The job re-runs on `labeled`/`unlabeled` events. Only changes since the merge base count: both `pr-policy` steps diff from the merge base of `HEAD` (the merge ref) and `origin/<base branch>` (`scripts/ci/pr_change_set.py`), never from the event's `pull_request.base.sha`, which goes stale when `main` moves before the run (CI-POLICY-BASE, CI run 37739461709). A missing base branch fails closed.
 
 ## 4. Claude review bot
 
