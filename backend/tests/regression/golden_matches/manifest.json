@@ -1,6 +1,6 @@
 {
   "id": "GS-AN-1",
-  "version": 1,
+  "version": 2,
   "created": "2026-10-06",
   "description": "Golden matches for the starter stats AN-01..AN-07 (ST-049, QD-GD-03): three tag scripts (2 games; 3 games; 1 game with corrections and needs-decision rallies) and their expected values. No video, no people.",
   "licence": "CC0-1.0",
@@ -22,18 +22,18 @@
   "files": [
     {
       "path": "expected/gm1-two-games.json",
-      "sha256": "514a662c6cb0f2e0e7a381ae4782e1a12c6f88784a5953a5bfa6f5cabb5ff84c",
-      "bytes": 3180
+      "sha256": "c53a2a46a3d48853c6c641d441f11a61f1a8107dbbf4b176027a547fded9df72",
+      "bytes": 3387
     },
     {
       "path": "expected/gm2-three-games.json",
-      "sha256": "61046c08a60ee06968d22b0080378931223262cfb73801234334da211bf86ac4",
-      "bytes": 3187
+      "sha256": "28acc9afae7e567f2b36dec7e4e88238921c0dd81bf69ed02169735312ff3070",
+      "bytes": 3402
     },
     {
       "path": "expected/gm3-corrections-needs-decision.json",
-      "sha256": "2e21a5292a4cc3d0ec78fbe24711d2797bfdf7099fc39c40f6b463016cd4019c",
-      "bytes": 2491
+      "sha256": "2c4c514cc10b05eda3aeb93b1358a7ebf9376d6a36a0b0ce9eeff1815377cfe1",
+      "bytes": 2694
     },
     {
       "path": "gm1-two-games.script.json",

@@ -41,7 +41,8 @@ def test_the_manifest_lists_exactly_the_files_of_the_set() -> None:
 
 def test_the_manifest_records_rules_dictionary_and_labellers() -> None:
     manifest = _json(SET_DIR / "manifest.json")
-    assert (manifest["id"], manifest["version"]) == ("GS-AN-1", 2)  # v2: AN-07 rule 0.3 per share, AN-06 longest_by_game
+    # v2: AN-07 rule 0.3 per share, AN-06 longest_by_game
+    assert (manifest["id"], manifest["version"]) == ("GS-AN-1", 2)
     assert manifest["rules_version"] == "PROVISIONAL-UNVERIFIED"
     assert manifest["metric_dict_version"] == "0.1"
     assert manifest["consent_status"] == "synthetic"
