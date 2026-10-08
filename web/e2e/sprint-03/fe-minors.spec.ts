@@ -1,6 +1,7 @@
 // Sprint 2 review round 3 FE minors carried to Sprint 3 (C3-10), live on the stack:
 // PD-R3S2-01 T-02 errors use the shared error summary [DPA/DESIGN-13];
-// PD-R3S2-02 H-01 says when "Reload the history" failed again.
+// PD-R3S2-02 H-01 says when "Reload the history" failed again and that it is reloading.
+// Binds tests/features/game_start_errors.feature and tests/features/history_reload.feature.
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from '../helpers/axe';
 import { MY_SIDE, receivedMatch, tagJourneyByApi } from '../helpers/sprint-02';
@@ -42,5 +43,30 @@ test.describe('@story-C3-10 FE minors from Sprint 2 review round 3', () => {
     await history.getByRole('button', { name: 'Reload the history' }).click();
     await expect(history.getByRole('alert')).toHaveCount(0);
     await expect(history.getByRole('button', { name: /Reload the history/ })).toHaveCount(0);
+  });
+
+  test('PD-R3S2-02 while the history reloads the button says so and is busy', async ({ page }) => {
+    const matchId = await receivedMatch(page, 'PD-R3S2-02 H-01 busy');
+    await tagJourneyByApi(page, matchId);
+    let mode: 'fail' | 'hold' = 'fail';
+    let release: () => void = () => {};
+    const held = new Promise<void>((r) => {
+      release = r;
+    });
+    await page.route(`**/api/matches/${matchId}/corrections**`, async (route) => {
+      if (mode === 'fail') return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":{"code":"unknown"}}' });
+      await held;
+      return route.continue();
+    });
+    await page.goto(`/matches/${matchId}/sheet`);
+    const history = page.getByRole('region', { name: 'Correction history' });
+    await expect(history).toContainText('The correction history could not be loaded.');
+    mode = 'hold';
+    await history.getByRole('button', { name: 'Reload the history' }).click();
+    const busy = history.getByRole('button', { name: 'Reloading the history…' });
+    await expect(busy).toHaveAttribute('aria-busy', 'true');
+    release();
+    await expect(history.getByRole('button', { name: /Reload/ })).toHaveCount(0);
+    await expect(history.getByRole('alert')).toHaveCount(0);
   });
 });
