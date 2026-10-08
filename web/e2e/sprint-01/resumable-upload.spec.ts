@@ -5,7 +5,7 @@
 import { expect, test } from '@playwright/test';
 import { stat } from 'node:fs/promises';
 import { answerSetup, createAndUpload, LONG_CLIP, paddedClip, signInByLink, uploadPercent } from '../helpers/sprint-01';
-import { settledServerOffset } from '../helpers/upload-hold';
+import { holdUploadAt, settledServerOffset } from '../helpers/upload-hold';
 
 // page.route does not see requests of a service-worker-controlled page in WebKit; routing
 // specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
@@ -40,19 +40,20 @@ test.describe('Resumable upload', () => {
   test('Return after closing the tab', async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);
     const size = (await stat(file)).size;
-    let uploadUrl = '';
-    page.on('request', (r) => {
-      if (r.method() === 'PATCH' && /\/uploads\//.test(r.url())) uploadUrl = r.url();
-    });
+    // Closing "once the bar shows 30%" raced the last chunk: on a fast runner the bar can first
+    // read >= 30% while the final PATCH is on its way, the server finishes the upload and no
+    // banner is due (CI run 37715576115). Holding the chunk at 30% closes the tab mid-upload.
+    const { chunk } = await holdUploadAt(page, size, 30);
     await signInByLink(page);
     await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy', file });
     await createAndUpload(page);
-    await expect.poll(() => uploadPercent(page), { timeout: 60_000 }).toBeGreaterThanOrEqual(30);
+    const held = await chunk;
     await page.close();
 
     // Given: the tab closed while the upload was unfinished (CI-FLAKE-RESUMABLE).
-    const offset = await settledServerOffset(context, uploadUrl);
+    const offset = await settledServerOffset(context, held.url);
     expect(offset, 'the upload must be unfinished when the tab closes').toBeLessThan(size);
+    expect(offset, 'the held chunk must not reach the server').toBe(held.offset);
 
     // Then: she is offered to resume from where the server stopped.
     const again = await context.newPage();
