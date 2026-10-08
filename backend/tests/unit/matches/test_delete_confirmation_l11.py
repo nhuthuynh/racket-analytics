@@ -37,7 +37,7 @@ def _refusal(body: Any) -> list[tuple[Any, str]]:
 
 @pytest.mark.parametrize(
     "value",
-    ["del\x00ete", "del\ud800ete", "del\udfffete", "del ete", "del ete", "del\x7fete"],
+    ["del\x00ete", "del\ud800ete", "del\udfffete", "del\u2028ete", "del\u2029ete", "del\x7fete"],  # noqa: PT014 (surrogates look equal to ruff)
     ids=["nul", "high-surrogate", "low-surrogate", "line-separator", "para-separator", "del"],
 )
 def test_a_named_hidden_character_inside_the_confirmation_is_refused(value: str) -> None:

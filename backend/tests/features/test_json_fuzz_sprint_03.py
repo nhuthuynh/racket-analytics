@@ -20,7 +20,7 @@ from tests.support.api import ApiDriver
 pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 FEATURE = "json_fuzz_sprint_03.feature"
-HIDDEN = {"a NUL": "\x00", "a lone surrogate": "\ud800", "a line separator": " "}
+HIDDEN = {"a NUL": "\x00", "a lone surrogate": "\ud800", "a line separator": "\u2028"}
 
 
 @scenario(FEATURE, "A delete confirmation with a hidden character is refused")
