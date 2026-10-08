@@ -31,3 +31,20 @@ Feature: The purge job runs on a schedule of at least once a day
       Then the container exits with code 0 within 10 seconds
       And the purge job received SIGTERM
       And the last log line is "purge.schedule.stopped"
+
+    Scenario: Stopping the container between runs stops the schedule promptly, even with the longest tick
+      Given the purge schedule is set to every 600 seconds
+      And the heartbeat tick is 300 seconds
+      And a purge job that prints "job-ran"
+      When the purge schedule starts in a container
+      And the container is stopped after the first run has finished
+      Then the container exits with code 0 within 5 seconds
+      And the last log line is "purge.schedule.stopped"
+
+    Scenario: The job runs at start and again after each interval
+      Given the purge schedule is set to every 3 seconds
+      And a purge job that prints "job-ran"
+      When the purge schedule starts in a container
+      Then the first run is logged with status "ok" at level "INFO" announcing the next run in 3 seconds
+      And the second run is logged between 3 and 5 seconds after the first, also with status "ok"
+      And the job's own output "job-ran" passed through for each run

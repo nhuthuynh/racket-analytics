@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -153,6 +154,53 @@ def test_sigterm_during_a_run_is_passed_to_the_job_and_the_scheduler_exits_promp
     assert rc == 0, err
     assert got_term.exists(), "the in-flight job did not receive SIGTERM"
     assert logs[-1]["event"] == "purge.schedule.stopped"
+
+
+@pytest.mark.unit
+def test_sigterm_between_runs_stops_promptly_even_with_the_longest_tick(tmp_path: Path) -> None:
+    # PE-R1-1: the wait between runs must end on SIGTERM, not after the current tick. The
+    # longest accepted tick (300 s) is far beyond Compose's 30 s stop_grace_period (ADR 0038).
+    ran = tmp_path / "ran"
+    proc = start_scheduler(tmp_path, counter_cmd(ran), PURGE_INTERVAL_S="600", PURGE_TICK_S="300")
+    try:
+        assert wait_for(lambda: lines(ran) >= 1)
+        time.sleep(0.5)  # the run has finished; the scheduler is waiting for the next one
+        assert proc.poll() is None
+        t0 = time.monotonic()
+        proc.send_signal(signal.SIGTERM)
+        try:
+            out, err = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            pytest.fail("SIGTERM between runs did not stop the scheduler within 5 s")
+        elapsed = time.monotonic() - t0
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.communicate()
+    assert elapsed < 2, elapsed
+    assert proc.returncode == 0, err
+    logs = [json.loads(ln) for ln in out.splitlines() if ln.strip()]
+    assert logs[-1]["event"] == "purge.schedule.stopped"
+    assert logs[-1]["runs"] == 1
+
+
+@pytest.mark.unit
+def test_runs_are_spaced_by_the_interval_not_back_to_back(tmp_path: Path) -> None:
+    # PE-R1-2: pins the cadence; a scheduler that ignores PURGE_INTERVAL_S and loops fails here.
+    ran = tmp_path / "ran"
+    proc = start_scheduler(tmp_path, counter_cmd(ran), PURGE_INTERVAL_S="2", PURGE_TICK_S="1")
+    try:
+        assert wait_for(lambda: lines(ran) >= 1, timeout=3), "no run at start"
+        time.sleep(1.2)
+        assert lines(ran) == 1, "a second run started before the interval had passed"
+        assert wait_for(lambda: lines(ran) >= 2, timeout=4), "no second run after the interval"
+    finally:
+        rc, logs, err = stop(proc)
+    assert rc == 0, err
+    runs = [r for r in logs if r.get("event") == "purge.run"]
+    assert all(r["next_run_in_s"] == 2 for r in runs)
+    stamps = [datetime.fromisoformat(r["ts"].replace("Z", "+00:00")) for r in runs[:2]]
+    assert 1.5 <= (stamps[1] - stamps[0]).total_seconds() <= 3.5, stamps
 
 
 @pytest.mark.unit

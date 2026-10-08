@@ -18,6 +18,7 @@ import subprocess
 import time
 import uuid
 from collections.abc import Iterator
+from datetime import datetime
 from typing import Any
 
 import pytest
@@ -93,6 +94,11 @@ def interval(world: dict[str, Any], seconds: int) -> None:
     world["env"]["PURGE_TICK_S"] = "1"
 
 
+@given(parsers.parse("the heartbeat tick is {seconds:d} seconds"))
+def tick(world: dict[str, Any], seconds: int) -> None:
+    world["env"]["PURGE_TICK_S"] = str(seconds)
+
+
 @given(parsers.parse('a purge job that prints "{text}" and fails with exit code {rc:d}'))
 def failing_job(world: dict[str, Any], text: str, rc: int) -> None:
     world["job"] = ["sh", "-c", f"echo {text}; exit {rc}"]
@@ -131,6 +137,17 @@ def start(world: dict[str, Any]) -> None:
 @when("the container is stopped while the job is running")
 def stop_container(world: dict[str, Any]) -> None:
     assert _wait_for(lambda: "job-started" in _logs(world)[1]), _logs(world)
+    t0 = time.monotonic()
+    res = _docker("stop", "-t", "30", world["name"])
+    world["stop_s"] = time.monotonic() - t0
+    assert res.returncode == 0, res.stderr
+
+
+@when("the container is stopped after the first run has finished")
+def stop_between_runs(world: dict[str, Any]) -> None:
+    assert _wait_for(lambda: len(_runs(world)) >= 1), _logs(world)
+    time.sleep(0.5)  # the scheduler is now waiting for the next run
+    assert _state(world)["Running"], _logs(world)
     t0 = time.monotonic()
     res = _docker("stop", "-t", "30", world["name"])
     world["stop_s"] = time.monotonic() - t0
@@ -197,3 +214,41 @@ def last_line(world: dict[str, Any], event: str) -> None:
     records = _logs(world)[0]
     assert records, "no JSON log lines"
     assert records[-1]["event"] == event, records
+
+
+def _ts(record: dict[str, Any]) -> datetime:
+    return datetime.fromisoformat(record["ts"].replace("Z", "+00:00"))
+
+
+@then(
+    parsers.parse(
+        'the first run is logged with status "{status}" at level "{level}" '
+        "announcing the next run in {seconds:d} seconds"
+    )
+)
+def first_run(world: dict[str, Any], status: str, level: str, seconds: int) -> None:
+    assert _wait_for(lambda: len(_runs(world)) >= 1), _logs(world)
+    run = _runs(world)[0]
+    assert (run["run"], run["status"], run["level"], run["exit_code"]) == (1, status, level, 0)
+    assert run["next_run_in_s"] == seconds
+    assert run["consecutive_failures"] == 0
+
+
+@then(
+    parsers.parse(
+        "the second run is logged between {low:d} and {high:d} seconds after the first, "
+        'also with status "{status}"'
+    )
+)
+def second_run(world: dict[str, Any], low: int, high: int, status: str) -> None:
+    assert _wait_for(lambda: len(_runs(world)) >= 2, timeout=high + 10), _logs(world)
+    first, second = _runs(world)[:2]
+    gap = (_ts(second) - _ts(first)).total_seconds()
+    assert low - 0.5 <= gap <= high, (gap, first, second)
+    assert second["run"] == 2 and second["status"] == status
+
+
+@then(parsers.parse('the job\'s own output "{text}" passed through for each run'))
+def output_passed_through(world: dict[str, Any], text: str) -> None:
+    _, plain, _ = _logs(world)
+    assert plain.count(text) >= len(_runs(world)) >= 2, plain
