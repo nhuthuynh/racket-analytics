@@ -88,8 +88,14 @@ Verdict: APPROVE
 Reviewer: senior-qa-engineer
 ```
 
-A review whose body does not *start* with the verdict, or that has no `Reviewer:` line, is
-ignored. With strict status checks, updating a branch creates a new head. CI then runs again,
+The `Reviewer:` line must be the line right after the `Verdict:` line. The check ignores a
+review when:
+
+- its body does not *start* with the verdict, or the next line is not `Reviewer: <role>`;
+- it was not submitted (only `COMMENTED`, `APPROVED` and `CHANGES_REQUESTED` count, so a
+  `PENDING` or `DISMISSED` review never counts);
+- its author is not trusted. GitHub's `author_association` must be `OWNER`, `MEMBER` or
+  `COLLABORATOR`, because anyone can review a PR on this public repo. With strict status checks, updating a branch creates a new head. CI then runs again,
 and both reviewers must post their verdicts again on the new SHA.
 
 ## 4. PR labels that CI reads
