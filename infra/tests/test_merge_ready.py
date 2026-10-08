@@ -10,9 +10,11 @@ Negative cases first.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 from types import ModuleType
 from typing import Any
 
@@ -29,9 +31,11 @@ from github_stub import (
     green_runs,
     review,
     serve,
+    workflow_run,
 )
 
 SCRIPT = SCRIPTS_DIR / "ci" / "merge_ready.py"
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def load() -> ModuleType:
@@ -52,13 +56,34 @@ def evaluate(
     reviews: list[dict[str, Any]] | None = None,
     the_pr: dict[str, Any] | None = None,
     sha: str = HEAD_SHA,
+    wruns: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     return load().evaluate(
         the_pr or pr(),
         sha,
         green_runs() if runs is None else runs,
         approvals() if reviews is None else reviews,
+        [workflow_run()] if wruns is None else wruns,
     )
+
+
+def suite(runs: list[dict[str, Any]], suite_id: int, id_offset: int) -> list[dict[str, Any]]:
+    """The same jobs as another check suite (a new trigger of the workflow, e.g. a label)."""
+    return [r | {"id": r["id"] + id_offset, "check_suite": {"id": suite_id}} for r in runs]
+
+
+def red_suite() -> list[dict[str, Any]]:
+    """What a pre-label run leaves behind: policy failed, the rest cancelled, ci-gate failed."""
+    return [
+        r
+        | {
+            "conclusion": "failure"
+            if r["name"] in {"ci-gate", "PR policy (test immutability, size)"}
+            else "cancelled"
+        }
+        for r in green_runs()
+        if r["conclusion"] == "success"
+    ]
 
 
 # ======================================================================= unit: refusals
@@ -228,6 +253,46 @@ def test_a_non_gate_run_that_did_not_succeed_blocks(outcome: str) -> None:
     assert f"check 'E2E' is {outcome}" in evaluate(runs=runs)
 
 
+# --------------------------------- unit: a newer run of the same workflow supersedes (M3)
+@pytest.mark.unit
+def test_a_newer_failing_suite_of_the_workflow_blocks_despite_an_older_green_one() -> None:
+    runs = green_runs() + suite(red_suite(), 2, 100)
+    wruns = [workflow_run(1, 1), workflow_run(2, 2)]
+    reasons = evaluate(runs=runs, wruns=wruns)
+    assert "check 'ci-gate' is failure" in reasons
+    assert "check 'PR policy (test immutability, size)' is failure" in reasons
+
+
+@pytest.mark.unit
+def test_a_superseded_suite_never_hides_another_workflows_failure() -> None:
+    runs = (
+        red_suite()
+        + suite(green_runs(), 2, 100)
+        + [check_run("review", "failure", run_id=500, suite_id=3)]
+    )
+    wruns = [workflow_run(1, 1), workflow_run(2, 2), workflow_run(3, 3, workflow_id=11)]
+    assert evaluate(runs=runs, wruns=wruns) == ["check 'review' is failure"]
+
+
+@pytest.mark.unit
+def test_a_newest_suite_cancelled_before_its_jobs_started_blocks() -> None:
+    wruns = [workflow_run(1, 1), workflow_run(2, 2)]  # suite 2 has no check runs at all
+    assert any("no ci-gate check run" in r for r in evaluate(wruns=wruns))
+
+
+@pytest.mark.unit
+def test_a_suite_of_another_event_is_not_superseded() -> None:
+    runs = suite(red_suite(), 1, 0) + suite(green_runs(), 2, 100)
+    wruns = [workflow_run(1, 1, event="workflow_dispatch"), workflow_run(2, 2)]
+    assert "check 'ci-gate' is failure" in evaluate(runs=runs, wruns=wruns)
+
+
+@pytest.mark.unit
+def test_without_workflow_run_data_every_suite_still_counts() -> None:
+    runs = red_suite() + suite(green_runs(), 2, 100)
+    assert "check 'ci-gate' is failure" in evaluate(runs=runs, wruns=[])
+
+
 # ======================================================================= unit: allowed
 @pytest.mark.unit
 def test_all_green_and_both_approvals_on_the_head_allow_the_merge() -> None:
@@ -240,6 +305,23 @@ def test_a_successful_rerun_replaces_an_earlier_failure() -> None:
         r | {"id": r["id"] + 100} for r in green_runs()
     ]
     assert evaluate(runs=runs) == []
+
+
+@pytest.mark.unit
+def test_a_label_rerun_supersedes_the_cancelled_and_failed_older_suite() -> None:
+    runs = red_suite() + suite(green_runs(), 2, 100)
+    wruns = [workflow_run(1, 1), workflow_run(2, 2)]
+    assert evaluate(runs=runs, wruns=wruns) == []
+
+
+@pytest.mark.unit
+def test_regression_merged_pr_2_head_with_a_label_rerun_is_merge_ready_on_ci() -> None:
+    """Real check and workflow runs of PR #2 at c4c66b1 (review round 2, M3): suite
+    101621087376 was cancelled by the label re-run, suite 101621285156 is all green."""
+    data = json.loads((FIXTURES / "pr2_c4c66b1_runs.json").read_text())
+    sha = data["head_sha"]
+    reasons = load().check_reasons(data["check_runs"], sha, data["workflow_runs"])
+    assert reasons == []
 
 
 @pytest.mark.unit
@@ -336,6 +418,33 @@ def test_script_allows_the_merge_following_every_page_and_sends_the_token() -> N
     check_pages = [p for p, _ in stub.requests if "/check-runs" in p]
     assert len(check_pages) == 3
     assert {auth for _, auth in stub.requests} == {"Bearer t0ken"}
+
+
+@pytest.mark.integration
+def test_script_refuses_when_the_newest_ci_run_failed_over_http() -> None:
+    stub = GitHubStub(
+        check_runs=green_runs() + suite(red_suite(), 2, 100),
+        workflow_runs=[workflow_run(2, 2), workflow_run(1, 1)],
+    )
+    with serve(stub):
+        res = run_script(stub)
+    assert res.returncode == 1, res.stdout + res.stderr
+    assert "check 'ci-gate' is failure" in res.stdout
+
+
+@pytest.mark.integration
+def test_script_allows_a_label_rerun_and_asks_for_the_head_shas_workflow_runs() -> None:
+    stub = GitHubStub(
+        check_runs=red_suite() + suite(green_runs(), 2, 100),
+        workflow_runs=[workflow_run(1, 1), workflow_run(2, 2), workflow_run(9, 9, sha=OLD_SHA)],
+        page_size=1,
+    )
+    with serve(stub):
+        res = run_script(stub)
+    assert res.returncode == 0, res.stdout + res.stderr
+    asked = [p for p, _ in stub.requests if "/actions/runs" in p]
+    assert len(asked) == 2  # two runs on the head SHA, one per page
+    assert all(f"head_sha={HEAD_SHA}" in p for p in asked)
 
 
 @pytest.mark.unit

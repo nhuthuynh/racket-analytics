@@ -52,6 +52,20 @@ Feature: Merge readiness of a pull request into main
       When the orchestrator runs the merge check on the head
       Then the merge is refused naming "senior reviewer: no latest"
 
+    Scenario: A newer CI run that failed refuses the merge despite an older green run
+      Given a pull request into main whose CI was green on the head
+      And a newer CI run of the same workflow then failed on the head
+      And the principal-engineer and the senior-qa-engineer approved the head
+      When the orchestrator runs the merge check on the head
+      Then the merge is refused naming "check 'ci-gate' is failure"
+
+    Scenario: A label re-run supersedes the cancelled CI run it replaced
+      Given a pull request into main whose CI run was cancelled by a label re-run
+      And the label re-run of the same workflow is green on the head
+      And the principal-engineer and the senior-qa-engineer approved the head
+      When the orchestrator runs the merge check on the head
+      Then the merge is allowed
+
     Scenario: Green CI and both approvals on the head allow the merge
       Given a pull request into main whose CI is green on the head
       And the principal-engineer and the senior-qa-engineer approved the head

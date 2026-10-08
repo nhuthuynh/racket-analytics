@@ -6,9 +6,17 @@ from __future__ import annotations
 import subprocess
 
 import pytest
-from github_stub import OLD_SHA, GitHubStub, check_run, green_runs, review, serve
+from github_stub import (
+    OLD_SHA,
+    GitHubStub,
+    check_run,
+    green_runs,
+    review,
+    serve,
+    workflow_run,
+)
 from pytest_bdd import given, parsers, scenarios, then, when
-from test_merge_ready import run_script
+from test_merge_ready import red_suite, run_script, suite
 
 pytestmark = [pytest.mark.scenario, pytest.mark.integration]
 
@@ -37,6 +45,30 @@ def gate_running(stub: GitHubStub) -> None:
     stub.check_runs = [r for r in green_runs() if r["name"] != "ci-gate"] + [
         check_run("ci-gate", None, "in_progress", run_id=41)
     ]
+
+
+@given("a pull request into main whose CI was green on the head")
+def was_green(stub: GitHubStub) -> None:
+    stub.check_runs = green_runs()
+    stub.workflow_runs = [workflow_run(1, 1)]
+
+
+@given("a newer CI run of the same workflow then failed on the head")
+def newer_failed(stub: GitHubStub) -> None:
+    stub.check_runs += suite(red_suite(), 2, 100)
+    stub.workflow_runs.append(workflow_run(2, 2))
+
+
+@given("a pull request into main whose CI run was cancelled by a label re-run")
+def cancelled_by_label(stub: GitHubStub) -> None:
+    stub.check_runs = red_suite()
+    stub.workflow_runs = [workflow_run(1, 1)]
+
+
+@given("the label re-run of the same workflow is green on the head")
+def label_rerun_green(stub: GitHubStub) -> None:
+    stub.check_runs += suite(green_runs(), 2, 100)
+    stub.workflow_runs.append(workflow_run(2, 2))
 
 
 @given("the principal-engineer and the senior-qa-engineer approved the head")

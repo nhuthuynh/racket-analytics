@@ -1,4 +1,4 @@
-"""A local stand-in for the three GitHub REST endpoints `scripts/ci/merge_ready.py` reads
+"""A local stand-in for the four GitHub REST endpoints `scripts/ci/merge_ready.py` reads
 (CI-PR-GATE). It speaks real HTTP on 127.0.0.1, paginates with `Link: rel="next"` like
 GitHub, and records the requests, so the script is exercised over a real socket.
 """
@@ -34,6 +34,23 @@ def check_run(
         "status": status,
         "conclusion": conclusion,
         "check_suite": {"id": suite_id},
+    }
+
+
+def workflow_run(
+    suite_id: int = 1,
+    run_id: int = 1,
+    workflow_id: int = 10,
+    event: str = "pull_request",
+    sha: str = HEAD_SHA,
+) -> dict[str, Any]:
+    """A GitHub Actions workflow run: one run (and one check suite) per trigger of a workflow."""
+    return {
+        "id": run_id,
+        "workflow_id": workflow_id,
+        "event": event,
+        "check_suite_id": suite_id,
+        "head_sha": sha,
     }
 
 
@@ -91,6 +108,7 @@ class GitHubStub:
     )
     check_runs: list[dict[str, Any]] = field(default_factory=green_runs)
     reviews: list[dict[str, Any]] = field(default_factory=approvals)
+    workflow_runs: list[dict[str, Any]] = field(default_factory=lambda: [workflow_run()])
     page_size: int = 2
     requests: list[tuple[str, str | None]] = field(default_factory=list)
     url: str = ""
@@ -114,6 +132,11 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
                 runs = [r for r in stub.check_runs if r.get("head_sha", HEAD_SHA) == m.group(1)]
                 chunk, more = self._page(runs, page)
                 return self._send({"total_count": len(runs), "check_runs": chunk}, more, page)
+            if parts.path == f"{base}/actions/runs":
+                sha = parse_qs(parts.query).get("head_sha", [""])[0]
+                wruns = [r for r in stub.workflow_runs if r["head_sha"] == sha]
+                chunk, more = self._page(wruns, page)
+                return self._send({"total_count": len(wruns), "workflow_runs": chunk}, more, page)
             if parts.path == f"{base}/pulls/{PR_NUMBER}/reviews":
                 chunk, more = self._page(stub.reviews, page)
                 return self._send(chunk, more, page)
@@ -134,10 +157,11 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
             if more:
-                path = urlsplit(self.path).path
-                self.send_header(
-                    "Link", f'<{stub.url}{path}?per_page=100&page={page + 1}>; rel="next"'
-                )
+                parts = urlsplit(self.path)
+                query = {k: v[0] for k, v in parse_qs(parts.query).items() if k != "page"}
+                query["page"] = str(page + 1)
+                nxt = "&".join(f"{k}={v}" for k, v in query.items())
+                self.send_header("Link", f'<{stub.url}{parts.path}?{nxt}>; rel="next"')
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
