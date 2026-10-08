@@ -3,7 +3,9 @@
 // Gherkin is a 48 MiB padded fixture, and the 2-minute cut is 10 s: the behaviour is the same,
 // the run time is not (judgment). Red until ST-017.
 import { expect, test } from '@playwright/test';
+import { stat } from 'node:fs/promises';
 import { answerSetup, createAndUpload, LONG_CLIP, paddedClip, signInByLink, uploadPercent } from '../helpers/sprint-01';
+import { settledServerOffset } from '../helpers/upload-hold';
 
 // page.route does not see requests of a service-worker-controlled page in WebKit; routing
 // specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
@@ -37,15 +39,25 @@ test.describe('Resumable upload', () => {
 
   test('Return after closing the tab', async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);
+    const size = (await stat(file)).size;
+    let uploadUrl = '';
+    page.on('request', (r) => {
+      if (r.method() === 'PATCH' && /\/uploads\//.test(r.url())) uploadUrl = r.url();
+    });
     await signInByLink(page);
     await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy', file });
     await createAndUpload(page);
     await expect.poll(() => uploadPercent(page), { timeout: 60_000 }).toBeGreaterThanOrEqual(30);
     await page.close();
 
+    // Given: the tab closed while the upload was unfinished (CI-FLAKE-RESUMABLE).
+    const offset = await settledServerOffset(context, uploadUrl);
+    expect(offset, 'the upload must be unfinished when the tab closes').toBeLessThan(size);
+
+    // Then: she is offered to resume from where the server stopped.
     const again = await context.newPage();
     await again.goto('/');
-    const banner = again.getByText(/Your upload of '.+' is (\d{1,2})% done\./);
+    const banner = again.getByText(new RegExp(`Your upload of '.+' is ${Math.floor((offset / size) * 100)}% done\\.`));
     await expect(banner).toBeVisible();
     await expect(again.getByRole('button', { name: 'Resume upload' })).toBeVisible();
     await expect(again.getByText(/It will be kept until/)).toBeVisible();
