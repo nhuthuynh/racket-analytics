@@ -1,13 +1,6 @@
-"""PE-R1S3-07 / QA-R1S3-07 (review round 1): what CI run 37639459765 at 48988f4 showed about the
-``infra-tests`` job.
-
-1. The job selects tests with a marker expression, so an infra test module without a ``unit`` or
-   ``integration`` mark never runs on CI (``test_workflows_sprint03.py`` and
-   ``test_dev_chrome.py`` were deselected: 14 tests, green only locally).
-2. ``test_gitleaks_ignore.py`` checks that each ignored fingerprint names a commit in the
-   repository. A shallow checkout (the ``actions/checkout`` default, depth 1) has no history, so
-   the check failed on CI for the real commit ``9ca52fe``. The job fetches the full history.
-"""
+"""PE-R1S3-07 / QA-R1S3-07 (CI run 37639459765 at 48988f4): the ``infra-tests`` job's marker
+expression must deselect no infra test module (14 unmarked tests never ran on CI), and its checkout
+must hold the full history (``test_gitleaks_ignore.py`` looks up the fingerprinted commits)."""
 
 from __future__ import annotations
 
