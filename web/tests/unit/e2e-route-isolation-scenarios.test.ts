@@ -52,6 +52,9 @@ describe('Feature: An E2E spec that fakes a response sees it in every browser', 
   it("Scenario: Every E2E spec in the repository routes only with service workers blocked", () => {
     // Positive control first: the tree is read at all (it holds specs that do route).
     expect(checkSpecs(e2eDirWith(FAKED_HISTORY))).toHaveLength(1);
-    expect(checkSpecs(E2E_DIR)).toEqual([]);
+    expect(
+      checkSpecs(E2E_DIR),
+      "these specs route a request without test.use({ serviceWorkers: 'block' }), so the route does not apply in WebKit",
+    ).toEqual([]);
   });
 });
