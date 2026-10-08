@@ -6,6 +6,11 @@ decisions file (`| Ticket | Measured | PRs, in stack order | Kind |`). Each PR i
 ``waived N`` (gets the `size-waiver` label, valid up to N changed lines) or a **stacked part**
 ``N`` that must pass `PR size` unlabelled, so at most 400 lines.
 
+A ticket's **measured** lines are its non-record code lines (ADR 0039: record paths go back to
+the base state on a ticket branch). Its PRs must also carry the ticket's own decisions file
+(`docs/sprints/03/decisions/<ID>.md`, PO rule 2026-10-07), which `check_pr_size.py` counts, so
+the caps must cover the measured lines plus ``DECISIONS_FILE_BUDGET`` (SQA-1, PR #6).
+
     size_decisions.py check FILE --scope TICKET=LINES ...   # every ticket decided, parts legal
     size_decisions.py apply FILE --ticket T --pr K --changed N   # label for one re-measured PR
 
@@ -22,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 HARD_LIMIT = 400  # check_pr_size.py HARD_LIMIT
+DECISIONS_FILE_BUDGET = 40  # lines of the ticket's own decisions file, in one of its PRs
 WAIVER_LABEL = "size-waiver"
 HEADING = "## Size decisions"
 _PART = re.compile(r"(waived )?(\d+)")
@@ -66,7 +72,8 @@ def parse(text: str) -> Decisions:
 
 
 def problems(decisions: Decisions, scope: dict[str, int]) -> list[str]:
-    """Every ticket in scope decided, no unwaived part over 400, the measured lines covered."""
+    """Every ticket in scope decided, no unwaived part over 400, and the measured lines plus
+    the ticket's own decisions file covered."""
     found = []
     for ticket, measured in scope.items():
         parts = decisions.get(ticket)
@@ -78,9 +85,12 @@ def problems(decisions: Decisions, scope: dict[str, int]) -> list[str]:
             for i, p in enumerate(parts, 1)
             if not p.waived and p.cap > HARD_LIMIT
         ]
-        covered = sum(p.cap for p in parts)
-        if covered < measured:
-            found.append(f"{ticket}: the PRs cover {covered} of {measured} measured changed lines")
+        covered, needed = sum(p.cap for p in parts), measured + DECISIONS_FILE_BUDGET
+        if covered < needed:
+            found.append(
+                f"{ticket}: the PRs cover {covered} of {needed} changed lines"
+                f" ({measured} measured + {DECISIONS_FILE_BUDGET} for its decisions file)"
+            )
     return found
 
 

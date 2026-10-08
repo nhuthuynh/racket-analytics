@@ -1,4 +1,4 @@
-"""The SIZE-WAIVERS-03 scope: Sprint 3 ticket PRs measured over 400 non-record changed lines.
+"""The SIZE-WAIVERS-03 scope: Sprint 3 ticket PRs over 400 changed lines with their decisions file.
 
 Values are the ticket's measurement (2026-10-08); DOCS-03 is the record paths measured with
 `git diff --numstat origin/main...origin/sprint-03 -- docs/...` (6,235 lines).
@@ -28,5 +28,5 @@ SCOPE = {
     "ST-050b": 892,
     "ST-052": 1444,
     "DOCS-03": 6235,
-    "SIZE-WAIVERS-03": 547,  # this ticket's own PR #6
+    "SIZE-WAIVERS-03": 533,  # this ticket's own PR #6, without this decisions file
 }

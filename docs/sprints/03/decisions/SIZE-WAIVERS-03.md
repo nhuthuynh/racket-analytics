@@ -1,30 +1,30 @@
 # SIZE-WAIVERS-03 decisions
 
-Per-ticket decision file (PO rule 2026-10-07). Ticket PR sizes are non-record changed lines, measured as `check_pr_size.py` counts them; DOCS-03 is the record paths. Each PR in the table below is `waived N` (gets the `size-waiver` label, valid up to N lines) or a stacked part `N` (no label, at most 400 lines), in stack order.
+Per-ticket decision file (PO rule 2026-10-07). **Measured** is a ticket's non-record changed lines: `check_pr_size.py`'s excludes (lockfiles, `fixtures/*`, `*.snap`) plus the record paths (`docs/sprints/02`, `docs/sprints/03`, `docs/design`, `docs/decisions/README.md`), which ADR 0039 resets to the base state on every ticket branch and DOCS-03 carries. The gate also counts the one record file each ticket PR adds, its own `docs/sprints/03/decisions/<ID>.md`, so every ticket's caps cover Measured **+ 40** for that file (SQA-1, PR #6): a waived PR's number includes it, and in a stack the part marked † carries it. DOCS-03's Measured is the record paths. Each PR in the table below is `waived N` (gets the `size-waiver` label, valid up to N lines as `check_pr_size.py` counts them on the built branch) or a stacked part `N` (no label, at most 400 lines), in stack order.
 
 ## Size decisions
 
 | Ticket | Measured | PRs, in stack order | Kind |
 |---|---|---|---|
-| HARNESS-03 | 1462 | waived 1462 | waived |
-| ST-043 | 496 | waived 496 | waived |
-| ST-044 | 828 | waived 828 | waived |
-| ST-045 | 428 | waived 428 | waived |
-| ST-049 | 575 | 355; 342 | stacked |
-| COACH-1 | 1530 | waived 1530 | waived |
-| QA-ACC-3 | 3160 | 383; 359; 343; 397; 351; 280; 228; 220; 336; 327 | stacked |
-| ST-053 | 1026 | 178; 328; 167; 378 | stacked |
-| ST-052a | 558 | 351; 207 | stacked |
-| PE-R1S3-07 | 585 | 101; 374; 110 | stacked |
-| SRE-PURGE-a | 516 | waived 516 | waived |
-| ST-042 | 894 | waived 894 | waived |
-| PE-DESIGN-3 | 936 | waived 936 | waived |
-| ST-048 | 2316 | waived 785; waived 913; waived 427; 191 | stacked, PRs 1-3 waived |
-| ST-050 | 412 | waived 412 | waived |
-| ST-050b | 892 | 399; 306; 187 | stacked |
-| ST-052 | 1444 | waived 1444 | waived |
+| HARNESS-03 | 1462 | waived 1502 | waived |
+| ST-043 | 496 | waived 536 | waived |
+| ST-044 | 828 | waived 868 | waived |
+| ST-045 | 428 | waived 468 | waived |
+| ST-049 | 575 | 355; 382 | stacked, † PR 2 |
+| COACH-1 | 1530 | waived 1570 | waived |
+| QA-ACC-3 | 3160 | 383; 359; 343; 397; 351; 280; 228; 220; 336; 367 | stacked, † PR 10 |
+| ST-053 | 1026 | 178; 328; 207; 378 | stacked, † PR 3 |
+| ST-052a | 558 | 351; 247 | stacked, † PR 2 |
+| PE-R1S3-07 | 585 | 101; 374; 150 | stacked, † PR 3 |
+| SRE-PURGE-a | 516 | waived 556 | waived |
+| ST-042 | 894 | waived 934 | waived |
+| PE-DESIGN-3 | 936 | waived 976 | waived |
+| ST-048 | 2316 | waived 785; waived 913; waived 427; 231 | stacked, PRs 1-3 waived, † PR 4 |
+| ST-050 | 412 | waived 452 | waived |
+| ST-050b | 892 | 399; 306; 227 | stacked, † PR 3 |
+| ST-052 | 1444 | waived 1484 | waived |
 | DOCS-03 | 6235 | waived 8000 | waived |
-| SIZE-WAIVERS-03 | 547 | waived 600 | waived |
+| SIZE-WAIVERS-03 | 533 | waived 600 | waived |
 
 ## Rows
 
@@ -52,3 +52,4 @@ Per-ticket decision file (PO rule 2026-10-07). Ticket PR sizes are non-record ch
 | 2026-10-08 | engineering-manager (SIZE-WAIVERS-03, PR #6) | **This ticket's rows live in this per-ticket file, not in the shared `decision-log.md`** (PO ticket/PR rule of 2026-10-07: ticket PRs do not edit the shared logs; DOCS-03 consolidates them). The table above is the machine-read summary of the rows below; `scripts/ci/size_decisions.py` checks it (`check`) and gives each PR its label (`apply`) | Red then green in PR #6: `cd infra && uv run pytest -q tests/test_size_decisions.py tests/test_size_decisions_cli.py tests/test_size_waivers_scenarios.py`; `python3 scripts/ci/size_decisions.py check docs/sprints/03/decisions/SIZE-WAIVERS-03.md --scope=...` → "18 tickets decided" | A decision that only a person reads drifts from the label put on the PR; a checked table cannot. Rule (3) of the first row (a waiver covers up to its number) is what `apply` enforces |
 | 2026-10-08 | engineering-manager (SIZE-WAIVERS-03, PR #6) | **The Locust load-window fix first carried on this branch (`3e29098`) is dropped; `main`'s CI-PERF-GATES fix (PR #13) is kept.** Merging `origin/main` took `main`'s `scripts/ci/perf_verdict.py`, and this branch's `infra/tests/test_perf_verdict_load_window.py` (never on `main`) went with it | `main`'s `infra/tests/test_perf_verdict_window.py` covers the same three cases (slow window fails, no users fails closed, start-up excluded) and adds the 60 s minimum window | Two fixes for one gate in one file would conflict; the merged one is reviewed and stricter. No test on `main` is changed, so no TCR row |
 | 2026-10-08 | engineering-manager (SIZE-WAIVERS-03, PR #6) | **SIZE-WAIVERS-03 itself (PR #6, 547): waived up to 600.** After the merge of `origin/main` the PR carries the decisions file (52), the checker `scripts/ci/size_decisions.py` (132) and its scenario (46 + 112), integration (63) and unit (111 + 31 scope) tests. Decided before the re-push of PR #6 | `python3 scripts/ci/check_pr_size.py --base origin/main --head HEAD` at `0d52852` → "547 changed lines … over 400 lines", rc=1 | PR #6 is already open and must stay one PR (PO instruction for this ticket), so it cannot be stacked. Splitting would leave either the checker without its tests or the tests without the file they read (PO rule: every PR carries its tests). 600 leaves room for review fixes; above it needs a new row |
+| 2026-10-08 | engineering-manager (SIZE-WAIVERS-03, PR #6 review round 1, SQA-1) | **Every size decision leaves 40 lines for the ticket's own decisions file; this amends rule (3) of the first row and the numbers of every ticket row above.** The Measured basis stays the non-record lines (`check_pr_size.py` excludes plus the ADR 0039 record paths, which every ticket branch resets and DOCS-03 carries). But the PO rule of 2026-10-07 adds one record file to each ticket PR, `docs/sprints/03/decisions/<ID>.md`, and the gate counts it. So each waiver is now Measured + 40, and in each stack one part marked † carries the file and has room for it: ST-049 PR 2 342 → 382, QA-ACC-3 PR 10 327 → 367, ST-053 PR 3 167 → 207 (PR 4 at 378 has no room), ST-052a PR 2 207 → 247, PE-R1S3-07 PR 3 110 → 150, ST-048 PR 4 191 → 231, ST-050b PR 3 187 → 227. `size_decisions.py check` now refuses a ticket whose caps cover less than Measured + 40. A decisions file over 40 lines, or any re-measured PR above its cap, still needs a new row here before the PR opens (`apply` fails closed). Scope: no other ticket of the ADR 0039 map comes within 40 lines of 400, so none is added | Same per-commit basis as the first row; the remaining map rows on that basis: T-SEC-RV3-02 157, T-C3-01 7, T-C3-02 11, T-ST-044-b 98, T-ST-043-b 95, T-ST-054 317, T-C3-04 322, T-ST-048-tests 170, T-C3-03 304, T-C3-10 262, T-DR-02-FE 181, `152c57c` (QA-FUZZ-3) 180, `b5cd5ac` + `f493c02` 84; highest 322 + 40 = 362 ≤ 400. Red then green: `cd infra && uv run pytest -q tests/test_size_decisions.py tests/test_size_decisions_cli.py tests/test_size_waivers_scenarios.py` → 5 failed, 19 passed at `1125741`; 24 passed after the fix. This PR: 588 changed lines after the fix, of which this file is 55, so Measured 533 and 533 + 40 = 573 ≤ its waiver of 600 | The reviewer is right that a cap at the measured code lines alone fails when the PR opens with its decisions file. 40 lines fits a heading, the table header and the decision rows a ticket usually has; a larger file is caught by `apply` at the PR, not silently (judgment) |
