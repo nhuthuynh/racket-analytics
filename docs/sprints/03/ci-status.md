@@ -63,3 +63,12 @@ Three consecutive green runs of the integration job on the PR head are still to 
 - The store slowdown itself (about 64 KiB/s for big writes on the runner) has no cause yet. Suggestion for sre-devops-engineer: on failure, the integration job should keep the whole object store log as an artifact, not `--tail=200` (`ci.yml` "Service logs on failure").
 - A slow store keeps a PATCH's transaction and its `upload_sessions` row lock open for as long as the S3 write takes (observed: 25 s, `idle in transaction`). With pool 5 + overflow 10, about 15 slow PATCHes at once would use up the pool. This is design (ADR 0011 step order), not this defect; it is for the principal-engineer to decide whether to bound it.
 - Other tests that use `sb.receive_video` once or twice per test are not at risk on the same scale (2.6 MB each). IT-02-13 was the only one that uploaded 12 videos in one test.
+
+### Review round 1 (PE-PR17-01, QA-PR17-01): the fix to IT-02-13 is committed
+
+The senior-qa-engineer accepted the TCR row with conditions in the [PR #17 review](https://github.com/nhuthuynh/racket-analytics/pull/17#pullrequestreview-5456430248); the decision is copied into the row. The 3-line change plus 1 import is commit `a3500d1` (`test(CI-IT0213-HANG)`), on its own. Local stack (Postgres 16 via `scripts/dev-postgres.sh`, SeaweedFS 3.97 via `scripts/dev-objectstore.sh`), `backend/`, `T=tests/integration/test_it_02_13_scorebook_limits.py::test_it_02_13_parallel_commands_never_pass_the_per_account_rate`:
+
+- Red, test unchanged, every S3 call through `slow_object_store` at `CI_WRITE_RATE` (scratch `-p` plugin that wraps `S3_ENDPOINT_URL` for the whole run): `uv run pytest -q -n 3 -p viaslow $T` gave `3 failed in 131.06s`.
+- Green, with `a3500d1`, the same command 3 times: `3 passed in 4.45s`, `3 passed in 4.59s`, `3 passed in 4.72s`.
+- Direct (no proxy), 3 times: `uv run pytest -q -n 3 $T` gave `3 passed in 4.13s`, `4.18s`, `4.01s`.
+- The ticket's suites and the whole IT-02-13 file: `uv run pytest -q -n 3 tests/integration/test_it_02_13_scorebook_limits.py tests/features/test_ci_it0213_rate_on_a_slow_store.py tests/integration/harness/test_ci_it0213_rate_arrange.py tests/unit/test_slow_store_throttle.py` gave `18 passed in 6.53s`. `uv run mypy`: `Success: no issues found in 94 source files`.
