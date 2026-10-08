@@ -57,3 +57,62 @@ test.describe('@M0 @story-C3-03 @needs-verification Only moves the server accept
     expect((await sheetOf(page, matchId)).rows.find((r) => r.number === 14)?.marker).toBeNull();
   });
 });
+
+// E2E-03-08 (QA-C303-01, PE-C303-R1-01): the C-03 mirror. Same setup as the C-03 scenario in
+// corrections_replay.feature: game 1 (A serves) A wins at rally 22, game 2 (B serves) has 5
+// rallies; correcting rally 22 to B re-opens game 1, so rallies 23-27 need a decision. Only the
+// earliest kept rally of game 2 may move back (book.py _check_move_back, not_first_in_game).
+test.describe('@M0 @story-C3-03 @needs-verification Only moves the server accepts are offered', () => {
+  test('E2E-03-08 "Move back" is offered only on the first rally of its game, and the others say why', async ({ page }, testInfo) => {
+    const matchId = await receivedMatch(page, 'E2E-03-08 move back');
+    let v = await version(page, matchId);
+    const startGame = async (side: 'A' | 'B') => {
+      const r = await page.request.post(`/api/matches/${matchId}/games`, {
+        headers: { 'If-Match': `"${v}"` }, data: { first_serving_side: side, ends_switched: false },
+      });
+      expect(r.status(), await r.text()).toBe(201);
+      v = ((await r.json()) as { version: number }).version;
+    };
+    let i = 0;
+    const tag = async (winners: string) => {
+      for (const side of winners) {
+        // 2 s apart so all 27 rallies end inside the 60 s fixture clip
+        const r = await page.request.post(`/api/matches/${matchId}/rallies`, {
+          headers: { 'If-Match': `"${v}"` },
+          data: { start_ms: i * 2000, end_ms: i * 2000 + 1500, winning_side: side, ending: 'winner', responsible_player: null, fault_kind: null },
+        });
+        expect(r.status(), await r.text()).toBe(201);
+        v = ((await r.json()) as { version: number }).version;
+        i += 1;
+      }
+    };
+    await startGame('A');
+    await tag('AAAAABBBABABBAAAABAAAA');
+    await startGame('B');
+    await tag('ABABA');
+    const ids = (await sheetOf(page, matchId)).rows.map((r) => r.rally_id);
+    const fix = await page.request.patch(`/api/matches/${matchId}/rallies/${ids[21]}`, {
+      headers: { 'If-Match': `"${v}"` }, data: { field: 'winning_side', value: 'B' },
+    });
+    expect(fix.status(), await fix.text()).toBe(200);
+
+    await page.goto(`/matches/${matchId}/sheet`);
+    for (const n of [24, 25, 26, 27]) {
+      const row = page.getByRole('row', { name: new RegExp(`Rally ${n}\\b`) });
+      await expect(row.getByText('needs your decision')).toBeVisible();
+      await expect(row.getByRole('button', { name: /back to game/ })).toHaveCount(0);
+      await expect(row.getByRole('button', { name: `Remove rally ${n}` })).toBeVisible();
+      await expect(row).toContainText('Only the first rally of game 2 can move back to game 1. Decide rally 23 first.');
+    }
+    const r23 = page.getByRole('row', { name: /Rally 23\b/ });
+    await expect(r23).not.toContainText('Only the first rally');
+    await expectNoBlockingA11yViolations(page, testInfo, 'S-01-move-back-offer');
+
+    await r23.getByRole('button', { name: 'Move rally 23 back to game 1' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Rally 23 moved back to game 1.' })).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0); // not Next's empty route announcer
+    const after = (await sheetOf(page, matchId)).rows.find((r) => r.number === 23) as { game?: number; marker: string | null } | undefined;
+    expect(after?.game).toBe(1);
+    expect(after?.marker).toBeNull();
+  });
+});

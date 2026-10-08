@@ -102,3 +102,35 @@ describe('C3-03: decision/not_last_in_game is explained, not "Try again"', () =>
     expect(await screen.findByRole('alert')).toHaveTextContent('Only the last rally of a game can move to the next game.');
   });
 });
+
+// QA-C303-01 / PE-C303-R1-01: the C-03 mirror. While game 1 is not over, only the earliest kept
+// rally of game 2 may move back (book.py _check_move_back, decision/not_first_in_game); the
+// other rows say why instead of showing nothing. Negative case first.
+describe('C3-03: "Move back" is explained on rallies that are not first in their game', () => {
+  const open: SheetGame[] = [
+    { number: 1, first_serving_side: 'A', winner: null },
+    { number: 2, first_serving_side: 'B', winner: null },
+  ];
+
+  it('a later rally of game 2 is not offered game 1, and says which rally to decide first', () => {
+    setup(sheet([row(1), conflict(2, { game: 2 }), conflict(3, { game: 2 })], open));
+    const r3 = screen.getByRole('row', { name: /Rally 3\b/ });
+    expect(within(r3).queryByRole('button', { name: /back to game/ })).toBeNull();
+    expect(within(r3).getByRole('button', { name: 'Remove rally 3' })).toBeVisible();
+    expect(r3).toHaveTextContent('Only the first rally of game 2 can move back to game 1. Decide rally 2 first.');
+  });
+
+  it('"first" is by time on the video, not by row number', () => {
+    setup(sheet([row(1), conflict(2, { game: 2, start_ms: 30_000, end_ms: 30_500 }), conflict(3, { game: 2 })], open));
+    const r2 = screen.getByRole('row', { name: /Rally 2\b/ });
+    expect(within(r2).queryByRole('button', { name: /back to game/ })).toBeNull();
+    expect(r2).toHaveTextContent('Only the first rally of game 2 can move back to game 1. Decide rally 3 first.');
+  });
+
+  it('the first rally of game 2 is offered game 1 and shows no explanation', () => {
+    setup(sheet([row(1), conflict(2, { game: 2 }), conflict(3, { game: 2 })], open));
+    const r2 = screen.getByRole('row', { name: /Rally 2\b/ });
+    expect(within(r2).getByRole('button', { name: 'Move rally 2 back to game 1' })).toBeVisible();
+    expect(r2).not.toHaveTextContent('Only the first rally');
+  });
+});
