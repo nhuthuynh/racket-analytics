@@ -16,8 +16,8 @@ from the independent reference ``scripts/measure/statslib.py``, so a wrong froze
 pass, and the set is checked by ``racket-manifest-check`` (no change without a version bump).
 
 The expected values are the coach's hand counts only once COACH-1 has counted the scripts
-(QD-AN-03) into ``docs/domain/hand-counts/GS-AN-1-v1.json``, a file the coach owns; until it
-exists and equals the frozen values, the last test stays red (``red_until COACH-1``).
+(QD-AN-03) into ``docs/domain/hand-counts/GS-AN-1-v1.json``, a file the coach owns; the last
+test checks that it exists and equals the frozen values (in the gated run since COACH-1).
 v2 changes no script: it sets AN-07 ``low_sample`` by rule 0.3 on each share, as the product
 does since PE-R1-ST044-01 (gm1 A and gm2 A become true), and freezes AN-06 ``longest_by_game``
 (PE-R1-ST049-01, PE-R1-ST049-02).
@@ -197,7 +197,6 @@ def test_golden_an_manifest_is_intact() -> None:
     assert manifest["labellers"], "the labeller role is recorded (FR-151)"
 
 
-@pytest.mark.red_until(story="COACH-1")
 @pytest.mark.parametrize("match", MATCHES)
 def test_golden_an_frozen_values_are_the_coachs_hand_count(match: str) -> None:
     """QD-AN-03: the coach hand-counts each script on paper and records the count, in the
