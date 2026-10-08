@@ -1,34 +1,27 @@
 {
   "version": "0.1",
-  "note": "Digests of each definition (ST-043, NFR-075). Regenerate only together with a version bump.",
+  "note": "Append-only record {id: {version: digest}} of every shipped definition (ST-043, NFR-075). Never rewrite or remove a row; a changed definition gets a new version row.",
   "entries": {
     "AN-01": {
-      "version": "0.1",
-      "digest": "eab27fcb8058da4babb4d234467d6eb10c16c280242476a4ee2bf76e5024f03a"
+      "0.1": "eab27fcb8058da4babb4d234467d6eb10c16c280242476a4ee2bf76e5024f03a"
     },
     "AN-02": {
-      "version": "0.1",
-      "digest": "bf4dc1e7b0ac28c49539a3792efb7344dfc1ec7b3df8e051c7d13dff63a2d4e7"
+      "0.1": "bf4dc1e7b0ac28c49539a3792efb7344dfc1ec7b3df8e051c7d13dff63a2d4e7"
     },
     "AN-03": {
-      "version": "0.1",
-      "digest": "8ffd21f2e159ec840db7b2300eb195d5133e126d5011efb998d940a9991578ba"
+      "0.1": "8ffd21f2e159ec840db7b2300eb195d5133e126d5011efb998d940a9991578ba"
     },
     "AN-04": {
-      "version": "0.1",
-      "digest": "f30e46ea471f6911b1f719aea43d7984976d7209f3d0331a5a80872020e3f83a"
+      "0.1": "f30e46ea471f6911b1f719aea43d7984976d7209f3d0331a5a80872020e3f83a"
     },
     "AN-05": {
-      "version": "0.1",
-      "digest": "e03d4fbb8502d01093d0912314bb498e992acc113a3ec22ca37ffed9adbc58c0"
+      "0.1": "e03d4fbb8502d01093d0912314bb498e992acc113a3ec22ca37ffed9adbc58c0"
     },
     "AN-06": {
-      "version": "0.1",
-      "digest": "748b0fba3888c13c4fa91b6bd9e7d55438c1680981c7efd3e8e94cc3cf0742d4"
+      "0.1": "748b0fba3888c13c4fa91b6bd9e7d55438c1680981c7efd3e8e94cc3cf0742d4"
     },
     "AN-07": {
-      "version": "0.1",
-      "digest": "b05795914d1fa941d11a8eb1841bb089b440f3e12cbd20e7e722da918325c464"
+      "0.1": "b05795914d1fa941d11a8eb1841bb089b440f3e12cbd20e7e722da918325c464"
     }
   }
 }
