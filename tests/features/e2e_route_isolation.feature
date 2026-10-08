@@ -27,3 +27,12 @@ Feature: An E2E spec that fakes a response sees it in every browser
     Scenario: Every E2E spec in the repository routes only with service workers blocked
       When the route isolation check reads the repository's E2E specs
       Then the check names no spec
+
+    # Review round 1 (PE-R1-01, F1): globs such as '**/api/**' hold "/*" and "*/", so a reader
+    # that strips comments without knowing strings hid route calls and the block between globs.
+    Scenario: Globs that look like comment markers do not hide a route or a block
+      Given an E2E spec whose glob strings contain "/*" and "*/" around its route calls
+      And the spec does not block service workers
+      When the route isolation check reads the E2E specs
+      Then the check names the line of every route
+      And a spec that blocks service workers between two such globs is not named

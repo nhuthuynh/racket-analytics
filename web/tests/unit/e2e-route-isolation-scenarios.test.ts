@@ -49,6 +49,29 @@ describe('Feature: An E2E spec that fakes a response sees it in every browser', 
     expect(checkSpecs(dir)).toEqual([]);
   });
 
+  it('Scenario: Globs that look like comment markers do not hide a route or a block', () => {
+    // PE-R1-01 / F1: "**/api/**" opens a fake block comment that the next glob closes.
+    const dir = e2eDirWith([
+      "import { expect, test } from '@playwright/test';",
+      "const ALL = '**/api/**';",
+      "test('x', async ({ page }) => {",
+      "  await page.waitForURL('**/matches/**');",
+      "  await page.route('**/api/a/**', (route) => route.fulfill({ status: 503 }));",
+      "  await page.route('**/api/b', (route) => route.fulfill({ status: 503 }));",
+      '});',
+    ]);
+    expect(checkSpecs(dir)).toEqual([
+      { file: 'sprint-03/fe-minors.spec.ts', line: 5 },
+      { file: 'sprint-03/fe-minors.spec.ts', line: 6 },
+    ]);
+    const blocked = e2eDirWith([
+      "await page.route('**/uploads/**', handler);",
+      "test.use({ serviceWorkers: 'block' });",
+      "await page.goto('**/x');",
+    ]);
+    expect(checkSpecs(blocked)).toEqual([]);
+  });
+
   it("Scenario: Every E2E spec in the repository routes only with service workers blocked", () => {
     // Positive control first: the tree is read at all (it holds specs that do route).
     expect(checkSpecs(e2eDirWith(FAKED_HISTORY))).toHaveLength(1);
