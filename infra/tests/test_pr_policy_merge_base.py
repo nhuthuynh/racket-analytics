@@ -145,11 +145,11 @@ def pr(tmp_path: Path) -> PullRequest:
 
 
 def pr_policy_steps() -> list[dict]:
-    return [s for s in yaml.safe_load(WORKFLOW.read_text())["jobs"]["pr-policy"]["steps"]]
+    return list(yaml.safe_load(WORKFLOW.read_text())["jobs"]["pr-policy"]["steps"])
 
 
 def run_step(name: str, pr: PullRequest, merge_sha: str) -> subprocess.CompletedProcess[str]:
-    """Run one pr-policy step as the runner would: step env resolved from the event, `run` in bash."""
+    """Run one pr-policy step as the runner does: env resolved from the event, `run` in bash."""
     (step,) = [s for s in pr_policy_steps() if s.get("name") == name]
     ctx = pr.context(merge_sha)
     assert not EXPRESSION.search(step["run"]), "expressions belong in env, not in run (injection)"
@@ -197,7 +197,7 @@ def test_a_docs_only_pr_is_not_blamed_for_a_test_edit_that_reached_main_after_th
 def test_a_small_pr_is_not_blamed_for_lines_that_reached_main_after_the_event(
     pr: PullRequest,
 ) -> None:
-    pr.change_in_pr("docs/notes.md", lines(10))
+    pr.change_in_pr("docs/change.md", lines(10))
     pr.open_event()
     pr.main_moves("backend/src/big.py", lines(450))
     merge_sha = pr.checkout_merge_ref()

@@ -7,6 +7,8 @@ senior-qa-engineer; label mechanism is judgment, see docs/process/ci-cd.md).
 Adding new files is always allowed: TDD adds tests, it never rewrites accepted ones.
 
 Usage: PR_LABELS='["a","b"]' check_test_immutability.py --base origin/main --head HEAD
+`--base` is the base branch; the PR change set is diffed from its merge base with `--head`
+(pr_change_set.py, CI-POLICY-BASE).
 Exit codes: 0 ok, 1 violation, 2 usage or git error (fails closed).
 """
 
@@ -15,8 +17,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import sys
+
+from pr_change_set import ChangeSetError, diff
 
 PROTECTED_PREFIXES = (
     "backend/tests/",
@@ -56,7 +59,7 @@ def violations(name_status: str) -> list[tuple[str, str]]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--base", required=True, help="base ref, e.g. origin/main")
+    ap.add_argument("--base", required=True, help="base branch, e.g. origin/main")
     ap.add_argument("--head", default="HEAD")
     args = ap.parse_args(argv)
 
@@ -68,17 +71,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"test-immutability: cannot read PR_LABELS ({exc}); failing closed")
         return 2
 
-    diff = subprocess.run(
-        ["git", "diff", "--name-status", "-M", f"{args.base}...{args.head}"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if diff.returncode != 0:
-        print(f"test-immutability: git diff failed, failing closed:\n{diff.stderr}")
+    try:
+        change_set = diff(args.base, args.head, "--name-status", "-M")
+    except ChangeSetError as exc:
+        print(f"test-immutability: {exc}; failing closed")
         return 2
+    print(f"test-immutability: {change_set.describe(args.base, args.head)}")
 
-    found = violations(diff.stdout)
+    found = violations(change_set.changes)
     if not found:
         print("test-immutability: no existing test, scenario or gold file was changed.")
         return 0

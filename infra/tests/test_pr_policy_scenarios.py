@@ -19,9 +19,8 @@ from typing import Any
 
 import pytest
 import yaml
-from pytest_bdd import given, parsers, scenarios, then, when
-
 from conftest import REPO_ROOT as REPO
+from pytest_bdd import given, parsers, scenarios, then, when
 
 pytestmark = pytest.mark.integration
 
@@ -202,4 +201,3 @@ def size_fails(results: dict[str, subprocess.CompletedProcess[str]], n: int) -> 
     res = results[SIZE]
     assert res.returncode == 1, res.stdout + res.stderr
     assert f"pr-size: {n} changed lines" in res.stdout
-

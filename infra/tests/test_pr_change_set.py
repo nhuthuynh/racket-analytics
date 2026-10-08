@@ -86,7 +86,7 @@ def test_histories_with_nothing_in_common_are_an_error(repo: Path) -> None:
     git(repo, "checkout", "-q", "--orphan", "stranger")
     commit(repo, "other.txt", "x\n")
     with pytest.raises(pr_change_set.ChangeSetError, match="merge base"):
-        pr_change_set.merge_base("main", "pr", cwd=repo)
+        pr_change_set.merge_base("main", "stranger", cwd=repo)
 
 
 def test_changes_that_reached_the_base_branch_later_are_not_in_the_change_set(
@@ -120,9 +120,7 @@ def test_each_policy_script_logs_the_change_set_it_judged(repo: Path, script: st
 
 
 @pytest.mark.parametrize("script", ["check_test_immutability.py", "check_pr_size.py"])
-def test_each_policy_script_fails_closed_on_an_unknown_base_branch(
-    repo: Path, script: str
-) -> None:
+def test_each_policy_script_fails_closed_on_an_unknown_base_branch(repo: Path, script: str) -> None:
     res = run(script, repo, "--base", "origin/nope", "--head", "HEAD")
     assert res.returncode == 2, res.stdout + res.stderr
     assert "origin/nope" in res.stdout
