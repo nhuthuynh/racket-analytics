@@ -5,6 +5,8 @@ import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from '../helpers/axe';
 import { MY_SIDE, receivedMatch, tagJourneyByApi } from '../helpers/sprint-02';
 
+test.use({ serviceWorkers: 'block' }); // PD-R3S2-02 routes the corrections request (TCR 2026-10-08)
+
 test.describe('@story-C3-10 FE minors from Sprint 2 review round 3', () => {
   test('PD-R3S2-01 T-02 with no choice shows the error summary, which links to the question', async ({ page }, testInfo) => {
     const matchId = await receivedMatch(page, 'PD-R3S2-01 T-02');
