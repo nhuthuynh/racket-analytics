@@ -31,6 +31,27 @@ Feature: Merge readiness of a pull request into main
       When the orchestrator runs the merge check on the head
       Then the merge is refused naming "ci-gate"
 
+    Scenario: The principal-engineer requesting changes on the head refuses the merge
+      Given a pull request into main whose CI is green on the head
+      And the principal-engineer and the senior-qa-engineer approved the head
+      And the principal-engineer then requested changes on the head
+      When the orchestrator runs the merge check on the head
+      Then the merge is refused naming "principal-engineer: Verdict: CHANGES REQUESTED"
+
+    Scenario: An approval posted by an outside GitHub user does not count
+      Given a pull request into main whose CI is green on the head
+      And the principal-engineer approved the head
+      And an outside GitHub user posted an approval as the senior-qa-engineer
+      When the orchestrator runs the merge check on the head
+      Then the merge is refused naming "senior reviewer: no latest"
+
+    Scenario: An approval that was never submitted does not count
+      Given a pull request into main whose CI is green on the head
+      And the principal-engineer approved the head
+      And the senior-qa-engineer has an unsubmitted approval on the head
+      When the orchestrator runs the merge check on the head
+      Then the merge is refused naming "senior reviewer: no latest"
+
     Scenario: Green CI and both approvals on the head allow the merge
       Given a pull request into main whose CI is green on the head
       And the principal-engineer and the senior-qa-engineer approved the head

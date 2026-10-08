@@ -22,9 +22,19 @@ OLD_SHA = "c1" * 20
 
 
 def check_run(
-    name: str, conclusion: str | None = "success", status: str = "completed", run_id: int = 1
+    name: str,
+    conclusion: str | None = "success",
+    status: str = "completed",
+    run_id: int = 1,
+    suite_id: int = 1,
 ) -> dict[str, Any]:
-    return {"id": run_id, "name": name, "status": status, "conclusion": conclusion}
+    return {
+        "id": run_id,
+        "name": name,
+        "status": status,
+        "conclusion": conclusion,
+        "check_suite": {"id": suite_id},
+    }
 
 
 def review(
@@ -32,11 +42,18 @@ def review(
     verdict: str,
     sha: str = HEAD_SHA,
     review_id: int = 1,
-    submitted_at: str = "2026-10-08T10:00:00Z",
+    submitted_at: str | None = "2026-10-08T10:00:00Z",
+    *,
+    state: str = "COMMENTED",
+    association: str = "OWNER",
 ) -> dict[str, Any]:
+    """A review as GitHub lists it. The repo owner's account posts for every agent role."""
+    login = "nhuthuynh" if association == "OWNER" else "outsider"
     return {
         "id": review_id,
-        "state": "COMMENTED",
+        "user": {"login": login},
+        "author_association": association,
+        "state": state,
         "commit_id": sha,
         "submitted_at": submitted_at,
         "body": f"Verdict: {verdict}\nReviewer: {role}\n\nFindings: none.",
@@ -77,6 +94,7 @@ class GitHubStub:
     page_size: int = 2
     requests: list[tuple[str, str | None]] = field(default_factory=list)
     url: str = ""
+    raw_pr: bytes | None = None  # a non-JSON body for the PR endpoint
 
 
 def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
@@ -90,7 +108,7 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
             page = int(parse_qs(parts.query).get("page", ["1"])[0])
             base = f"/repos/{REPO}"
             if parts.path == f"{base}/pulls/{PR_NUMBER}":
-                return self._send(stub.pr)
+                return self._send_raw(stub.raw_pr) if stub.raw_pr else self._send(stub.pr)
             m = re.fullmatch(rf"{base}/commits/(\w+)/check-runs", parts.path)
             if m:
                 runs = [r for r in stub.check_runs if r.get("head_sha", HEAD_SHA) == m.group(1)]
@@ -100,6 +118,12 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
                 chunk, more = self._page(stub.reviews, page)
                 return self._send(chunk, more, page)
             self._send({"message": "Not Found"}, status=404)
+
+        def _send_raw(self, data: bytes) -> None:
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
 
         def _page(self, items: list[Any], page: int) -> tuple[list[Any], bool]:
             start = (page - 1) * stub.page_size

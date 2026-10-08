@@ -14,6 +14,8 @@ pytestmark = [pytest.mark.scenario, pytest.mark.integration]
 
 scenarios("merge_ready.feature")
 
+LATER = "2026-10-08T11:00:00Z"
+
 
 @pytest.fixture
 def stub() -> GitHubStub:
@@ -53,6 +55,25 @@ def principal_approved(stub: GitHubStub) -> None:
 @given("the senior-qa-engineer approved only an older commit")
 def senior_stale(stub: GitHubStub) -> None:
     stub.reviews.append(review("senior-qa-engineer", "APPROVE", OLD_SHA, review_id=2))
+
+
+@given("the principal-engineer then requested changes on the head")
+def principal_blocks(stub: GitHubStub) -> None:
+    stub.reviews.append(
+        review("principal-engineer", "CHANGES REQUESTED", review_id=3, submitted_at=LATER)
+    )
+
+
+@given("an outside GitHub user posted an approval as the senior-qa-engineer")
+def outsider_approved(stub: GitHubStub) -> None:
+    stub.reviews.append(review("senior-qa-engineer", "APPROVE", review_id=4, association="NONE"))
+
+
+@given("the senior-qa-engineer has an unsubmitted approval on the head")
+def senior_pending(stub: GitHubStub) -> None:
+    stub.reviews.append(
+        review("senior-qa-engineer", "APPROVE", review_id=5, submitted_at=None, state="PENDING")
+    )
 
 
 @when("the orchestrator runs the merge check on the head", target_fixture="result")

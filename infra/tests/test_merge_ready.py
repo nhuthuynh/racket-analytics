@@ -81,7 +81,7 @@ def test_an_approval_on_an_older_sha_does_not_count() -> None:
         review("senior-qa-engineer", "APPROVE", OLD_SHA, 2),
     ]
     reasons = evaluate(reviews=reviews)
-    assert any("senior" in r and "head" in r for r in reasons)
+    assert any("senior" in r and OLD_SHA in r for r in reasons)  # stale, not missing
 
 
 @pytest.mark.unit
@@ -157,6 +157,77 @@ def test_the_sha_must_be_the_head_of_an_open_pr_into_main(
     assert any(word in r for r in evaluate(the_pr=the_pr))
 
 
+# ---------------------------------------------- unit: who and what may give a verdict (M1, M2)
+@pytest.mark.unit
+@pytest.mark.parametrize("association", ["NONE", "CONTRIBUTOR", "FIRST_TIME_CONTRIBUTOR"])
+def test_a_verdict_from_an_untrusted_author_does_not_count(association: str) -> None:
+    outsider = review("senior-qa-engineer", "APPROVE", review_id=2, association=association)
+    reasons = evaluate(reviews=[review("principal-engineer", "APPROVE"), outsider])
+    assert any(r.startswith("senior reviewer: no latest") for r in reasons)
+
+
+@pytest.mark.unit
+def test_an_untrusted_approve_does_not_override_a_real_changes_requested() -> None:
+    reviews = [
+        *approvals(),
+        review("principal-engineer", "CHANGES REQUESTED", HEAD_SHA, 8, "2026-10-08T11:00:00Z"),
+        review(
+            "principal-engineer", "APPROVE", HEAD_SHA, 9, "2026-10-08T12:00:00Z", association="NONE"
+        ),
+    ]
+    assert "principal-engineer: Verdict: CHANGES REQUESTED on the head" in evaluate(reviews=reviews)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("state", ["PENDING", "DISMISSED"])
+def test_an_unsubmitted_or_dismissed_review_does_not_count(state: str) -> None:
+    unsent = review("senior-qa-engineer", "APPROVE", review_id=2, submitted_at=None, state=state)
+    reasons = evaluate(reviews=[review("principal-engineer", "APPROVE"), unsent])
+    assert any(r.startswith("senior reviewer: no latest") for r in reasons)
+
+
+@pytest.mark.unit
+def test_a_pending_approve_does_not_override_a_submitted_changes_requested() -> None:
+    reviews = [
+        *approvals(),
+        review("senior-qa-engineer", "CHANGES REQUESTED", HEAD_SHA, 8, "2026-10-08T11:00:00Z"),
+        review("senior-qa-engineer", "APPROVE", HEAD_SHA, 9, None, state="PENDING"),
+    ]
+    assert "senior-qa-engineer: Verdict: CHANGES REQUESTED on the head" in evaluate(reviews=reviews)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "body",
+    [
+        "Verdict: APPROVE\n\n> quoted earlier review\nReviewer: senior-qa-engineer\n",
+        "Verdict: APPROVE\nSee the example below.\nReviewer: senior-qa-engineer\n",
+        "Verdict: APPROVE\n",
+    ],
+)
+def test_the_reviewer_line_must_follow_the_verdict_line(body: str) -> None:
+    misplaced = review("senior-qa-engineer", "APPROVE", review_id=2) | {"body": body}
+    reasons = evaluate(reviews=[review("principal-engineer", "APPROVE"), misplaced])
+    assert any(r.startswith("senior reviewer: no latest") for r in reasons)
+
+
+@pytest.mark.unit
+def test_a_failure_is_not_hidden_by_a_same_named_success_in_another_workflow() -> None:
+    runs = [
+        *green_runs(),
+        check_run("lint", "failure", run_id=60, suite_id=1),
+        check_run("lint", "success", run_id=61, suite_id=2),
+    ]
+    assert any("'lint' is failure" in r for r in evaluate(runs=runs))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("outcome", ["cancelled", "timed_out", "action_required", "failure"])
+def test_a_non_gate_run_that_did_not_succeed_blocks(outcome: str) -> None:
+    runs = [*green_runs(), check_run("E2E", outcome, run_id=70)]
+    assert f"check 'E2E' is {outcome}" in evaluate(runs=runs)
+
+
 # ======================================================================= unit: allowed
 @pytest.mark.unit
 def test_all_green_and_both_approvals_on_the_head_allow_the_merge() -> None:
@@ -171,16 +242,38 @@ def test_a_successful_rerun_replaces_an_earlier_failure() -> None:
     assert evaluate(runs=runs) == []
 
 
+@pytest.mark.unit
+def test_a_neutral_non_gate_run_allows_the_merge() -> None:
+    assert evaluate(runs=[*green_runs(), check_run("Optional report", "neutral", run_id=71)]) == []
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR"])
+def test_a_trusted_author_may_give_the_senior_verdict(association: str) -> None:
+    senior = review("senior-qa-engineer", "APPROVE", review_id=2, association=association)
+    assert evaluate(reviews=[review("principal-engineer", "APPROVE"), senior]) == []
+
+
+@pytest.mark.unit
+def test_the_latest_review_wins_when_the_api_lists_them_out_of_order() -> None:
+    reviews = [
+        review("principal-engineer", "APPROVE", HEAD_SHA, 9, "2026-10-08T12:00:00Z"),
+        review("principal-engineer", "CHANGES REQUESTED", HEAD_SHA, 8, "2026-10-08T11:00:00Z"),
+        review("senior-qa-engineer", "APPROVE", HEAD_SHA, 2),
+    ]
+    assert evaluate(reviews=reviews) == []
+
+
 # ======================================================================= integration
 def run_script(
-    stub: GitHubStub, sha: str = HEAD_SHA, token: str | None = None
+    stub: GitHubStub, sha: str = HEAD_SHA, token: str | None = None, pr: int = PR_NUMBER
 ) -> subprocess.CompletedProcess[str]:
     env = {k: v for k, v in os.environ.items() if k not in {"GITHUB_TOKEN", "GH_TOKEN"}}
     env["GITHUB_API_URL"] = stub.url
     if token:
         env["GITHUB_TOKEN"] = token
     return subprocess.run(
-        [sys.executable, str(SCRIPT), "--repo", REPO, "--pr", str(PR_NUMBER), "--sha", sha],
+        [sys.executable, str(SCRIPT), "--repo", REPO, "--pr", str(pr), "--sha", sha],
         capture_output=True,
         text=True,
         env=env,
@@ -205,6 +298,7 @@ def test_script_refuses_a_stale_sha_over_http() -> None:
         res = run_script(stub, sha=OLD_SHA)
     assert res.returncode == 1
     assert "merge-ready: no" in res.stdout
+    assert f"{OLD_SHA} is not the PR head" in res.stdout
 
 
 @pytest.mark.integration
@@ -214,6 +308,22 @@ def test_script_exits_2_when_the_api_cannot_be_read() -> None:
     res = run_script(stub)
     assert res.returncode == 2
     assert "merge-ready: unknown" in res.stdout
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("stub_kwargs", "pr_number"),
+    [({}, 404), ({"raw_pr": b"<html>not json</html>"}, None)],
+    ids=["http-404", "non-json-body"],
+)
+def test_script_exits_2_on_an_http_error_or_a_malformed_body(
+    stub_kwargs: dict[str, Any], pr_number: int | None
+) -> None:
+    with serve(GitHubStub(**stub_kwargs)) as stub:
+        res = run_script(stub, pr=pr_number or PR_NUMBER)
+    assert res.returncode == 2, res.stdout + res.stderr
+    assert "merge-ready: unknown" in res.stdout
+    assert "Traceback" not in res.stderr
 
 
 @pytest.mark.integration
