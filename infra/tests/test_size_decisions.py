@@ -27,7 +27,7 @@ TABLE = """\
 
 ## Size decisions
 
-| Ticket | Measured | PRs, in stack order | Row |
+| Ticket | Measured | PRs, in stack order | Kind |
 |---|---|---|---|
 | T-WAIVED | 1462 | waived 1462 | waived |
 | T-STACKED | 575 | 355; 342 | stacked |

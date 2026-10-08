@@ -2,7 +2,7 @@
 """Ticket-PR size decisions (SIZE-WAIVERS-03; ADR 0039 rule 4, ADR 0030 rule 4; NFR-077).
 
 A ticket's **size decision** is a stack of PRs, read from the "## Size decisions" table of a
-decisions file (`| Ticket | Measured | PRs, in stack order | Row |`). Each PR is either
+decisions file (`| Ticket | Measured | PRs, in stack order | Kind |`). Each PR is either
 ``waived N`` (gets the `size-waiver` label, valid up to N changed lines) or a **stacked part**
 ``N`` that must pass `PR size` unlabelled, so at most 400 lines.
 
