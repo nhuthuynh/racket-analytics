@@ -86,7 +86,12 @@ jobs:
         run: bash ../scripts/ci/e2e_repeat.sh
       - name: Service logs on failure
         if: failure()
-        run: $COMPOSE logs --no-color --tail=300
+        run: |
+          $COMPOSE logs --no-color --tail=300
+          $COMPOSE logs --no-color api
+          for f in web/test-results/*/error-context.md; do
+            if [[ -f "$f" ]]; then echo "== $f"; cat "$f"; fi
+          done
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

@@ -91,6 +91,14 @@ def test_token_is_read_only_and_the_job_has_a_timeout() -> None:
     assert 0 < wf["jobs"]["repeat"]["timeout-minutes"] <= 90
 
 
+def test_a_failure_leaves_the_triage_evidence_in_the_job_log() -> None:
+    # The artifact is not readable everywhere the log is (agent sandbox), and a 60 s timeout names
+    # no Playwright call: the page state at the timeout and every API request are both needed.
+    runs = "\n".join(s.get("run", "") for s in steps() if s.get("if") == "failure()")
+    assert "$COMPOSE logs --no-color api" in runs  # every request, no --tail
+    assert "error-context.md" in runs
+
+
 # ---------------------------------------------------------------- positive cases
 def test_dispatch_takes_spec_grep_repeat_and_browser() -> None:
     inputs = triggers()["workflow_dispatch"]["inputs"]
