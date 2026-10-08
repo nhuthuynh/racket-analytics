@@ -158,6 +158,9 @@ export const API_ERROR_CODES = [
   'decision_needed',
   'rules_unavailable',
   'scorebook_full',
+  // api-sprint-03 §6.1
+  'no_consent',
+  'invalid_label',
 ] as const;
 export type ServerErrorCode = (typeof API_ERROR_CODES)[number];
 export type ApiErrorCode = ServerErrorCode | 'network_error' | 'invalid_response' | 'unknown';
@@ -217,6 +220,11 @@ export const FIELD_ERROR_CODES = [
   'not_first_in_game',
   'too_many_rallies',
   'too_many_changes',
+  // api-sprint-03 §6.2
+  'outside_clip',
+  'no_rally',
+  'out_of_order',
+  'not_a_player',
 ] as const;
 export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
 
