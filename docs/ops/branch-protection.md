@@ -74,7 +74,8 @@ of these hold on that SHA:
 
 - The SHA is the head of an **open** PR into `main`. An approval on an older commit does not
   count.
-- The latest run of every check concluded `success`, and `ci-gate` itself is `success`. Any
+- The latest run of every job in the newest suite of each workflow concluded `success`, and
+  `ci-gate` itself is `success`. Any
   other check may be `skipped` or `neutral`, for example the schedule-only `flaky-report`
   (decision-log 2026-10-08).
 - Only the **newest workflow run** of each workflow and event on that SHA counts. Adding or
