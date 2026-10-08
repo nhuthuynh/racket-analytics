@@ -1,6 +1,4 @@
-# CI-FLAKE-RESUMABLE-2 decisions
-
-Small decisions for ticket CI-FLAKE-RESUMABLE-2 (E2E repeat workflow for flake triage in CI, slice 2/2, NFR-074), one dated row each. Moved here from the shared `docs/sprints/03/decision-log.md` (PO rule 2026-10-07: one decisions file per ticket; the DOCS/RETRO ticket consolidates).
+# CI-FLAKE-RESUMABLE-2 decisions (one file per ticket, PO rule 2026-10-07; row moved from the shared Sprint 3 decision log)
 
 | Date | Who | Decision | Evidence | Reasoning |
 |---|---|---|---|---|
