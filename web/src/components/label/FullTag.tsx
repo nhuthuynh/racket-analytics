@@ -183,16 +183,26 @@ export function FullTag({
     setHeld(null);
     setSent([]);
     setQuestionAlert(null);
+    setTagProblem(null);
     setDropAsk(false);
   }
 
+  /** The server holds this rally's span, so moving it would send events against a span it does not hold (PE-ST052-R2-01). */
+  function spanHeld(): boolean {
+    if (held === null) return false;
+    setTagProblem(`Rally ${number} is already saved from frame ${start} to ${end}, and saved labels cannot be changed yet.`);
+    return true;
+  }
+
   function markStart() {
+    if (spanHeld()) return;
     setTagProblem(null);
     setStart(frame);
     if (end !== null && end <= frame) setEnd(null);
   }
 
   function markEnd() {
+    if (spanHeld()) return;
     if (start === null) return setTagProblem('Press Rally start first.');
     if (frame <= start) return setTagProblem('Rally end must be after its start.');
     setTagProblem(null);
@@ -613,6 +623,7 @@ export function FullTag({
                     type="button"
                     className="button button--secondary"
                     aria-label={`Remove ${m.type} at frame ${m.frame}`}
+                    disabled={busy}
                     onClick={() => setMarks((all) => all.filter((_, j) => j !== i))}
                   >
                     Remove

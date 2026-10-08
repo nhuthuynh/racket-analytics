@@ -173,6 +173,7 @@ describe('Full Tag save after a lost response (PE-ST052-R1-04)', () => {
     expect(screen.getByText('Rally 1: frames 0 to 20')).toBeVisible();
     await choose('Winner', null);
     expect(await screen.findByText('Rally 1: frames 0 to 20, winner, 2 events')).toBeVisible();
+    expect(screen.queryByText(held)).toBeNull();
     expect(s.rallies).toEqual([expect.objectContaining({ start_frame: 0, end_frame: 20, events: [HIT, BOUNCE] })]);
   });
 
