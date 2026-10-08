@@ -10,7 +10,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
 import type { Match } from '@/lib/api/types';
-import { FAULT_KINDS, type EventLabel, type LabelDocument, type LabelFaultKind, type LabelSession, type SavedRally } from '@/lib/label/types';
+import { FAULT_KINDS, type EventLabel, type LabelDocument, type LabelFaultKind, type LabelOutcome, type LabelSession, type SavedRally } from '@/lib/label/types';
+import { reconcile, sameOutcome } from '@/lib/label/reconcile';
 import { ENDING_WORDS, FAULT_WORDS, exportLine, frameTime, inOrder, markLine, refusalReason, savedLine } from '@/lib/label/view';
 import { ENDINGS, type Ending, type Side } from '@/lib/tagging/types';
 import { sideNames } from '@/lib/tagging/view';
@@ -59,6 +60,12 @@ function saveProblem(e: unknown, saved: readonly SavedRally[], span: { start: nu
   return `The label was not saved. Try again.${ref}`;
 }
 
+/** A refusal (422) or the rate limit (429) stores nothing (api-sprint-03 §5.4); any other failure
+ *  may have stored the label before its response was lost. */
+function mayHaveLanded(e: unknown): boolean {
+  return !(e instanceof ApiError && (e.status === 422 || e.status === 429));
+}
+
 type Pending = { kind: 'hit'; frame: number } | { kind: 'bounce'; frame: number } | null;
 
 export function FullTag({
@@ -94,7 +101,9 @@ export function FullTag({
   const [side, setSide] = useState<Side | null>(null);
   const [responsible, setResponsible] = useState<string | null>(null);
   const [askFault, setAskFault] = useState(false);
-  const [rallySaved, setRallySaved] = useState(false);
+  // The server's copy of the rally being labelled: its outcome and the events it holds (PE-ST052-R1-04).
+  const [held, setHeld] = useState<LabelOutcome | null>(null);
+  const [sent, setSent] = useState<EventLabel[]>([]);
   const [busy, setBusy] = useState(false);
   const [questionAlert, setQuestionAlert] = useState<string | null>(null);
   const [tagProblem, setTagProblem] = useState<string | null>(null);
@@ -109,6 +118,10 @@ export function FullTag({
   const video = useRef<HTMLVideoElement>(null);
   const keysOpener = useRef<HTMLElement | null>(null);
   const playingRef = useRef(false);
+  // The session version the local state matches, and whether a POST failed without telling us
+  // whether it was stored. A retry reads the session first when it did.
+  const known = useRef(initial.version);
+  const unsure = useRef(false);
   const number = saved.length + 1;
 
   useEffect(() => setSingleKeys(readSingleKeys()), []);
@@ -167,7 +180,8 @@ export function FullTag({
     setSide(null);
     setResponsible(null);
     setAskFault(false);
-    setRallySaved(false);
+    setHeld(null);
+    setSent([]);
     setQuestionAlert(null);
     setDropAsk(false);
   }
@@ -215,32 +229,92 @@ export function FullTag({
       responsible_player: ending === 'replay' ? null : responsible,
       fault_kind: ending === 'fault' ? faultKind : null,
     };
+    const span = { start, end };
+    let saving = held;
+    let done = sent;
     let rest = marks;
-    try {
-      if (!rallySaved) {
-        await api.labelEvent(match.id, { type: 'rally', start_frame: start, end_frame: end, outcome });
-        setRallySaved(true);
+    const local = (events: EventLabel[]): SavedRally => ({ id: `r${number}`, start_frame: start, end_frame: end, outcome: saving ?? outcome, events });
+
+    // Read what the server holds; false when that read fails too.
+    const check = async (): Promise<boolean> => {
+      try {
+        const s = await api.labelSession(match.id);
+        unsure.current = false;
+        if (s.version === known.current) return true; // nothing was stored since the state we hold
+        const r = reconcile(s, span, marks);
+        known.current = r.version;
+        saving = r.held?.outcome ?? null;
+        done = r.held?.events ?? [];
+        rest = r.rest;
+        setSaved(r.others);
+        setHeld(saving);
+        setSent(done);
+        setMarks(rest);
+        return true;
+      } catch {
+        return false;
       }
-      while (rest.length > 0) {
-        const [next, ...after] = rest;
-        await api.labelEvent(match.id, next as EventLabel);
-        rest = after;
-        setMarks(after);
-      }
-    } catch (e) {
-      setQuestionAlert(saveProblem(e, saved, { start, end }));
+    };
+
+    if (unsure.current && !(await check())) {
+      setQuestionAlert('The label was not saved because the connection dropped. Try again.');
       setBusy(false);
       return;
     }
-    const local: SavedRally = { id: `r${number}`, start_frame: start, end_frame: end, outcome, events: marks };
+    if (saving && !sameOutcome(saving, outcome)) {
+      const was = ENDING_WORDS[saving.ending];
+      setQuestionAlert(`Rally ${number} is already saved as ${was.toLowerCase()}, and saved labels cannot be changed yet. Choose ${was} to save its events.`);
+      setBusy(false);
+      return;
+    }
     try {
-      setSaved(inOrder((await api.labelSession(match.id)).document.rallies));
+      if (!saving) {
+        known.current = (await api.labelEvent(match.id, { type: 'rally', start_frame: start, end_frame: end, outcome })).version;
+        saving = outcome;
+        setHeld(outcome);
+      }
+      while (rest.length > 0) {
+        const [next, ...after] = rest as [EventLabel, ...EventLabel[]];
+        known.current = (await api.labelEvent(match.id, next)).version;
+        done = [...done, next];
+        rest = after;
+        setSent(done);
+        setMarks(after);
+      }
+    } catch (e) {
+      const problem = saveProblem(e, saved, span);
+      if (mayHaveLanded(e)) {
+        unsure.current = true;
+        await check();
+      }
+      if (!(saving && rest.length === 0)) {
+        setQuestionAlert(problem);
+        setBusy(false);
+        return;
+      }
+    }
+    await finish(local([...done, ...rest]));
+    setSaid(`Rally ${number} saved.`);
+  }
+
+  /** The rally is on the server: list it as saved (the server's copy; the local one if that read fails). */
+  async function finish(fallback: SavedRally) {
+    try {
+      const s = await api.labelSession(match.id);
+      known.current = s.version;
+      setSaved(inOrder(s.document.rallies));
     } catch {
-      setSaved((s) => inOrder([...s, local]));
+      setSaved((all) => inOrder([...all, fallback]));
     }
     resetRally();
     setBusy(false);
-    setSaid(`Rally ${number} saved.`);
+  }
+
+  /** Esc, then Yes: drop the unsaved marks. A rally the server already holds stays saved. */
+  async function dropRally() {
+    if (held === null || start === null || end === null) return resetRally();
+    setBusy(true);
+    await finish({ id: `r${number}`, start_frame: start, end_frame: end, outcome: held, events: sent });
   }
 
   async function exportLabels() {
@@ -330,6 +404,9 @@ export function FullTag({
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
+  const dropQuestion = held
+    ? `Rally ${number} is already saved. Drop its ${plural(marks.length, 'unsaved event', 'unsaved events')}?`
+    : `Drop rally ${number} and its ${plural(marks.length, 'event', 'events')}?`;
   const bySide = (s: Side) => players.filter((p) => p.startsWith(s));
   const playerButtons = (onPick: (slot: string) => void, pressed?: string | null) =>
     [names.mySide, otherSide].map((s) => (
@@ -504,10 +581,10 @@ export function FullTag({
       ) : null}
 
       {dropAsk ? (
-        <div role="group" aria-label={`Drop rally ${number} and its ${plural(marks.length, 'event', 'events')}?`} className="stack panel">
-          <p>{`Drop rally ${number} and its ${plural(marks.length, 'event', 'events')}?`}</p>
+        <div role="group" aria-label={dropQuestion} className="stack panel">
+          <p>{dropQuestion}</p>
           <div className="button-row">
-            <button type="button" className="button button--secondary" onClick={resetRally}>
+            <button type="button" className="button button--secondary" onClick={() => void dropRally()}>
               Yes
             </button>
             <button type="button" className="button button--secondary" onClick={() => setDropAsk(false)}>
