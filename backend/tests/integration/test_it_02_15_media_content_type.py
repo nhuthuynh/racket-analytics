@@ -3,9 +3,10 @@
 error, not a format error, so V-01 says "this browser cannot play this video" instead of a
 retry that fails again.
 
-API <-> object store, both real (dev-objectstore): the original is stored with
-``Content-Type: video/mp4`` and the presigned GET asks for it as the response type, so a link
-signed before the fix (or an object stored before it) still plays as a video.
+API <-> object store, both real (dev-objectstore): the stored ``Content-Type: video/mp4`` is
+what makes this test pass. The signed ``response-content-type`` is ignored by SeaweedFS 3.97
+(SEC-S2-TM-03, Sprint 2 smoke 3), so an object stored with another type is not corrected by
+the link; the edge headers on the media route are the other control (docs/ops/media-serving.md).
 """
 
 from __future__ import annotations

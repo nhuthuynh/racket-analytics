@@ -6,6 +6,17 @@ Owner: sre-devops-engineer. Rule: ADR 0033 rule 3 (with ADR 0030 rule 3). Sprint
 
 At the Sprint 1 close, concurrent Playwright runs shared `web/test-results` (ENOENT on traces) and other agents' Compose up/down changed the host network (`net::ERR_NETWORK_CHANGED`). Both produced false reds, so "0 flaky" could not be measured (QA-R3-E2E-02). Each verification round also left about 4.6 GB of images, which pushed the next build under the 10 GB disk floor (G01-05).
 
+## The evidence browser: `scripts/dev-chrome.sh` (ADR 0036, C3-04)
+
+Bundled Chromium cannot decode H.264, so the goal rows that play the real upload (G02-05, G02-06 (c), G02-10 V family and their Sprint 3 successors) run in Chrome for Testing 141.0.7390.54 at `/opt/google/chrome`, with `PW_CHROMIUM_CHANNEL=chrome`.
+
+| Command | What it does | Exit codes |
+|---|---|---|
+| `bash scripts/dev-chrome.sh` | Installs the pinned CfT zip after a sha256 check (`5023ec2b…23ed01`, ADR 0036) and checks the version inside before it replaces anything. A matching install is left as it is (no download); any other version is replaced | 0 installed or already there; 1 download failed, sha256 mismatch, or wrong version in the zip (nothing installed) |
+| `bash scripts/dev-chrome.sh check` | Prints the version if the pinned build is installed | 0 present; 1 missing or another version |
+
+Run `check` before a goal run that needs the evidence browser; a run without it is not the evidence for those rows (ADR 0036, fail closed).
+
 ## The wrapper: `scripts/ci/evidence.sh`
 
 | Command | What it does | Exit codes |
