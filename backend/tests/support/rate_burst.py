@@ -10,12 +10,20 @@ from __future__ import annotations
 import httpx
 
 from tests.support import scorebook as sb
+from tests.support import tus
 from tests.support.api import ApiDriver
+
+# The smallest upload the content check accepts with a whole ``ftyp`` header (TCR row 16).
+MINIMAL_VIDEO = tus.video_bytes(64)
 
 
 async def receive_minimal_video(client: httpx.AsyncClient, match_id: str) -> None:
-    """The match's video is received, through the real tus API."""
-    await sb.receive_video(client, match_id)
+    """The match's video is received, through the real tus API (create, HEAD, one PATCH).
+    64 bytes instead of the 1.72 MB clip: the rate tests never probe the video."""
+    upload = await tus.start(client, match_id, len(MINIMAL_VIDEO))
+    await tus.send_all(client, upload, MINIMAL_VIDEO, chunks=1)
+    status = (await client.get(f"/matches/{match_id}")).json()["status"]
+    assert status == "video_received", status
 
 
 def matches_with_video(
