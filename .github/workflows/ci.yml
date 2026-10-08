@@ -198,12 +198,25 @@ jobs:
       - name: Object store parity IT-00-16 (ADR 0008 part C)
         working-directory: infra
         run: uv sync --locked && uv run pytest -q tests/test_object_store_parity.py
-      - name: Backend suites with coverage (< 10 min, NFR-073)
+      - name: Warm the bytecode cache (unbudgeted; the budget times the suite, not setup)
+        # As in python-unit (CI run 37298471332): cold compilation of the dependencies and the
+        # rewritten test modules is runner setup, not the integration suite. CI-PERF-GATES.
         working-directory: backend
         run: |
           uv sync --locked
-          python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" -- \
-            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
+          uv run --no-sync pytest -q --collect-only -p no:cacheprovider \
+            -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
+            --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
+            --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py >/dev/null
+      - name: Backend suites with coverage (< 10 min, NFR-073)
+        # pytest-xdist: one worker per runner core, each on its own session database (C-32).
+        # The suite grew (IT-02-10 + IT-03-12 fuzz = 52% of 728 s serial); the 600 s budget
+        # does not change. The budget record and the 25 slowest tests are kept per run.
+        working-directory: backend
+        run: |
+          python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" --json ../reports/integration-budget.json -- \
+            uv run --no-sync pytest -q -n auto --durations=25 \
+              -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
@@ -409,7 +422,7 @@ jobs:
         run: |
           mkdir -p reports/perf
           $COMPOSE cp web-tls:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/racket-dev-ca.crt"
-      - name: Locust, 50 readers at 1 RPS and 1 correction user, 60 s
+      - name: Locust, 50 readers at 1 RPS and 1 correction user, >= 60 s steady window
         env:
           RA_ORIGIN: https://localhost:3000
           RA_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
@@ -418,13 +431,16 @@ jobs:
         run: |
           pip install "uv==${UV_VERSION}"
           # Locust exits 1 on any failed request; perf_verdict.py decides the gate.
+          # -t counts seeding (test_start) and spawn too: 90 s = a 60 s steady window plus
+          # 30 s of warm-up allowance (PR #6 needed 13.8 s). CI-PERF-GATES.
           uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_sprint02.py \
-            --headless --host http://127.0.0.1:8000 -u 51 -r 51 -t 60s \
+            --headless --host http://127.0.0.1:8000 -u 51 -r 51 -t 90s \
             --csv reports/perf/perf --only-summary || echo "locust rc=$?"
       - name: Verdict (gates) and baseline table
         run: |
           python3 scripts/ci/perf_verdict.py --stats reports/perf/perf_stats.csv \
             --state reports/perf/perf_state.json --rps 50 --json reports/perf/verdict.json \
+            --history reports/perf/perf_stats_history.csv --users 51 \
             --summary "$GITHUB_STEP_SUMMARY"
       - name: Service logs on failure
         if: failure()
