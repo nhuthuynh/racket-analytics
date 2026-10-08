@@ -8,7 +8,7 @@ import { expectNoBlockingA11yViolations } from '../helpers/axe';
 import { receivedMatch } from '../helpers/sprint-02';
 import { METRIC_NAMES, PUBLISHED, REFERENCE, SCREEN, metricCard, statsPath, tagWorkedExampleByApi } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-047 @nfr-038 Evidence crawl', () => {
+test.describe('@M0 @story-ST-047 @nfr-038 Evidence crawl', { tag: '@red-until-ST-047' }, () => {
   test('E2E-03-02 every metric shows n and a working "Show me"', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
     expect(PUBLISHED.length, 'no coach-reviewed metric to crawl (COACH-1)').toBeGreaterThan(0);
