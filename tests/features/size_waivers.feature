@@ -30,6 +30,13 @@ Feature: Every Sprint 3 ticket PR over 400 changed lines has its size decided be
       Then the size-waiver label is applied
       And the PR size check passes and counts 1502 changed lines
 
+    Scenario: A waived ticket PR with its own decisions file passes PR size with the label
+      Given the size decision for "HARNESS-03" PR 1
+      And that PR changes 1462 code lines and adds its own 40-line decisions file
+      When the size decision is applied and the PR policy checks run on the merge ref
+      Then the size-waiver label is applied
+      And the PR size check passes and counts 1502 changed lines
+
     Scenario: A stacked part within 400 lines passes PR size without a label
       Given the size decision for "ST-049" PR 1
       And that PR changes 355 lines

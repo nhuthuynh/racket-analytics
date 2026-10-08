@@ -28,5 +28,5 @@ SCOPE = {
     "ST-050b": 892,
     "ST-052": 1444,
     "DOCS-03": 6235,
-    "SIZE-WAIVERS-03": 533,  # this ticket's own PR #6, without this decisions file
+    "SIZE-WAIVERS-03": 552,  # this ticket's own PR #6, without this decisions file
 }

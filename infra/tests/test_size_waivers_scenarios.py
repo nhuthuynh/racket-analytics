@@ -41,6 +41,18 @@ def pr_changes(tmp_path: Path, n: int) -> tuple[PullRequest, int]:
     return pr, n
 
 
+@given(
+    parsers.parse("that PR changes {n:d} code lines and adds its own {d:d}-line decisions file"),
+    target_fixture="pr",
+)
+def pr_changes_with_decisions_file(tmp_path: Path, n: int, d: int) -> tuple[PullRequest, int]:
+    # SQA-1 (PR #6): the gate counts docs/sprints/03/decisions/<ID>.md (PO rule 2026-10-07).
+    pr = PullRequest.opened_against_main(tmp_path)
+    pr.push("pr", "docs/sprints/03/decisions/HARNESS-03.md", lines(d))
+    pr.open_event("backend/src/change.py", lines(n))
+    return pr, n + d
+
+
 @when(
     "the size decision is applied and the PR policy checks run on the merge ref",
     target_fixture="outcome",
