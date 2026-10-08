@@ -17,6 +17,8 @@ from pathlib import Path
 import pytest
 from conftest import SCRIPTS_DIR
 
+pytestmark = pytest.mark.unit  # CI selects -m "unit or integration" (PE-R1S3-07)
+
 SCRIPT = SCRIPTS_DIR / "dev-chrome.sh"
 VERSION = "141.0.7390.54"
 ADR_SHA256 = "5023ec2b8995b74caa5de0e22d5e30f871c3ecce67a6e52d3c9f9dfed423ed01"
