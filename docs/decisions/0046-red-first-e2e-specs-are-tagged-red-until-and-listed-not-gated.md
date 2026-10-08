@@ -1,6 +1,6 @@
 # 0046. Red-first E2E specs carry a `@red-until-<story>` tag; CI runs them in a listed, non-gating step with a stale-tag check
 
-- **Status:** Proposed (sre-devops-engineer, 2026-10-07, Sprint 3 review round 2). The engineering-manager accepts or rejects it (blockers.md row of 2026-10-07, "The E2E job cannot be green on `sprint-03`…"). The senior-qa-engineer decides the TCR row that tags the specs.
+- **Status:** **Accepted with one amendment** (engineering-manager, 2026-10-08, Sprint 3 close; PE-R3S3-05 / QA-R3S3-03; see Notes). Proposed by the sre-devops-engineer on 2026-10-07 (review round 2). The senior-qa-engineer still decides TCR row 30.
 - **Date:** 2026-10-07
 - **Deciders:** engineering-manager (accept), senior-qa-engineer (TCR: the specs are QA-owned)
 - **Consulted:** principal-engineer (PE-R1S3-07), senior-qa-engineer (QA-R1S3-07, the tag proposal in blockers.md)
@@ -51,3 +51,8 @@ Chosen option: **1**.
 - `actionlint .github/workflows/ci.yml` → rc 0.
 - Real Playwright 1.56.1, scratch spec (one gated test, a `describe` tagged `@red-until-ST-047` that fails, a test tagged `@red-until-ST-048` that passes, two projects): gated run `--grep-invert` → `2 passed`, rc 0. Listed run → rc 1. Report → table `ST-047 | 2 | 0 | 0`, `ST-048 | 0 | 2 | 0`, two "stale tag" lines, rc 1. After the stale tag is removed → "No stale tags.", rc 0, and the gated run has `4 passed`.
 - Today's specs (`web/e2e`, no tags yet): `playwright test --list --grep "@red-until-" --reporter=json` → "No tests found"; report → "no red-until E2E tests were selected (fail closed)", rc 1.
+
+## Notes
+
+- **2026-10-08 (engineering-manager, Sprint 3 close): accepted, with one amendment.** The model is right: it is the twin of the reviewed backend `red_until` gate, and the alternatives (`test.fail()`, skips, a separate job) hide why a test fails or go stale. But the fail-closed rule on an empty selection has no exit: once every red-first spec lands, nothing carries a tag, the listed step selects nothing, and `ci-gate` is red by construction. That is the state at `c1fba6a` (`grep -rn '@red-until' web/e2e | wc -l` → 0; every E2E-03 spec passed in VR3). **Amendment:** the listed step first counts `@red-until-` tags in the spec files (a static grep). With 0 tags it prints "no red-first E2E spec is waiting on a story" and exits 0. With 1 or more tags and an empty selection it still fails closed, which is the case the rule exists for (a broken grep or a renamed tag). Owner: sre-devops-engineer, red first in `infra/tests/test_e2e_red_until.py` (a 0-tag case that passes and a tagged-but-unselected case that fails). TCR row 30 stays QA's to decide; with no red-first spec left, the expected decision is "no tag needed now" (judgment).
+
