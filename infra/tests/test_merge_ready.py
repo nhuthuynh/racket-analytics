@@ -226,3 +226,18 @@ def test_script_allows_the_merge_following_every_page_and_sends_the_token() -> N
     check_pages = [p for p, _ in stub.requests if "/check-runs" in p]
     assert len(check_pages) == 3
     assert {auth for _, auth in stub.requests} == {"Bearer t0ken"}
+
+
+@pytest.mark.unit
+def test_an_empty_api_url_falls_back_to_github(monkeypatch: pytest.MonkeyPatch) -> None:
+    mod = load()
+    seen: list[str] = []
+
+    def fake_get(url: str) -> tuple[Any, None]:
+        seen.append(url)
+        raise OSError("offline")
+
+    monkeypatch.setattr(mod, "_get", fake_get)
+    monkeypatch.setenv("GITHUB_API_URL", "")
+    assert mod.main(["--repo", REPO, "--pr", "7", "--sha", HEAD_SHA]) == 2
+    assert seen == [f"https://api.github.com/repos/{REPO}/pulls/7"]
