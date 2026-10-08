@@ -77,12 +77,12 @@ of these hold on that SHA:
 - The latest run of every job in the newest suite of each workflow concluded `success`, and
   `ci-gate` itself is `success`. Any
   other check may be `skipped` or `neutral`, for example the schedule-only `flaky-report`
-  (decision-log 2026-10-08).
+  (`docs/sprints/03/decisions/CI-PR-GATE.md`, row 1).
 - Only the **newest workflow run** of each workflow and event on that SHA counts. Adding or
   removing a label, or re-opening the PR, starts a new run of `ci.yml` on the same SHA, and
   `cancel-in-progress` cancels the older one. The check reads
   `GET /repos/{repo}/actions/runs?head_sha=<SHA>` and ignores the check suites of the older
-  runs. A check run outside GitHub Actions is never ignored (decision-log row 5).
+  runs. A check run outside GitHub Actions is never ignored (`docs/sprints/03/decisions/CI-PR-GATE.md`, row 5).
 - The **principal-engineer's** latest review and at least one **senior-\*** role's latest
   review start with `Verdict: APPROVE` and were given on that SHA. No role's latest review on
   that SHA says `Verdict: CHANGES REQUESTED`.

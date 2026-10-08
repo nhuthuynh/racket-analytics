@@ -7,7 +7,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -56,8 +55,7 @@ def project(tmp_path: Path) -> Path:
     return proj
 
 
-def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
-    """Gherkin tags (@ticket-..., @nfr-...) become one registered marker, so
-    --strict-markers holds (CI-PR-GATE; same idea as backend/tests/conftest.py)."""
+def pytest_bdd_apply_tag(tag: str, function: object) -> bool:
+    """Gherkin tags become `bdd_tag(name=...)` markers, so `--strict-markers` stays on."""
     pytest.mark.bdd_tag(name=tag)(function)
     return True

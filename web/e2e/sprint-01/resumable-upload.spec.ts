@@ -3,7 +3,9 @@
 // Gherkin is a 48 MiB padded fixture, and the 2-minute cut is 10 s: the behaviour is the same,
 // the run time is not (judgment). Red until ST-017.
 import { expect, test } from '@playwright/test';
+import { stat } from 'node:fs/promises';
 import { answerSetup, createAndUpload, LONG_CLIP, paddedClip, signInByLink, uploadPercent } from '../helpers/sprint-01';
+import { holdUploadAt, serverOffset, settledServerOffset } from '../helpers/upload-hold';
 
 // page.route does not see requests of a service-worker-controlled page in WebKit; routing
 // specs block the worker (TCR 2026-10-05, W-01 WebKit family). The worker keeps its own
@@ -37,15 +39,26 @@ test.describe('Resumable upload', () => {
 
   test('Return after closing the tab', async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);
+    const size = (await stat(file)).size;
+    // Closing "once the bar shows 30%" raced the last chunk: on a fast runner the bar can first
+    // read >= 30% while the final PATCH is on its way, the server finishes the upload and no
+    // banner is due (CI run 37715576115). Holding the chunk at 30% closes the tab mid-upload.
+    const { chunk } = await holdUploadAt(page, size, 30);
     await signInByLink(page);
     await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy', file });
     await createAndUpload(page);
-    await expect.poll(() => uploadPercent(page), { timeout: 60_000 }).toBeGreaterThanOrEqual(30);
+    const held = await chunk;
     await page.close();
 
+    // Given: the tab closed while the upload was unfinished (CI-FLAKE-RESUMABLE).
+    const offset = await settledServerOffset(context, held.url);
+    expect(offset, 'the upload must be unfinished when the tab closes').toBeLessThan(size);
+    expect(offset, 'the held chunk must not reach the server').toBe(held.offset);
+
+    // Then: she is offered to resume from where the server stopped.
     const again = await context.newPage();
     await again.goto('/');
-    const banner = again.getByText(/Your upload of '.+' is (\d{1,2})% done\./);
+    const banner = again.getByText(new RegExp(`Your upload of '.+' is ${Math.floor((offset / size) * 100)}% done\\.`));
     await expect(banner).toBeVisible();
     await expect(again.getByRole('button', { name: 'Resume upload' })).toBeVisible();
     await expect(again.getByText(/It will be kept until/)).toBeVisible();
@@ -98,34 +111,21 @@ test.describe('Resumable upload', () => {
 
   test('A different file is chosen to resume', async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);
-    let uploadUrl = '';
-    page.on('request', (r) => {
-      if (r.method() === 'PATCH' && /\/uploads\//.test(r.url())) uploadUrl = r.url();
-    });
+    const size = (await stat(file)).size;
+    // Same race as "Return after closing the tab": hold the chunk at 30% so the tab closes with
+    // the upload unfinished (CI-FLAKE-RESUMABLE).
+    const { chunk } = await holdUploadAt(page, size, 30);
     await signInByLink(page);
     await answerSetup(page, { format: 'Singles', players: ['Ivy', 'Carlos'], me: 'Ivy', file });
     await createAndUpload(page);
-    await expect.poll(() => uploadPercent(page), { timeout: 60_000 }).toBeGreaterThanOrEqual(30);
+    const held = await chunk;
     await page.close();
 
-    // A PATCH still in flight when the tab closes can land afterwards and move the server offset
+    // A PATCH still in flight when the tab closes could land afterwards and move the server offset
     // (QA-V1-02: 'is 42% done' read too early, 1 failure in 14 runs under load). Read the
     // percentage only once the server offset has stopped changing for a full interval.
-    expect(uploadUrl).not.toBe('');
-    const serverOffset = async (): Promise<number> => {
-      const head = await context.request.head(uploadUrl, { headers: { 'Tus-Resumable': '1.0.0' } });
-      expect(head.status()).toBe(200);
-      return Number(head.headers()['upload-offset']);
-    };
-    let settled = -1;
-    await expect
-      .poll(async () => {
-        const now = await serverOffset();
-        const stable = now === settled;
-        settled = now;
-        return stable;
-      }, { intervals: [1_000], timeout: 30_000 })
-      .toBe(true);
+    const settled = await settledServerOffset(context, held.url);
+    expect(settled, 'the upload must be unfinished when the tab closes').toBeLessThan(size);
 
     const again = await context.newPage();
     await again.goto('/');
@@ -133,7 +133,7 @@ test.describe('Resumable upload', () => {
     await again.getByRole('button', { name: 'Resume upload' }).click();
     await again.getByLabel('Choose video').setInputFiles(LONG_CLIP);
     await expect(again.getByText(/This is not the same video/)).toBeVisible();
-    expect(await serverOffset()).toBe(settled); // the other file sent nothing
+    expect(await serverOffset(context, held.url)).toBe(settled); // the other file sent nothing
     await again.goto('/');
     await expect(again.getByText(new RegExp(`is ${before}% done`))).toBeVisible();
   });

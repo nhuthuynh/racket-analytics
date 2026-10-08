@@ -23,11 +23,11 @@ default-groups = ["dev"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers"]
-# pytest-bdd: .feature files live at the repository root (tests/features), sprint-00 §3.
+# pytest-bdd: .feature files live at the repository root (tests/features), as in backend/.
 bdd_features_base_dir = "../tests/features"
 markers = [
     "unit: no I/O beyond temp dirs and subprocesses of the scripts under test; fast",
-    "integration: starts real local services (Postgres, SeaweedFS) or Docker",
-    "bdd_tag(name=...): a Gherkin tag, kept for reporting",
+    "integration: starts real local services (Postgres, SeaweedFS) or Docker, or drives workflow steps on a real git checkout",
+    "bdd_tag(name): a Gherkin tag from tests/features/*.feature, kept for reporting",
     "scenario: a pytest-bdd scenario generated from tests/features/*.feature",
 ]
