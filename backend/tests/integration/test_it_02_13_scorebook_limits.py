@@ -23,6 +23,7 @@ import pytest
 
 from tests.support import scorebook as sb
 from tests.support.api import ApiDriver
+from tests.support.rate_burst import matches_with_video
 
 TAG = {"winning_side": None, "ending": "replay", "responsible_player": None, "fault_kind": None}
 
@@ -103,9 +104,7 @@ def test_it_02_13_parallel_commands_never_pass_the_per_account_rate(
     """12 game starts on 12 matches at once (one match would serialise them on its version):
     exactly 5 are saved. A refused command writes nothing, its rate hit included."""
     ivy = api.as_user("ivy")
-    match_ids = [api.run(sb.create_doubles(ivy, f"IT-02-13 rate {attempt}.{i}")) for i in range(12)]
-    for match_id in match_ids:
-        api.run(sb.receive_video(ivy, match_id))
+    match_ids = matches_with_video(api, ivy, f"IT-02-13 rate {attempt}", 12)
     body = {"first_serving_side": "A", "ends_switched": False}
 
     async def burst() -> list[httpx.Response]:
