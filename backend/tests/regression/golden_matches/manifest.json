@@ -1,0 +1,54 @@
+{
+  "id": "GS-AN-1",
+  "version": 2,
+  "created": "2026-10-06",
+  "description": "Golden matches for the starter stats AN-01..AN-07 (ST-049, QD-GD-03): three tag scripts (2 games; 3 games; 1 game with corrections and needs-decision rallies) and their expected values. No video, no people.",
+  "licence": "CC0-1.0",
+  "licence_note": "Synthetic tag scripts written by the QA lane; no third-party content.",
+  "consent_status": "synthetic",
+  "split": "regression",
+  "rules_version": "PROVISIONAL-UNVERIFIED",
+  "metric_dict_version": "0.1",
+  "labellers": [
+    {
+      "role": "senior-qa-engineer",
+      "task": "tag scripts"
+    },
+    {
+      "role": "pickleball-domain-coach",
+      "task": "hand count (QD-AN-03, COACH-1), recorded in docs/domain/hand-counts/GS-AN-1-v1.json"
+    }
+  ],
+  "files": [
+    {
+      "path": "expected/gm1-two-games.json",
+      "sha256": "e47a6a6776c68001525eaddd083ab01b377acc4099d5046c01802ab448f8938b",
+      "bytes": 3362
+    },
+    {
+      "path": "expected/gm2-three-games.json",
+      "sha256": "aad44da51cd0f1f1373a31e9620859f74814f6c4ad79e41670cc652d13389630",
+      "bytes": 3377
+    },
+    {
+      "path": "expected/gm3-corrections-needs-decision.json",
+      "sha256": "f2c4880a1fe5e37c4bf7cc27dcf1efecdcce02a1fb700b2aca1ec8213182b81b",
+      "bytes": 2669
+    },
+    {
+      "path": "gm1-two-games.script.json",
+      "sha256": "9d8da498e66558ae987c4fd4c75f540676c941bf7a2e5336c2c90a8516624f32",
+      "bytes": 8318
+    },
+    {
+      "path": "gm2-three-games.script.json",
+      "sha256": "6eaf021989d03d65df30c8f5706fde82165f45ed679a2d7253b7210def1879d5",
+      "bytes": 8262
+    },
+    {
+      "path": "gm3-corrections-needs-decision.script.json",
+      "sha256": "d235558f700c513e17ba7516b7a4771e88ce21e6ea6a9f7a1d5a5d07c6061071",
+      "bytes": 3585
+    }
+  ]
+}

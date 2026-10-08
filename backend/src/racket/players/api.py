@@ -7,9 +7,10 @@ any resource lookup, so a 401 reveals nothing about whether a resource exists.
 from __future__ import annotations
 
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Body, Depends, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -19,7 +20,7 @@ from racket.platform.errors import Unauthenticated
 from racket.platform.logs import SECURITY_LOGGER, user_id_var
 from racket.platform.settings import Settings
 from racket.players.domain import client_ip
-from racket.players.service import Account, IdentityService, MagicLinkService
+from racket.players.service import Account, AccountDeletion, IdentityService, MagicLinkService
 
 security_log = logging.getLogger(SECURITY_LOGGER)
 
@@ -163,19 +164,39 @@ def dev_sign_in(
     return response
 
 
+def _signed_out(response: Response, settings: Settings) -> Response:
+    # The browser drops its HTTP cache; the client clears its own storage (FR-011, NFR-067).
+    response.headers["Clear-Site-Data"] = '"cache"'
+    response.delete_cookie(
+        cookie_name(settings), path="/", secure=settings.secure_cookies, httponly=True,
+        samesite="lax",
+    )  # fmt: skip
+    return response
+
+
 @router.post("/auth/sign-out", status_code=204)
 def sign_out(request: Request, session: Annotated[Session, Depends(get_session)]) -> Response:
     settings = settings_of(request)
     token = presented_token(request)
     if token:
         IdentityService(session, settings).sign_out(token)
-    # The browser drops its HTTP cache; the client clears its own storage (FR-011, NFR-067).
-    response = Response(status_code=204, headers={"Clear-Site-Data": '"cache"'})
-    response.delete_cookie(
-        cookie_name(settings), path="/", secure=settings.secure_cookies, httponly=True,
-        samesite="lax",
-    )  # fmt: skip
-    return response
+    return _signed_out(Response(status_code=204), settings)
+
+
+@router.delete("/me", status_code=202)
+def delete_me(
+    request: Request,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+    body: Annotated[Any, Body()] = None,
+) -> Response:
+    """FR-007 (api-sprint-03 §4.2): every match deleted, every session ended, the address
+    freed; signed out here with the ``POST /auth/sign-out`` headers. 202: the purge follows."""
+    tombstone = AccountDeletion(session).delete(account.id, body)
+    response = JSONResponse(
+        tombstone.response(), status_code=202, headers={"Cache-Control": "no-store"}
+    )
+    return _signed_out(response, settings_of(request))
 
 
 @router.get("/me")

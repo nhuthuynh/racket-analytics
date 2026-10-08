@@ -6,7 +6,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import MatchesError from '@/app/matches/error';
-import MatchesLoading from '@/app/matches/loading';
+import MatchesLoading from '@/app/matches/(list)/loading';
 import { LocalDateLine } from '@/components/LocalDate';
 import { matchStatusLine } from '@/lib/format';
 

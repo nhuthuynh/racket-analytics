@@ -80,6 +80,18 @@ class ExpiryPolicy:
     def expires_at(self, *, created_at: datetime, now: datetime) -> datetime:
         return min(now + self.idle, created_at + self.max_age)
 
+    def is_abandoned(
+        self, status: str, updated_at: datetime, expires_at: datetime | None, *, now: datetime
+    ) -> bool:
+        """ST-038 (FR-024, NFR-066 d): the purge frees an upload that is not complete and has
+        been idle ``idle`` since its last accepted chunk, or is past its expiry time, or was
+        already marked expired. A completed upload is the match's video: never."""
+        if status == "complete":
+            return False
+        if status == "expired":
+            return True
+        return now - updated_at >= self.idle or (expires_at is not None and now >= expires_at)
+
 
 DEFAULT_EXPIRY = ExpiryPolicy(idle=timedelta(hours=24), max_age=timedelta(hours=72))
 

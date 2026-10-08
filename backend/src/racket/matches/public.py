@@ -8,13 +8,22 @@ transaction, so "upload complete", ``Match.mark_uploaded`` and the probe job com
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from racket.matches.deletion import Tombstone, confirm_deletion
 from racket.matches.domain import MatchId, OwnerId
-from racket.matches.repository import MatchRepository
+from racket.matches.repository import MatchRepository, matches
+from racket.matches.scorebook.domain import project
+from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import NotFound
+from racket.video_ingest.public import close_for_deleted_match
+
+__all__ = ["Tombstone", "confirm_deletion"]  # the deletion rules Identity & Players reuses
 
 
 def owns_match(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> bool:
@@ -65,3 +74,106 @@ def clear_rejection(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) 
     )
     if match is not None and match.rejection_code is not None:
         match.clear_rejection()
+
+
+@dataclass(frozen=True)
+class LiveSheet:
+    """The projected score sheet of a live match at ``version`` (published to Analytics, R6)."""
+
+    version: int
+    owner_id: uuid.UUID
+    sheet: dict[str, Any]
+
+
+def lock_live_sheet(session: Session, match_id: uuid.UUID) -> LiveSheet | None:
+    """The sheet of a live match, read under the match row ``FOR SHARE`` lock, which the caller
+    holds to its commit (analytics-snapshots.md §4.2 step 2, invariant S8). ``None`` when the
+    match does not exist or is deleted, so a snapshot is never written for it."""
+    owner = session.execute(
+        sa.select(matches.c.owner_id)
+        .where(*MatchRepository.live(match_id))
+        .with_for_update(read=True)
+    ).scalar_one_or_none()
+    if owner is None:
+        return None
+    book = ScorebookRepository(session).load(match_id)
+    return LiveSheet(book.version, uuid.UUID(str(owner)), project(book))
+
+
+@dataclass(frozen=True)
+class DueMatch:
+    match_id: uuid.UUID
+    owner_id: uuid.UUID
+    deleted_at: datetime
+
+
+def due_for_purge(
+    session: Session, limit: int, *, older_than: datetime | None = None
+) -> list[DueMatch]:
+    """Tombstoned matches, oldest deletion first (deletion-and-purge.md §4.2)."""
+    query = sa.select(matches.c.id, matches.c.owner_id, matches.c.deleted_at).where(
+        matches.c.deleted_at.is_not(None)
+    )
+    if older_than is not None:
+        query = query.where(matches.c.deleted_at <= older_than)
+    rows = session.execute(query.order_by(matches.c.deleted_at, matches.c.id).limit(limit)).all()
+    return [DueMatch(uuid.UUID(str(r.id)), uuid.UUID(str(r.owner_id)), r.deleted_at) for r in rows]
+
+
+def claim_for_purge(session: Session, match_id: uuid.UUID) -> bool:
+    """Lock one tombstoned match for this pass; ``False`` when another pass holds it or it is
+    gone (``FOR UPDATE SKIP LOCKED``, so parallel passes split the work, IT-03-07)."""
+    found = session.execute(
+        sa.select(matches.c.id)
+        .where(matches.c.id == match_id, matches.c.deleted_at.is_not(None))
+        .with_for_update(skip_locked=True)
+    ).first()
+    return found is not None
+
+
+def purge_match(session: Session, match_id: uuid.UUID) -> int:
+    """Delete the match root of a claimed tombstone; the foreign keys cascade to participants,
+    games, rallies and the correction trail. Runs last, in the caller's transaction."""
+    result = session.execute(
+        sa.delete(matches).where(matches.c.id == match_id, matches.c.deleted_at.is_not(None))
+    )
+    return int(result.rowcount)  # type: ignore[attr-defined]
+
+
+def existing_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """Which of ``ids`` still have a ``matches`` row, live or tombstoned (orphan sweep)."""
+    if not ids:
+        return set()
+    found = session.execute(sa.select(matches.c.id).where(matches.c.id.in_(ids))).scalars()
+    return {uuid.UUID(str(i)) for i in found}
+
+
+def tombstone_owned_by(session: Session, owner_id: uuid.UUID, at: datetime) -> list[uuid.UUID]:
+    """Tombstone every live match of an owner and close their uploads, in the caller's
+    transaction (``DELETE /me`` step 3; the pass's second net, SEC-S3-TM-05). Returns the ids."""
+    ids = [
+        uuid.UUID(str(i))
+        for i in session.execute(
+            sa.update(matches)
+            .where(matches.c.owner_id == owner_id, matches.c.deleted_at.is_(None))
+            .values(deleted_at=at, updated_at=at)
+            .returning(matches.c.id)
+        ).scalars()
+    ]
+    for match_id in ids:
+        close_for_deleted_match(session, match_id, at)
+    return ids
+
+
+def owner_has_matches(session: Session, owner_id: uuid.UUID) -> bool:
+    """Any ``matches`` row (live or tombstoned) of this owner: an account is purged only after
+    every one of its matches (deletion-and-purge.md §4.2)."""
+    found = session.execute(sa.select(matches.c.id).where(matches.c.owner_id == owner_id).limit(1))
+    return found.first() is not None
+
+
+def owned_format(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> str | None:
+    """The format (``singles``/``doubles``) of a live match the owner holds, else ``None``: the
+    owner filter for another context's routes that also need the slots (Full Tag)."""
+    match = MatchRepository(session).get_owned(MatchId(match_id), OwnerId(owner_id))
+    return None if match is None else match.format.value

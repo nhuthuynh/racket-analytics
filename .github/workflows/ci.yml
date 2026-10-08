@@ -34,7 +34,7 @@ env:
   PROPERTY_BUDGET_S: "90"
   # NFR-073 "rules + domain unit suite": the rules engine and the bounded contexts' unit tests.
   # tests/unit as a whole is the backend unit suite with its own 60 s budget (W-01, run 37434214390).
-  DOMAIN_TEST_PATHS: "tests/unit/sports tests/unit/matches tests/unit/players tests/unit/video_ingest"
+  DOMAIN_TEST_PATHS: "tests/unit/sports tests/unit/matches tests/unit/players tests/unit/video_ingest tests/unit/analytics"
   COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
   FORCE_COLOR: "1"
 
@@ -152,6 +152,25 @@ jobs:
           path: reports/unit.xml
           if-no-files-found: warn
 
+  drill-lint:
+    # ST-053 (c), G03-09 (c): every drill in content/drills passes the FR-140 rules (QD-DR-01/02).
+    name: Drill library lint (FR-140, ST-053)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked
+      - run: uv run --no-sync racket-drill-lint ../content/drills
+
   # ------------------------------------------------------------------ integration on Compose
   integration:
     name: Integration, scenario and regression suites on Compose (+ changed-lines coverage)
@@ -256,6 +275,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0 # test_gitleaks_ignore.py checks each fingerprint's commit exists
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -352,11 +372,27 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium webkit
       - name: Playwright journeys; axe 0 serious/critical (NFR-027)
+        # Gated: every spec except the red-first ones tagged @red-until-<story> (ADR 0046).
         working-directory: web
         env:
           # web-tls (ADR 0029): Secure `__Host-` cookies need https in WebKit.
           BASE_URL: https://localhost:3000
-        run: pnpm exec playwright test --reporter=github,html
+          # E2E-03-05 (ST-052): the labeller-admin CLI in this job's api container.
+          E2E_ADMIN_CMD: docker compose -f ${{ github.workspace }}/infra/compose.yaml --env-file ${{ github.workspace }}/infra/env.example exec -T api python -m racket.dataset.admin
+        run: pnpm exec playwright test --grep-invert "@red-until-" --reporter=github,html
+      - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
+        # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).
+        # BASE_URL: playwright.config.ts defaults to https://localhost:3000, the same origin.
+        working-directory: web
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ../reports/e2e-red-until.json
+        run: |
+          pnpm exec playwright test --grep "@red-until-" --reporter=json \
+            || echo "playwright rc=$? (red-until tests are expected to fail)"
+      - name: Stale-tag check for the red-until E2E tests
+        run: |
+          python3 scripts/ci/e2e_red_until_report.py --json reports/e2e-red-until.json --specs web/e2e \
+            --summary "$GITHUB_STEP_SUMMARY"
       - name: Service logs on failure
         if: failure()
         run: $COMPOSE logs --no-color --tail=300
@@ -553,6 +589,7 @@ jobs:
       - python-lint
       - python-types
       - python-unit
+      - drill-lint
       - integration
       - fixture-integrity
       - infra-tests

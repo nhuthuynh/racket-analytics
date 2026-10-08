@@ -18,6 +18,7 @@ from typing import Any
 from fastapi import FastAPI
 from starlette.concurrency import run_in_threadpool
 
+from racket.platform import events
 from racket.platform.db import engine_for, session_factory, upgrade_to_head
 from racket.platform.errors import ErrorMapper
 from racket.platform.health import router as health_router
@@ -81,7 +82,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.add_middleware(HttpMetricsMiddleware)  # outermost: NFR-041 availability SLI (ST-024)
 
+    from racket.analytics.api import router as stats_router
+    from racket.analytics.service import on_sheet_changed
+    from racket.dataset.api import router as label_router
     from racket.matches.api import router as matches_router
+    from racket.matches.events import ScoreSheetChanged
     from racket.matches.scorebook.api import router as scorebook_router
     from racket.players.api import dev_router
     from racket.players.api import router as players_router
@@ -94,6 +99,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(dev_router)  # the /dev/* routes exist only when enabled (api §2)
     app.include_router(matches_router)
     app.include_router(scorebook_router)
+    app.include_router(stats_router)
+    app.include_router(label_router)
+    events.subscribe(ScoreSheetChanged, on_sheet_changed)  # after-commit consumer (ADR 0040)
     app.include_router(uploads_router)
     app.include_router(policy_router)  # plain JSON, not a tus route (no Tus-Resumable)
     return app

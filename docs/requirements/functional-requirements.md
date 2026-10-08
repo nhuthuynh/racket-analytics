@@ -330,7 +330,7 @@ Feature: Resumable upload
 ```
 
 #### FR-023 Upload validation
-- **Description:** The server accepts only real video files: MP4 or MOV containers with H.264 or HEVC, checked by content and not by extension. Files must be within the size and duration caps (provisional: 10 GB and 150 min). Rejections use the error summary and state the caps in human units. Server checks are authoritative.
+- **Description:** The server accepts only real video files: MP4 or MOV containers with H.264 or HEVC, checked by content and not by extension. Files must be within the size and duration caps (provisional: 10 GB and 150 min). Rejections use the error summary and state the caps in human units. A file in an accepted container whose video codec is not supported gets the same message as a file that is not a video ("This file is not a video we can read"), because the user's next step is the same (DR-01 R-3, 2026-10-07). Server checks are authoritative.
 - **Priority:** Must · **Release:** R1 · **Milestone:** M0 · **Status:** ready-candidate (caps confirmed by R-05)
 - **Source:** PROD US-203; ENG NFR-SEC-04; DES FR-UX-33; [AQS/SEC-02]; [DPA/DESIGN-13]; conflict K12
 - **K12 / R-05 note (2026-10-05, senior-ml-cv-engineer, ST-025):** caps **not yet confirmed**, still provisional 10 GB / 150 min. The two caps bind together at 66.7 MB per minute (8.89 Mbit/s); if any of the ≥ 5 measured phone models records above that rate at 1080p60, the size cap binds first and must be raised or the copy changed. Measurement is blocked on real phone recordings (`docs/data/phone-fixtures.md` §4; blockers.md 2026-10-05).
@@ -662,7 +662,7 @@ Feature: Quick Tag
 ```
 
 #### FR-051 Keyboard tagging
-- **Description:** Quick Tag works fully from the keyboard, using an in-app key map shown with `?`. Single-key shortcuts can be turned off or remapped. Keyboard tagging gives the same results as tapping.
+- **Description:** Quick Tag works fully from the keyboard, using an in-app key map shown with `?`. The key map has a key for every FR-050 input: rally start and end, the winning side, each of the five endings (`W` winner, `U` unforced error, `O` forced error, `F` fault, `R` replay; an ending key saves the rally) and the responsible player (`3`-`6`). This extends DES FR-UX-61, which lists `W`/`U`/`F` only (DR-02 R2-3, 2026-10-07). Single-key shortcuts can be turned off or remapped. Keyboard tagging gives the same results as tapping.
 - **Priority:** Must · **Release:** R1 · **Milestone:** M0 · **Status:** ready-candidate
 - **Source:** PROD US-401 (keyboard scenario); DES FR-UX-61; SC 2.1.1 and 2.1.4 not fetched (judgment)
 ```gherkin
@@ -966,7 +966,7 @@ Feature: Confidence bands
 #### FR-100 Starter stats from Quick Tag
 - **Description:** For each side, and per player where `responsible_player` was tagged, the app computes:
   - AN-01 serve rally win %
-  - AN-02 side-out %
+  - AN-02 rallies won when receiving (the metric was called "side-out %" until 2026-10-07; under side-out doubles scoring a won receiving rally against server 1 is not a side-out, so that name misleads; metric-dictionary D-1, ADR 0044 rule 5)
   - AN-03 points per service turn
   - AN-04 unforced errors per game
   - AN-05 serve fault %
@@ -994,7 +994,7 @@ Feature: Metrics show their uncertainty
     Scenario Outline: Low-sample flag
       Given Ivy received serve in <n> rallies and won <won>
       When she opens her stats
-      Then "side-out %" shows <pct> with "n = <n>" and low-sample label "<flag>"
+      Then "Rallies won when receiving" shows <pct> with "n = <n>" and low-sample label "<flag>"
       Examples:
         | n  | won | pct | flag |
         | 8  | 4   | 50% | yes  |
@@ -1013,7 +1013,7 @@ Feature: Metric dictionary
     Then AN-05 is not shown
   Scenario: Definition shown
     Given AN-02 is coach-reviewed
-    When Ivy opens "How is this measured?" on side-out %
+    When Ivy opens "How is this measured?" on "Rallies won when receiving"
     Then she sees its definition in plain words
 ```
 

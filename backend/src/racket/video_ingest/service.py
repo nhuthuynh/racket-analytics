@@ -33,12 +33,14 @@ from racket.platform.errors import (
     LengthRequired,
     NotFound,
     PayloadTooLarge,
+    Unauthenticated,
 )
 from racket.platform.logs import SECURITY_LOGGER
 from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
 from racket.platform.slis import SLIRecorder, UploadEvent
 from racket.platform.storage import ObjectStore, is_missing_upload
+from racket.players import public as players
 from racket.video_ingest.domain import (
     ExpiryPolicy,
     ObjectKeyPolicy,
@@ -257,6 +259,10 @@ class UploadService:
         # see each other's sessions (C-02, PE-R3R-01; READ COMMITTED reads after the lock).
         self.uploads.lock_owner(owner_id)
         self._check_quota(owner_id, length, now)
+        # SEC-S3-TM-05: the account row FOR SHARE, held to the commit, before anything is written
+        if not players.lock_live_account(self.session, owner_id):
+            self.session.rollback()
+            raise Unauthenticated("the account was deleted")
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
             f"upload:create:{owner_id}",
             limit=self.settings.upload_create_limit_per_hour,
@@ -356,6 +362,8 @@ class UploadService:
         """Ownership first (404 for others, T-UV-8), then expiry (410 for the owner, §6.4)."""
         upload_id = parse_upload_id(raw_upload_id)
         upload = None if upload_id is None else self.uploads.get_owned(upload_id, owner_id)
+        if upload is not None and not matches.owns_match(self.session, upload.match_id, owner_id):
+            upload = None  # the match was deleted: its uploads are gone too (ST-050)
         if upload is None:
             self._deny(owner_id, route, method)
             raise UploadNotFound("no such upload for this owner")

@@ -25,16 +25,22 @@ export function ScoreSheetView({
   initialSheet,
   initialVersion,
   api = browserApi,
+  initialPlay,
 }: {
   match: Match;
   initialSheet: ScoreSheet;
   initialVersion: number;
   api?: SheetApi;
+  /** `?play=<rally_id>` from "Show me" (E-01, ADR 0043): open V-01 for that rally on arrival. */
+  initialPlay?: string;
 }) {
   const [sheet, setSheet] = useState(initialSheet);
   const [version, setVersion] = useState(initialVersion);
   const [history, setHistory] = useState<HistoryItem[] | null>(null);
   const [historyFailed, setHistoryFailed] = useState(false);
+  /** Failed loads in a row and a reload in flight, for H-01 feedback (PD-R3S2-02). */
+  const [historyTries, setHistoryTries] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [said, setSaid] = useState('');
   const [busy, setBusy] = useState(false);
@@ -42,6 +48,25 @@ export function ScoreSheetView({
   /** The "Watch rally n" button that opened V-01: focus goes back to it if the video fails (PD-S2R1-05). */
   const watchOpener = useRef<HTMLElement | null>(null);
   const [refocusWatch, setRefocusWatch] = useState(false);
+  /**
+   * DR-02 E-3: the rallies that followed the decided row, in order, so focus can go to the next
+   * one still shown when the row's controls go. By rally id, not number: the server renumbers
+   * the kept rallies after a removal.
+   */
+  const [followers, setFollowers] = useState<string[] | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const undoRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (followers === null) return;
+    setFollowers(null);
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return; // the control used is still there
+    const target = followers
+      .map((id) => rootRef.current?.querySelector<HTMLElement>(`tr[data-rally-id="${CSS.escape(id)}"] button`))
+      .find((b) => b);
+    (target ?? undoRef.current)?.focus();
+  }, [followers, sheet]);
 
   useEffect(() => {
     if (!refocusWatch || playing) return;
@@ -50,11 +75,16 @@ export function ScoreSheetView({
   }, [playing, refocusWatch]);
 
   const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
     try {
       setHistory(await api.corrections(match.id));
       setHistoryFailed(false);
+      setHistoryTries(0);
     } catch {
       setHistoryFailed(true);
+      setHistoryTries((n) => n + 1);
+    } finally {
+      setHistoryLoading(false);
     }
   }, [api, match.id]);
 
@@ -98,34 +128,52 @@ export function ScoreSheetView({
   const names = sideNames(match);
 
   function decide(row: SheetRow, decision: RallyDecision) {
+    const after = [...sheet.rows]
+      .sort((a, b) => a.number - b.number)
+      .filter((r) => r.number > row.number)
+      .map((r) => r.rally_id);
     void run(
       'Decision',
       (v) => (api.resolveRally ?? browserApi.resolveRally)(match.id, v, row.rally_id, decision),
-      () =>
-        decision === 'withdraw'
+      () => {
+        setFollowers(after);
+        return decision === 'withdraw'
           ? `Rally ${row.number} removed. It stays in the correction history.`
           : decision === 'move_to_previous_game'
             ? `Rally ${row.number} moved back to game ${row.game - 1}.`
-            : `Rally ${row.number} moved to the next game.`,
+            : `Rally ${row.number} moved to the next game.`;
+      },
     );
   }
 
   /**
-   * Which move a "needs your decision" row can take (api-sprint-02 §3 Resolution). C-03: while
-   * the game before the row's game is not over, the next game is refused by the server, and only
-   * the earliest kept rally of the row's game may move back; otherwise the rally is past the end
-   * of its game and moves to the next one.
+   * Which move a "needs your decision" row can take (api-sprint-02 §3 Resolution), and, when none,
+   * why (C3-03, Gherkin §7.7). C-03: while the game before the row's game is not over, the next
+   * game is refused by the server, and only the earliest kept rally of the row's game may move
+   * back. Otherwise the rally is past the end of its game and moves to the next one, but only the
+   * latest kept rally of the game (by time on the video), so no rally of the game is left behind
+   * it (PE-S2-R2-01; the server refuses others with decision/not_last_in_game, PE-S2-R3-01).
    */
-  function moveFor(row: SheetRow): RallyDecision | null {
+  function moveFor(row: SheetRow): { decision: RallyDecision | null; why: string | null } {
+    const sameGame = sheet.rows.filter((r) => r.game === row.game);
     const previous = sheet.games?.find((g) => g.number === row.game - 1);
-    if (!previous || previous.winner !== null) return 'move_to_next_game';
-    const first = sheet.rows
-      .filter((r) => r.game === row.game)
-      .reduce<SheetRow | null>((a, r) => (a === null || r.start_ms < a.start_ms ? r : a), null);
-    return first?.rally_id === row.rally_id ? 'move_to_previous_game' : null;
+    if (!previous || previous.winner !== null) {
+      const last = sameGame.reduce<SheetRow | null>((a, r) => (a === null || r.start_ms > a.start_ms ? r : a), null);
+      if (!last || last.rally_id === row.rally_id) return { decision: 'move_to_next_game', why: null };
+      return {
+        decision: null,
+        why: `Only the last rally of game ${row.game} can move to the next game. Decide rally ${last.number} first.`,
+      };
+    }
+    const first = sameGame.reduce<SheetRow | null>((a, r) => (a === null || r.start_ms < a.start_ms ? r : a), null);
+    if (!first || first.rally_id === row.rally_id) return { decision: 'move_to_previous_game', why: null };
+    return {
+      decision: null,
+      why: `Only the first rally of game ${row.game} can move back to game ${row.game - 1}. Decide rally ${first.number} first.`,
+    };
   }
 
-  async function watch(row: SheetRow, opener: HTMLElement) {
+  async function watch(row: SheetRow, opener: HTMLElement | null) {
     watchOpener.current = opener;
     setProblem(null);
     try {
@@ -139,6 +187,20 @@ export function ScoreSheetView({
     }
   }
 
+  // Opened from "Show me" (ST-047): scroll the rally's row into view and open its video once.
+  const played = useRef(false);
+  useEffect(() => {
+    if (played.current || !initialPlay) return;
+    played.current = true;
+    const target = initialSheet.rows.find((r) => r.rally_id === initialPlay);
+    if (!target) return;
+    const tr = rootRef.current?.querySelector<HTMLElement>(`tr[data-rally-id="${CSS.escape(target.rally_id)}"]`);
+    tr?.scrollIntoView?.({ block: 'center' });
+    const opener = tr?.querySelector<HTMLElement>('button') ?? null;
+    void watch(target, opener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
+
   function correct(row: SheetRow, field: CorrectableField, value: CorrectionValue) {
     void run(
       'Correction',
@@ -148,7 +210,7 @@ export function ScoreSheetView({
   }
 
   return (
-    <div className="stack">
+    <div className="stack" ref={rootRef}>
       {problem ? (
         <p role="alert" className="notice notice--error">
           {problem}
@@ -178,20 +240,7 @@ export function ScoreSheetView({
         rowActions={(row) => (
           <>
             {row.marker === 'needs_decision' ? (
-              <span className="rally-fix">
-                {moveFor(row) === 'move_to_next_game' ? (
-                  <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_next_game')}>
-                    {`Move rally ${row.number} to the next game`}
-                  </button>
-                ) : moveFor(row) === 'move_to_previous_game' ? (
-                  <button type="button" className="button rally-fix__button" onClick={() => decide(row, 'move_to_previous_game')}>
-                    {`Move rally ${row.number} back to game ${row.game - 1}`}
-                  </button>
-                ) : null}
-                <button type="button" className="button button--secondary rally-fix__button" onClick={() => decide(row, 'withdraw')}>
-                  {`Remove rally ${row.number}`}
-                </button>
-              </span>
+              <MoveOffer row={row} offer={moveFor(row)} onDecide={decide} />
             ) : null}
             <button type="button" className="button button--secondary rally-fix__button" onClick={(e) => void watch(row, e.currentTarget)}>
               {`Watch rally ${row.number}`}
@@ -202,6 +251,7 @@ export function ScoreSheetView({
       />
       <p>
         <button
+          ref={undoRef}
           type="button"
           className="button button--secondary"
           aria-busy={busy}
@@ -214,10 +264,23 @@ export function ScoreSheetView({
         <h2 id="history-title">Correction history</h2>
         {historyFailed ? (
           <div className="stack">
-            <p>The correction history could not be loaded.</p>
+            {historyTries > 1 ? (
+              <p role="alert" className="notice notice--error">
+                {`The history still could not be loaded (tried ${historyTries} times). Check your connection, then reload it again.`}
+              </p>
+            ) : (
+              <p>The correction history could not be loaded.</p>
+            )}
             <p>
-              <button type="button" className="button button--secondary" onClick={() => void loadHistory()}>
-                Reload the history
+              <button
+                type="button"
+                className="button button--secondary"
+                aria-busy={historyLoading}
+                onClick={() => {
+                  if (!historyLoading) void loadHistory();
+                }}
+              >
+                {historyLoading ? 'Reloading the history…' : 'Reload the history'}
               </button>
             </p>
           </div>
@@ -228,5 +291,34 @@ export function ScoreSheetView({
         )}
       </section>
     </div>
+  );
+}
+
+/** The decision buttons of a "needs your decision" row (ST-032, C-03, C3-03). */
+function MoveOffer({
+  row,
+  offer,
+  onDecide,
+}: {
+  row: SheetRow;
+  offer: { decision: RallyDecision | null; why: string | null };
+  onDecide: (row: SheetRow, decision: RallyDecision) => void;
+}) {
+  return (
+    <span className="rally-fix">
+      {offer.decision === 'move_to_next_game' ? (
+        <button type="button" className="button rally-fix__button" onClick={() => onDecide(row, 'move_to_next_game')}>
+          {`Move rally ${row.number} to the next game`}
+        </button>
+      ) : offer.decision === 'move_to_previous_game' ? (
+        <button type="button" className="button rally-fix__button" onClick={() => onDecide(row, 'move_to_previous_game')}>
+          {`Move rally ${row.number} back to game ${row.game - 1}`}
+        </button>
+      ) : null}
+      <button type="button" className="button button--secondary rally-fix__button" onClick={() => onDecide(row, 'withdraw')}>
+        {`Remove rally ${row.number}`}
+      </button>
+      {offer.why ? <span className="rally-fix__why">{offer.why}</span> : null}
+    </span>
   );
 }

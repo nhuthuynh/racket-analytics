@@ -24,34 +24,34 @@ export class ResponseShapeError extends Error {
   }
 }
 
-type Obj = Record<string, unknown>;
+export type Obj = Record<string, unknown>;
 
-function obj(value: unknown, path: string): Obj {
+export function obj(value: unknown, path: string): Obj {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new ResponseShapeError(path);
   }
   return value as Obj;
 }
 
-function str(o: Obj, key: string, path: string): string {
+export function str(o: Obj, key: string, path: string): string {
   const v = o[key];
   if (typeof v !== 'string') throw new ResponseShapeError(`${path}.${key}`);
   return v;
 }
 
-function num(o: Obj, key: string, path: string): number {
+export function num(o: Obj, key: string, path: string): number {
   const v = o[key];
   if (typeof v !== 'number' || !Number.isFinite(v)) throw new ResponseShapeError(`${path}.${key}`);
   return v;
 }
 
-function bool(o: Obj, key: string, path: string): boolean {
+export function bool(o: Obj, key: string, path: string): boolean {
   const v = o[key];
   if (typeof v !== 'boolean') throw new ResponseShapeError(`${path}.${key}`);
   return v;
 }
 
-function oneOf<T extends string>(o: Obj, key: string, allowed: readonly T[], path: string): T {
+export function oneOf<T extends string>(o: Obj, key: string, allowed: readonly T[], path: string): T {
   const v = o[key];
   if (typeof v !== 'string' || !(allowed as readonly string[]).includes(v)) {
     throw new ResponseShapeError(`${path}.${key}`);
@@ -59,7 +59,7 @@ function oneOf<T extends string>(o: Obj, key: string, allowed: readonly T[], pat
   return v as T;
 }
 
-function arr(o: Obj, key: string, path: string): unknown[] {
+export function arr(o: Obj, key: string, path: string): unknown[] {
   const v = o[key];
   if (!Array.isArray(v)) throw new ResponseShapeError(`${path}.${key}`);
   return v;

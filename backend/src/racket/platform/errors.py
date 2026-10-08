@@ -45,6 +45,13 @@ CODE_MESSAGES.update(
         "checksum_mismatch": "Part of the upload was damaged. Please send it again.",
     }
 )
+# Sprint 3 (api-sprint-03 §6.1), fixed messages.
+CODE_MESSAGES.update(
+    {
+        "no_consent": "This match has no consent record for labelling.",
+        "invalid_label": "This label is not valid.",
+    }
+)
 # Sprint 2 (ST-026..ST-032; match-aggregate §3 refusals), fixed messages.
 CODE_MESSAGES.update(
     {

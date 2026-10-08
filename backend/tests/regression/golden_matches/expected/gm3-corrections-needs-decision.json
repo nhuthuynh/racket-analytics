@@ -1,0 +1,36 @@
+{
+ "match": "gm3-corrections-needs-decision",
+ "metric_dict_version": "0.1",
+ "rules_version": "PROVISIONAL-UNVERIFIED",
+ "source": "Computed by the independent reference scripts/measure/statslib.py (pinned to the coach's worked example, metric-dictionary §2) and frozen. v2 (QA-R2S3-01): AN-07 low_sample by rule 0.3 on each share (PE-R1S3-05), AN-06 longest_by_game (PE-R1S3-06); scripts unchanged. The coach's QD-AN-03 hand count is docs/domain/hand-counts/GS-AN-1-v1.json; test_golden_an compares the two (COACH-1).",
+ "metrics": {
+  "AN-01": {
+   "A": {"k": 11, "n": 13, "value": 0.8462, "ci_low": 0.5777, "ci_high": 0.9567, "low_sample": true, "rallies": [1, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]},
+   "B": {"k": 4, "n": 6, "value": 0.6667, "ci_low": 0.3, "ci_high": 0.9032, "low_sample": true, "rallies": [2, 3, 4, 5, 6, 7]}
+  },
+  "AN-02": {
+   "A": {"k": 2, "n": 6, "value": 0.3333, "ci_low": 0.0968, "ci_high": 0.7, "low_sample": true, "rallies": [2, 3, 4, 5, 6, 7]},
+   "B": {"k": 2, "n": 13, "value": 0.1538, "ci_low": 0.0433, "ci_high": 0.4223, "low_sample": true, "rallies": [1, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]}
+  },
+  "AN-03": {
+   "A": {"points": 11, "turns": 2, "value": 5.5, "low_sample": true, "rallies": [8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]},
+   "B": {"points": 4, "turns": 1, "value": 4.0, "low_sample": true, "rallies": [2, 3, 5, 6]}
+  },
+  "AN-04": {
+   "A": {"count": 1, "games": 1, "value": 1.0, "by_player": {"A1": 1}, "player_not_tagged": 0, "low_sample": true, "rallies": [2]},
+   "B": {"count": 1, "games": 1, "value": 1.0, "by_player": {}, "player_not_tagged": 1, "low_sample": true, "rallies": [7]}
+  },
+  "AN-05": {
+   "A": {"k": 0, "n": 13, "value": 0.0, "ci_low": 0.0, "ci_high": 0.2281, "fault_type_not_tagged": 0, "low_sample": true, "rallies": []},
+   "B": {"k": 0, "n": 6, "value": 0.0, "ci_low": 0.0, "ci_high": 0.3903, "fault_type_not_tagged": 0, "low_sample": true, "rallies": []}
+  },
+  "AN-06": {
+   "A": {"longest": 11, "longest_by_game": [11], "histogram": {"1": 0, "2": 0, "3": 0, "4": 0, "5+": 1}, "n": 11, "low_sample": false, "rallies": [8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]},
+   "B": {"longest": 4, "longest_by_game": [4], "histogram": {"1": 0, "2": 0, "3": 0, "4": 1, "5+": 0}, "n": 4, "low_sample": false, "rallies": [2, 3, 5, 6]}
+  },
+  "AN-07": {
+   "A": {"n": 12, "counts": {"winner": 9, "unforced_error": 1, "forced_error": 1, "fault": 1}, "low_sample": true, "rallies": [1, 2, 6, 8, 11, 12, 13, 14, 15, 17, 18, 19]},
+   "B": {"n": 7, "counts": {"winner": 3, "unforced_error": 1, "forced_error": 1, "fault": 2}, "low_sample": true, "rallies": [3, 4, 5, 7, 9, 10, 16]}
+  }
+ }
+}

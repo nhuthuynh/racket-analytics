@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PageTitle } from '@/components/PageTitle';
+import { DeletedNotice } from '@/components/DeletedNotice';
 import { ResumeBanner } from '@/components/ResumeBanner';
 import { ApiError } from '@/lib/api/client';
 import { serverApi } from '@/lib/api/server';
@@ -21,12 +22,16 @@ async function loadMatches(): Promise<Match[]> {
   }
 }
 
-export default async function MatchesPage() {
+type Props = { searchParams?: Promise<{ deleted?: string | string[] }> };
+
+export default async function MatchesPage({ searchParams }: Props = {}) {
   const matches = await loadMatches();
+  const deleted = (await searchParams)?.deleted;
   return (
     <div className="stack">
       <PageTitle>Your matches</PageTitle>
-      <h1>Your matches</h1>
+      <h1 tabIndex={-1}>Your matches</h1>
+      <DeletedNotice which={typeof deleted === 'string' ? deleted : undefined} />
       <ResumeBanner matches={matches} />
       {matches.length === 0 ? (
         <div className="empty-state">

@@ -158,6 +158,9 @@ export const API_ERROR_CODES = [
   'decision_needed',
   'rules_unavailable',
   'scorebook_full',
+  // api-sprint-03 §6.1
+  'no_consent',
+  'invalid_label',
 ] as const;
 export type ServerErrorCode = (typeof API_ERROR_CODES)[number];
 export type ApiErrorCode = ServerErrorCode | 'network_error' | 'invalid_response' | 'unknown';
@@ -215,8 +218,16 @@ export const FIELD_ERROR_CODES = [
   'no_previous_game',
   'previous_game_over',
   'not_first_in_game',
+  // api-sprint-02 §4.2 amendment (C3-02, PE-S2-R3-02): only the latest kept rally moves forward
+  'not_last_in_game',
   'too_many_rallies',
   'too_many_changes',
+  // api-sprint-03 §6.2
+  'confirmation_required',
+  'outside_clip',
+  'no_rally',
+  'out_of_order',
+  'not_a_player',
 ] as const;
 export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
 

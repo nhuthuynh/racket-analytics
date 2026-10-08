@@ -1,0 +1,950 @@
+{
+  "sprint": "03",
+  "goal": "Starter stats AN-01..AN-07 with n, Wilson intervals, low-sample flags and Show me evidence; match and account deletion with purge; Full Tag and drill lint; the Sprint 2 agent-owned blockers and majors fixed first (docs/sprints/sprint-03.md §1)",
+  "goal_scorecard": "docs/sprints/03/goal-scorecard.md",
+  "dates": {
+    "planned_start": "2026-11-16",
+    "planned_review": "2026-11-27",
+    "work_started": "2026-10-06",
+    "status_written": "2026-10-08 (sprint close, engineering-manager, at c1fba6a; VR3 measured fb920bc)",
+    "closed": "2026-10-08"
+  },
+  "owner": "engineering-manager",
+  "branch": "sprint-03",
+  "based_on": "sprint-02@ce91984",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. implemented_units and dod_done_units tracked separately. Status: not_started | in_progress | implemented | done | partial | blocked. Decider tasks (ADR 0037 rule 2) carry dates, not units.",
+  "capacity": {
+    "load_factor": 0.8,
+    "capacity_units_per_lane": 12.8,
+    "committed_units_per_lane": {
+      "BE": 12.5,
+      "FE": 11,
+      "QA": 9.5,
+      "SRE": 7.0,
+      "ML": 3
+    },
+    "committed_units": 43.0,
+    "stretch": [
+      "ST-035",
+      "ST-034",
+      "ST-033",
+      "ST-036",
+      "ST-025 (P3)"
+    ]
+  },
+  "goal_metrics": {
+    "G03-01": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "5/5 live journeys, rc=0, no failing step"
+    },
+    "G03-02": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "tag->stats p95 34.3 ms (n 70); correction 24.0 ms (n 5); delete hidden 22.2 ms (n 5)"
+    },
+    "G03-03": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "0 rows in 20 columns; 5/5 links 404; purge service PURGE_INTERVAL_S 86400"
+    },
+    "G03-04": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "IT-03 + BOLA 183/183; earlier 317/317; sandbox 10/10"
+    },
+    "G03-05": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "p95 32.5 ms, p99 114.9 ms, 100%, 0 unexpected, 50.0 RPS"
+    },
+    "G03-06": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "114 passed, 0 failed, 6 named skips; x3 342 passed, 0 flaky"
+    },
+    "G03-07": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "231 ms / 837 ms / CLS 0, n 20 each"
+    },
+    "G03-08": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "GS-AN-1 v2 31/31; scenarios 15/15; conservation 1000/0; manifest rc 0; 7/7 coach-reviewed"
+    },
+    "G03-09": {
+      "met": false,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "IT-03-11 15/15, E2E-03-05 passed, lint 1+5 correct; no CI run at the head (origin 723bb7f; last run 37643676432 at 09f1f67 failed)"
+    },
+    "G03-10": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "55 axe checks 0 serious/critical; 0 small targets; every family and state; keyboard and 320/360 passed"
+    },
+    "G03-11": {
+      "met": true,
+      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "changed lines 94%; analytics 98.1%; rules 99.57/98.41%; web 91.64%; mutation 0.8635/0.9251; oracle 100000/0; 8.0/12.2/350.1 s"
+    },
+    "G03-12": {
+      "met": false,
+      "verified": "VR3 counted 3; EM close recount 8 (review-rounds Sprint close)",
+      "actual": "verifier 3; EM close recount 8 after reconciling review round 3; GitHub bug issues 0"
+    }
+  },
+  "open_defects": {
+    "count": 8,
+    "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md",
+    "at": "sprint close, 2026-10-08, c1fba6a + EM close rows (rc=1)",
+    "ids": [
+      "PE-R1S3-01 / QA-R1S3-04 / QA-R3S3-02 / SEC-R3S3-03 (blocker)",
+      "PD-R1S3-01 family (blocker)",
+      "PD-R1-06 / DR-01 / DR-02 family (blocker)",
+      "PE-R3S3-01 / QA-R3S3-04 (major)",
+      "PE-R3S3-05 / QA-R3S3-03 (major)",
+      "PE-R3S3-03 / SEC-R3S3-02 / QA-R3S3-05 (major)",
+      "PE-R3S3-04 (major)",
+      "PD-R3S3-01 (major)"
+    ],
+    "deferred": {
+      "QA-R1S3-09, QA-R1S3-10": "accepted TDD-order breach -> retro 3 A5 (R3-IN-1)",
+      "QA-R3-GATE-01 / C-06": "S3-DoD-P6",
+      "SEC-RV3-01": "S3-DoD-P10",
+      "BLK-GOLD-01": "S3-DoD-P11",
+      "minors and nits": "Sprint 4 carry-over C4-MIN (sprint-report §8)"
+    },
+    "note": "goal rounds 1-3 counted 3 because review round 3 (fdeeb53) had no rows; reconciled at close (retro 3 M1)"
+  },
+  "decider_tasks": [
+    {
+      "id": "DR-01",
+      "due": "D1",
+      "status": "cells_done_outcome_not_recorded",
+      "evidence": [
+        "1433a92"
+      ],
+      "note": "every decider cell written; chair has not recorded held (PD-R1S3-01, PD-R1-06)"
+    },
+    {
+      "id": "DR-02",
+      "due": "D1",
+      "status": "cells_done_outcome_not_recorded",
+      "evidence": [
+        "1433a92"
+      ],
+      "note": "every decider cell written; chair has not recorded held (PD-R1S3-01, PD-R1-06)"
+    },
+    {
+      "id": "DR-02-FE",
+      "due": "D1",
+      "status": "done",
+      "evidence": [
+        "a200f1a",
+        "9726add",
+        "1433a92"
+      ]
+    },
+    {
+      "id": "DR-02-COACH",
+      "due": "D1",
+      "status": "done_late",
+      "evidence": [
+        "d59d156"
+      ]
+    },
+    {
+      "id": "DR-02-BA",
+      "due": "D1",
+      "status": "done_late",
+      "evidence": [
+        "4ef07de",
+        "1433a92"
+      ]
+    },
+    {
+      "id": "DR-02-PM",
+      "due": "D1",
+      "status": "done_late",
+      "evidence": [
+        "56b2f6b",
+        "1433a92"
+      ]
+    },
+    {
+      "id": "DR-02-SEC",
+      "due": "D1",
+      "status": "done_late",
+      "evidence": [
+        "af3dd99"
+      ]
+    },
+    {
+      "id": "COACH-1",
+      "due": "D1-D2",
+      "status": "done_late",
+      "evidence": [
+        "d59d156"
+      ]
+    },
+    {
+      "id": "PM-1",
+      "due": "D1",
+      "status": "partial",
+      "evidence": [
+        "1433a92"
+      ],
+      "note": "FR-007 re-sign-in rule decided (DR-03 R3-6, 1433a92); ADR 0005 acceptance still pending (Sprint 4 carry-over C4-DR)"
+    },
+    {
+      "id": "PE-1",
+      "due": "D1-D2",
+      "status": "done_late",
+      "evidence": [
+        "86d7839"
+      ]
+    },
+    {
+      "id": "PE-2",
+      "due": "D1 doc, D2 review",
+      "status": "done_late",
+      "evidence": [
+        "86d7839"
+      ]
+    },
+    {
+      "id": "PE-3",
+      "due": "D1-D2",
+      "status": "done_late",
+      "evidence": [
+        "86d7839"
+      ]
+    },
+    {
+      "id": "PE-4",
+      "due": "D1",
+      "status": "done",
+      "evidence": [
+        "bd770f8"
+      ]
+    },
+    {
+      "id": "PD-1",
+      "due": "D1-D2",
+      "status": "done_late",
+      "evidence": [
+        "dc9e73a"
+      ]
+    },
+    {
+      "id": "DR-03",
+      "due": "D3",
+      "status": "cells_done_outcome_not_recorded",
+      "evidence": [
+        "1433a92"
+      ],
+      "note": "every decider cell written; chair has not recorded held (PD-R1S3-01, PD-R1-06)"
+    },
+    {
+      "id": "SEC-1",
+      "due": "D1-D2",
+      "status": "done_late",
+      "evidence": [
+        "af3dd99"
+      ]
+    },
+    {
+      "id": "BA-1",
+      "due": "D2, D8",
+      "status": "not_done",
+      "note": "Sprint 4 DoR check not delivered; gate task at Sprint 4 planning (ADR 0047)"
+    }
+  ],
+  "po_items_open": [
+    "P6",
+    "P7",
+    "P8",
+    "P9",
+    "P10",
+    "P11",
+    "P13"
+  ],
+  "stories": [
+    {
+      "id": "C3-01",
+      "kind": "carry_over",
+      "title": "QA-RV3-02: QA decides TCR rows 24-28 of Sprint 2",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0.5,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "1c1535d"
+      ],
+      "note": "QA decisions on TCR rows 24-28 recorded",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-02",
+      "kind": "carry_over",
+      "title": "PE-S2-R3-02: contract amendment not_last_in_game (docs task PE-4)",
+      "units": {},
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "bd770f8"
+      ],
+      "note": "contract amendment; landed after C3-03 (retro 3 A3 slip)",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-03",
+      "kind": "carry_over",
+      "title": "PE-S2-R3-01: S-01 offers only moves the server accepts",
+      "units": {
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [
+        "C3-02"
+      ],
+      "open": [],
+      "evidence": [
+        "6059930",
+        "975338e",
+        "c5f7049"
+      ],
+      "note": "pending principal-designer and QA re-check",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-04",
+      "kind": "carry_over",
+      "title": "QA-RV3-04: scripts/dev-chrome.sh (ADR 0036)",
+      "units": {
+        "SRE": 0.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0.5,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "c0fb6ad"
+      ],
+      "note": "QA re-check closed QA-RV3-04 (fb69a7d)",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-05",
+      "kind": "carry_over",
+      "title": "PE-S2-R3-03: CI and smoke at the Sprint 2 head; merge chain",
+      "units": {
+        "SRE": 0.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0.5,
+      "dod_done_units": 0,
+      "depends_on": [
+        "C3-01"
+      ],
+      "open": [],
+      "evidence": [
+        "ece0f30"
+      ],
+      "note": "QA re-check closed PE-S2-R3-03 (fb69a7d)",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-06",
+      "kind": "carry_over",
+      "title": "QA-R3-GATE-01 / C-06: manual screen-reader pass (human, P6)",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "blocked",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "P6"
+      ],
+      "open": [],
+      "evidence": [
+        "610e853"
+      ],
+      "note": "S3-DoD-P6: not met, waiting on P6 (0 of 38 rows run)",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-07",
+      "kind": "carry_over",
+      "title": "SEC-RV3-01: repository visibility (human, P10)",
+      "units": {},
+      "committed": true,
+      "status": "blocked",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "P10"
+      ],
+      "open": [],
+      "evidence": [],
+      "note": "S3-DoD-P10: not met, waiting on P10",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-08",
+      "kind": "carry_over",
+      "title": "BLK-GOLD-01: private footage bucket (after P11)",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "blocked",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [
+        "P11"
+      ],
+      "open": [],
+      "evidence": [],
+      "note": "S3-DoD-P11: not met, waiting on P11",
+      "ticket_pr": null
+    },
+    {
+      "id": "C3-09",
+      "kind": "carry_over",
+      "title": "DR family: decider tasks DR-01, DR-02",
+      "units": {},
+      "committed": true,
+      "status": "in_progress",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "a200f1a",
+        "1265966",
+        "1433a92"
+      ],
+      "note": "all decider cells written; chair outcome not recorded",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-043",
+      "kind": "story",
+      "title": "Metric dictionary in code (FR-102)",
+      "units": {
+        "BE": 0.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0.5,
+      "dod_done_units": 0,
+      "depends_on": [
+        "COACH-1",
+        "PE-2"
+      ],
+      "open": [],
+      "evidence": [
+        "bd7593c",
+        "921ed53"
+      ],
+      "note": "AN-01..07 shipped coach-reviewed, pinned to the record",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-044",
+      "kind": "story",
+      "title": "Starter stats AN-01..AN-07 with uncertainty (FR-100, FR-101)",
+      "units": {
+        "BE": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "783cfd2",
+        "fee4fa3",
+        "38b5da4"
+      ],
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-045",
+      "kind": "story",
+      "title": "Attribution conservation (FR-109)",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-044"
+      ],
+      "open": [],
+      "evidence": [
+        "a678a01"
+      ],
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-046",
+      "kind": "story",
+      "title": "MetricSnapshot and the stats API",
+      "units": {
+        "BE": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-044",
+        "PE-1",
+        "PE-2"
+      ],
+      "open": [],
+      "evidence": [
+        "bd6d1be",
+        "c038dee"
+      ],
+      "note": "ST-046a/b; built on sprint-03, not s3/* (ADR 0039 rule 6 breach)",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-047",
+      "kind": "story",
+      "title": "Show me evidence (FR-103)",
+      "units": {
+        "BE": 1,
+        "FE": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-046",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": [
+        "5e0b7ac",
+        "d83ee1b"
+      ],
+      "note": "API + UI; d83ee1b 2,125 lines, split before its PR (decision-log 2026-10-08)",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-048",
+      "kind": "story",
+      "title": "Stats dashboard",
+      "units": {
+        "FE": 4
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 4,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-046",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": [
+        "d83ee1b",
+        "2a8dbe6",
+        "81091cb"
+      ],
+      "note": "built before DR-03 held, no PO waiver (retro 3 M3)",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-049",
+      "kind": "story",
+      "title": "Golden matches QD-GD-03, gold set GS-AN-1 v1 (NFR-004)",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [
+        "COACH-1"
+      ],
+      "open": [],
+      "evidence": [
+        "c371369",
+        "39f624a",
+        "7a6ffe5"
+      ],
+      "note": "GS-AN-1 v2, hand count gated",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-050",
+      "kind": "story",
+      "title": "Delete a match (FR-006)",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "depends_on": [
+        "PE-3",
+        "SEC-1",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": [
+        "87322ad",
+        "aac9a8e",
+        "48d5889",
+        "a1b28bd",
+        "96044d9"
+      ],
+      "note": "ADR 0045 security ITs still missing (PE-R3S3-03)",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-051",
+      "kind": "story",
+      "title": "Delete my account (FR-007)",
+      "units": {
+        "BE": 2,
+        "FE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 3,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-050",
+        "PM-1"
+      ],
+      "open": [],
+      "evidence": [
+        "9590092",
+        "45bf6e6",
+        "1040cfb"
+      ],
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-038",
+      "kind": "story",
+      "title": "Abandoned uploads expire (FR-024), carried",
+      "units": {
+        "BE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-050"
+      ],
+      "open": [],
+      "evidence": [
+        "a3bc305"
+      ],
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-042",
+      "kind": "story",
+      "title": "Least-privilege worker credentials (NFR-054), carried",
+      "units": {
+        "BE": 1,
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "61dbdd5",
+        "a1bf473",
+        "e54b754"
+      ],
+      "note": "column grants 0013 (SEC-R1S3-01)",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-052",
+      "kind": "story",
+      "title": "Full Tag labelling tool (FR-150)",
+      "units": {
+        "ML": 2,
+        "FE": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 4,
+      "dod_done_units": 0,
+      "depends_on": [
+        "PE-1",
+        "DR-03"
+      ],
+      "open": [],
+      "evidence": [
+        "98f4c7c",
+        "c5476c8",
+        "e45db46",
+        "cd8856f"
+      ],
+      "note": "cd8856f 1,367 lines, split before its PR",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-053",
+      "kind": "story",
+      "title": "Drill JSON Schema and CI lint (FR-140)",
+      "units": {
+        "ML": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "70fa33f",
+        "1955d74",
+        "2408bff",
+        "bac3d81",
+        "b5cd5ac",
+        "4d8af6d",
+        "f493c02"
+      ],
+      "note": "CI job has no run at the head",
+      "ticket_pr": null
+    },
+    {
+      "id": "ST-054",
+      "kind": "story",
+      "title": "E2E journey v2 and stats performance baseline",
+      "units": {
+        "QA": 2,
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-048",
+        "ST-047"
+      ],
+      "open": [],
+      "evidence": [
+        "9c64d79",
+        "c7a6443",
+        "661f6c9"
+      ],
+      "note": "QA half implemented (journey v2, crawl, timing green); SRE Locust on stats/evidence in CI not done",
+      "ticket_pr": null
+    },
+    {
+      "id": "QA-ACC-3",
+      "kind": "story",
+      "title": "Acceptance first: steps, IT-03, E2E-03 red",
+      "units": {
+        "QA": 2
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "depends_on": [
+        "PE-1",
+        "PD-1"
+      ],
+      "open": [],
+      "evidence": [
+        "79ad8c3",
+        "979b23c",
+        "8880b55",
+        "5ffce1c",
+        "152c57c",
+        "de1b894",
+        "00430c4",
+        "8745dd5",
+        "ab0c279",
+        "20ad39e",
+        "5421ce7",
+        "99a711f"
+      ],
+      "note": "tests written red first; they turn green with the stories",
+      "ticket_pr": null
+    },
+    {
+      "id": "QA-FUZZ-3",
+      "kind": "story",
+      "title": "Rule L11 on new JSON fields; limit concurrency",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "152c57c"
+      ],
+      "ticket_pr": null
+    },
+    {
+      "id": "QA-DRY-3",
+      "kind": "story",
+      "title": "Scorecard dry-runs",
+      "units": {
+        "QA": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "a69ff7d",
+        "9562871",
+        "f621c51"
+      ],
+      "note": "G03-05 dry-run row is the SRE gap (VR3-S3-02)",
+      "ticket_pr": null
+    },
+    {
+      "id": "QA-MIN-3",
+      "kind": "story",
+      "title": "QA minors QA-RV3-06, SEC-RV3-03",
+      "units": {
+        "QA": 0.5
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 0.5,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "e5324cc"
+      ],
+      "ticket_pr": null
+    },
+    {
+      "id": "SRE-PURGE",
+      "kind": "story",
+      "title": "Purge job scheduled in Compose (NFR-066 c)",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "implemented",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "depends_on": [
+        "ST-050"
+      ],
+      "open": [],
+      "evidence": [
+        "ecee023",
+        "cad2451"
+      ],
+      "note": "scheduled purge live, first run ok",
+      "ticket_pr": null
+    },
+    {
+      "id": "SRE-SMOKE-3",
+      "kind": "story",
+      "title": "Integration smoke before review and at the close head",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [
+        "4fff02c",
+        "01811d1",
+        "fdeeb53"
+      ],
+      "note": "no close-head smoke section",
+      "ticket_pr": null
+    },
+    {
+      "id": "SRE-MIN-3",
+      "kind": "story",
+      "title": "SRE minors",
+      "units": {
+        "SRE": 1
+      },
+      "committed": true,
+      "status": "not_done",
+      "implemented_units": 0,
+      "dod_done_units": 0,
+      "depends_on": [],
+      "open": [],
+      "evidence": [],
+      "ticket_pr": null
+    }
+  ],
+  "totals": {
+    "planned_units": 43.0,
+    "implemented_units": 38.5,
+    "dod_done_units": 0,
+    "implemented_ratio": 0.895,
+    "by_lane": {
+      "BE": "12.5/12.5",
+      "FE": "11.0/11.0",
+      "QA": "9.0/9.5",
+      "SRE": "3.0/7.0",
+      "ML": "3.0/3.0"
+    },
+    "dod_note": "0: no Sprint 3 ticket PR exists (ADR 0039); Sprint 1+2 reached main via PR #2 on 2026-10-06"
+  },
+  "goal_met": false,
+  "ticket_prs": {
+    "rule": "ADR 0039: one PR per ticket into main, principal-engineer + senior-engineer verdict on the head SHA before merge; no sprint-wide PR",
+    "opened": [],
+    "map": "docs/decisions/0039-sprint-3-tickets-ship-as-ticket-prs-with-principal-and-senior-review.md",
+    "status": "none opened at close (list_pull_requests state=all 2026-10-08 -> #1 closed, #2 merged 2026-10-06, #3 closed; no s3/* branch). Retro 3 A1",
+    "pr_description_note": "T-ST-043/044/045/053/052a PRs must state 'TDD order not shown: reconstruction only (QA-R1S3-09/10)'"
+  },
+  "goal_met_note": "not met at close: VR3 10/12 at fb920bc; G03-09 (c) no CI at the head; G03-12 open 8 after the EM close reconciliation (sprint-report §1)"
+}
