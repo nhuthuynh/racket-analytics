@@ -124,6 +124,33 @@ def test_check_mode_fails_closed_when_chrome_is_missing(tmp_path: Path) -> None:
     assert "not installed" in res.stderr
 
 
+def test_check_mode_refuses_another_installed_version(tmp_path: Path) -> None:
+    dest = tmp_path / "chrome"
+    dest.mkdir()
+    (dest / "chrome").write_text('#!/bin/sh\necho "Google Chrome for Testing 140.0.0.0 "\n')
+    os.chmod(dest / "chrome", 0o700)
+    res = run(dest, "file:///unused", "0" * 64, "check")
+    assert res.returncode != 0
+    assert "wrong version" in res.stderr
+    assert res.stdout == ""
+
+
+def test_unknown_mode_is_a_usage_error(tmp_path: Path) -> None:
+    res = run(tmp_path / "chrome", "file:///unused", "0" * 64, "upgrade")
+    assert res.returncode != 0
+    assert "usage" in res.stderr
+    assert not (tmp_path / "chrome").exists()
+
+
+def test_check_mode_reports_the_installed_version(tmp_path: Path) -> None:
+    z = make_zip(tmp_path)
+    dest = tmp_path / "chrome"
+    assert run(dest, z.as_uri(), sha(z)).returncode == 0
+    res = run(dest, "file:///unused", "0" * 64, "check")
+    assert res.returncode == 0, res.stderr
+    assert res.stdout.strip() == f"Google Chrome for Testing {VERSION}"
+
+
 def test_defaults_are_the_adr_0036_pins() -> None:
     text = SCRIPT.read_text()
     assert ADR_SHA256 in text
