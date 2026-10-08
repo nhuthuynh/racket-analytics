@@ -187,6 +187,8 @@ The coach counted the three ST-049 tag scripts (`backend/tests/regression/golden
 - **Frozen GS-AN-1 v1 (the QA reference's values) vs hand count:** 2 differences, both AN-07 side A `low_sample` (gm1, gm2): hand count `true`, frozen `false`. The hand count applies rule 0.3 to each AN-07 share (gm1 A: n = 21, unforced-error share 5/21 has a 34.5-point interval). This is the reference defect PE-R1S3-05; the fix is QA's TCR row, not a change here (ADR 0044 rule 2).
 - `cd backend && env -u APP_ENV uv run pytest -q tests/regression/test_golden_an.py` → `4 failed, 27 passed`; the four failures are those two cells, seen once against the product and once against the hand count. The hand-count case for gm3 passes.
 
+**Addendum 2026-10-08 (PR #33 review round 1, PE-R1-COACH1-02):** the three results above describe `main` before GS-AN-1 v2 (ST-049, PR #32), which changed no script, set AN-07 `low_sample` by rule 0.3 on each share (so the 2 AN-07 differences are closed) and compares AN-06 `longest_by_game`. The record now holds `longest_by_game` under `matches[m]["AN-06"][side]` and `gold_set_version: 2` (`8766c25`). On the current head: frozen GS-AN-1 v2 vs hand count → 0 differences on every compared field; `cd backend && env -u APP_ENV uv run pytest -q tests/regression/test_golden_an.py` → `31 passed` (gm1, gm2 and gm3 hand-count cases pass). The tables below are unchanged: they already list AN-06 per game.
+
 **gm1-two-games**
 
 | Metric | Side A | Side B |
