@@ -15,6 +15,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 from conftest import REPO_ROOT
 
 IGNORE = REPO_ROOT / ".gitleaksignore"
@@ -73,12 +74,31 @@ def test_every_entry_names_a_commit_in_this_repository() -> None:
 
 
 # ---------------------------------------------------------------- positive case
+# ADR 0039 rule 5: the key lives in two commits that gitleaks scans, the original 9ca52fe on
+# `sprint-03` (the evidence branch; the scan covers every fetched ref) and its cherry-picked copy
+# e6231db on the SEC-RV3-02 ticket PR (merged into `main` with a merge commit, so the hash stays).
+SEC_RV3_02_COMMITS = (
+    "9ca52fecb2b322539facb467855c62c2667594ce",
+    "e6231dbb46a346c7f37286d67398f9c35a7c3edb",
+)
+
+
 @pytest.mark.unit
 def test_the_sec_rv3_02_positive_control_is_the_only_entry() -> None:
     assert [fp for fp, _ in entries()] == [
-        "9ca52fecb2b322539facb467855c62c2667594ce:"
-        "backend/tests/unit/platform/test_settings_sprint03.py:generic-api-key:41"
+        f"{commit}:backend/tests/unit/platform/test_settings_sprint03.py:generic-api-key:41"
+        for commit in SEC_RV3_02_COMMITS
     ]
+
+
+@pytest.mark.unit
+def test_ci_infra_job_fetches_the_history_the_commit_check_needs() -> None:
+    """PR #3, CI run 37629664958: on the default depth-1 checkout no fingerprint commit exists."""
+    job = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text())["jobs"][
+        "infra-tests"
+    ]
+    checkout = next(s for s in job["steps"] if s.get("uses", "").startswith("actions/checkout@"))
+    assert checkout.get("with", {}).get("fetch-depth") == 0, checkout
 
 
 @pytest.mark.integration
