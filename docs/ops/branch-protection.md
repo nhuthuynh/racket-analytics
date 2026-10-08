@@ -77,6 +77,11 @@ of these hold on that SHA:
 - The latest run of every check concluded `success`, and `ci-gate` itself is `success`. Any
   other check may be `skipped` or `neutral`, for example the schedule-only `flaky-report`
   (decision-log 2026-10-08).
+- Only the **newest workflow run** of each workflow and event on that SHA counts. Adding or
+  removing a label, or re-opening the PR, starts a new run of `ci.yml` on the same SHA, and
+  `cancel-in-progress` cancels the older one. The check reads
+  `GET /repos/{repo}/actions/runs?head_sha=<SHA>` and ignores the check suites of the older
+  runs. A check run outside GitHub Actions is never ignored (decision-log row 5).
 - The **principal-engineer's** latest review and at least one **senior-\*** role's latest
   review start with `Verdict: APPROVE` and were given on that SHA. No role's latest review on
   that SHA says `Verdict: CHANGES REQUESTED`.
@@ -95,7 +100,9 @@ review when:
 - it was not submitted (only `COMMENTED`, `APPROVED` and `CHANGES_REQUESTED` count, so a
   `PENDING` or `DISMISSED` review never counts);
 - its author is not trusted. GitHub's `author_association` must be `OWNER`, `MEMBER` or
-  `COLLABORATOR`, because anyone can review a PR on this public repo. With strict status checks, updating a branch creates a new head. CI then runs again,
+  `COLLABORATOR`, because anyone can review a PR on this public repo.
+
+With strict status checks, updating a branch creates a new head. CI then runs again,
 and both reviewers must post their verdicts again on the new SHA.
 
 ## 4. PR labels that CI reads
