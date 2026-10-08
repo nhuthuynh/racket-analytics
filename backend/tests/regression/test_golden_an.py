@@ -1,4 +1,4 @@
-"""Golden matches GS-AN-1 v1 (ST-049; QD-GD-03; NFR-004 exact, FR-151 / NFR-078 frozen set).
+"""Golden matches GS-AN-1 v2 (ST-049; QD-GD-03; NFR-004 exact, FR-151 / NFR-078 frozen set).
 
 Three tag scripts under the provisional preset (``golden_matches/*.script.json``):
 
@@ -18,6 +18,9 @@ pass, and the set is checked by ``racket-manifest-check`` (no change without a v
 The expected values are the coach's hand counts only once COACH-1 has counted the scripts
 (QD-AN-03) into ``docs/domain/hand-counts/GS-AN-1-v1.json``, a file the coach owns; until it
 exists and equals the frozen values, the last test stays red (``red_until COACH-1``).
+v2 changes no script: it sets AN-07 ``low_sample`` by rule 0.3 on each share, as the product
+does since PE-R1-ST044-01 (gm1 A and gm2 A become true), and freezes AN-06 ``longest_by_game``
+(PE-R1-ST049-01, PE-R1-ST049-02).
 AN-01, AN-02, AN-03, AN-05 and AN-06 read the provisional score sequence, so their rows
 carry ``needs_verification`` and are reported on their own line (QD-QG-P5, scorecard G03-08).
 """
@@ -188,7 +191,7 @@ def test_golden_an_manifest_is_intact() -> None:
     assert manifest_cli.main([str(SET_DIR)]) == 0
     manifest = json.loads((SET_DIR / "manifest.json").read_text())
     assert manifest["id"] == "GS-AN-1"
-    assert manifest["version"] == 1
+    assert manifest["version"] == 2  # v2: AN-07 rule 0.3 per share, AN-06 longest_by_game
     assert manifest["rules_version"] == "PROVISIONAL-UNVERIFIED"
     assert manifest["metric_dict_version"] == "0.1"
     assert manifest["labellers"], "the labeller role is recorded (FR-151)"

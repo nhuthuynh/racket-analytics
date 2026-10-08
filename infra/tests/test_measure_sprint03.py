@@ -191,6 +191,44 @@ def test_an07_rally_ending_mix(worked: dict) -> None:
     assert b["counts"] == {"winner": 3, "unforced_error": 1, "forced_error": 1, "fault": 2}
 
 
+# PE-R1-ST044-01 / PE-R1-ST049-02: rule 0.3 applies to each AN-07 share, not to n alone (dictionary
+# AN-07 min_sample, confirmed by the coach 2026-10-07). Negative case first.
+def test_an07_flags_a_wide_share_even_when_n_reaches_20() -> None:
+    tags = [_t("A", "winner"), _t("B", "unforced_error")] * 12  # A ends 24: 12 W, 12 UE
+    a = s.starter_stats([{"first_serving_side": "A", "tags": tags}])["AN-07"]["A"]
+    assert a["n"] == 24
+    assert a["counts"]["winner"] == 12  # 12/24: interval 0.3143-0.6857, 37 points wide
+    assert a["low_sample"] is True
+
+
+def test_an07_is_not_flagged_when_n_is_20_and_every_share_is_narrow() -> None:
+    games = [{"first_serving_side": "A", "tags": [_t("A", "winner")] * 11} for _ in range(3)]
+    a = s.starter_stats(games)["AN-07"]["A"]
+    assert (a["n"], a["counts"]["winner"]) == (33, 33)
+    assert a["low_sample"] is False
+
+
+# PE-R1-ST044-02 / GS-AN-1 v2: dictionary AN-06 output is the longest run per side per game.
+def test_an06_longest_run_per_game_on_the_worked_example(worked: dict) -> None:
+    assert worked["AN-06"]["A"]["longest_by_game"] == [3]  # rallies 7, 9, 11
+    assert worked["AN-06"]["B"]["longest_by_game"] == [2]
+
+
+def test_an06_a_game_without_a_run_counts_zero_in_play_order() -> None:
+    games = [
+        {"first_serving_side": "A", "tags": [_t("A", "winner")] * 11},
+        {"first_serving_side": "B", "tags": [_t("B", "winner")] * 11},
+    ]
+    st = s.starter_stats(games)["AN-06"]
+    assert st["A"]["longest_by_game"] == [11, 0]
+    assert st["B"]["longest_by_game"] == [0, 11]
+    assert st["A"]["longest"] == max(st["A"]["longest_by_game"])
+
+
+def test_an06_longest_by_game_is_a_compared_field() -> None:
+    assert "longest_by_game" in s.COMPARED["AN-06"]
+
+
 def test_every_metric_carries_its_rally_numbers(worked: dict) -> None:
     # FR-103: the evidence of AN-01 for A is the 7 rallies A served (replay excluded)
     assert worked["AN-01"]["A"]["rallies"] == [1, 2, 7, 9, 10, 11, 12]

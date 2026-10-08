@@ -1,4 +1,4 @@
-"""ST-049 unit (FR-151, QD-GD-03, NFR-004): the shape of the frozen set GS-AN-1 v1.
+"""ST-049 unit (FR-151, QD-GD-03, NFR-004): the shape of the frozen set GS-AN-1 v2.
 
 The files under ``tests/regression/golden_matches/`` are data; these checks keep them usable
 as a gold set: the manifest lists exactly the set's files, every expected file covers every
@@ -41,7 +41,7 @@ def test_the_manifest_lists_exactly_the_files_of_the_set() -> None:
 
 def test_the_manifest_records_rules_dictionary_and_labellers() -> None:
     manifest = _json(SET_DIR / "manifest.json")
-    assert (manifest["id"], manifest["version"]) == ("GS-AN-1", 1)
+    assert (manifest["id"], manifest["version"]) == ("GS-AN-1", 2)  # v2: AN-07 rule 0.3 per share, AN-06 longest_by_game
     assert manifest["rules_version"] == "PROVISIONAL-UNVERIFIED"
     assert manifest["metric_dict_version"] == "0.1"
     assert manifest["consent_status"] == "synthetic"
@@ -84,3 +84,18 @@ def test_every_game_but_the_last_is_finished_before_the_next_starts() -> None:
     assert sum(counts["gm1-two-games"]) == 59
     assert sum(counts["gm2-three-games"]) == 59
     assert counts["gm3-corrections-needs-decision"] == [23]
+
+
+def test_an07_low_sample_in_the_set_follows_rule_0_3_on_each_share() -> None:
+    """Dictionary AN-07 min_sample (rule 0.3, PE-R1-ST044-01, PE-R1-ST049-01): a side is flagged
+    when n < 20 or any of its four shares has an interval wider than 30 points, not on n alone.
+    Negative case first: gm1 A has n = 21 but a wide share, so it must be flagged."""
+    gm1_a = _json(SET_DIR / "expected" / "gm1-two-games.json")["metrics"]["AN-07"]["A"]
+    assert gm1_a["n"] >= statslib.MIN_PROPORTION_N
+    assert gm1_a["low_sample"] is True, "gm1 A: n >= 20 but a share is wider than 30 points"
+    for match in MATCHES:
+        metrics = _json(SET_DIR / "expected" / f"{match}.json")["metrics"]
+        for side in ("A", "B"):
+            row = metrics["AN-07"][side]
+            rule = any(statslib.proportion_flag(k, row["n"]) for k in row["counts"].values())
+            assert row["low_sample"] is rule, f"{match} AN-07 {side}: frozen {row['low_sample']}"

@@ -1,9 +1,9 @@
-# Sprint 3 ST-049 (NFR-004, FR-151, QD-GD-03): the golden matches GS-AN-1 v1 guard the starter
+# Sprint 3 ST-049 (NFR-004, FR-151, QD-GD-03): the golden matches GS-AN-1 v2 guard the starter
 # stats. Steps: backend/tests/features/test_golden_matches_gs_an_1.py. The full gate (3 matches x
 # AN-01..AN-07 x 2 sides) is backend/tests/regression/test_golden_an.py (`pytest -m golden_an`).
 # Scoring is PROVISIONAL-UNVERIFIED (ADR 0009, ADR 0023).
 @M4 @story-ST-049 @nfr-004 @analytics @golden_an @needs-verification
-Feature: Golden matches GS-AN-1 v1 guard the starter stats
+Feature: Golden matches GS-AN-1 v2 guard the starter stats
   Three frozen tag scripts and their expected values; the product must equal them exactly,
   and any difference names the match, the metric and the side.
 
@@ -18,7 +18,7 @@ Feature: Golden matches GS-AN-1 v1 guard the starter stats
     Scenario: The committed golden set passes the manifest check
       Given the committed golden set GS-AN-1
       When the manifest check runs on it
-      Then the check passes as "GS-AN-1 v1, 6 files"
+      Then the check passes as "GS-AN-1 v2, 6 files"
 
   Rule: A difference names the match, the metric and the side (NFR-004)
 
