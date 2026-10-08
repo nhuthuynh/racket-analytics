@@ -72,3 +72,13 @@ The senior-qa-engineer accepted the TCR row with conditions in the [PR #17 revie
 - Green, with `a3500d1`, the same command 3 times: `3 passed in 4.45s`, `3 passed in 4.59s`, `3 passed in 4.72s`.
 - Direct (no proxy), 3 times: `uv run pytest -q -n 3 $T` gave `3 passed in 4.13s`, `4.18s`, `4.01s`.
 - The ticket's suites and the whole IT-02-13 file: `uv run pytest -q -n 3 tests/integration/test_it_02_13_scorebook_limits.py tests/features/test_ci_it0213_rate_on_a_slow_store.py tests/integration/harness/test_ci_it0213_rate_arrange.py tests/unit/test_slow_store_throttle.py` gave `18 passed in 6.53s`. `uv run mypy`: `Success: no issues found in 94 source files`.
+
+CI on the PR head `f2130ba` (code head; the commit after it changes only this file), [run 37777727725](https://github.com/nhuthuynh/racket-analytics/actions/runs/37777727725), job "Integration, scenario and regression suites on Compose (+ changed-lines coverage)", 3 consecutive attempts, each `success` (including the step "Backend suites with coverage (< 10 min, NFR-073)", which runs IT-02-13):
+
+| Attempt | Job id | Started → completed (UTC) | Conclusion |
+|---|---|---|---|
+| 1 | 113312713391 | 12:33:37 → 12:37:25 | success |
+| 2 | 113319980852 | 12:51:22 → 12:55:49 | success |
+| 3 | 113327553218 | 13:09:12 → 13:14:16 | success |
+
+The other jobs of attempt 1 were green as well, except `PR policy (test immutability, size)`, which fails as designed until the senior-qa-engineer applies `qa-approved-test-change` (log: `test-immutability: … modified: backend/tests/integration/test_it_02_13_scorebook_limits.py`) and the size waiver is recorded; `ci-gate` follows it.
