@@ -18,10 +18,12 @@ from racket.sports.pickleball.metrics import (
     LOCK_PATH,
     METRICS_PATH,
     STATUSES,
+    DefinitionLock,
     InvalidDictionary,
     MetricDictionary,
     definition_digest,
     load_dictionary,
+    version_bump_violations,
 )
 
 pytestmark = pytest.mark.unit
@@ -134,27 +136,110 @@ def test_the_public_view_carries_what_the_card_needs() -> None:
 
 
 # ---------------------------------------------------------------- 4: version bump guard
-def test_every_definition_change_bumps_its_version() -> None:
-    """A definition changed without a version bump fails here (NFR-075: old snapshots keep
-    their version). After a bump, update ``metrics.lock.json`` in the same commit."""
-    lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
-    dictionary = load_dictionary()
-    assert lock["version"] == dictionary.version, "dictionary version changed: update the lock"
-    for entry in dictionary.entries:
-        locked = lock["entries"][entry.id]
-        if definition_digest(entry) != locked["digest"]:
-            assert entry.version != locked["version"], f"{entry.id} changed without a bump"
-        assert entry.version == locked["version"], f"{entry.id}: update metrics.lock.json"
-        assert definition_digest(entry) == locked["digest"], f"{entry.id}: update the lock"
+# ``version_bump_violations`` is the NFR-075 guard (pure). The lock is append-only, keyed by
+# (id, version) -> digest; ``previous`` is the lock on main (the integration test reads it from
+# the merge base with git), so a digest overwritten in place is caught (PE-ST043-01, SQA-3).
+def lock() -> dict[str, Any]:
+    data: dict[str, Any] = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
+    return copy.deepcopy(data)
 
 
-def test_the_guard_catches_a_silent_definition_change() -> None:
+def violations(
+    data: dict[str, Any], current: dict[str, Any], previous: dict[str, Any] | None = None
+) -> tuple[str, ...]:
+    return version_bump_violations(
+        MetricDictionary.parse(data),
+        DefinitionLock.parse(current),
+        previous=None if previous is None else DefinitionLock.parse(previous),
+    )
+
+
+def digest_of(data: dict[str, Any], entry_id: str) -> str:
+    return definition_digest(MetricDictionary.parse(data).entry(entry_id))
+
+
+def bump_an01(data: dict[str, Any], current: dict[str, Any], version: str = "0.2") -> None:
+    data["entries"][0]["formula"] = "rallies won by S / all rallies"
+    data["entries"][0]["version"] = version
+    current["entries"]["AN-01"][version] = digest_of(data, "AN-01")
+
+
+def test_a_definition_change_without_a_bump_is_a_violation() -> None:
     data = raw()
-    data["entries"][0]["formula"] = "something else"
-    changed = MetricDictionary.parse(data).entry("AN-01")
-    lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
-    assert definition_digest(changed) != lock["entries"]["AN-01"]["digest"]
-    assert changed.version == lock["entries"]["AN-01"]["version"]  # the guard above would fail
+    data["entries"][0]["formula"] = "rallies won by S / all rallies"
+    assert violations(data, lock()) == ("AN-01 0.1: definition changed without a version bump",)
+
+
+def test_a_digest_rewritten_in_place_is_a_violation_against_the_previous_lock() -> None:
+    """The reviewer's bypass: new formula, new digest pasted over 0.1, no bump."""
+    data, current, previous = raw(), lock(), lock()
+    data["entries"][0]["formula"] = "rallies won by S / all rallies"
+    current["entries"]["AN-01"]["0.1"] = digest_of(data, "AN-01")
+    assert violations(data, current) == ()  # the lock alone agrees with the file ...
+    assert violations(data, current, previous) == (  # ... but history says otherwise
+        "AN-01 0.1: locked digest rewritten; the lock is append-only, bump the version",
+    )
+
+
+def test_a_removed_lock_row_is_a_violation_against_the_previous_lock() -> None:
+    previous, current = lock(), lock()
+    previous["entries"]["AN-02"]["0.0"] = "0" * 64
+    assert "AN-02 0.0: locked row removed; the lock is append-only" in violations(
+        raw(), current, previous
+    )
+
+
+def test_an_unrecorded_version_is_a_violation() -> None:
+    data = raw()
+    data["entries"][0]["version"] = "0.2"
+    data["version"] = "0.2"
+    current = lock()
+    current["version"] = "0.2"
+    assert violations(data, current) == ("AN-01 0.2: not recorded in metrics.lock.json",)
+
+
+def test_an_entry_bump_without_a_dictionary_bump_is_a_violation() -> None:
+    data, current = raw(), lock()
+    bump_an01(data, current)
+    assert violations(data, current) == (
+        "dictionary 0.1: older than entry AN-01 0.2; bump the dictionary version",
+    )
+
+
+def test_a_new_definition_without_a_dictionary_bump_since_main_is_a_violation() -> None:
+    data, current, previous = raw(), lock(), lock()
+    data["version"] = "0.2"
+    current["version"] = "0.2"
+    previous["version"] = "0.2"
+    bump_an01(data, current)
+    assert violations(data, current, previous) == (
+        "dictionary 0.2: definitions changed since the previous lock 0.2; bump the dictionary",
+    )
+
+
+def test_a_lock_for_another_dictionary_version_is_a_violation() -> None:
+    current = lock()
+    current["version"] = "0.3"
+    assert violations(raw(), current) == ("dictionary 0.1: metrics.lock.json is for 0.3",)
+
+
+def test_a_bumped_definition_recorded_in_the_lock_passes() -> None:
+    data, current, previous = raw(), lock(), lock()
+    bump_an01(data, current)
+    data["version"] = "0.2"
+    current["version"] = "0.2"
+    assert violations(data, current, previous) == ()
+
+
+def test_a_malformed_lock_is_refused() -> None:
+    current = lock()
+    current["entries"]["AN-01"] = {"0.1": "not-a-digest"}
+    with pytest.raises(InvalidDictionary, match=r"AN-01 0\.1: digest"):
+        DefinitionLock.parse(current)
+
+
+def test_the_shipped_dictionary_matches_its_lock() -> None:
+    assert violations(raw(), lock()) == ()
 
 
 def test_status_is_not_part_of_the_definition() -> None:
