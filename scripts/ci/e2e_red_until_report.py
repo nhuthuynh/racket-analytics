@@ -15,6 +15,11 @@ It fails closed:
 * exit 2 when the JSON report is missing or unreadable.
 
 Failed, timed-out, interrupted and skipped tests are expected and exit 0. Standard library only.
+
+With ``--specs DIR`` (ADR 0046 amendment, 2026-10-08) the ``@red-until-`` tags in the spec files
+under DIR are counted first. With 0 tags no red-first spec is waiting on a story: the report is
+not read and the exit is 0. With 1 or more tags the rules above apply, so an empty selection still
+fails closed (a broken grep or a renamed tag).
 """
 
 from __future__ import annotations
@@ -46,6 +51,25 @@ def story_of(tags: list[str]) -> str | None:
     return None
 
 
+SPEC_SUFFIXES = (".spec.ts", ".spec.tsx", ".spec.js", ".spec.mjs")
+
+
+def count_tags(root: Path) -> int:
+    """Number of ``@red-until-`` tags in the Playwright spec files under ``root``."""
+    return sum(
+        path.read_text(encoding="utf-8", errors="replace").count("@red-until-")
+        for path in sorted(root.rglob("*"))
+        if path.is_file() and path.name.endswith(SPEC_SUFFIXES)
+    )
+
+
+def write(text: str, summary: Path | None) -> None:
+    print(text)
+    if summary:
+        with summary.open("a", encoding="utf-8") as fh:
+            fh.write(text)
+
+
 def outcome(test: dict) -> str:
     results = test.get("results") or []
     last = results[-1].get("status", "") if results else "skipped"
@@ -60,7 +84,22 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--json", type=Path, required=True)
     p.add_argument("--summary", type=Path)
+    p.add_argument("--specs", type=Path, help="spec directory whose @red-until- tags are counted")
     args = p.parse_args(argv)
+    tags = None
+    if args.specs is not None:
+        if not args.specs.is_dir():
+            print(f"e2e_red_until_report: no spec directory {args.specs}", file=sys.stderr)
+            return 2
+        tags = count_tags(args.specs)
+        if tags == 0:
+            write(
+                "### E2E tests waiting on a story (ADR 0046)\n\n"
+                f"0 `@red-until-` tags under `{args.specs}`: "
+                "no red-first E2E spec is waiting on a story.\n",
+                args.summary,
+            )
+            return 0
     try:
         data = json.loads(args.json.read_text(encoding="utf-8"))
         suites = data.get("suites", [])
@@ -95,16 +134,13 @@ def main(argv: list[str] | None = None) -> int:
         lines.append(f"| {story} | {c['failed']} | {c['passed']} | {c['skipped']} |")
     problems = []
     if not seen:
-        problems.append("no red-until E2E tests were selected (fail closed)")
+        where = f" although the spec files carry {tags} tag(s)" if tags else ""
+        problems.append(f"no red-until E2E tests were selected{where} (fail closed)")
     problems += [f"stale tag, the test passes: {s}" for s in stale]
     problems += [f"no story in the tags of {u}" for u in unnamed]
     problems += [f"report error: {e.get('message', e)}" for e in data.get("errors", [])]
     lines += ["", *(f"- {p}" for p in problems)] if problems else ["", "No stale tags."]
-    text = "\n".join(lines) + "\n"
-    print(text)
-    if args.summary:
-        with args.summary.open("a", encoding="utf-8") as fh:
-            fh.write(text)
+    write("\n".join(lines) + "\n", args.summary)
     return 1 if problems else 0
 
 

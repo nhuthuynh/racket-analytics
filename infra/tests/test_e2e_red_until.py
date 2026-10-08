@@ -191,3 +191,63 @@ def test_the_listed_step_writes_the_json_report_the_script_reads() -> None:
     assert out, listed
     rep = next(s for s in e2e_steps() if "e2e_red_until_report.py" in s.get("run", ""))
     assert Path(out).name in rep["run"]
+
+
+# ---------------------------------------------------------------- ADR 0046 amendment (2026-10-08)
+# The listed step counts the @red-until- tags in the spec files first (a static grep). With 0
+# tags nothing is waiting on a story: exit 0 with a message. With 1 or more tags and an empty
+# selection it still fails closed (a broken grep or a renamed tag). PE-R3S3-05 / QA-R3S3-03.
+def specs_dir(tmp: Path, tagged: bool) -> Path:
+    d = tmp / "e2e" / "sprint-03"
+    d.mkdir(parents=True)
+    tag = ", { tag: '@red-until-ST-047' }" if tagged else ""
+    (d / "journey-v2.spec.ts").write_text(f"test('E2E-03-01 stats'{tag}, async () => {{}});\n")
+    (d / "notes.md").write_text("@red-until-ST-999 in a non-spec file is not a tag\n")
+    return tmp / "e2e"
+
+
+def test_tagged_specs_with_an_empty_selection_still_fail_closed(tmp_path: Path) -> None:
+    specs = specs_dir(tmp_path, tagged=True)
+    path = report(tmp_path, [])
+    res = subprocess.run(
+        [sys.executable, str(SCRIPT), "--json", str(path), "--specs", str(specs)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res.returncode == 1, res.stdout + res.stderr
+    assert "no red-until" in res.stdout
+    assert "1 tag" in res.stdout
+
+
+def test_no_tagged_spec_means_nothing_is_waiting_and_passes(tmp_path: Path) -> None:
+    specs = specs_dir(tmp_path, tagged=False)
+    summary = tmp_path / "summary.md"
+    # Playwright writes "No tests found" into the report when --grep selects nothing.
+    path = report(tmp_path, [])
+    body = json.loads(path.read_text())
+    body["errors"] = [{"message": "Error: No tests found"}]
+    path.write_text(json.dumps(body))
+    res = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--json",
+            str(path),
+            "--specs",
+            str(specs),
+            "--summary",
+            str(summary),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "no red-first E2E spec is waiting on a story" in res.stdout
+    assert "no red-first E2E spec is waiting on a story" in summary.read_text()
+
+
+def test_the_report_step_counts_the_tags_in_the_spec_files() -> None:
+    rep = next(s for s in e2e_steps() if "e2e_red_until_report.py" in s.get("run", ""))
+    assert "--specs web/e2e" in rep["run"], rep["run"]
