@@ -190,6 +190,7 @@ python3 scripts/measure/pw_timings.py "$GOAL/e2e-timing.json" --min-n 20 \
 
 ```bash
 cd backend
+eval "$(bash ../scripts/dev-postgres.sh url)"; eval "$(bash ../scripts/dev-objectstore.sh env)"   # QA-RV3-06: the selection holds Postgres tests (IT-02-14)
 HYPOTHESIS_PROFILE=ci python3 ../scripts/ci/run_with_budget.py 90 -- env -u APP_ENV uv run pytest -q -rs \
   -m "scoring and not nightly and not red_until" --junitxml="$GOAL/scoring.xml"; echo rc=$?
 env -u APP_ENV uv run pytest -q -m "golden_replay" --junitxml="$GOAL/golden-replay.xml"; echo rc=$?

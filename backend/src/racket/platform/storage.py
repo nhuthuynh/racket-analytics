@@ -113,9 +113,13 @@ class ObjectStore:
     ) -> str:
         """A GET link for ``key``. With ``public_endpoint`` the link is signed for the host the
         browser uses (the https origin's media route, SRE-MEDIA), so the signature matches what
-        the store receives through the proxy. With ``content_type`` the store answers with that
-        ``Content-Type`` (signed ``response-content-type``), whatever the object was stored
-        with (QA-RV1-05). Bearer secret: never log it (NFR-069)."""
+        the store receives through the proxy. ``content_type`` adds a signed
+        ``response-content-type``; S3 honours it, but SeaweedFS 3.97 ignores it and answers with
+        the stored type (SEC-S2-TM-03, smoke 3), so it is a hint, not a control. The controls
+        are the type stored at upload (``video/mp4``) and the edge headers on the media route
+        (nosniff, ``default-src 'none'; sandbox``, ``private, no-store``;
+        docs/ops/media-serving.md).
+        Bearer secret: never log it (NFR-069)."""
         ttl = max(1, min(ttl_seconds, PRESIGN_MAX_SECONDS))
         client = self._client if public_endpoint is None else self._signer(public_endpoint)
         params = {"Bucket": self.bucket, "Key": key}
