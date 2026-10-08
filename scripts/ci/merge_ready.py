@@ -7,7 +7,10 @@ A pull request may merge into `main` only when, on its current head SHA:
   * the latest review of the principal-engineer and the latest review of at least one
     senior-* role start with "Verdict: APPROVE" and were given on that SHA;
   * no role's latest review on that SHA says "Verdict: CHANGES REQUESTED".
-All agents post as one GitHub account, so a review names its role on a line "Reviewer: <role>".
+All agents post as one GitHub account, so a review names its role on the line right after the
+verdict ("Reviewer: <role>"). Only submitted reviews (COMMENTED, APPROVED, CHANGES_REQUESTED)
+by a trusted author (author_association OWNER, MEMBER or COLLABORATOR) count, because anyone
+can review a PR on a public repo and the token owner's own PENDING review is listed too.
 
 Usage: merge_ready.py --repo OWNER/NAME --pr N --sha HEAD_SHA
 Env: GITHUB_TOKEN or GH_TOKEN (optional for a public repo); GITHUB_API_URL (default GitHub).
@@ -31,19 +34,24 @@ APPROVE = "APPROVE"
 CHANGES = "CHANGES REQUESTED"
 GREEN = {"success"}
 GREEN_IF_NOT_GATE = {"success", "skipped", "neutral"}
-_VERDICT = re.compile(r"\AVerdict:\s*(APPROVE|CHANGES REQUESTED)\b")
-_ROLE = re.compile(r"^Reviewer:\s*([a-z-]+)\s*$", re.MULTILINE)
+SUBMITTED = {"COMMENTED", "APPROVED", "CHANGES_REQUESTED"}
+TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
+_VERDICT = re.compile(
+    r"\AVerdict:\s*(APPROVE|CHANGES REQUESTED)\b[^\n]*\r?\nReviewer:\s*([a-z-]+)[ \t]*\r?$",
+    re.MULTILINE,
+)
 _NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 
 
 # ------------------------------------------------------------------ rule (no I/O)
-def latest_runs(check_runs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """The newest run per check name (re-runs get higher ids)."""
-    latest: dict[str, dict[str, Any]] = {}
+def latest_runs(check_runs: list[dict[str, Any]]) -> dict[tuple[Any, str], dict[str, Any]]:
+    """The newest run per (check suite, name); re-runs get higher ids. Same-named jobs of two
+    workflows are different suites, so one cannot hide the other's failure."""
+    latest: dict[tuple[Any, str], dict[str, Any]] = {}
     for run in check_runs:
-        name = run["name"]
-        if name not in latest or run["id"] > latest[name]["id"]:
-            latest[name] = run
+        key = ((run.get("check_suite") or {}).get("id"), run["name"])
+        if key not in latest or run["id"] > latest[key]["id"]:
+            latest[key] = run
     return latest
 
 
@@ -51,13 +59,15 @@ def verdicts(reviews: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
     """role -> (verdict, commit SHA) of that role's latest verdict review."""
     found: dict[str, tuple[tuple[str, int], str, str]] = {}
     for rv in reviews:
-        body = (rv.get("body") or "").lstrip()
-        verdict, role = _VERDICT.match(body), _ROLE.search(body)
-        if not verdict or not role or rv.get("state") == "DISMISSED":
+        match = _VERDICT.match((rv.get("body") or "").lstrip())
+        if not match or rv.get("state") not in SUBMITTED:
             continue
+        if rv.get("author_association") not in TRUSTED:
+            continue
+        verdict, role = match.groups()
         key = (rv.get("submitted_at") or "", rv["id"])
-        if role.group(1) not in found or key > found[role.group(1)][0]:
-            found[role.group(1)] = (key, verdict.group(1), rv.get("commit_id") or "")
+        if role not in found or key > found[role][0]:
+            found[role] = (key, verdict, rv.get("commit_id") or "")
     return {role: (v, sha) for role, (_, v, sha) in found.items()}
 
 
@@ -75,9 +85,10 @@ def head_reasons(pr: dict[str, Any], sha: str) -> list[str]:
 
 def check_reasons(check_runs: list[dict[str, Any]], sha: str) -> list[str]:
     """Every latest check run is green; ci-gate exists and succeeded."""
-    runs = latest_runs(check_runs)
-    reasons = [] if GATE in runs else [f"no {GATE} check run on {sha}"]
-    for name, run in sorted(runs.items()):
+    runs = sorted(latest_runs(check_runs).values(), key=lambda r: (r["name"], r["id"]))
+    reasons = [] if any(r["name"] == GATE for r in runs) else [f"no {GATE} check run on {sha}"]
+    for run in runs:
+        name = run["name"]
         outcome = run.get("conclusion") if run.get("status") == "completed" else run.get("status")
         if outcome not in (GREEN if name == GATE else GREEN_IF_NOT_GATE):
             reasons.append(f"check '{name}' is {outcome}")
