@@ -1,0 +1,106 @@
+# E2E repeat run for flake triage (NFR-074; CI-FLAKE-RESUMABLE, blockers.md 2026-10-08).
+# A flaky E2E is repeated on the CI runner, where it failed, not only locally: one spec, N
+# repeats, one browser, no retries, on the same Compose stack and https origin as the e2e job in
+# ci.yml. The job fails on a flaky test (flaky_report.py --fail-on-flaky) and on a test that
+# fails every time (Playwright's exit code). Not part of ci-gate: it is a triage tool, run on
+# demand and on a PR that changes it, its script, or the spec and helper it was built for.
+name: E2E repeat (flake triage)
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: Spec under web/ (e2e/...spec.ts)
+        required: true
+        default: e2e/sprint-01/resumable-upload.spec.ts
+        type: string
+      grep:
+        description: Test title filter (Playwright --grep); empty runs the whole spec
+        required: false
+        default: "Return after closing the tab|A different file is chosen to resume"
+        type: string
+      repeat:
+        description: Repeats per test (1-99)
+        required: true
+        default: "20"
+        type: string
+      project:
+        description: Browser project
+        required: true
+        default: chromium
+        type: choice
+        options:
+          - chromium
+          - webkit
+  pull_request:
+    paths:
+      - .github/workflows/e2e-repeat.yml
+      - scripts/ci/e2e_repeat.sh
+      - web/e2e/helpers/upload-hold.ts
+      - web/e2e/sprint-01/resumable-upload.spec.ts
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-repeat-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
+  FORCE_COLOR: "1"
+
+jobs:
+  repeat:
+    name: E2E repeat (--repeat-each, flaky report)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable
+      - name: Start the full stack
+        # As in ci.yml e2e: every test signs in from this one runner IP.
+        env:
+          AUTH_LINK_LIMIT_PER_IP: "1000"
+          AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
+        run: $COMPOSE up -d --build --wait
+      - name: Trust the dev CA (public root certificate only; ADR 0029)
+        run: |
+          $COMPOSE cp web-tls:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/racket-dev-ca.crt"
+          sudo cp "$RUNNER_TEMP/racket-dev-ca.crt" /usr/local/share/ca-certificates/racket-dev-ca.crt
+          sudo update-ca-certificates
+          curl --fail --silent --show-error -o /dev/null https://localhost:3000/
+      - working-directory: web
+        env:
+          PROJECT: ${{ inputs.project || 'chromium' }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps "$PROJECT"
+      - name: Repeat the spec; fail on a flaky or broken test (NFR-074)
+        working-directory: web
+        env:
+          BASE_URL: https://localhost:3000
+          SPEC: ${{ inputs.spec || 'e2e/sprint-01/resumable-upload.spec.ts' }}
+          GREP: ${{ github.event_name == 'workflow_dispatch' && inputs.grep || 'Return after closing the tab|A different file is chosen to resume' }}
+          REPEAT: ${{ inputs.repeat || '20' }}
+          PROJECT: ${{ inputs.project || 'chromium' }}
+          REPORT_DIR: ${{ github.workspace }}/reports
+        run: bash ../scripts/ci/e2e_repeat.sh
+      - name: Service logs on failure
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=300
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-repeat
+          path: |
+            reports/
+            web/playwright-report/
+            web/test-results/
+          if-no-files-found: warn

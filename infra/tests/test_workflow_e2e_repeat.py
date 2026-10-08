@@ -72,7 +72,9 @@ def test_inputs_never_reach_a_shell_line_directly() -> None:
         ({"PROJECT": "firefox"}, "project must be"),
     ],
 )
-def test_a_bad_input_is_refused_before_playwright_runs(env: dict[str, str], message: str, tmp_path: Path) -> None:
+def test_a_bad_input_is_refused_before_playwright_runs(
+    env: dict[str, str], message: str, tmp_path: Path
+) -> None:
     res = run_script(env, tmp_path)
     assert res.returncode == 2, res.stdout + res.stderr
     assert message in res.stderr
@@ -124,4 +126,5 @@ def test_it_runs_the_script_on_the_compose_stack_over_https_like_the_e2e_job() -
 
 def test_the_reports_are_kept_even_when_the_job_fails() -> None:
     uploads = [s for s in steps() if str(s.get("uses", "")).startswith("actions/upload-artifact@")]
-    assert uploads and uploads[0].get("if") == "always()"
+    assert uploads
+    assert uploads[0].get("if") == "always()"

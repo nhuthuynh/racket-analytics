@@ -32,16 +32,25 @@ set -euo pipefail
 shift 3
 spec="$1"; shift
 repeat=""
-for a in "$@"; do case "$a" in --repeat-each=*) repeat="${a#--repeat-each=}";; --retries*) exit 98;; esac; done
-[[ "$spec" == "$EXPECT_SPEC" && "$repeat" == "$EXPECT_REPEAT" && "$PW_PROJECTS" == "chromium" ]] || {
-  echo "wrong call: spec=$spec repeat=$repeat project=$PW_PROJECTS" >&2; exit 99; }
+for a in "$@"; do
+  case "$a" in
+    --repeat-each=*) repeat="${a#--repeat-each=}" ;;
+    --retries*) exit 98 ;;
+  esac
+done
+if [[ "$spec" != "$EXPECT_SPEC" || "$repeat" != "$EXPECT_REPEAT" || "$PW_PROJECTS" != chromium ]]
+then
+  echo "wrong call: spec=$spec repeat=$repeat project=$PW_PROJECTS" >&2
+  exit 99
+fi
+case_open="<testcase classname=\"sprint-01/resumable-upload.spec.ts\" name=\"$FAKE_TITLE\""
 {
   echo '<testsuites><testsuite name="sprint-01/resumable-upload.spec.ts">'
   for i in $(seq 1 "$repeat"); do
     if (( i <= FAKE_FAILS )); then
-      echo "<testcase classname=\"sprint-01/resumable-upload.spec.ts\" name=\"$FAKE_TITLE\"><failure message=\"banner not visible\"/></testcase>"
+      echo "$case_open><failure message=\"banner not visible\"/></testcase>"
     else
-      echo "<testcase classname=\"sprint-01/resumable-upload.spec.ts\" name=\"$FAKE_TITLE\"/>"
+      echo "$case_open/>"
     fi
   done
   echo '</testsuite></testsuites>'
