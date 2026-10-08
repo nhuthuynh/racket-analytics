@@ -390,8 +390,9 @@ export function QuickTag({
       )}
 
       <div className="quick-tag__row">
+        {/* Same words as S-01 (flows-sprint-02 §9 PD-FL2-05, DR-02 R2-2). */}
         <button type="button" className="button button--secondary" onClick={() => void undo()}>
-          Undo
+          Undo last change
         </button>
         <button
           ref={keysButton}
