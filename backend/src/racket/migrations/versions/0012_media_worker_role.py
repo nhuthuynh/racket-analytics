@@ -18,7 +18,10 @@ Grants are exactly what ``racket.worker`` running the ``probe`` stage issues (jo
 
 Nothing on ``accounts``, ``sessions``, ``sign_in_*``, the scorebook tables or any table added
 later (no default privileges). Roles are cluster-wide, so the role is created only when absent
-and is dropped on downgrade only when no other database still grants to it.
+and is dropped on downgrade only when no other database still grants to it. The migration lock
+is per database, so migrators of two databases of one cluster (parallel test workers) can both
+pass the ``NOT EXISTS`` check; the loser's ``unique_violation`` / ``duplicate_object`` means
+"already there" (IT-03-10c).
 
 Revision ID: 0012
 Revises: 0011
@@ -53,6 +56,8 @@ def upgrade() -> None:
                 CREATE ROLE racket_media_worker
                     NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
             END IF;
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            NULL;  -- a migrator of another database of this cluster created it first
         END
         $$
         """
