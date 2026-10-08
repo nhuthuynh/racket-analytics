@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # E2E repeat run for flake triage (NFR-074; CI-FLAKE-RESUMABLE), from web/ against a running stack.
-# Env: SPEC (under web/e2e), GREP (optional), REPEAT (1-99), PROJECT (chromium|webkit), REPORT_DIR.
+# Env: SPEC (under web/e2e), GREP (as typed; empty = whole spec), REPEAT (1-99), PROJECT
+# (chromium|webkit), REPORT_DIR, EVENT (pull_request runs the two resume titles; PE-PR10-M1).
 # Exit: 2 refused input; 1 a flaky test (flaky_report.py); else Playwright's code, so a test that
 # fails every time (broken, not flaky) fails too. No retries (playwright.config.ts retries: 0).
 set -euo pipefail
 
 spec="${SPEC:-e2e/sprint-01/resumable-upload.spec.ts}"
 grep="${GREP:-}"
+[[ "${EVENT:-}" != pull_request ]] || grep='Return after closing the tab|A different file is chosen to resume'
 repeat="${REPEAT:-20}"
 project="${PROJECT:-chromium}"
 out="${REPORT_DIR:-../reports}"

@@ -78,7 +78,8 @@ jobs:
         env:
           BASE_URL: https://localhost:3000
           SPEC: ${{ inputs.spec || 'e2e/sprint-01/resumable-upload.spec.ts' }}
-          GREP: ${{ github.event_name == 'workflow_dispatch' && inputs.grep || 'Return after closing the tab|A different file is chosen to resume' }}
+          GREP: ${{ inputs.grep }}
+          EVENT: ${{ github.event_name }}
           REPEAT: ${{ inputs.repeat || '20' }}
           PROJECT: ${{ inputs.project || 'chromium' }}
           REPORT_DIR: ${{ github.workspace }}/reports

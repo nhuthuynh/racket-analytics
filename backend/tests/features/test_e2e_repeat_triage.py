@@ -123,7 +123,10 @@ def report_says(ctx: dict[str, Any], text: str) -> None:
     assert text in _report(ctx)
 
 
-@given(parsers.re(r'a repeat run started by (?P<event>\w+) with the title filter "(?P<typed>[^"]*)"'))
+RUN_BY = r'a repeat run started by (?P<event>\w+) with the title filter "(?P<typed>[^"]*)"'
+
+
+@given(parsers.re(RUN_BY))
 def a_run_by(ctx: dict[str, Any], event: str, typed: str, tmp_path: Path) -> None:
     a_test(ctx, 0, 1, tmp_path)
     ctx.update(event=event, grep=typed)
