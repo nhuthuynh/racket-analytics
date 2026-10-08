@@ -36,3 +36,24 @@ Feature: Corrections re-score later rallies
       When Ivy changes rally 22 to "won by side B"
       Then game 1 is no longer over
       And the rallies of game 2 are listed as needing her decision, not deleted
+
+  # Sprint 3 §7.7 (C3-03, PE-S2-R3-01). API binding: the server's rule (the move the client may
+  # offer); browser binding: web/e2e/sprint-03/move-offer.spec.ts (E2E-03-07).
+  Rule: Only moves the server accepts are offered
+
+    @needs-verification
+    Scenario: Move offered only on the latest kept rally
+      Given rallies 12 to 14 need Ivy's decision
+      When she opens the options of rally 12
+      Then "Move to the next game" is not offered
+      And she is told only the latest kept rally can be moved first
+
+    # QA-C303-01 / PE-C303-R1-01: the C-03 mirror. API binding: the server's rule
+    # (decision/not_first_in_game); browser binding: E2E-03-08 in move-offer.spec.ts.
+    @needs-verification
+    Scenario: Move back offered only on the first rally of its game
+      Given game 1 is no longer over and rallies 23 to 27 of game 2 need Ivy's decision
+      When she opens the options of rally 24
+      Then "Move back to game 1" is not offered
+      And she is told only the first rally of game 2 can move back first
+      And rally 23 can be moved back to game 1

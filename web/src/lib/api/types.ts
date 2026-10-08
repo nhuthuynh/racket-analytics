@@ -215,6 +215,8 @@ export const FIELD_ERROR_CODES = [
   'no_previous_game',
   'previous_game_over',
   'not_first_in_game',
+  // api-sprint-02 §4.2 amendment (C3-02, PE-S2-R3-02): only the latest kept rally moves forward
+  'not_last_in_game',
   'too_many_rallies',
   'too_many_changes',
 ] as const;

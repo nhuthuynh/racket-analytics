@@ -133,11 +133,14 @@ export function commandProblem(e: unknown, what: string, timeZone?: string): str
     if (e.code === 'scorebook_full') return `${what} was not saved: ${fullReason(e)}`;
     if (e.code === 'rate_limited') return `${what} was not saved: ${rateReason(e, timeZone)}`;
     if (e.code === 'validation_failed') {
-      switch (fieldCode(e, 'previous_game_over', 'not_first_in_game', 'no_previous_game', 'not_needed')) {
+      switch (fieldCode(e, 'previous_game_over', 'not_first_in_game', 'not_last_in_game', 'no_previous_game', 'not_needed')) {
         case 'previous_game_over':
           return 'The previous game is already over, so the rally cannot move back into it. Remove the rally, or move it to the next game.';
         case 'not_first_in_game':
           return 'Only the first rally of a game can move back to the previous game. Decide that rally first.';
+        case 'not_last_in_game':
+          // C3-03 (PE-S2-R3-01): the server moves only the latest kept rally of a game forward.
+          return 'Only the last rally of a game can move to the next game. Decide the later rallies first.';
         case 'no_previous_game':
           return 'There is no previous game to move this rally to.';
         case 'not_needed':
