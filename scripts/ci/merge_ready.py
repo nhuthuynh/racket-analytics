@@ -61,10 +61,8 @@ def verdicts(reviews: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
     return {role: (v, sha) for role, (_, v, sha) in found.items()}
 
 
-def evaluate(
-    pr: dict[str, Any], sha: str, check_runs: list[dict[str, Any]], reviews: list[dict[str, Any]]
-) -> list[str]:
-    """Reasons the PR may not merge at `sha`; an empty list means merge-ready."""
+def head_reasons(pr: dict[str, Any], sha: str) -> list[str]:
+    """`sha` must be the head of an open PR into main (no stale-SHA merge)."""
     reasons: list[str] = []
     if pr.get("state") != "open":
         reasons.append(f"PR is {pr.get('state')}, not open")
@@ -72,20 +70,28 @@ def evaluate(
         reasons.append(f"PR targets {pr.get('base', {}).get('ref')}, not main")
     if pr.get("head", {}).get("sha") != sha:
         reasons.append(f"{sha} is not the PR head ({pr.get('head', {}).get('sha')})")
+    return reasons
 
+
+def check_reasons(check_runs: list[dict[str, Any]], sha: str) -> list[str]:
+    """Every latest check run is green; ci-gate exists and succeeded."""
     runs = latest_runs(check_runs)
-    if GATE not in runs:
-        reasons.append(f"no {GATE} check run on {sha}")
+    reasons = [] if GATE in runs else [f"no {GATE} check run on {sha}"]
     for name, run in sorted(runs.items()):
         outcome = run.get("conclusion") if run.get("status") == "completed" else run.get("status")
-        allowed = GREEN if name == GATE else GREEN_IF_NOT_GATE
-        if outcome not in allowed:
+        if outcome not in (GREEN if name == GATE else GREEN_IF_NOT_GATE):
             reasons.append(f"check '{name}' is {outcome}")
+    return reasons
 
+
+def review_reasons(reviews: list[dict[str, Any]], sha: str) -> list[str]:
+    """Principal and a senior approve the head; nobody's latest verdict there blocks."""
     latest = verdicts(reviews)
-    for role, (verdict, at) in sorted(latest.items()):
-        if verdict == CHANGES and at == sha:
-            reasons.append(f"{role}: Verdict: {CHANGES} on the head")
+    reasons = [
+        f"{role}: Verdict: {CHANGES} on the head"
+        for role, (verdict, at) in sorted(latest.items())
+        if verdict == CHANGES and at == sha
+    ]
     principal = latest.get(PRINCIPAL)
     if principal != (APPROVE, sha):
         reasons.append(f"{PRINCIPAL}: no latest 'Verdict: {APPROVE}' on the head ({principal})")
@@ -93,6 +99,13 @@ def evaluate(
     if (APPROVE, sha) not in seniors.values():
         reasons.append(f"senior reviewer: no latest 'Verdict: {APPROVE}' on the head ({seniors})")
     return reasons
+
+
+def evaluate(
+    pr: dict[str, Any], sha: str, check_runs: list[dict[str, Any]], reviews: list[dict[str, Any]]
+) -> list[str]:
+    """Reasons the PR may not merge at `sha`; an empty list means merge-ready."""
+    return head_reasons(pr, sha) + check_reasons(check_runs, sha) + review_reasons(reviews, sha)
 
 
 # ------------------------------------------------------------------ GitHub REST (I/O)
