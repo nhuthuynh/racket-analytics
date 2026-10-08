@@ -9,7 +9,7 @@ import {
   DRAFTS, PUBLISHED, REFERENCE, SCREEN, UNOFFICIAL, definitionOf, metricCard, statsPath, tagWorkedExampleByApi,
 } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-043 @fr-102 Definitions and drafts', () => {
+test.describe('@M0 @story-ST-043 @fr-102 Definitions and drafts', { tag: '@red-until-COACH-1' }, () => {
   test('E2E-03-03 "How is this measured?" shows the definition; drafts are not shown; low-sample text', async ({ page }, testInfo) => {
     expect(PUBLISHED.length, 'no coach-reviewed metric (COACH-1)').toBeGreaterThan(0);
     const matchId = await receivedMatch(page, 'E2E-03-03 definitions');
