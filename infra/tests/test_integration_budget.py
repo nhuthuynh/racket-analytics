@@ -99,7 +99,8 @@ def test_the_budget_wraps_only_pytest_and_records_its_time() -> None:
     steps = integration_steps()
     run = steps[_index(steps, "$INTEGRATION_BUDGET_S")]["run"]
     budgeted = run.split("run_with_budget.py", 1)[1]
-    assert "uv sync" not in budgeted and "compose" not in budgeted.lower()
+    assert "uv sync" not in budgeted
+    assert "compose" not in budgeted.lower()
     assert '"$INTEGRATION_BUDGET_S" --json ../reports/integration-budget.json --' in run
     assert "--durations=25" in budgeted  # the slowest tests are listed on every run
 

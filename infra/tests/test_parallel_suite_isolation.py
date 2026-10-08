@@ -27,7 +27,7 @@ HARNESS = ["tests/integration/harness/test_db_isolation.py",
 
 
 @pytest.fixture
-def database_url(tmp_path: Path):  # noqa: ANN201 - yields the URL of a throwaway Postgres
+def database_url(tmp_path: Path):
     env = {**os.environ, "RA_DEV_STATE": str(tmp_path / "pg")}
     start = subprocess.run(["bash", str(SCRIPTS_DIR / "dev-postgres.sh"), "start"], env=env,
                            capture_output=True, text=True, timeout=120, check=False)  # fmt: skip
@@ -53,12 +53,15 @@ def test_two_workers_each_get_and_drop_their_own_database(database_url: str) -> 
     env = {**os.environ, "DATABASE_URL": database_url, "APP_ENV": "test"}
     env.pop("VIRTUAL_ENV", None)  # the infra venv must not leak into the backend project
     res = subprocess.run(
-        ["uv", "run", "--locked", "pytest", "-q", "-p", "no:cacheprovider", "-n", "2",
+        ["uv", "run", "--locked", "pytest", "-v", "-p", "no:cacheprovider", "-n", "2",
          *HARNESS],
         cwd=BACKEND, env=env, capture_output=True, text=True, timeout=600, check=False,
     )  # fmt: skip
     out = res.stdout + res.stderr
     assert res.returncode == 0, out[-3000:]
-    assert re.search(r"created: 2/2 workers|2 workers \[", out), out[-3000:]
-    assert " passed" in out and " failed" not in out
+    assert "created: 2/2 workers" in out, out[-3000:]
+    assert "[gw0]" in out  # both workers ran tests
+    assert "[gw1]" in out
+    assert " passed" in out
+    assert " failed" not in out
     assert _databases(database_url) == before  # every worker dropped its session database

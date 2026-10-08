@@ -29,7 +29,7 @@ USERS = 20
 SEED_S = 12
 RUN_S = 45  # 12 s start-up + ~33 s steady window
 
-LOCUSTFILE = '''
+LOCUSTFILE = """
 import time
 from itertools import cycle
 from locust import FastHttpUser, constant_throughput, events, task
@@ -45,11 +45,11 @@ class U(FastHttpUser):
     @task
     def hit(self):
         self.client.get("/", name=next(self.names))
-'''
+"""
 
 
 class _Ok(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:  # noqa: N802 - http.server API
+    def do_GET(self) -> None:
         self.send_response(200)
         self.send_header("Content-Length", "2")
         self.end_headers()

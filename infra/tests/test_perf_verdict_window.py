@@ -41,9 +41,10 @@ USERS = 51
 T0 = 1_791_400_000
 
 
-def _load_module():  # noqa: ANN202 - the script under test, imported as a module
+def _load_module():
     spec = importlib.util.spec_from_file_location("perf_verdict", SCRIPT)
-    assert spec and spec.loader
+    assert spec is not None
+    assert spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -111,7 +112,8 @@ def test_a_named_history_file_that_is_missing_fails_closed(tmp_path: Path) -> No
     stats, state = write_run(tmp_path, None)
     rc, _, out = verdict(stats, state, *windowed(stats))
     assert rc == 2, out
-    assert "cannot read the run" in out and "perf_stats_history.csv" in out
+    assert "cannot read the run" in out
+    assert "perf_stats_history.csv" in out
 
 
 @pytest.mark.unit
@@ -207,7 +209,8 @@ def _perf_steps() -> str:
 def test_ci_gates_the_windowed_rate_with_room_for_warm_up() -> None:
     text = _perf_steps()
     assert "--history reports/perf/perf_stats_history.csv" in text
-    assert "--users 51" in text and "-u 51" in text
+    assert "--users 51" in text
+    assert "-u 51" in text
     assert "--rps 50" in text  # the target is not lowered
     assert "--min-window" not in text  # CI keeps the 60 s default window
     # run-time = 60 s window + 30 s warm-up allowance (PR #6 needed 13.8 s)
