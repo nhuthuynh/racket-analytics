@@ -167,6 +167,8 @@ class Settings:
         if deployed and parts.scheme != "https":
             # The link carries a sign-in token and the session cookie is Secure (ADR 0029).
             raise ConfigurationError("PUBLIC_WEB_ORIGIN must be https outside dev and test")
+        if deployed and "dev-only" in (email_secret or "").lower():  # SEC-RV3-02
+            raise ConfigurationError("AUTH_EMAIL_KEY is a dev placeholder; set a real secret")
         if deployed and len(email_secret or "") < EMAIL_KEY_MIN:
             raise ConfigurationError(
                 f"AUTH_EMAIL_KEY must have at least {EMAIL_KEY_MIN} characters"
