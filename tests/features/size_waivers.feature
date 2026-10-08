@@ -9,11 +9,11 @@ Feature: Every Sprint 3 ticket PR over 400 changed lines has its size decided be
 
     Scenario: A waived ticket PR above its recorded number gets no label and fails PR size
       Given the size decision for "HARNESS-03" PR 1
-      And that PR changes 1463 lines
+      And that PR changes 1503 lines
       When the size decision is applied and the PR policy checks run on the merge ref
       Then the decision asks for a new decision row
       And no size-waiver label is applied
-      And the PR size check fails and counts 1463 changed lines
+      And the PR size check fails and counts 1503 changed lines
 
     Scenario: A stacked part over 400 lines gets no label and fails PR size
       Given the size decision for "ST-049" PR 1
@@ -25,10 +25,10 @@ Feature: Every Sprint 3 ticket PR over 400 changed lines has its size decided be
 
     Scenario: A waived ticket PR within its recorded number passes PR size with the label
       Given the size decision for "HARNESS-03" PR 1
-      And that PR changes 1462 lines
+      And that PR changes 1502 lines
       When the size decision is applied and the PR policy checks run on the merge ref
       Then the size-waiver label is applied
-      And the PR size check passes and counts 1462 changed lines
+      And the PR size check passes and counts 1502 changed lines
 
     Scenario: A stacked part within 400 lines passes PR size without a label
       Given the size decision for "ST-049" PR 1
@@ -44,3 +44,4 @@ Feature: Every Sprint 3 ticket PR over 400 changed lines has its size decided be
       When the SIZE-WAIVERS-03 decisions file is checked against them
       Then every ticket has a size decision
       And no stacked part without a waiver is over 400 changed lines
+      And every ticket's PRs leave room for its own decisions file

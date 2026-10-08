@@ -110,3 +110,8 @@ def every_ticket(check: subprocess.CompletedProcess[str]) -> None:
 @then("no stacked part without a waiver is over 400 changed lines")
 def no_oversize_part(check: subprocess.CompletedProcess[str]) -> None:
     assert "without a waiver" not in check.stdout
+
+
+@then("every ticket's PRs leave room for its own decisions file")
+def room_for_decisions_file(check: subprocess.CompletedProcess[str]) -> None:
+    assert "for its decisions file" not in check.stdout
