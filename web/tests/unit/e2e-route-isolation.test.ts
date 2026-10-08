@@ -80,11 +80,15 @@ describe('unisolatedRoutes', () => {
 
   it('names every route of a real spec once its block is changed to allow', () => {
     const e2e = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../e2e');
-    for (const [spec, lines] of [
-      ['sprint-01/resumable-upload.spec.ts', [18, 67, 88, 151]],
-      ['walking-skeleton.spec.ts', [46, 89]],
+    // The expected lines are read from the spec (a statement that starts with `<x>.route(`), so an
+    // edit to the spec moves them; the count pins that every route call is still seen.
+    for (const [spec, routeCount] of [
+      ['sprint-01/resumable-upload.spec.ts', 4],
+      ['walking-skeleton.spec.ts', 2],
     ] as const) {
       const source = readFileSync(path.join(e2e, spec), 'utf8');
+      const lines = source.split('\n').flatMap((text, i) => (/^\s*(await\s+)?\w+\.route\(/.test(text) ? [i + 1] : []));
+      expect(lines, spec).toHaveLength(routeCount);
       expect(unisolatedRoutes(source), spec).toEqual([]);
       expect(unisolatedRoutes(source.replace("serviceWorkers: 'block'", "serviceWorkers: 'allow'")), spec).toEqual(lines);
     }
