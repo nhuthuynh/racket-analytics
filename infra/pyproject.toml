@@ -13,6 +13,7 @@ dev = [
     "psycopg[binary]>=3.2",
     "requests>=2.32",
     "ruff>=0.6",
+    "pytest-bdd>=7.3",
 ]
 
 [tool.uv]
@@ -22,7 +23,11 @@ default-groups = ["dev"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers"]
+# pytest-bdd: .feature files live at the repository root (tests/features), sprint-00 §3.
+bdd_features_base_dir = "../tests/features"
 markers = [
     "unit: no I/O beyond temp dirs and subprocesses of the scripts under test; fast",
     "integration: starts real local services (Postgres, SeaweedFS) or Docker",
+    "bdd_tag(name=...): a Gherkin tag, kept for reporting",
+    "scenario: a pytest-bdd scenario generated from tests/features/*.feature",
 ]

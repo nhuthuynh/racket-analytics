@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -53,3 +54,10 @@ def project(tmp_path: Path) -> Path:
     proj.mkdir()
     subprocess.run(["git", "init", "-q", str(proj)], check=True)
     return proj
+
+
+def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
+    """Gherkin tags (@ticket-..., @nfr-...) become one registered marker, so
+    --strict-markers holds (CI-PR-GATE; same idea as backend/tests/conftest.py)."""
+    pytest.mark.bdd_tag(name=tag)(function)
+    return True
