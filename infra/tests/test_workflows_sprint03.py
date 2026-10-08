@@ -6,8 +6,11 @@ ST-054 (SRE half, NFR-073): the 10 s "rules + domain" unit budget also measures 
 
 from __future__ import annotations
 
+import pytest
 import yaml
 from conftest import REPO_ROOT
+
+pytestmark = pytest.mark.unit  # CI selects -m "unit or integration" (PE-R1S3-07)
 
 CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
