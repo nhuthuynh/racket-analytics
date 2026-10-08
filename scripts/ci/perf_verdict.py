@@ -3,6 +3,7 @@
 
     python3 scripts/ci/perf_verdict.py --stats reports/perf/perf_stats.csv \
         --state reports/perf/perf_state.json --rps 50 --json reports/perf/verdict.json \
+        [--history reports/perf/perf_stats_history.csv --users 51] \
         [--summary "$GITHUB_STEP_SUMMARY"]
 
 Gates (sprint-02 §8): every endpoint exercised; availability (non-failed / all) >= 99.5%
@@ -11,12 +12,13 @@ sheet restored byte-identical after the correction+undo pairs (C-04); the accoun
 seeded; achieved rate >= 95% of --rps. Read p95/p99 (NFR-010) is a baseline: reported, not
 gated, until the R1 review (sprint-02 §3.1).
 
-The achieved rate is measured over the loaded window when ``<prefix>_stats_history.csv`` sits
-next to the stats file (Locust ``--csv`` writes it): from the first second with users spawned
-to the last sample. Locust's own ``Requests/s`` divides by the whole run, and the locustfile
-seeds inside the run limit before any user spawns (PR #6, CI run 37739461709: 13.6 s of
-seeding, ~52 RPS delivered, 39.8 reported). Without the history file the whole-run figure is
-used, which can only under-state the rate.
+Achieved rate (CI-PERF-GATES): with --history (Locust's ``_stats_history.csv``) and --users,
+the rate is measured over the steady-state **measurement window**: from the first sample in
+which all --users are running (the **warm-up** before it, i.e. seeding in ``test_start`` and
+user spawn, which Locust counts inside --run-time, is excluded) to the last such sample. The
+window must last at least --min-window seconds (default 60), else the run fails. Without
+--history the whole-run rate is gated (stricter). Availability and latency always cover the
+whole run, warm-up included.
 
 Exit 0 all gates met; 1 a gate failed; 2 the stats or state file is missing or unreadable.
 Standard library only.
@@ -34,6 +36,8 @@ READS = ("score-sheet", "corrections", "match")
 COMMANDS = ("correct", "undo")
 MIN_AVAILABILITY = 0.995
 MAX_CORRECTION_P95_MS = 1500.0
+MIN_RATE_SHARE = 0.95
+MIN_WINDOW_S = 60.0
 
 
 def _num(raw: str) -> float | None:
@@ -48,30 +52,45 @@ def load_rows(path: Path) -> dict[str, dict[str, str]]:
         return {r["Name"]: r for r in csv.DictReader(fh)}
 
 
-def load_window_rate(history: Path) -> tuple[float, int] | None:
-    """(requests/s, seconds) from the first Aggregated sample with users to the last one.
+def load_history(path: Path) -> list[dict[str, str]]:
+    """Aggregated samples of Locust's ``_stats_history.csv``, oldest first."""
+    with path.open(newline="") as fh:
+        return [r for r in csv.DictReader(fh) if r["Name"] == "Aggregated"]
 
-    None when the file is absent; (0.0, 0) when no sample has users (fail closed).
-    """
-    if not history.exists():
+
+def _at(sample: dict[str, str], column: str) -> float:
+    """A numeric history cell; missing or "N/A" counts as 0."""
+    return _num(sample.get(column, "")) or 0.0
+
+
+def measurement_window(history: list[dict[str, str]], users: int) -> dict | None:
+    """The steady-state window: samples in which all ``users`` are running. ``None`` when
+    the run never had them all running (no steady state to measure). Everything before the
+    window is the warm-up (seeding and spawn)."""
+    steady = [r for r in history if _at(r, "User Count") >= users]
+    if not steady:
         return None
-    with history.open(newline="") as fh:
-        samples = [
-            (int(_num(r["Timestamp"]) or 0), _num(r["Total Request Count"]) or 0.0)
-            for r in csv.DictReader(fh)
-            if r.get("Name") == "Aggregated" and (_num(r.get("User Count", "")) or 0) > 0
-        ]
-    if len(samples) < 2 or samples[-1][0] <= samples[0][0]:
-        return 0.0, 0
-    window = samples[-1][0] - samples[0][0]
-    return (samples[-1][1] - samples[0][1]) / window, window
+    first, last = steady[0], steady[-1]
+    start, end = int(_at(first, "Timestamp")), int(_at(last, "Timestamp"))
+    seconds = end - start
+    requests = int(_at(last, "Total Request Count") - _at(first, "Total Request Count"))
+    return {
+        "start": start,
+        "end": end,
+        "seconds": seconds,
+        "warm_up_s": start - int(_at(history[0], "Timestamp")),
+        "requests": requests,
+        "rps": round(requests / seconds, 3) if seconds > 0 else 0.0,
+    }
 
 
 def evaluate(
     rows: dict[str, dict[str, str]],
     state: dict,
     rps: float,
-    window: tuple[float, int] | None = None,
+    history: list[dict[str, str]] | None = None,
+    users: int = 0,
+    min_window_s: float = MIN_WINDOW_S,
 ) -> dict:
     missing = [
         n for n in (*READS, *COMMANDS) if _num(rows.get(n, {}).get("Request Count")) in (None, 0.0)
@@ -82,7 +101,9 @@ def evaluate(
     availability = round((total - failed) / total, 5) if total else 0.0
     cmd_p95 = [_num(rows.get(n, {}).get("95%")) for n in COMMANDS]
     corrections_p95 = max((p for p in cmd_p95 if p is not None), default=None)
-    achieved = window[0] if window is not None else (_num(agg.get("Requests/s")) or 0.0)
+    run_rps = _num(agg.get("Requests/s")) or 0.0
+    window = measurement_window(history, users) if history is not None else None
+    achieved = run_rps if history is None else (window["rps"] if window else 0.0)
     baseline = {
         n: {
             "requests": int(_num(rows[n]["Request Count"]) or 0),
@@ -99,8 +120,10 @@ def evaluate(
         "corrections_p95": corrections_p95 is not None and corrections_p95 <= MAX_CORRECTION_P95_MS,
         "restored_byte_identical": state.get("restored_byte_identical") is True,
         "seeded": state.get("seeded") is True,
-        "achieved_rps": achieved >= 0.95 * rps,
+        "achieved_rps": achieved >= MIN_RATE_SHARE * rps,
     }
+    if history is not None:
+        checks["measurement_window"] = window is not None and window["seconds"] >= min_window_s
     return {
         "ok": all(checks.values()),
         "checks": checks,
@@ -110,10 +133,21 @@ def evaluate(
         "availability": availability,
         "corrections_p95_ms": corrections_p95,
         "achieved_rps": achieved,
+        "run_rps": run_rps,
+        "window": window,
         "target_rps": rps,
-        "load_window_s": window[1] if window is not None else None,
         "baseline": baseline,
     }
+
+
+def _window_text(v: dict) -> str:
+    w = v.get("window")
+    if w is None:
+        return " (whole run)" if "measurement_window" not in v["checks"] else " (no window)"
+    return (
+        f" (warm-up {w['warm_up_s']} s excluded, window {w['seconds']} s; whole run "
+        f"{v['run_rps']:.1f})"
+    )
 
 
 def markdown(v: dict) -> str:
@@ -122,7 +156,8 @@ def markdown(v: dict) -> str:
         "",
         f"Verdict: **{'pass' if v['ok'] else 'FAIL'}**; requests {v['requests']}, failures "
         f"{v['failures']}, availability {v['availability']:.4f}, achieved {v['achieved_rps']:.1f} "
-        f"of {v['target_rps']:.0f} RPS, correction p95 {v['corrections_p95_ms']} ms.",
+        f"of {v['target_rps']:.0f} RPS{_window_text(v)}, correction p95 "
+        f"{v['corrections_p95_ms']} ms.",
         "",
         "| Endpoint | Requests | p50 ms | p95 ms | p99 ms |",
         "|---|---|---|---|---|",
@@ -141,22 +176,22 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--stats", type=Path, required=True, help="Locust --csv PREFIX_stats.csv")
     p.add_argument("--state", type=Path, required=True, help="the locustfile's state JSON")
     p.add_argument("--rps", type=float, required=True)
+    p.add_argument("--history", type=Path, help="Locust --csv PREFIX_stats_history.csv")
+    p.add_argument("--users", type=int, default=0, help="users that make the steady state")
+    p.add_argument("--min-window", type=float, default=MIN_WINDOW_S, help="seconds")
     p.add_argument("--json", type=Path)
     p.add_argument("--summary", type=Path, help="append a Markdown table (GITHUB_STEP_SUMMARY)")
     args = p.parse_args(argv)
     try:
         rows = load_rows(args.stats)
         state = json.loads(args.state.read_text())
+        history = load_history(args.history) if args.history else None
     except (OSError, ValueError, KeyError) as exc:
         print(f"perf_verdict: cannot read the run: {exc}", file=sys.stderr)
         return 2
-    history = args.stats.with_name(args.stats.stem + "_history.csv")
-    try:
-        window = load_window_rate(history)
-    except (OSError, ValueError, KeyError) as exc:
-        print(f"perf_verdict: cannot read {history}: {exc}", file=sys.stderr)
-        return 2
-    v = evaluate(rows, state, args.rps, window)
+    if history is not None and args.users < 1:
+        p.error("--history needs --users (the users that make the steady state)")
+    v = evaluate(rows, state, args.rps, history, args.users, args.min_window)
     text = json.dumps(v, indent=2)
     print(text)
     if args.json:
