@@ -28,4 +28,5 @@ SCOPE = {
     "ST-050b": 892,
     "ST-052": 1444,
     "DOCS-03": 6235,
+    "SIZE-WAIVERS-03": 547,  # this ticket's own PR #6
 }
