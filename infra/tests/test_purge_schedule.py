@@ -1,6 +1,7 @@
 """SRE-PURGE slice (a) (NFR-066 c, NFR-047; ADR 0038 Proposed): the scheduler that runs the
 purge/expiry job at least daily. Slice (b), the Compose ``purge`` service that runs it, follows
-once QA decides the test-change row for the built-services inventory (docs/sprints/03/decisions/SRE-PURGE-a.md).
+once QA decides the test-change row for the built-services inventory
+(docs/sprints/03/decisions/SRE-PURGE-a.md).
 
 The scheduler is ``infra/docker/purge_schedule.py`` (standard library only, shipped in the API
 image). It runs the job's command, writes one JSON log line per run to stdout, survives a failed
