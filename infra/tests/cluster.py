@@ -71,6 +71,12 @@ def fresh_cluster(state: Path) -> Iterator[str]:
                        check=False)  # fmt: skip
 
 
+def collides_on(role: str, failure: str) -> bool:
+    """Both ways Postgres reports two CREATE ROLE of one name: the unique index, or the catalog
+    check when the other transaction committed first."""
+    return "pg_authid_rolname_index" in failure or f'role "{role}" already exists' in failure
+
+
 def unique_role() -> str:
     return f"ra_it_cluster_{uuid.uuid4().hex[:8]}"
 

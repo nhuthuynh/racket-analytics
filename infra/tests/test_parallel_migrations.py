@@ -3,7 +3,7 @@ migrate their own databases safely once the integration job's migrate step has r
 
 Real Postgres 16 (scripts/dev-postgres.sh), the real migration chain plus the 0012-pattern
 fixture revision of ``parallel_migrate.py``, the migrate module named by ci.yml. Each test uses
-its own cluster-wide role, so one cluster serves the module.
+its own fresh cluster, as CI's Compose Postgres is fresh on every run.
 """
 
 from __future__ import annotations
@@ -13,15 +13,15 @@ from pathlib import Path
 
 import psycopg
 import pytest
-from cluster import fresh_cluster, migrate_module, run_helper, unique_role
+from cluster import collides_on, fresh_cluster, migrate_module, run_helper, unique_role
 
 pytestmark = pytest.mark.integration
 
 
-@pytest.fixture(scope="module")
-def base_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
-    state: Path = tmp_path_factory.mktemp("pg")
-    with fresh_cluster(state) as url:
+@pytest.fixture
+def base_url(tmp_path: Path) -> Iterator[str]:
+    """A fresh cluster per test: the base database's migration head is part of the state."""
+    with fresh_cluster(tmp_path / "pg") as url:
         yield url
 
 
@@ -29,12 +29,6 @@ def _roles(url: str, role: str) -> int:
     with psycopg.connect(url, connect_timeout=5) as conn:
         row = conn.execute("SELECT count(*) FROM pg_roles WHERE rolname = %s", (role,)).fetchone()
         return int(row[0]) if row else 0
-
-
-def _collides_on(role: str, failure: str) -> bool:
-    """Both ways Postgres reports two CREATE ROLE of one name: the unique index, or the catalog
-    check when the other transaction committed first."""
-    return "pg_authid_rolname_index" in failure or f'role "{role}" already exists' in failure
 
 
 def _databases(url: str) -> set[str]:
@@ -49,7 +43,7 @@ def test_without_the_step_the_losing_workers_fail_on_the_cluster_role_only(base_
     out = run_helper("workers", base_url, role, "4")
 
     assert len(out["failed"]) == 3, out  # one worker creates the role, the other three collide
-    assert all(_collides_on(role, f) for f in out["failed"]), out
+    assert all(collides_on(role, f) for f in out["failed"]), out
     assert _roles(base_url, role) == 1
 
 

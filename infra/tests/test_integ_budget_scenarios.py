@@ -7,6 +7,7 @@ tooling (SRE lane) and the wiring checks need PyYAML, which the backend does not
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,9 @@ import yaml
 from cluster import (
     BUDGET_MARK,
     CI,
+    MIGRATE_MODULE,
+    REPO_ROOT,
+    collides_on,
     fresh_cluster,
     integration_steps,
     migrate_module,
@@ -26,8 +30,6 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 pytestmark = pytest.mark.integration
 scenarios("ci_integ_budget.feature")
-
-DUPLICATE_ROLE = "pg_authid_rolname_index"
 
 
 @pytest.fixture
@@ -62,7 +64,7 @@ def workers_migrate(base_url: str, world: dict[str, Any], n: int) -> None:
 def a_worker_fails(world: dict[str, Any]) -> None:
     out = world["workers"]
     assert out["failed"], out
-    assert all(DUPLICATE_ROLE in f for f in out["failed"]), out
+    assert all(collides_on(world["role"], f) for f in out["failed"]), out
     assert out["at_head"] == out["workers"] - len(out["failed"])
 
 
@@ -98,8 +100,8 @@ def same_selection(steps: list[dict[str, Any]]) -> None:
     assert _selection(budgeted) == _selection(flaky)
     assert " --cov " in budgeted.replace("\\\n", " ")
     assert "--cov-report=xml:../reports/coverage-backend.xml" in budgeted
-    pyproject = (Path(CI).parents[2] / "backend" / "pyproject.toml").read_text()
-    assert "branch = true" in pyproject.split("[tool.coverage.run]", 1)[1].split("[", 1)[0]
+    pyproject = tomllib.loads((REPO_ROOT / "backend" / "pyproject.toml").read_text())
+    assert pyproject["tool"]["coverage"]["run"]["branch"] is True
 
 
 @then("the integration budget is 600 seconds")
@@ -109,8 +111,6 @@ def budget_is_600() -> None:
 
 @then("the migrate step runs before the budgeted step and outside the budget")
 def migrate_before_budget(steps: list[dict[str, Any]]) -> None:
-    from cluster import MIGRATE_MODULE
-
     migrate = step_index(steps, MIGRATE_MODULE)
     budgeted = step_index(steps, BUDGET_MARK)
     assert 0 <= migrate < budgeted, "the base database must be migrated before the workers start"

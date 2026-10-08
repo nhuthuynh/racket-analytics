@@ -208,6 +208,12 @@ jobs:
             -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
             --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
             --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py >/dev/null
+      - name: Migrate the base database before the parallel workers (unbudgeted setup)
+        # Workers migrate their own session databases of this one cluster at the same moment.
+        # Cluster-wide objects (migration 0012's role racket_media_worker) are created here
+        # first, as Compose's `migrate` service does, so they cannot collide. ADR 0048.
+        working-directory: backend
+        run: uv run --no-sync python -m racket.platform.migrate
       - name: Backend suites with coverage (< 10 min, NFR-073)
         # pytest-xdist: one worker per runner core, each on its own session database (C-32).
         # The suite grew (IT-02-10 + IT-03-12 fuzz = 52% of 728 s serial); the 600 s budget
