@@ -122,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pr", required=True, type=int)
     ap.add_argument("--sha", required=True, help="the PR head SHA to be merged")
     args = ap.parse_args(argv)
-    api = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+    api = (os.environ.get("GITHUB_API_URL") or "https://api.github.com").rstrip("/")
     base = f"{api}/repos/{args.repo}"
     try:
         pr, _ = _get(f"{base}/pulls/{args.pr}")
