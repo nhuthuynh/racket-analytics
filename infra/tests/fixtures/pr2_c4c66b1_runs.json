@@ -1,0 +1,43 @@
+{
+ "_source": "GET /repos/nhuthuynh/racket-analytics/{actions/runs?head_sha=,commits/<sha>/check-runs} for merged PR #2 head c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4, fetched 2026-10-08; fields trimmed to those merge_ready.py reads",
+ "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4",
+ "workflow_runs": [
+  {"id": 37514696166, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 101621285129, "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"},
+  {"id": 37514696229, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 101621285156, "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "run_attempt": 1, "status": "completed", "conclusion": "success"},
+  {"id": 37514626501, "workflow_id": 375162211, "name": "Claude review", "event": "pull_request", "check_suite_id": 101621087305, "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "run_attempt": 1, "status": "completed", "conclusion": "success"},
+  {"id": 37514626510, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 101621087376, "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"}
+ ],
+ "check_runs": [
+  {"id": 112452557670, "name": "ci-gate", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445008971, "name": "Flaky-test report (NFR-074)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "skipped", "check_suite": {"id": 101621285156}},
+  {"id": 112445007554, "name": "E2E (Playwright, Chromium + WebKit) with axe-core", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007465, "name": "Python unit suites (time-budgeted)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007391, "name": "Integration, scenario and regression suites on Compose (+ changed-lines coverage)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007368, "name": "Secret scan, dependency audit", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007297, "name": "Workflow lint (actionlint)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007289, "name": "Fixture and gold-set integrity (FR-151, NFR-078)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007266, "name": "Locust baseline 50 RPS (ST-039; NFR-010 baseline, NFR-013, NFR-041)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007214, "name": "SBOM (CycloneDX) and licence gate", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007199, "name": "Web lint, types, unit, coverage, bundle budget", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007141, "name": "Python lint and format (Ruff)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007101, "name": "Infra, hooks and CI-script tests (ST-001..ST-003)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007047, "name": "Python types (mypy; strict on domain modules)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112445007017, "name": "PR policy (test immutability, size)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621285156}},
+  {"id": 112444969524, "name": "ci-gate", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "failure", "check_suite": {"id": 101621087376}},
+  {"id": 112444255585, "name": "Flaky-test report (NFR-074)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "skipped", "check_suite": {"id": 101621087376}},
+  {"id": 112444254734, "name": "Web lint, types, unit, coverage, bundle budget", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "cancelled", "check_suite": {"id": 101621087376}},
+  {"id": 112444254709, "name": "PR policy (test immutability, size)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "failure", "check_suite": {"id": 101621087376}},
+  {"id": 112444254608, "name": "E2E (Playwright, Chromium + WebKit) with axe-core", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "cancelled", "check_suite": {"id": 101621087376}},
+  {"id": 112444254601, "name": "Integration, scenario and regression suites on Compose (+ changed-lines coverage)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "cancelled", "check_suite": {"id": 101621087376}},
+  {"id": 112444254555, "name": "Python unit suites (time-budgeted)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "cancelled", "check_suite": {"id": 101621087376}},
+  {"id": 112444254544, "name": "Python lint and format (Ruff)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621087376}},
+  {"id": 112444254530, "name": "Infra, hooks and CI-script tests (ST-001..ST-003)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "cancelled", "check_suite": {"id": 101621087376}},
+  {"id": 112444254482, "name": "Python types (mypy; strict on domain modules)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621087376}},
+  {"id": 112444254357, "name": "Fixture and gold-set integrity (FR-151, NFR-078)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621087376}},
+  {"id": 112444254324, "name": "Locust baseline 50 RPS (ST-039; NFR-010 baseline, NFR-013, NFR-041)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "cancelled", "check_suite": {"id": 101621087376}},
+  {"id": 112444254318, "name": "Workflow lint (actionlint)", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621087376}},
+  {"id": 112444254292, "name": "SBOM (CycloneDX) and licence gate", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621087376}},
+  {"id": 112444253867, "name": "Secret scan, dependency audit", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621087376}},
+  {"id": 112444252080, "name": "review", "head_sha": "c4c66b1825c8ce76f7e6d08d12300f5ae88b11b4", "status": "completed", "conclusion": "success", "check_suite": {"id": 101621087305}}
+ ]
+}

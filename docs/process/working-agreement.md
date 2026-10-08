@@ -121,6 +121,7 @@ R = Responsible, A = Accountable, C = Consulted, I = Informed. Human PO is the h
 - **Comment etiquette:**
   - Comment on the code, never the author, and explain why.
   - Label severity: **Blocking** (unlabelled), `Nit:`, `Optional:`/`Consider:`, `FYI:` [EP/ENG-06].
+- **Verdict format (CI-PR-GATE):** every PR review body starts with `Verdict: APPROVE` or `Verdict: CHANGES REQUESTED`, followed on the next line by `Reviewer: <role>`, and is submitted (not left pending). `scripts/ci/merge_ready.py` reads only that format before a merge; see `docs/ops/branch-protection.md` §3.
 - **Automation first:** linters and static analysis run before any reviewer, so reviews focus on design and function [EP/ENG-19]. Hooks enforce this [DPA/AI-10].
 - **Fresh context:** the reviewer is a different agent invocation from the writer, with no access to the writer's reasoning [DPA/AI-08].
   - Reviewers flag only correctness, security or stated-requirement gaps, to avoid over-engineering [EP/ENG-24].
