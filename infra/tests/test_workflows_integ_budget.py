@@ -1,4 +1,4 @@
-"""Sprint 3 CI guards (sre-devops-engineer): CI-INTEG-BUDGET (NFR-073; ADR 0048).
+"""CI-INTEG-BUDGET guards (sre-devops-engineer; NFR-073; ADR 0048).
 
 The integration suite runs in parallel workers (pytest-xdist), each on its own session database
 of the one Compose Postgres. Migration 0012 creates the cluster-wide role racket_media_worker
