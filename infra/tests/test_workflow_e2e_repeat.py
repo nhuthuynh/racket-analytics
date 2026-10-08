@@ -51,6 +51,14 @@ def test_inputs_never_reach_a_shell_line_directly() -> None:
         assert "${{ github.event.inputs." not in step.get("run", ""), step.get("name")
 
 
+def test_an_empty_dispatch_grep_reaches_the_script_unchanged() -> None:
+    # PE-PR10-M1: `inputs.grep || '<default>'` turns an empty dispatch grep into the default,
+    # since '' is falsy in Actions expressions. The script picks the default from EVENT instead.
+    env = next(s["env"] for s in steps() if "bash ../scripts/ci/e2e_repeat.sh" in s.get("run", ""))
+    assert env["GREP"] == "${{ inputs.grep }}"
+    assert env["EVENT"] == "${{ github.event_name }}"
+
+
 @pytest.mark.parametrize(
     ("env", "message"),
     [

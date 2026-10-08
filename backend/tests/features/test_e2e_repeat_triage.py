@@ -28,6 +28,9 @@ spec="$1"; shift
 repeat=""
 for a in "$@"; do case "$a" in --repeat-each=*) repeat="${a#--repeat-each=}" ;; esac; done
 [[ "$*" != *--retries* ]] || exit 98
+grep=""; prev=""
+for a in "$@"; do [[ "$prev" == --grep ]] && grep="$a"; prev="$a"; done
+printf '%s' "$grep" > "$PLAYWRIGHT_JUNIT_OUTPUT_NAME.grep"
 if [[ "$spec" != "$EXPECT_SPEC" || "$repeat" != "$EXPECT_REPEAT" || "$PW_PROJECTS" != chromium ]]
 then
   echo "wrong call: spec=$spec repeat=$repeat project=$PW_PROJECTS" >&2
@@ -69,7 +72,8 @@ def run_job(ctx: dict[str, Any], repeat: int) -> None:
     env = {
         "PATH": f"{ctx['bin']}{os.pathsep}{os.environ['PATH']}",
         "SPEC": SPEC,
-        "GREP": "Return after closing the tab",
+        "GREP": ctx.get("grep", "Return after closing the tab"),
+        "EVENT": ctx.get("event", "workflow_dispatch"),
         "REPEAT": str(repeat),
         "PROJECT": "chromium",
         "REPORT_DIR": str(ctx["reports"]),
@@ -117,3 +121,20 @@ def names_flaky(ctx: dict[str, Any]) -> None:
 @then(parsers.parse('the flaky report says "{text}"'))
 def report_says(ctx: dict[str, Any], text: str) -> None:
     assert text in _report(ctx)
+
+
+@given(parsers.re(r'a repeat run started by (?P<event>\w+) with the title filter "(?P<typed>[^"]*)"'))
+def a_run_by(ctx: dict[str, Any], event: str, typed: str, tmp_path: Path) -> None:
+    a_test(ctx, 0, 1, tmp_path)
+    ctx.update(event=event, grep=typed)
+
+
+@when("the E2E repeat job starts Playwright")
+def starts_playwright(ctx: dict[str, Any]) -> None:
+    run_job(ctx, 1)
+
+
+@then(parsers.re(r'Playwright is given the title filter "(?P<used>[^"]*)"'))
+def given_filter(ctx: dict[str, Any], used: str) -> None:
+    sent = ctx["reports"] / "e2e-repeat.xml.grep"
+    assert sent.read_text() == used, ctx["result"].stderr

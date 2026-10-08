@@ -23,3 +23,16 @@ Feature: Repeating an E2E in CI to triage a flaky test
       When the E2E repeat job runs it 20 times
       Then the job fails
       And the flaky report says "0 flaky"
+
+  Rule: A dispatch runs the title filter as typed; a pull request runs the two resume titles (PE-PR10-M1)
+
+    Scenario Outline: The title filter a repeat run uses
+      Given a repeat run started by <event> with the title filter "<typed>"
+      When the E2E repeat job starts Playwright
+      Then Playwright is given the title filter "<used>"
+
+      Examples:
+        | event             | typed     | used                                                          |
+        | workflow_dispatch |           |                                                               |
+        | workflow_dispatch | Wording   | Wording                                                       |
+        | pull_request      |           | Return after closing the tab\|A different file is chosen to resume |
