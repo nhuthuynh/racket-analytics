@@ -42,8 +42,11 @@ def test_without_the_step_the_losing_workers_fail_on_the_cluster_role_only(base_
 
     out = run_helper("workers", base_url, role, "4")
 
-    assert len(out["failed"]) == 3, out  # one worker creates the role, the other three collide
+    # One worker creates the role; any worker inside the 1 s window collides. A worker released
+    # late sees the committed role and passes, so the count is a range (PE-PR15-03, QA-PR15-02).
+    assert 1 <= len(out["failed"]) <= 3, out
     assert all(collides_on(role, f) for f in out["failed"]), out
+    assert out["at_head"] == out["workers"] - len(out["failed"]), out
     assert _roles(base_url, role) == 1
 
 
@@ -77,3 +80,17 @@ def test_after_the_step_four_workers_reach_head_and_leave_no_database(base_url: 
     assert out == {"workers": 4, "failed": [], "at_head": 4}
     assert _roles(base_url, role) == 1
     assert _databases(base_url) == before
+
+
+def test_the_helper_leaves_no_copy_of_the_migrations_behind(
+    base_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setenv("TMPDIR", str(scratch))  # the helper's tempfile.mkdtemp lands here
+    role = unique_role()
+
+    run_helper("step", base_url, role, migrate_module())
+    run_helper("workers", base_url, role, "2")
+
+    assert sorted(p.name for p in scratch.iterdir() if p.name.startswith("ra-migrations-")) == []

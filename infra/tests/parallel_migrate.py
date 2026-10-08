@@ -15,6 +15,8 @@ overlap (the race is deterministic, not 4-in-5 as measured with 0012 itself).
   real head, wait for each other, then apply the fixture revision at the same moment. Every
   database is dropped at the end.
 
+Each call removes its temporary copy of the migrations when it ends.
+
 Prints one JSON line with the outcome.
 """
 
@@ -96,13 +98,16 @@ def _admin(base_url: str) -> Any:
 
 # ---------------------------------------------------------------- step
 def step(base_url: str, role: str, module: str) -> dict[str, Any]:
-    db.MIGRATIONS_DIR = with_fixture_revision(role)
+    fixture_dir = with_fixture_revision(role)
+    db.MIGRATIONS_DIR = fixture_dir
     os.environ["DATABASE_URL"] = base_url
     try:
         runpy.run_module(module, run_name="__main__")
         rc: int | str | None = 0
     except SystemExit as exc:
         rc = exc.code
+    finally:
+        shutil.rmtree(fixture_dir.parent, ignore_errors=True)
     return {"rc": rc, "base_version": version_of(base_url)}
 
 
@@ -142,6 +147,7 @@ def workers(base_url: str, role: str, n: int) -> dict[str, Any]:
                 with contextlib.suppress(Exception):
                     conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         admin.dispose()
+        shutil.rmtree(fixture_dir.parent, ignore_errors=True)
     return {"workers": n, "failed": failed, "at_head": at_head}
 
 
