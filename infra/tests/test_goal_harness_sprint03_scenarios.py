@@ -147,7 +147,7 @@ def db(tmp_path: Path, world: dict[str, Any]):
             ]
         _sql(url, SCHEMA + "\n".join(rows))
         world.update(gone=gone, gone_acc=gone_acc, kept=kept)
-        world["out"] = {"ids": [gone, gone_acc, kept], "kept_ids": [kept], "media": []}
+        world["out"] = {"deleted_ids": [gone, gone_acc], "media": []}
         world["psql"] = _psql_cmd(url)
         yield url
 
@@ -180,6 +180,21 @@ def leaky_purge(db: str, world: dict[str, Any]) -> None:
 @given("a purge job that removes every row and object of the deleted match and account")
 def full_purge(db: str, world: dict[str, Any], store: ObjectStore) -> None:
     sql = _purge_sql(world, keep_snapshot=False)
+    world["purge_cmd"] = f"{_psql_cmd(db)} -c {shlex.quote(sql)}"
+    world["store"] = store
+
+
+@given("a purge job that removes the deleted match and its video but keeps the deleted account")
+def purge_keeps_account(db: str, world: dict[str, Any], store: ObjectStore) -> None:
+    m = world["gone"]
+    sql = " ".join(
+        _delete(table, column, m)
+        for table, column in (
+            ("match_rallies", "match_id"),
+            ("metric_snapshots", "match_id"),
+            ("matches", "id"),
+        )
+    )
     world["purge_cmd"] = f"{_psql_cmd(db)} -c {shlex.quote(sql)}"
     world["store"] = store
 
@@ -232,6 +247,68 @@ def zero_rows(world: dict[str, Any]) -> None:
 @then("the video link answered 404")
 def video_404(world: dict[str, Any]) -> None:
     assert world["result"]["media"] == [404]
+
+
+# ------------------------------------------------------------------ deleted ids (PE-1)
+def _sign_in_again(world: dict[str, Any], again_id: str) -> None:
+    """G03-01 step 8 as the harness judges it: DELETE /me accepted, old session 401, empty list."""
+    world["step"] = live.judge_account_deletion(
+        deleted_id=world["gone_acc"],
+        status=204,
+        old_session=401,
+        back=True,
+        items=[],
+        again_me={"id": again_id},
+    )
+
+
+@when("signing in again with the same address resolves to the deleted account's id")
+def again_same_id(world: dict[str, Any]) -> None:
+    _sign_in_again(world, world["gone_acc"])
+
+
+@when("signing in again with the same address resolves to a new account id")
+def again_new_id(world: dict[str, Any]) -> None:
+    _sign_in_again(world, str(uuid.uuid4()))
+
+
+@then(parsers.parse('the account deletion step fails, naming "{text}"'))
+def deletion_step_fails(world: dict[str, Any], text: str) -> None:
+    assert world["step"]["ok"] is False, world["step"]
+    assert any(p.startswith(text) for p in world["step"]["problems"]), world["step"]
+
+
+@then("the account deletion step passes")
+def deletion_step_passes(world: dict[str, Any]) -> None:
+    assert world["step"]["ok"] is True, world["step"]
+    assert world["step"]["problems"] == []
+
+
+@then("the purge check inventoried exactly the deleted match and the deleted account")
+def inventoried_exactly(world: dict[str, Any]) -> None:
+    assert world["result"]["ids"] == [world["gone"], world["gone_acc"]], world["result"]
+    assert world["step"]["again_id"] not in world["result"]["ids"]
+
+
+@given("a fresh run of the goal journey")
+def fresh_run(world: dict[str, Any]) -> None:
+    world["out"] = {"deleted_ids": [], "media": []}
+    world["match"] = str(uuid.uuid4())
+
+
+@when("GET /me answers without an account id")
+def me_without_id(world: dict[str, Any]) -> None:
+    world["setup_problems"] = live.record_run_ids(world["out"], world["match"], {"email": "x"})
+
+
+@then(parsers.parse('the run\'s setup fails, naming "{text}"'))
+def setup_fails(world: dict[str, Any], text: str) -> None:
+    assert any(p.startswith(text) for p in world["setup_problems"]), world["setup_problems"]
+
+
+@then("no id is recorded for the purge check")
+def nothing_recorded(world: dict[str, Any]) -> None:
+    assert world["out"]["deleted_ids"] == []
 
 
 # ------------------------------------------------------------------ sign-in link (BE-GR1-01)

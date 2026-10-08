@@ -34,6 +34,34 @@ Feature: The Sprint 3 goal harness measures purge and sign-in honestly
       And every inventoried column counts 0 rows, "matches.id" and "accounts.id" among them
       And the video link answered 404
 
+  Rule: Only an account that really went away counts as deleted (PE-1, review round 1)
+
+    Scenario: Signing in again under the deleted account's id is not a deletion, and its row is counted
+      Given a database holding a deleted match, a deleted account and a kept match
+      And a rally video link of the deleted match taken before deletion
+      And a purge job that removes the deleted match and its video but keeps the deleted account
+      When signing in again with the same address resolves to the deleted account's id
+      And the purge check runs
+      Then the account deletion step fails, naming "signed in again under the deleted account id"
+      And the purge check fails
+      And it names "accounts.id: 1 rows left"
+
+    Scenario: A run whose account id cannot be read refuses to start
+      Given a fresh run of the goal journey
+      When GET /me answers without an account id
+      Then the run's setup fails, naming "GET /me returned no account id"
+      And no id is recorded for the purge check
+
+    Scenario: A new account after deletion passes and is never counted as deleted
+      Given a database holding a deleted match, a deleted account and a kept match
+      And a rally video link of the deleted match taken before deletion
+      And a purge job that removes every row and object of the deleted match and account
+      When signing in again with the same address resolves to a new account id
+      And the purge check runs
+      Then the account deletion step passes
+      And the purge check passes
+      And the purge check inventoried exactly the deleted match and the deleted account
+
   Rule: Signing in again never reuses a spent sign-in link (G03-01 step 8, BE-GR1-01)
 
     Scenario: No new sign-in mail means no link

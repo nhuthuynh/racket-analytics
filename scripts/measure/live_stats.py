@@ -16,10 +16,11 @@ Each run is a fresh account on the live stack over https (ADR 0029):
  7. DELETE the match -> 404 on the match and its stats and gone from the list (timed, <= 60 s,
     NFR-066 a);
  8. DELETE the account -> the old session gets 401; signing in again with the same address
-    gives an empty account (FR-007).
+    gives an empty account under a new id (FR-007).
 
 With ``--psql`` and ``--purge-cmd`` it then runs the purge job once and checks that no row in
-any public table holds a deleted match or account id, and that the rally video links taken in
+any public table holds a deleted match or account id (the ids recorded at setup; a run whose
+GET /me names no account id fails setup), and that the rally video links taken in
 step 4 (still within their TTL) now answer 404 (NFR-066 b).
 
     python3 scripts/measure/live_stats.py --api https://localhost:33000/api \
@@ -88,6 +89,62 @@ def _reference(tags: list[dict[str, Any]]) -> dict[str, Any]:
     return s.starter_stats([{"first_serving_side": "A", "tags": tags}])
 
 
+def account_id(me: Any) -> str | None:
+    """The account id in a GET /me body, or None when there is none to read."""
+    value = me.get("id") if isinstance(me, dict) else None
+    return value if isinstance(value, str) and value else None
+
+
+def record_run_ids(out: dict[str, Any], match_id: str, me: Any) -> list[str]:
+    """Record the match and account this run will delete; refuse when /me names no account.
+
+    The purge check (G03-03) inventories exactly these ids, so an id the harness cannot read
+    is a failed setup, never a silent gap in the inventory (PE-1).
+    """
+    acc = account_id(me)
+    if acc is None:
+        return [f"GET /me returned no account id: {me!r}"[:200]]
+    out["deleted_ids"] += [match_id, acc]
+    return []
+
+
+def judge_account_deletion(
+    *,
+    deleted_id: str | None,
+    status: int,
+    old_session: int,
+    back: bool,
+    items: Any,
+    again_me: Any,
+) -> dict[str, Any]:
+    """G03-01 step 8: the account went away and signing in again gives a new, empty account."""
+    again_id = account_id(again_me) if back else None
+    problems = []
+    if status not in sk.DELETE_OK:
+        problems.append(f"DELETE /me status {status}")
+    if old_session != 401:
+        problems.append(f"old session status {old_session}")
+    if not back:
+        problems.append("could not sign in again with the same address")
+    elif items != []:
+        problems.append(f"matches after signing in again: {items!r}"[:200])
+    if not deleted_id:
+        problems.append("no deleted account id recorded")
+    if back and again_id is None:
+        problems.append("GET /me after signing in again returned no account id")
+    elif again_id is not None and again_id == deleted_id:
+        problems.append(f"signed in again under the deleted account id {deleted_id}")
+    return {
+        "ok": not problems,
+        "problems": problems,
+        "status": status,
+        "old_session": old_session,
+        "items_after_sign_in": items,
+        "deleted_id": deleted_id,
+        "again_id": again_id,
+    }
+
+
 def run(args: argparse.Namespace, data: bytes, ctx: Any, out: dict[str, Any]) -> dict[str, Any]:
     steps: dict[str, Any] = {}
     c = Client(args.api, args.origin, ctx)
@@ -98,8 +155,12 @@ def run(args: argparse.Namespace, data: bytes, ctx: Any, out: dict[str, Any]) ->
     steps["setup"] = {"ok": bool(ok and match_id and video.get("ok")), "video": video}
     if not steps["setup"]["ok"]:
         return steps
-    me = _get(c, "me").json() or {}
-    out["ids"] += [match_id, *([me["id"]] if isinstance(me.get("id"), str) else [])]
+    me = _get(c, "me").json()
+    problems = record_run_ids(out, match_id, me)
+    if problems:
+        steps["setup"] = {"ok": False, "video": video, "problems": problems}
+        return steps
+    deleted_account = account_id(me)
 
     # 2. tag -> stats current, rally by rally
     sess = Session(c, match_id)
@@ -204,16 +265,15 @@ def run(args: argparse.Namespace, data: bytes, ctx: Any, out: dict[str, Any]) ->
     again = Client(args.api, args.origin, ctx)
     back = sign_in_as(again, args.mailpit, address)
     items = (_get(again, "matches").json() or {}).get("items") if back else None
-    again_me = (_get(again, "me").json() or {}) if back else {}
-    if isinstance(again_me.get("id"), str):
-        out["ids"].append(again_me["id"])  # the new account is not deleted; listed for clarity
-        out["kept_ids"].append(again_me["id"])
-    steps["delete_account"] = {
-        "ok": r.status in sk.DELETE_OK and old_session == 401 and back and items == [],
-        "status": r.status,
-        "old_session": old_session,
-        "items_after_sign_in": items,
-    }
+    again_me = _get(again, "me").json() if back else None
+    steps["delete_account"] = judge_account_deletion(
+        deleted_id=deleted_account,
+        status=r.status,
+        old_session=old_session,
+        back=back,
+        items=items,
+        again_me=again_me,
+    )
     again.close()
     c.close()
     return steps
@@ -232,13 +292,15 @@ def purge_check(args: argparse.Namespace, ctx: Any, out: dict[str, Any]) -> dict
     done = subprocess.run(  # noqa: S603 (operator-supplied local command, no shell)
         shlex.split(args.purge_cmd), capture_output=True, text=True, timeout=600, check=False
     )
-    ids = [i for i in out["ids"] if i not in out["kept_ids"]]
+    ids = list(out["deleted_ids"])  # recorded at setup; never inferred by subtraction (PE-1)
     try:
         pairs = s.parse_pairs(_psql(args.psql, s.columns_sql())) + list(s.ROOT_TABLES)
         counts = s.parse_counts(_psql(args.psql, s.count_sql(pairs, ids))) if ids else {}
         problems = s.purge_problems(counts)
     except (RuntimeError, ValueError) as exc:
         counts, problems = {}, [str(exc)]
+    if not ids:
+        problems.insert(0, "no deleted id to check")
     media, checked = [], 0
     for m in out["media"]:
         if not m["url"] or time.time() >= m["valid_until"] - 5:
@@ -253,7 +315,13 @@ def purge_check(args: argparse.Namespace, ctx: Any, out: dict[str, Any]) -> dict
         problems.append("no media link checked within its TTL")
     if done.returncode != 0:
         problems.append(f"purge command rc={done.returncode}")
-    return {"ok": not problems, "rows": counts, "media": media, "problems": problems[:20]}
+    return {
+        "ok": not problems,
+        "ids": ids,
+        "rows": counts,
+        "media": media,
+        "problems": problems[:20],
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -290,8 +358,7 @@ def main(argv: list[str] | None = None) -> int:
     ctx = ssl_context(args.cacert, args.insecure_loopback)
     data = Path(args.file).read_bytes()
     out: dict[str, Any] = {
-        "ids": [],
-        "kept_ids": [],
+        "deleted_ids": [],
         "media": [],
         "stats_current_ms": [],
         "correction_to_stats_ms": [],

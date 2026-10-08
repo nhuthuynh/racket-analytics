@@ -342,3 +342,95 @@ def test_stats_contract_paths_fill_every_placeholder() -> None:
     for name in sk.ROUTES:
         _, p = sk.path(name, match_id="m", metric_id="AN-01", side="A")
         assert "{" not in p
+
+
+# ======================================== deleted ids are recorded, never inferred (PE-1)
+ACC = "0b6f4a3e-6f0e-4d4e-9b8a-3c2d1e0f9a8b"
+MATCH = "5d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+NEW_ACC = "7a8b9c0d-1e2f-4a3b-8c5d-6e7f8a9b0c1d"
+
+
+def _judge(live, **over):
+    kwargs = {
+        "deleted_id": ACC,
+        "status": 204,
+        "old_session": 401,
+        "back": True,
+        "items": [],
+        "again_me": {"id": NEW_ACC},
+    }
+    return live.judge_account_deletion(**{**kwargs, **over})
+
+
+def test_signing_in_again_under_the_deleted_id_is_not_a_deletion() -> None:
+    step = _judge(_load("live_stats"), again_me={"id": ACC})
+    assert step["ok"] is False
+    text = "signed in again under the deleted account id"
+    assert any(p.startswith(text) for p in step["problems"])
+
+
+def test_signing_in_again_without_an_id_is_not_a_pass() -> None:
+    step = _judge(_load("live_stats"), again_me={})
+    assert step["ok"] is False
+    text = "GET /me after signing in again returned no account id"
+    assert any(p.startswith(text) for p in step["problems"])
+
+
+def test_account_deletion_without_a_deleted_id_is_not_a_pass() -> None:
+    step = _judge(_load("live_stats"), deleted_id=None)
+    assert step["ok"] is False
+
+
+@pytest.mark.parametrize(
+    ("over", "text"),
+    [
+        ({"status": 200}, "DELETE /me status 200"),
+        ({"old_session": 200}, "old session status 200"),
+        ({"back": False}, "could not sign in again"),
+        ({"items": [{"id": MATCH}]}, "matches after signing in again"),
+    ],
+)
+def test_account_deletion_names_each_failure(over: dict, text: str) -> None:
+    step = _judge(_load("live_stats"), **over)
+    assert step["ok"] is False
+    assert any(p.startswith(text) for p in step["problems"]), step
+
+
+def test_a_new_account_after_deletion_passes() -> None:
+    step = _judge(_load("live_stats"))
+    assert step == {
+        "ok": True,
+        "problems": [],
+        "status": 204,
+        "old_session": 401,
+        "items_after_sign_in": [],
+        "deleted_id": ACC,
+        "again_id": NEW_ACC,
+    }
+
+
+@pytest.mark.parametrize("me", [{}, {"id": ""}, {"id": 7}, None, []])
+def test_setup_refuses_a_me_without_an_account_id(me) -> None:
+    live = _load("live_stats")
+    out = {"deleted_ids": []}
+    problems = live.record_run_ids(out, MATCH, me)
+    assert problems
+    assert problems[0].startswith("GET /me returned no account id")
+    assert out["deleted_ids"] == []
+
+
+def test_setup_records_the_match_and_the_account_as_deleted_ids() -> None:
+    live = _load("live_stats")
+    out = {"deleted_ids": []}
+    assert live.record_run_ids(out, MATCH, {"id": ACC}) == []
+    assert out["deleted_ids"] == [MATCH, ACC]
+
+
+def test_purge_check_with_no_deleted_id_is_not_a_pass() -> None:
+    from argparse import Namespace
+
+    live = _load("live_stats")
+    args = Namespace(psql="true", purge_cmd="true")
+    result = live.purge_check(args, None, {"deleted_ids": [], "media": []})
+    assert result["ok"] is False
+    assert "no deleted id to check" in result["problems"]
