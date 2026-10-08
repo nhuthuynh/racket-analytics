@@ -11,6 +11,13 @@ sheet restored byte-identical after the correction+undo pairs (C-04); the accoun
 seeded; achieved rate >= 95% of --rps. Read p95/p99 (NFR-010) is a baseline: reported, not
 gated, until the R1 review (sprint-02 §3.1).
 
+The achieved rate is measured over the loaded window when ``<prefix>_stats_history.csv`` sits
+next to the stats file (Locust ``--csv`` writes it): from the first second with users spawned
+to the last sample. Locust's own ``Requests/s`` divides by the whole run, and the locustfile
+seeds inside the run limit before any user spawns (PR #6, CI run 37739461709: 13.6 s of
+seeding, ~52 RPS delivered, 39.8 reported). Without the history file the whole-run figure is
+used, which can only under-state the rate.
+
 Exit 0 all gates met; 1 a gate failed; 2 the stats or state file is missing or unreadable.
 Standard library only.
 """
@@ -41,7 +48,31 @@ def load_rows(path: Path) -> dict[str, dict[str, str]]:
         return {r["Name"]: r for r in csv.DictReader(fh)}
 
 
-def evaluate(rows: dict[str, dict[str, str]], state: dict, rps: float) -> dict:
+def load_window_rate(history: Path) -> tuple[float, int] | None:
+    """(requests/s, seconds) from the first Aggregated sample with users to the last one.
+
+    None when the file is absent; (0.0, 0) when no sample has users (fail closed).
+    """
+    if not history.exists():
+        return None
+    with history.open(newline="") as fh:
+        samples = [
+            (int(_num(r["Timestamp"]) or 0), _num(r["Total Request Count"]) or 0.0)
+            for r in csv.DictReader(fh)
+            if r.get("Name") == "Aggregated" and (_num(r.get("User Count", "")) or 0) > 0
+        ]
+    if len(samples) < 2 or samples[-1][0] <= samples[0][0]:
+        return 0.0, 0
+    window = samples[-1][0] - samples[0][0]
+    return (samples[-1][1] - samples[0][1]) / window, window
+
+
+def evaluate(
+    rows: dict[str, dict[str, str]],
+    state: dict,
+    rps: float,
+    window: tuple[float, int] | None = None,
+) -> dict:
     missing = [
         n for n in (*READS, *COMMANDS) if _num(rows.get(n, {}).get("Request Count")) in (None, 0.0)
     ]
@@ -51,7 +82,7 @@ def evaluate(rows: dict[str, dict[str, str]], state: dict, rps: float) -> dict:
     availability = round((total - failed) / total, 5) if total else 0.0
     cmd_p95 = [_num(rows.get(n, {}).get("95%")) for n in COMMANDS]
     corrections_p95 = max((p for p in cmd_p95 if p is not None), default=None)
-    achieved = _num(agg.get("Requests/s")) or 0.0
+    achieved = window[0] if window is not None else (_num(agg.get("Requests/s")) or 0.0)
     baseline = {
         n: {
             "requests": int(_num(rows[n]["Request Count"]) or 0),
@@ -80,6 +111,7 @@ def evaluate(rows: dict[str, dict[str, str]], state: dict, rps: float) -> dict:
         "corrections_p95_ms": corrections_p95,
         "achieved_rps": achieved,
         "target_rps": rps,
+        "load_window_s": window[1] if window is not None else None,
         "baseline": baseline,
     }
 
@@ -118,7 +150,13 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, KeyError) as exc:
         print(f"perf_verdict: cannot read the run: {exc}", file=sys.stderr)
         return 2
-    v = evaluate(rows, state, args.rps)
+    history = args.stats.with_name(args.stats.stem + "_history.csv")
+    try:
+        window = load_window_rate(history)
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"perf_verdict: cannot read {history}: {exc}", file=sys.stderr)
+        return 2
+    v = evaluate(rows, state, args.rps, window)
     text = json.dumps(v, indent=2)
     print(text)
     if args.json:
