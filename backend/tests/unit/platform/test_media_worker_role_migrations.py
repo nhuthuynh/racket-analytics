@@ -55,6 +55,17 @@ def test_0012_grants_nothing_on_identity_tables(monkeypatch: pytest.MonkeyPatch)
     assert touched <= PROBE_TABLES
 
 
+def test_0012_tolerates_a_concurrent_migrator_creating_the_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Roles are cluster-wide, the migration lock is per database: a loser of the NOT EXISTS
+    # race gets unique_violation (or duplicate_object) and must treat it as "already there".
+    [create] = [
+        s for s in _run("0012_media_worker_role", "upgrade", monkeypatch) if "CREATE ROLE" in s
+    ]
+    assert "EXCEPTION WHEN duplicate_object OR unique_violation THEN" in create
+
+
 def test_0012_creates_a_role_that_cannot_log_in(monkeypatch: pytest.MonkeyPatch) -> None:
     sql = " ".join(_run("0012_media_worker_role", "upgrade", monkeypatch))
     assert f"CREATE ROLE {ROLE} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE" in sql
