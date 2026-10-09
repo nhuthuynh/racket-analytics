@@ -2,6 +2,9 @@
 NFR-058). The named hidden characters of IT-03-12 on the match delete confirmation, and the
 delete racing a tag. "Unchanged": every row holding the match id and the scorebook row counts
 are equal before and after. Written red first: ``red_until`` ST-050.
+
+ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the marker is removed; every scenario
+passes and joins the per-PR gate.
 """
 
 from __future__ import annotations
@@ -16,8 +19,6 @@ from pytest_bdd import given, parsers, scenario, then, when
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 FEATURE = "json_fuzz_sprint_03.feature"
 HIDDEN = {"a NUL": "\x00", "a lone surrogate": "\ud800", "a line separator": "\u2028"}

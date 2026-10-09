@@ -5,6 +5,9 @@ surrogate or line/paragraph separator inside it, and any JSON value, is refused 
 ``confirm`` / ``confirmation_required`` and never with any other exception. Pure: no network,
 no disk. The rule is reached through a seam (tests/support/contract.py), so a missing module
 is a red row naming the story. Written red first: ``red_until`` ST-050.
+
+ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the marker is removed; every row passes
+and joins the per-PR gate.
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ from hypothesis import given
 from tests.integration.test_it_02_10_json_string_fuzz import ANY_JSON, SETTINGS, bad_text
 from tests.support.contract import Seam
 
-pytestmark = [pytest.mark.unit, pytest.mark.red_until(story="ST-050")]
+pytestmark = [pytest.mark.unit]
 
 CONFIRM_DELETION = Seam(
     "racket.matches.deletion:confirm_deletion",

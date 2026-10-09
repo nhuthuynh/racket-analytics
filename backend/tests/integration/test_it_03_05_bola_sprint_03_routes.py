@@ -11,6 +11,8 @@ Written red first (QA-ACC-3): ``red_until`` ST-046 (the first Sprint 3 route).
 
 The file-level marker became one marker per row (ST-046b, TCR row 2026-10-09 in
 docs/sprints/03/decisions/ST-046b.md): the stats row passes and joins the per-PR gate.
+ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the DELETE row passes and joins
+the per-PR gate.
 """
 
 from __future__ import annotations
@@ -32,7 +34,6 @@ WAITS_ON = {
     ("GET", "/matches/{match_id}/stats/{metric_id}/evidence"): pytest.mark.red_until(
         story="ST-047"
     ),
-    ("DELETE", "/matches/{match_id}"): pytest.mark.red_until(story="ST-050"),
 }
 ROUTES = [
     pytest.param(

@@ -4,6 +4,10 @@ screen copy (browser binding E2E-03-01, dialog X-01). "Anywhere in her account":
 its stats, score sheet and video answer 404 and the list omits it. "No stored file or record":
 the information-schema inventory and the object keys the database knew (IT-03-06's checks).
 Written red first: ``red_until`` ST-050.
+
+ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the module marker is lifted;
+"Someone else's match" passes and joins the per-PR gate. "Delete a tagged match" runs the purge
+in its last step, so it stays ``red_until`` ST-050b, marked on its own.
 """
 
 from __future__ import annotations
@@ -18,11 +22,10 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-050")]
-
 FEATURE = "match_deletion.feature"
 
 
+@pytest.mark.red_until(story="ST-050b")
 @scenario(FEATURE, "Delete a tagged match")
 def test_delete_a_tagged_match() -> None:
     pass
