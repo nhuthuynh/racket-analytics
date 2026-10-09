@@ -136,6 +136,13 @@ jobs:
       # measure test time, not a cold cache (run 37298471332: 11.1 s cold vs 6.8 s warm).
       - name: Warm the bytecode cache (collect only, not budgeted)
         run: uv run --no-sync pytest -q --collect-only -m unit
+      # PE-R1-DB-01 (ADR 0049): a fresh checkout has no .hypothesis/constants, so each worker's
+      # first example parsed every local module (~1.3 s per worker). Collects the domain
+      # selection and draws one example; runs no test.
+      - name: Warm the Hypothesis constants cache (not budgeted)
+        run: |
+          # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
+          uv run --no-sync python ../scripts/ci/warm_hypothesis_constants.py -m "unit and not red_until" $DOMAIN_TEST_PATHS
       # CI-DOMAIN-BUDGET (ADR 0049): runs 37882972340 and 37918385248 hit 10 s with every test
       # passing; ~80% of the suite is Hypothesis generation on the default profile in one process.
       # Parallel workers (one per core, work stealing); same budget, selection and profile, and the
