@@ -1,8 +1,8 @@
 """Binds tests/features/ci_domain_budget.feature (CI-DOMAIN-BUDGET; NFR-073; ADR 0049).
 
-The second scenario runs the real backend domain suite twice: once with the budgeted command
+The scenario runs the real backend domain suite twice: once with the budgeted command
 read from ci.yml, once in one process, and compares the junit results test by test. Bound in
-infra/tests: the step is CI tooling (SRE lane) and the wiring checks need PyYAML.
+infra/tests: the step is CI tooling (SRE lane) and reading ci.yml needs PyYAML.
 """
 
 from __future__ import annotations
@@ -13,59 +13,23 @@ from typing import Any
 
 import pytest
 from domain_budget import (
-    budget_argv,
     ci_env,
     command,
-    domain_step,
     junit_outcomes,
     option,
     positionals,
     pytest_args,
     run_in_backend,
 )
-from pytest_bdd import given, parsers, scenarios, then, when
+from pytest_bdd import given, scenarios, then, when
 
 pytestmark = pytest.mark.integration
 scenarios("ci_domain_budget.feature")
-
-NARROWING = ("-k", "--deselect", "--ignore", "--ignore-glob", "--lf", "--sw", "-x", "--maxfail")
 
 
 @pytest.fixture
 def world() -> dict[str, Any]:
     return {}
-
-
-@given("the CI workflow")
-def the_workflow() -> None:
-    domain_step()  # exactly one budgeted domain step
-
-
-@then(parsers.parse("the domain budget is {seconds:d} seconds"))
-def the_budget(seconds: int) -> None:
-    assert ci_env()["DOMAIN_UNIT_BUDGET_S"] == str(seconds)
-    assert budget_argv()[0] == str(seconds)
-
-
-@then(parsers.parse('the budgeted domain step selects "{marker}" on CI\'s DOMAIN_TEST_PATHS only'))
-def the_selection(marker: str) -> None:
-    args = pytest_args()
-    assert option(args, "-m") == marker
-    assert positionals(args) == ci_env()["DOMAIN_TEST_PATHS"].split()
-
-
-@then("the budgeted domain step deselects, ignores and skips nothing by itself")
-def nothing_narrowed() -> None:
-    args = pytest_args()
-    assert not [a for a in args if a.split("=", 1)[0] in NARROWING], args
-    assert "-o" not in args, args
-    assert not any(a.startswith("-p") for a in args), args
-
-
-@then("the budgeted domain step uses the default Hypothesis profile")
-def default_profile() -> None:
-    assert "HYPOTHESIS_PROFILE" not in domain_step()["run"]
-    assert "HYPOTHESIS_PROFILE" not in domain_step().get("env", {})
 
 
 @given("the backend unit suite on CI's DOMAIN_TEST_PATHS")

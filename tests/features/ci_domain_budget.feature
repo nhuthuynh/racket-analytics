@@ -5,14 +5,8 @@ Feature: The domain unit suite runs inside its 10 s budget with margin, on the s
   37918385248 were stopped at 10 s (exit 124) although every test passed: about 80% of the
   suite's time is Hypothesis example generation in some 30 property tests on the default
   profile, in one process. The suite runs in parallel test workers instead. The budget, the
-  test selection and the Hypothesis profile stay as they are.
-
-  Scenario: The budget cannot be met by changing what is measured
-    Given the CI workflow
-    Then the domain budget is 10 seconds
-    And the budgeted domain step selects "unit and not red_until" on CI's DOMAIN_TEST_PATHS only
-    And the budgeted domain step deselects, ignores and skips nothing by itself
-    And the budgeted domain step uses the default Hypothesis profile
+  test selection and the Hypothesis profile stay as they are (ci.yml guards:
+  infra/tests/test_ci_domain_budget.py).
 
   Scenario: The domain step runs in parallel workers on the same tests with the same results
     Given the backend unit suite on CI's DOMAIN_TEST_PATHS

@@ -97,6 +97,20 @@ def positionals(args: list[str]) -> list[str]:
     return out
 
 
+NARROWING = ("-k", "--deselect", "--ignore", "--ignore-glob", "--lf", "--last-failed", "--sw",
+             "--stepwise", "-x", "--exitfirst", "--maxfail", "--co", "--collect-only")  # fmt: skip
+
+
+def narrowing(args: list[str]) -> list[str]:
+    """Flags that would change what runs: deselection, early stop, plugins off, ini overrides."""
+    return [a for a in args if a.split("=", 1)[0] in NARROWING or a == "-o" or a.startswith("-p")]
+
+
+def profile_set() -> bool:
+    step = domain_step()
+    return "HYPOTHESIS_PROFILE" in step["run"] or "HYPOTHESIS_PROFILE" in step.get("env", {})
+
+
 # ---------------------------------------------------------------- real runs (scenario)
 def _backend_env() -> dict[str, str]:
     env = {k: v for k, v in os.environ.items() if k not in {"VIRTUAL_ENV", "HYPOTHESIS_PROFILE"}}

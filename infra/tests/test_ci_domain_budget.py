@@ -18,8 +18,10 @@ from domain_budget import (
     ci_env,
     command,
     domain_step,
+    narrowing,
     option,
     positionals,
+    profile_set,
     pytest_args,
     unit_steps,
 )
@@ -27,8 +29,6 @@ from domain_budget import (
 pytestmark = pytest.mark.unit
 
 SELECTION = "unit and not red_until"
-NARROWING = ("-k", "--deselect", "--ignore", "--ignore-glob", "--lf", "--last-failed", "--sw",
-             "--stepwise", "-x", "--exitfirst", "--maxfail", "--co", "--collect-only")  # fmt: skip
 
 
 # ---------------------------------------------------------------- negative cases first
@@ -38,25 +38,16 @@ def test_the_domain_budget_is_not_raised() -> None:
 
 
 def test_the_domain_step_narrows_nothing_by_itself() -> None:
-    args = pytest_args()
-    for flag in NARROWING:
-        assert not any(a == flag or a.startswith(flag + "=") for a in args), (flag, args)
-    run = domain_step()["run"]
-    assert "|| true" not in run
+    # `-k`, `-x`, `-p no:hypothesispytest` or `-o addopts=` would change what runs, not how fast.
+    assert narrowing(pytest_args()) == []
+    assert narrowing(["-k", "rules", "-p", "no:xdist", "-o", "addopts=", "--maxfail=1"]) == [
+        "-k", "-p", "-o", "--maxfail=1"]  # fmt: skip
+    assert "|| true" not in domain_step()["run"]
     assert "continue-on-error" not in domain_step()
 
 
-def test_the_domain_step_does_not_disable_plugins_or_override_ini() -> None:
-    # `-p no:hypothesispytest` or `-o addopts=` would change what runs, not how fast.
-    args = pytest_args()
-    assert "-o" not in args, args
-    assert not any(a.startswith("-p") for a in args), args
-
-
 def test_the_domain_step_keeps_the_default_hypothesis_profile() -> None:
-    step = domain_step()
-    assert "HYPOTHESIS_PROFILE" not in step["run"]
-    assert "HYPOTHESIS_PROFILE" not in step.get("env", {})
+    assert not profile_set()
 
 
 def test_parallel_workers_are_not_the_hypothesis_ci_property_step() -> None:
