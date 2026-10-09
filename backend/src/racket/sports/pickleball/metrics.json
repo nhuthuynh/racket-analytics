@@ -2,6 +2,9 @@
   "sport": "pickleball",
   "version": "0.1",
   "source": "docs/domain/metric-dictionary.md",
+  "low_sample": {
+    "max_interval_width": 0.3
+  },
   "entries": [
     {
       "id": "AN-01",

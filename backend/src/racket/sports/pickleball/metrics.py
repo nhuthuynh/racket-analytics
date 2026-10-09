@@ -8,6 +8,9 @@ and the UI (FR-102). Changing an entry's definition bumps its version (and the d
 ``metrics.lock.json`` is an append-only record ``{id: {version: digest}}`` of every definition
 ever shipped, and ``version_bump_violations`` (pure) reports a definition changed without a bump,
 also against the lock on main, so old snapshots keep meaning what they meant (NFR-075).
+The top-level ``low_sample`` rule (``max_interval_width``, metric-dictionary rule 0.3; ADR 0041)
+is digested too: the lock's ``low_sample`` rows ``{dictionary version: digest}`` record each rule
+ever shipped, so changing it needs a new dictionary version.
 Pure stdlib; reads only its own package file.
 """
 
@@ -44,6 +47,9 @@ DEFINITION_FIELDS = ("name", "definition", "formula", "unit", "data_level", "min
 _ID = re.compile(r"^AN-\d{2}$")
 _VERSION = re.compile(r"^\d+\.\d+$")
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
+
+
+LOW_SAMPLE_FIELDS = ("max_interval_width",)
 
 
 class InvalidDictionary(ValueError):
@@ -131,11 +137,25 @@ def _entry(raw: object) -> MetricEntry:
     )
 
 
+def _low_sample(rule: object) -> dict[str, float]:
+    """The dictionary-level low-sample rule (ADR 0041): ``{"max_interval_width": w}``,
+    0 < w <= 1."""
+    if not isinstance(rule, Mapping) or set(rule) != set(LOW_SAMPLE_FIELDS):
+        raise InvalidDictionary("low_sample must be {max_interval_width}")
+    width = rule["max_interval_width"]
+    if isinstance(width, bool) or not isinstance(width, int | float) or not 0 < width <= 1:
+        raise InvalidDictionary("low_sample.max_interval_width must be in (0, 1]")
+    return {"max_interval_width": float(width)}
+
+
 @dataclass(frozen=True, slots=True)
 class MetricDictionary:
     sport: str
     version: str
     entries: tuple[MetricEntry, ...] = field(default=())
+    # Empty only for a dictionary built in code; ``parse`` requires it and the policy refuses
+    # a dictionary without it (ADR 0041: no second source of the rule).
+    low_sample: Mapping[str, float] = field(default_factory=dict, hash=False)
 
     @classmethod
     def parse(cls, data: object) -> MetricDictionary:
@@ -150,8 +170,10 @@ class MetricDictionary:
             if entry.id in seen:
                 raise InvalidDictionary(f"duplicate id {entry.id}")
             seen.add(entry.id)
+        if "low_sample" not in data:
+            raise InvalidDictionary("low_sample is missing (ADR 0041)")
         return cls(sport=_text("dictionary", "sport", data.get("sport")), version=version,
-                   entries=entries)  # fmt: skip
+                   entries=entries, low_sample=_low_sample(data["low_sample"]))  # fmt: skip
 
     def entry(self, entry_id: str) -> MetricEntry:
         for entry in self.entries:
@@ -174,6 +196,12 @@ def definition_digest(entry: MetricEntry) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
+def low_sample_digest(dictionary: MetricDictionary) -> str:
+    """sha256 of the dictionary-level low-sample rule (ADR 0041; covered by the lock)."""
+    blob = json.dumps(dict(dictionary.low_sample), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode()).hexdigest()
+
+
 @cache
 def load_dictionary() -> MetricDictionary:
     return MetricDictionary.parse(json.loads(METRICS_PATH.read_text(encoding="utf-8")))
@@ -190,6 +218,7 @@ class DefinitionLock:
 
     version: str
     entries: Mapping[str, Mapping[str, str]]
+    low_sample: Mapping[str, str] = field(default_factory=dict)
 
     @classmethod
     def parse(cls, data: object) -> DefinitionLock:
@@ -208,7 +237,15 @@ class DefinitionLock:
                 if not isinstance(digest, str) or not _DIGEST.match(digest):
                     raise InvalidDictionary(f"{entry_id} {row_version}: digest must be sha256")
             entries[entry_id] = dict(rows)
-        return cls(version=version, entries=entries)
+        rule_rows = data.get("low_sample", {})
+        if not isinstance(rule_rows, Mapping):
+            raise InvalidDictionary("low_sample lock rows must be {version: digest}")
+        for row_version, digest in rule_rows.items():
+            if not isinstance(row_version, str) or not _VERSION.match(row_version):
+                raise InvalidDictionary(f"low_sample {row_version}: version")
+            if not isinstance(digest, str) or not _DIGEST.match(digest):
+                raise InvalidDictionary(f"low_sample {row_version}: digest must be sha256")
+        return cls(version=version, entries=entries, low_sample=dict(rule_rows))
 
 
 def version_bump_violations(
@@ -235,6 +272,7 @@ def version_bump_violations(
                 f"dictionary {dictionary.version}: older than entry {entry.id} {entry.version};"
                 " bump the dictionary version"
             )
+    found.extend(_low_sample_violations(dictionary, lock, previous))
     if previous is None:
         return tuple(found)
     for entry_id, rows in previous.entries.items():
@@ -260,3 +298,29 @@ def version_bump_violations(
             f" {previous.version}; bump the dictionary"
         )
     return tuple(found)
+
+
+def _low_sample_violations(
+    dictionary: MetricDictionary, lock: DefinitionLock, previous: DefinitionLock | None
+) -> list[str]:
+    """The rule in force is the lock row of the newest dictionary version not after the file's;
+    a changed rule therefore needs a new row under a new dictionary version (ADR 0041)."""
+    found: list[str] = []
+    in_force = [v for v in lock.low_sample if _version_key(v) <= _version_key(dictionary.version)]
+    if not in_force:
+        found.append("low_sample: not recorded in metrics.lock.json")
+    elif lock.low_sample[max(in_force, key=_version_key)] != low_sample_digest(dictionary):
+        found.append(
+            "low_sample: the interval-width rule changed without a dictionary version bump"
+        )
+    if previous is None:
+        return found
+    for row_version, digest in previous.low_sample.items():
+        if row_version not in lock.low_sample:
+            found.append(f"low_sample {row_version}: locked row removed; the lock is append-only")
+        elif lock.low_sample[row_version] != digest:
+            found.append(
+                f"low_sample {row_version}: locked digest rewritten; the lock is append-only,"
+                " bump the version"
+            )
+    return found
