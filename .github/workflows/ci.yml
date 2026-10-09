@@ -326,7 +326,9 @@ jobs:
   e2e:
     name: E2E (Playwright, Chromium + WebKit) with axe-core
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # 45: the gated step takes ~15 min and the listed red-until step runs failing tests to their
+    # own timeouts (ST-054, run 37867886176 was cancelled at 30 min).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -383,12 +385,14 @@ jobs:
         run: pnpm exec playwright test --grep-invert "@red-until-" --reporter=github,html
       - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
         # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).
+        # 2 workers: these tests mostly wait out their timeouts while red (ST-054); the gated
+        # step above keeps CI's single worker.
         # BASE_URL: playwright.config.ts defaults to https://localhost:3000, the same origin.
         working-directory: web
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: ../reports/e2e-red-until.json
         run: |
-          pnpm exec playwright test --grep "@red-until-" --reporter=json \
+          pnpm exec playwright test --grep "@red-until-" --workers=2 --reporter=json \
             || echo "playwright rc=$? (red-until tests are expected to fail)"
       - name: Stale-tag check for the red-until E2E tests
         run: |
