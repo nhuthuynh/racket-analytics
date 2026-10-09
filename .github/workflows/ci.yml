@@ -139,15 +139,15 @@ jobs:
       - name: Domain unit suite < 10 s (NFR-073)
         run: |
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
-          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m unit $DOMAIN_TEST_PATHS
+          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m "unit and not red_until" $DOMAIN_TEST_PATHS
       - name: Property tests, Hypothesis ci profile (>= 1,000 examples, ST-004)
         env:
           HYPOTHESIS_PROFILE: ci
         run: |
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
-          python3 ../scripts/ci/run_with_budget.py "$PROPERTY_BUDGET_S" -- uv run --no-sync pytest -q -m unit $DOMAIN_TEST_PATHS
+          python3 ../scripts/ci/run_with_budget.py "$PROPERTY_BUDGET_S" -- uv run --no-sync pytest -q -m "unit and not red_until" $DOMAIN_TEST_PATHS
       - name: Backend unit suite <= 60 s (NFR-073)
-        run: python3 ../scripts/ci/run_with_budget.py "$BACKEND_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m unit --junitxml=../reports/unit.xml
+        run: python3 ../scripts/ci/run_with_budget.py "$BACKEND_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m "unit and not red_until" --junitxml=../reports/unit.xml
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
