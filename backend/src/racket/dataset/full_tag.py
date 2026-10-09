@@ -9,10 +9,14 @@ The session holds what the labeller has marked: rallies (boundaries and outcome)
 bounce events. Every command is checked against ``full-tag-labels/v1`` by building the document
 it would export and running ``validate_labels`` on it, so the export can never be invalid
 because of a command that was accepted. An event must fall inside a marked rally.
+
+The session owns its state: ``add`` deep-copies the body it accepts and ``export`` returns a
+deep copy, so neither the caller's input nor a returned document is shared with the session.
 """
 
 from __future__ import annotations
 
+import copy
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -103,11 +107,12 @@ class FullTagSession:
             raise LabelRefused(f"type: must be one of {sorted(_FIELDS)}")
         if extra := sorted(set(body) - _FIELDS[kind]):
             raise LabelRefused(f"unknown field(s): {', '.join(map(str, extra))}")
+        owned = copy.deepcopy(dict(body))  # never share the caller's nested objects
         if kind == "rally":
             candidate = FullTagSession(self.clip, self.fps, self.frame_count, self.players,
-                                       (*self.rallies, dict(body)), self.events)  # fmt: skip
+                                       (*self.rallies, owned), self.events)  # fmt: skip
         else:
-            event = dict(body)
+            event = owned
             if kind == "hit":
                 event.setdefault("facets", {})
             frame = event.get("frame")
@@ -142,11 +147,11 @@ class FullTagSession:
                 "rallies": out}  # fmt: skip
 
     def export(self) -> dict[str, Any]:
-        """The ``full-tag-labels/v1`` document; ``ExportInvalid`` if it would not validate."""
+        """A fresh ``full-tag-labels/v1`` document; ``ExportInvalid`` if it would not validate."""
         doc = self._document()
         if problems := validate_labels(doc):
             raise ExportInvalid("; ".join(p.describe() for p in problems))
-        return doc
+        return copy.deepcopy(doc)
 
 
 def _start(rally: Mapping[str, Any]) -> int:

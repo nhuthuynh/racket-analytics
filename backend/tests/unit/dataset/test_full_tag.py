@@ -186,3 +186,54 @@ def test_an_empty_session_exports_a_valid_empty_document() -> None:
 def test_a_clip_that_is_not_singles_or_doubles_cannot_be_exported() -> None:
     with pytest.raises(ExportInvalid):
         FullTagSession(clip="match:1", fps=60, frame_count=10, players=("A1",)).export()
+
+
+# --------------------------------------------------------------- aliasing (PE-052a-1, BE-R1-1)
+# The session owns its state: a caller that keeps a reference to what it passed in, or to what
+# an export returned, cannot change an accepted session. Negative cases: each edit below would
+# make the export invalid if it reached the session.
+def _bounce_with_xy() -> dict[str, Any]:
+    return {"type": "bounce", "frame": 1820, "visible": True, "court_xy_m": [1.5, 3.0]}
+
+
+def test_editing_a_rally_body_after_add_does_not_change_the_session() -> None:
+    rally = {**RALLY, "outcome": dict(RALLY["outcome"])}
+    s = session(rally)
+    rally["outcome"]["responsible_player"] = "Q7"
+    rally["end_frame"] = -1
+    assert validate_labels(s.export()) == ()
+    assert s.export()["rallies"][0]["outcome"]["responsible_player"] == "B1"
+
+
+def test_editing_an_event_body_after_add_does_not_change_the_session() -> None:
+    hit = {**HIT, "facets": {"contact": "volley"}}
+    bounce = _bounce_with_xy()
+    s = session(RALLY, hit, bounce)
+    hit["facets"]["position"] = "kitchen"
+    hit["hitter"] = "Z9"
+    bounce["court_xy_m"].append(9.9)
+    events = s.export()["rallies"][0]["events"]
+    assert events[1] == {"type": "hit", "frame": 1840, "hitter": "B1",
+                         "facets": {"contact": "volley"}}  # fmt: skip
+    assert events[0]["court_xy_m"] == [1.5, 3.0]
+
+
+def test_editing_an_export_does_not_change_the_session() -> None:
+    s = session(RALLY, HIT, _bounce_with_xy())
+    doc = s.export()
+    doc["rallies"][0]["events"][1]["hitter"] = "Z9"
+    doc["rallies"][0]["events"][1]["facets"]["position"] = "kitchen"
+    doc["rallies"][0]["events"][0]["court_xy_m"][0] = "x"
+    doc["rallies"][0]["outcome"]["responsible_player"] = "Q7"
+    doc["rallies"][0]["events"].clear()
+    doc["players"].append("C1")
+    again = s.export()
+    assert validate_labels(again) == ()
+    assert again == session(RALLY, HIT, _bounce_with_xy()).export()
+
+
+def test_a_session_keeps_no_reference_to_the_callers_objects() -> None:
+    hit = {**HIT, "facets": {"contact": "volley"}}
+    s = session(RALLY, hit)
+    assert all(e is not hit and e["facets"] is not hit["facets"] for e in s.events)
+    assert all(r is not RALLY and r["outcome"] is not RALLY["outcome"] for r in s.rallies)
