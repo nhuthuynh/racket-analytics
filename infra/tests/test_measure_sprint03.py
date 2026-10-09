@@ -391,7 +391,7 @@ NEW_ACC = "7a8b9c0d-1e2f-4a3b-8c5d-6e7f8a9b0c1d"
 def _judge(live, **over):
     kwargs = {
         "deleted_id": ACC,
-        "status": 204,
+        "status": 202,
         "old_session": 401,
         "back": True,
         "items": [],
@@ -439,7 +439,7 @@ def test_a_new_account_after_deletion_passes() -> None:
     assert step == {
         "ok": True,
         "problems": [],
-        "status": 204,
+        "status": 202,
         "old_session": 401,
         "items_after_sign_in": [],
         "deleted_id": ACC,
