@@ -10,7 +10,7 @@ import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 import yaml
@@ -54,7 +54,7 @@ def floor_before_suites(steps: list[dict[str, Any]]) -> None:
 @then("the job checks the store's write throughput again before the red_until rows")
 def floor_before_red_until(steps: list[dict[str, Any]]) -> None:
     suites = _first(steps, "run_with_budget.py")
-    red_until = next(i for i, s in enumerate(steps) if "red_until" in s.get("name", ""))
+    red_until = _first(steps, '-m "red_until and not nightly"')
     assert any(suites < i < red_until for i in _floor_steps(steps)), _floor_steps(steps)
 
 
@@ -106,7 +106,9 @@ def kept_always(steps: list[dict[str, Any]]) -> None:
         if "logs --no-color objectstore > reports/objectstore.log" in s.get("run", "")
         and s.get("if") == "always()"
     )
-    upload = next(i for i, s in enumerate(steps) if s.get("with", {}).get("name") == "integration-reports")
+    upload = next(
+        i for i, s in enumerate(steps) if s.get("with", {}).get("name") == "integration-reports"
+    )
     assert keep < upload
     assert steps[upload]["with"]["path"] == "reports/"
     assert steps[upload].get("if") == "always()"
@@ -117,15 +119,15 @@ def kept_always(steps: list[dict[str, Any]]) -> None:
 class _FakeS3(BaseHTTPRequestHandler):
     """Stands in for the store: takes any PUT/DELETE and remembers the body sizes."""
 
-    sizes: list[int] = []
+    sizes: ClassVar[list[int]] = []
 
-    def do_PUT(self) -> None:  # noqa: N802 (http.server API)
+    def do_PUT(self) -> None:
         length = int(self.headers.get("Content-Length", "0"))
         self.sizes.append(len(self.rfile.read(length)))
         self.send_response(200)
         self.end_headers()
 
-    def do_DELETE(self) -> None:  # noqa: N802
+    def do_DELETE(self) -> None:
         self.send_response(204)
         self.end_headers()
 
