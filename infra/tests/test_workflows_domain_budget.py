@@ -4,7 +4,8 @@ The domain suite (1,217 tests, default Hypothesis profile) took 8.9 s of test ti
 about 1 s of interpreter and plugin start-up on ubuntu-24.04, so the 10 s budget stopped it
 with exit 124 although every test passed (runs 37914004993, 37919451474). The suite runs on
 every runner core with pytest-xdist, as the integration job already does (C-32). The budget
-itself, the paths and the default profile stay as they are.
+itself, the paths and the default profile stay as they are; idle workers steal
+queued tests so the Hypothesis-heavy modules do not end the run on one worker.
 """
 
 from __future__ import annotations
@@ -41,3 +42,6 @@ def test_the_domain_step_uses_one_xdist_worker_per_runner_core() -> None:
     run = domain_step()["run"]
     assert "run_with_budget.py" in run
     assert " -n auto " in run
+    # Work stealing: the ~30 Hypothesis tests hold most of the time and sit in a few modules,
+    # so the default batch hand-out left one worker running them alone (run 37921213218).
+    assert " --dist worksteal " in run

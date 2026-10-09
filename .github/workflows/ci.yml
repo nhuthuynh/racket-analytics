@@ -138,10 +138,11 @@ jobs:
         run: uv run --no-sync pytest -q --collect-only -m unit
       - name: Domain unit suite < 10 s (NFR-073)
         run: |
-          # pytest-xdist, one worker per runner core (as in the integration job, C-32): serially the
-          # suite passed in 8.9 s but start-up pushed it past 10 s (CI-DOMAIN-BUDGET, ST-048.md).
+          # pytest-xdist, one worker per runner core (as in the integration job, C-32), with work
+          # stealing so the Hypothesis-heavy modules spread over all workers. Serially the suite
+          # passed in 8.9 s but start-up pushed it past 10 s (CI-DOMAIN-BUDGET, ST-048.md).
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
-          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -n auto -m "unit and not red_until" $DOMAIN_TEST_PATHS
+          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -n auto --dist worksteal -m "unit and not red_until" $DOMAIN_TEST_PATHS
       - name: Property tests, Hypothesis ci profile (>= 1,000 examples, ST-004)
         env:
           HYPOTHESIS_PROFILE: ci
