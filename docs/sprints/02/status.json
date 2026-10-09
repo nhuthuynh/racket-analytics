@@ -759,15 +759,15 @@
   "goal_verdict": "NOT met: 11 of 12 metrics met (verifier round 3); G02-11 fails (verifier 2 open; EM recount at close 14 open)",
   "carry_over_to_sprint_03": "docs/sprints/02/sprint-report.md §8",
   "nightly": {
-    "run_date": "2026-10-08",
-    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/37756684702",
-    "commit": "68df5d746f5009784c4fbbc440dbdc887f0f7ce6",
+    "run_date": "2026-10-09",
+    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/37912384576",
+    "commit": "bfe6f334089834a03a99ba7157eda05afd5adcae",
     "oracle": {
       "status": "passed",
       "sequences": 100000,
       "disagreements": 0,
-      "seed": 20261008,
-      "seconds": 63.339,
+      "seed": 20261009,
+      "seconds": 31.927,
       "shortest": null,
       "passed": true,
       "job": "success"
