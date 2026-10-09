@@ -136,10 +136,14 @@ jobs:
       # measure test time, not a cold cache (run 37298471332: 11.1 s cold vs 6.8 s warm).
       - name: Warm the bytecode cache (collect only, not budgeted)
         run: uv run --no-sync pytest -q --collect-only -m unit
+      # CI-DOMAIN-BUDGET (ADR 0049): runs 37882972340 and 37918385248 hit 10 s with every test
+      # passing; ~80% of the suite is Hypothesis generation on the default profile in one process.
+      # Parallel workers (one per core, work stealing); same budget, selection and profile, and the
+      # budget still times start-up and collection. The wall time is kept as evidence.
       - name: Domain unit suite < 10 s (NFR-073)
         run: |
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
-          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m "unit and not red_until" $DOMAIN_TEST_PATHS
+          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" --json ../reports/budget/domain-unit.json -- uv run --no-sync pytest -q -n auto --dist worksteal -m "unit and not red_until" $DOMAIN_TEST_PATHS
       - name: Property tests, Hypothesis ci profile (>= 1,000 examples, ST-004)
         env:
           HYPOTHESIS_PROFILE: ci
@@ -152,7 +156,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-unit
-          path: reports/unit.xml
+          path: |
+            reports/unit.xml
+            reports/budget/domain-unit.json
           if-no-files-found: warn
 
   drill-lint:

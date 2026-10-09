@@ -76,7 +76,9 @@ def the_suite() -> None:
 @when("the budgeted domain step's command from ci.yml runs")
 def run_ci_command(world: dict[str, Any], tmp_path: Path) -> None:
     junit = tmp_path / "ci.xml"
-    res = run_in_backend([*command(), "-p", "no:cacheprovider", f"--junitxml={junit}"])
+    # `-v` after the step's `-q` restores the default verbosity, where xdist names its workers.
+    extra = ["-v", "-p", "no:cacheprovider", f"--junitxml={junit}"]
+    res = run_in_backend([*command(), *extra])
     world["ci"] = (res, junit)
 
 
@@ -92,7 +94,7 @@ def run_serial(world: dict[str, Any], tmp_path: Path) -> None:
 @then("the step ran on more than one worker")
 def more_than_one_worker(world: dict[str, Any]) -> None:
     res, _ = world["ci"]
-    m = re.search(r"\b(\d+) workers \[\d+ items\]", res.stdout)
+    m = re.search(r"\bcreated: (\d+)/\d+ workers", res.stdout)
     assert m, res.stdout[-2000:]
     assert int(m.group(1)) > 1, m.group(0)
 
