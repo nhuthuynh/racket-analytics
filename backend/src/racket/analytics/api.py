@@ -15,7 +15,6 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from racket.analytics import service
-from racket.analytics.snapshot import DEFAULT_MAX_INTERVAL_WIDTH
 from racket.matches import public as matches
 from racket.platform.db import get_session
 from racket.platform.errors import NotFound
@@ -74,7 +73,7 @@ def get_stats(match_id: OwnedMatchId, session: DbSession) -> JSONResponse:
         "metric_def_version": found.snapshot.key.metric_def_version,
         "unofficial": bool(found.sheet.get("unofficial", True)),
         "label": found.sheet.get("label"),
-        "low_sample_rule": {"max_interval_width": DEFAULT_MAX_INTERVAL_WIDTH},
+        "low_sample_rule": dict(dictionary.low_sample),  # ADR 0041: one source
         "metrics": found.snapshot.published_view(dictionary),
     }
     return JSONResponse(body, headers=NO_STORE)
