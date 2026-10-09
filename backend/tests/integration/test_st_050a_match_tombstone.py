@@ -14,12 +14,17 @@ unknown upload (not the owner's 410 for an expired one).
 
 from __future__ import annotations
 
+import asyncio
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
+from sqlalchemy.orm import Session
 
+from racket.matches import public as matches_port
+from racket.video_ingest.repository import MediaRepository, UploadRepository
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support import tus
@@ -140,3 +145,66 @@ def test_st_050a_a_receiving_upload_of_a_deleted_match_is_expired_and_answers_40
     patch = api.run(tus.patch(client, upload, 100, chunk))
     assert _strip(patch) == _strip(api.run(tus.patch(client, missing, 100, chunk)))
     assert patch.status_code == 404
+
+
+def _blocks_someone(engine: Any, pid: int) -> bool:
+    with engine.connect() as conn:
+        return bool(
+            conn.execute(
+                sa.text(
+                    "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'"
+                    " AND :pid = ANY(pg_blocking_pids(pid))"
+                ),
+                {"pid": pid},
+            ).scalar_one()
+        )
+
+
+def test_st_050a_delete_racing_the_completing_patch_neither_deadlocks_nor_fails(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    """PE-050a-01 / QA-50a-R1-01: the completing tus PATCH locks the upload row (NOWAIT), then
+    the match row (``_complete`` -> ``mark_uploaded``). DELETE must take them in the same order,
+    or the two deadlock and Postgres aborts one side (a 500). Here the PATCH's transaction is
+    replayed with the real repository calls and held between its two locks while DELETE runs."""
+    client = api.as_user("ivy")
+    match_id = api.run(sb.create_doubles(client, "ST-050a race"))
+    upload = api.run(tus.start(client, match_id, length=1000))
+    upload_id = uuid.UUID(upload.url.rsplit("/", 1)[1])
+    outcome: dict[str, Any] = {}
+
+    def completing_patch() -> None:
+        with Session(committed_db) as session:
+            try:
+                pid = session.execute(sa.text("SELECT pg_backend_pid()")).scalar_one()
+                row = UploadRepository(session).lock_nowait(upload_id)
+                assert row is not None
+                deadline = time.monotonic() + 10
+                while not _blocks_someone(committed_db, pid):  # DELETE now waits on a lock
+                    assert time.monotonic() < deadline, "DELETE never waited on the PATCH"
+                    time.sleep(0.01)
+                asset_id = MediaRepository(session).add_asset(
+                    owner_id=row.owner_id, match_id=row.match_id,
+                    object_key=row.object_key, size_bytes=row.length,
+                )  # fmt: skip
+                matches_port.mark_uploaded(session, row.match_id, row.owner_id, asset_id)
+                session.commit()
+                outcome["patch"] = "ok"
+            except Exception as exc:  # noqa: BLE001 - the outcome is the assertion
+                session.rollback()
+                outcome["patch"] = type(getattr(exc, "orig", exc)).__name__
+
+    async def race() -> int:
+        deleted, _ = await asyncio.gather(
+            client.request(
+                *st.statscontract.path("delete_match", match_id=match_id),
+                json=st.statscontract.CONFIRM_BODY,
+            ),
+            asyncio.to_thread(completing_patch),
+        )
+        return deleted.status_code
+
+    outcome["delete"] = api.run(race())
+
+    assert outcome == {"patch": "ok", "delete": 202}
+    assert st.request(api, "ivy", "match", match_id=match_id).status_code == 404
