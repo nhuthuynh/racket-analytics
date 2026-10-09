@@ -66,9 +66,11 @@ class SnapshotRepository:
                     "computed_at": insert.excluded.computed_at,
                 },
                 where=metric_snapshots.c.sheet_version < insert.excluded.sheet_version,
-            )
+            ).returning(metric_snapshots.c.sheet_version)
         )
-        return bool(result.rowcount)  # type: ignore[attr-defined]
+        # RETURNING, not rowcount: a Core insert run through the ORM Session reports
+        # rowcount -1, and a skipped conflict update returns no row.
+        return result.first() is not None
 
     def delete_for_match(self, match_id: uuid.UUID) -> int:
         result = self.session.execute(
