@@ -7,7 +7,9 @@ match; a body with any key besides ``confirm`` is 422 ``unknown_field`` and chan
 Then Ivy deletes: 202 ``{deleted, purge_due_by}`` with ``purge_due_by`` = the stored
 ``deleted_at`` + 7 days and ``Cache-Control: no-store``; the match, stats, evidence, score
 sheet, video, rally media and history answer 404 and the list omits it; a scorebook command and
-a second DELETE get the same 404 as a match that never existed.
+a second DELETE get the same 404 as a match that never existed. A receiving upload of the
+deleted match is expired under its row lock and its tus HEAD and PATCH answer the 404 of an
+unknown upload (not the owner's 410 for an expired one).
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import sqlalchemy as sa
 
 from tests.support import scorebook as sb
 from tests.support import stats as st
+from tests.support import tus
 from tests.support.api import ApiDriver
 
 
@@ -111,3 +114,29 @@ def test_st_050a_delete_is_202_and_every_read_answers_404_at_once(
     command = api.run(sb.command(client, "tag", version=version, body=tag, match_id=match_id))
     assert command.status_code == 404, command.text
     assert _strip(st.delete_match(api, "ivy", match_id)) == _absent(api, "ivy")
+
+
+def test_st_050a_a_receiving_upload_of_a_deleted_match_is_expired_and_answers_404(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    client = api.as_user("ivy")
+    match_id = api.run(sb.create_doubles(client, "ST-050a upload"))
+    upload = api.run(tus.start(client, match_id, length=1000))
+    sent = api.run(tus.patch(client, upload, 0, tus.video_bytes(100)))
+    assert sent.status_code == 204, sent.text
+    missing = tus.Upload(url=upload.url.rsplit("/", 1)[0] + f"/{uuid.uuid4()}", length=1)
+
+    assert st.delete_match(api, "ivy", match_id).status_code == 202
+
+    with committed_db.connect() as conn:
+        status, file_name = conn.execute(
+            sa.text("SELECT status, file_name FROM upload_sessions WHERE match_id = :id"),
+            {"id": match_id},
+        ).one()
+    assert (status, file_name) == ("expired", None)
+    head = api.run(tus.head(client, upload))
+    assert (head.status_code, head.content) == (404, api.run(tus.head(client, missing)).content)
+    chunk = tus.video_bytes(100)
+    patch = api.run(tus.patch(client, upload, 100, chunk))
+    assert _strip(patch) == _strip(api.run(tus.patch(client, missing, 100, chunk)))
+    assert patch.status_code == 404
