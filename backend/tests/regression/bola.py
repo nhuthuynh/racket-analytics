@@ -92,8 +92,12 @@ MATCH_ID_ROUTES_03 = {
 }
 # The Sprint 3 routes already served, whose probes therefore join MATRIX and count as covered
 # (one TCR row per story: ST-046b adds the stats route, TCR row 2026-10-09 in
-# docs/sprints/03/decisions/ST-046b.md). The owner's empty match answers 200 (every metric n = 0).
-SERVED_03: frozenset[RouteKey] = frozenset({("GET", "/matches/{match_id}/stats")})
+# docs/sprints/03/decisions/ST-046b.md; ST-050a adds the match DELETE, TCR row 2026-10-09 in
+# docs/sprints/03/decisions/ST-050a.md). The owner's empty match answers 200 (every metric n = 0);
+# her DELETE answers 202, so the matrix runs the owner's positive control after the attacker.
+SERVED_03: frozenset[RouteKey] = frozenset(
+    {("GET", "/matches/{match_id}/stats"), ("DELETE", "/matches/{match_id}")}
+)
 _PROBES += [Probe(m, t, "match", MATCH_ID_ROUTES_03[(m, t)]) for (m, t) in sorted(SERVED_03)]
 MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
