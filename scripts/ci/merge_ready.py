@@ -56,6 +56,12 @@ def _is_cancelled(wr: dict[str, Any]) -> bool:
     return wr.get("conclusion") == CANCELLED
 
 
+def _currency(wr: dict[str, Any]) -> tuple[bool, int]:
+    """Orders the runs of one workflow and event: any run that was not cancelled beats any
+    cancelled one, then the newer (higher id) run wins."""
+    return (not _is_cancelled(wr), wr["id"])
+
+
 def current_runs(workflow_runs: Sequence[dict[str, Any]]) -> dict[tuple[Any, Any], dict[str, Any]]:
     """The current workflow run per (workflow, event) on this SHA: the newest run that was not
     cancelled, or the newest run when every run was cancelled. A concurrency group can cancel
@@ -64,8 +70,7 @@ def current_runs(workflow_runs: Sequence[dict[str, Any]]) -> dict[tuple[Any, Any
     current: dict[tuple[Any, Any], dict[str, Any]] = {}
     for wr in workflow_runs:
         key = (wr.get("workflow_id"), wr.get("event"))
-        rank = (not _is_cancelled(wr), wr["id"])
-        if key not in current or rank > (not _is_cancelled(current[key]), current[key]["id"]):
+        if key not in current or _currency(wr) > _currency(current[key]):
             current[key] = wr
     return current
 
