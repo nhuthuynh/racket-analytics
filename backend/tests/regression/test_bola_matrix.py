@@ -3,6 +3,10 @@ AQS/SEC-09, AQS/SEC-03). Never deleted.
 
 User B (Carlos) gets the same 404 as for a missing resource on every route that takes one of
 user A's (Ivy's) resource IDs, and the endpoint inventory has no uncovered route.
+
+The attacker calls first and the owner's positive control runs last, so a state-changing route
+(``DELETE /matches/{match_id}``) is probed against the intact resource (ST-050a, TCR row
+2026-10-09 in docs/sprints/03/decisions/ST-050a.md).
 """
 
 from __future__ import annotations
@@ -74,11 +78,11 @@ async def test_other_user_gets_the_same_404_as_for_a_missing_resource(
 ) -> None:
     carlos, ivy = users["carlos"], users["ivy"]
 
-    owner = await ivy.request(probe.method, _url(probe, ivy_resources, False), **probe.kwargs())
     attacker = await carlos.request(
         probe.method, _url(probe, ivy_resources, False), **probe.kwargs()
     )
     missing = await carlos.request(probe.method, _url(probe, ivy_resources, True), **probe.kwargs())
+    owner = await ivy.request(probe.method, _url(probe, ivy_resources, False), **probe.kwargs())
 
     assert owner.status_code not in (404, 405), f"positive control failed: {owner.status_code}"
     assert attacker.status_code == 404

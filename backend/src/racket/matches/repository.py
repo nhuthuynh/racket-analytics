@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -37,6 +38,8 @@ matches = sa.Table(
     # The scorebook's optimistic lock and match length (ST-026; read by its repository only).
     sa.Column("best_of", sa.SmallInteger(), nullable=False, server_default="3"),
     sa.Column("version", sa.Integer(), nullable=False, server_default="0"),
+    # Tombstone (ST-050): set by a deletion; every read filters it out (deletion-and-purge §3.1).
+    sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
 )
 
 match_participants = sa.Table(
@@ -51,7 +54,7 @@ match_participants = sa.Table(
 
 # ``participants`` is a value of the aggregate, not a column: the repository saves and loads it.
 mapper_registry.map_imperatively(
-    Match, matches, exclude_properties=["participants", "best_of", "version"]
+    Match, matches, exclude_properties=["participants", "best_of", "version", "deleted_at"]
 )
 
 
@@ -100,13 +103,13 @@ class MatchRepository:
     def live(match_id: object) -> tuple[Any, ...]:
         """The filter of a match that is still there (one place for every read, R1)."""
         value = match_id.value if isinstance(match_id, MatchId) else match_id
-        return (matches.c.id == value,)
+        return (matches.c.id == value, matches.c.deleted_at.is_(None))
 
     def get_owned(
         self, match_id: MatchId, owner_id: OwnerId, *, for_update: bool = False
     ) -> Match | None:
         """The ownership-loading pattern ``WHERE id = :id AND owner_id = :me`` (R1)."""
-        query = sa.select(Match).where(matches.c.id == match_id, matches.c.owner_id == owner_id)
+        query = sa.select(Match).where(*self.live(match_id), matches.c.owner_id == owner_id)
         if for_update:
             query = query.with_for_update()
         match = self.session.execute(query).scalar_one_or_none()
@@ -115,8 +118,14 @@ class MatchRepository:
     def list_for_owner(self, owner_id: OwnerId, limit: int) -> list[Match]:
         query = (
             sa.select(Match)
-            .where(matches.c.owner_id == owner_id)
+            .where(matches.c.owner_id == owner_id, matches.c.deleted_at.is_(None))
             .order_by(matches.c.created_at.desc(), matches.c.id)
             .limit(limit)
         )
         return self._with_participants(list(self.session.execute(query).scalars()))
+
+    def tombstone(self, match_id: MatchId, at: datetime) -> None:
+        """Hide the match (the caller holds its row lock from ``get_owned(for_update=True)``)."""
+        self.session.execute(
+            sa.update(matches).where(*self.live(match_id)).values(deleted_at=at, updated_at=at)
+        )

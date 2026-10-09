@@ -10,6 +10,10 @@ so a new table is caught; risk row in sprint-03 §10) and no object the database
 match is left in the store.
 
 Written red first (QA-ACC-3): ``red_until`` ST-050.
+
+ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the module marker is lifted; the
+rows it turned green (the 404 for someone else, no typed confirmation) join the per-PR gate. The
+two rows that run the purge stay ``red_until`` ST-050b, each marked on its own.
 """
 
 from __future__ import annotations
@@ -21,8 +25,6 @@ import pytest
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 
 def _reads(match_id: str, rally_id: str) -> list[tuple[str, str]]:
@@ -71,6 +73,7 @@ def test_it_03_06_no_typed_confirmation_deletes_nothing(
     assert _listed(api, "ivy", match_id)
 
 
+@pytest.mark.red_until(story="ST-050b")
 def test_it_03_06_delete_hides_at_once_and_the_purge_leaves_nothing(
     api: ApiDriver, committed_db: Any
 ) -> None:
@@ -95,6 +98,7 @@ def test_it_03_06_delete_hides_at_once_and_the_purge_leaves_nothing(
     assert st.keys_still_stored(keys) == []
 
 
+@pytest.mark.red_until(story="ST-050b")
 def test_it_03_06_the_purge_leaves_other_matches_alone(api: ApiDriver, committed_db: Any) -> None:
     gone = st.tagged_example(api, "ivy", "IT-03-06 gone")
     kept = st.tagged_example(api, "ivy", "IT-03-06 kept")

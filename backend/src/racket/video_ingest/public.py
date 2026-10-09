@@ -26,6 +26,8 @@ __all__ = [
     "MediaSummary",
     "PendingUpload",
     "UploadStatus",
+    "close_for_deleted_match",
+    "lock_upload_of_match",
     "media_link",
     "media_summary",
 ]
@@ -124,3 +126,24 @@ def media_link(
         content_type=ORIGINAL_CONTENT_TYPE,  # QA-RV1-05: also for originals stored before
     )
     return MediaLink(policy.check(url, session_token=session_token), policy.ttl_seconds)
+
+
+def lock_upload_of_match(session: Session, match_id: uuid.UUID) -> None:
+    """Take the match's upload row lock, held to the caller's commit. The global lock order is
+    upload row, then match row (deletion-and-purge.md §3.1): the completing PATCH
+    (``write_chunk`` -> ``mark_uploaded``), the upload creation, the probe refusal
+    (``ProbeStage._reject``) and ``DELETE /matches/{id}`` all take them so; any new transaction
+    that touches both must too, or it can deadlock with them (PE-050a-01, PE-050a-05). Waits
+    for a PATCH in flight; a PATCH arriving later gets its 409."""
+    UploadRepository(session).for_match(match_id, for_update=True)
+
+
+def close_for_deleted_match(session: Session, match_id: uuid.UUID, at: datetime) -> None:
+    """The match was deleted (ST-050; deletion-and-purge.md §3.1 step 4): a receiving upload
+    is expired and forgets its file name, under the upload row lock, so a racing PATCH (which
+    takes the same lock) stores nothing more. Its bytes are left for the purge."""
+    upload = UploadRepository(session).for_match(match_id, for_update=True)
+    if upload is not None and upload.status is UploadStatus.RECEIVING:
+        upload.status = UploadStatus.EXPIRED
+        upload.file = None
+        upload.updated_at = at

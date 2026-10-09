@@ -12,8 +12,9 @@ Written red first (QA-ACC-3): ``red_until`` ST-046 (the first Sprint 3 route).
 The file-level marker became one marker per row (ST-046b, TCR row 2026-10-09 in
 docs/sprints/03/decisions/ST-046b.md): the stats row passes and joins the per-PR gate.
 The evidence row joins it with ST-047-API (TCR row 2026-10-09 in
-docs/sprints/03/decisions/ST-047-API.md); the inventory test now waits on ST-050 only (DELETE is
-not served yet).
+docs/sprints/03/decisions/ST-047-API.md). ST-050a (TCR row in
+docs/sprints/03/decisions/ST-050a.md): the DELETE row passes and joins the per-PR gate, and so
+does the inventory test, as every route it needs is now served.
 """
 
 from __future__ import annotations
@@ -29,12 +30,10 @@ from tests.support import stats as st
 from tests.support.api import ApiDriver
 
 # One marker per row naming the story that serves the route (as IT-03-12 does): the stats row
-# joins the gate with ST-046b, the evidence row with ST-047-API (TCR rows 2026-10-09 in
-# docs/sprints/03/decisions/); DELETE stays red until ST-050, so the red-until report has no
+# joins the gate with ST-046b, the evidence row with ST-047-API, the DELETE row with ST-050a
+# (TCR rows in docs/sprints/03/decisions/); no row waits any more, so the red-until report has no
 # stale row.
-WAITS_ON = {
-    ("DELETE", "/matches/{match_id}"): pytest.mark.red_until(story="ST-050"),
-}
+WAITS_ON: dict[tuple[str, str], pytest.MarkDecorator] = {}
 ROUTES = [
     pytest.param(
         key, kwargs, id=f"{key[0]} {key[1]}", marks=[WAITS_ON[key]] if key in WAITS_ON else []
@@ -71,7 +70,6 @@ def test_it_03_05_carlos_gets_the_missing_resource_404_on_every_sprint_3_route(
     assert owner.status_code not in (404, 405), f"positive control: {owner.status_code}"
 
 
-@pytest.mark.red_until(story="ST-050")  # the DELETE route is not served yet
 def test_it_03_05_every_match_scoped_and_label_route_has_a_probe(api: ApiDriver) -> None:
     served = {
         k

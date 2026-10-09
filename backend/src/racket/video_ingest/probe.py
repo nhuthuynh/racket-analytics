@@ -264,12 +264,15 @@ class ProbeStage:
         asset and session rows go (so a new upload can start) in the job's transaction; the
         original object is deleted only after that transaction commits (``after_commit``,
         idempotent, retried by the runner). A rollback (lost lease, commit failure) therefore
-        keeps both the rows and the bytes, and a re-run refuses the file again (PE-R3-02)."""
+        keeps both the rows and the bytes, and a re-run refuses the file again (PE-R3-02).
+        The upload row goes before the match row is locked: the global lock order is upload
+        row, then match row (``lock_upload_of_match``), as in ``DELETE /matches/{id}``, or the
+        two deadlock (PE-050a-05)."""
         match_id = ctx.key.match_id
+        UploadRepository(ctx.session).delete_for_match(match_id)
         matches.reject_video(
             ctx.session, match_id, asset.owner_id, rejection.value, datetime.now(UTC)
         )
-        UploadRepository(ctx.session).delete_for_match(match_id)
         MediaRepository(ctx.session).delete_asset(asset.id)
         ctx.session.flush()
         object_key = asset.object_key

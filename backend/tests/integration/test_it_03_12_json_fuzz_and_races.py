@@ -17,6 +17,10 @@ that row really waits on (review round 1, F1): the match delete rows and the rac
 (``DELETE /matches/{id}``), the account delete rows on ST-051 (``DELETE /me``), the label rows on
 ST-052 (the labeller seam and the label route). Each story removes the markers of its own rows. A
 DELETE answered 405 (the route is not built yet) is never counted as an L11 refusal.
+
+ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the match delete rows and the race
+pass and join the per-PR gate; their ``delete_match`` marker is removed (a row with no entry in
+``WAITS_ON`` carries no marker).
 """
 
 from __future__ import annotations
@@ -35,7 +39,6 @@ from tests.support import stats as st
 from tests.support.api import ApiDriver
 
 WAITS_ON = {
-    "delete_match": pytest.mark.red_until(story="ST-050"),
     "delete_account": pytest.mark.red_until(story="ST-051"),
     "label": pytest.mark.red_until(story="ST-052"),
 }
@@ -78,7 +81,7 @@ def _rows(*extra: tuple[Any, str]) -> list[Any]:
     of the story its route waits on."""
     out = []
     for field in sorted(FIELDS):
-        mark = WAITS_ON[FIELDS[field][0]]
+        mark = WAITS_ON.get(FIELDS[field][0], [])
         if not extra:
             out.append(pytest.param(field, marks=mark, id=field))
         out += [pytest.param(field, v, marks=mark, id=f"{field}-{i}") for v, i in extra]
@@ -205,7 +208,6 @@ def test_it_03_12_any_json_value_is_never_a_5xx(
     check()
 
 
-@WAITS_ON["delete_match"]
 def test_it_03_12_delete_racing_a_tag_ends_in_one_consistent_outcome(api: ApiDriver) -> None:
     match_id = sb.ready_match(api, "ivy", "IT-03-12 race")
     client = api.as_user("ivy")
