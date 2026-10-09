@@ -40,7 +40,7 @@ async function loaded(a: StatsApi = api()) {
   return a;
 }
 
-describe('D-01 states (E2E-03-08)', () => {
+describe('D-01 states (E2E-03-09)', () => {
   it('error: one alert with fixed words and the reference, a Try again button, and no numbers', async () => {
     const a = api({ stats: vi.fn().mockRejectedValueOnce(new ApiError(503, 'unavailable', REF)).mockResolvedValue(stats()) });
     render(<StatsDashboard match={match} rallyCount={14} api={a} />);
@@ -172,7 +172,7 @@ describe('D-01 cards (FR-100, FR-101, FR-102, FR-055)', () => {
   });
 });
 
-describe('E-01 "Show me" panel (ST-047; E2E-03-02, E2E-03-08)', () => {
+describe('E-01 "Show me" panel (ST-047; E2E-03-02, E2E-03-09)', () => {
   it('error: an alert in the panel with Try again and no rally links; Try again lists them', async () => {
     const a = await loaded(api({
       evidence: vi.fn().mockRejectedValueOnce(new ApiError(503, 'unavailable', REF)).mockResolvedValue(evidence()),

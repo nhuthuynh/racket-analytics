@@ -1,8 +1,8 @@
 // Goal round 1 (G03-06, G03-07, G03-10), found on the live Compose stack over HTTPS with Chrome for
-// Testing 141 (E2E-03-06, E2E-03-08, E2E-03-01):
+// Testing 141 (E2E-03-06, E2E-03-09, E2E-03-01):
 // 1. targets: the inline "score sheet" link of D-01's HAX sentence measured 104x21; it needs a
 //    24 px target (NFR-028; the E2E target check has no inline exception);
-// 2. E2E-03-08 loading: the busy region was in the server HTML, so it was visible before the
+// 2. E2E-03-09 loading: the busy region was in the server HTML, so it was visible before the
 //    browser had asked for the numbers ("D-01 never asked the API for its numbers"). The server
 //    HTML reserves the same space without claiming to be busy; the region turns busy when the
 //    request starts.
@@ -42,7 +42,7 @@ describe('D-01 HAX sentence link target (G03-10 b)', () => {
   });
 });
 
-describe('D-01 loading only once the request has started (E2E-03-08)', () => {
+describe('D-01 loading only once the request has started (E2E-03-09)', () => {
   it('the server HTML reserves the cards but is neither busy nor a status', () => {
     const html = renderToString(<StatsDashboard match={match} rallyCount={14} api={{ stats: vi.fn(), evidence: vi.fn() }} />);
     expect(html).toContain('stat-card--reserved');

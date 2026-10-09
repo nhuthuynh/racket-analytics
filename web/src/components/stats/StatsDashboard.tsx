@@ -46,7 +46,7 @@ export function StatsDashboard({
   const hasVideo = match.status === 'video_received';
   const empty = !hasVideo || rallyCount === 0;
   // 'idle' in the server HTML: the space is reserved, but nothing claims to load until the browser
-  // has asked (E2E-03-08 checks that the busy region means a request is under way).
+  // has asked (E2E-03-09 checks that the busy region means a request is under way).
   const [state, setState] = useState<State>({ kind: 'idle' });
   const [open, setOpen] = useState<OpenEvidence | null>(null);
   const retry = useRef<HTMLButtonElement>(null);
