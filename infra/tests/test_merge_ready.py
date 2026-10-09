@@ -460,3 +460,131 @@ def test_an_empty_api_url_falls_back_to_github(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("GITHUB_API_URL", "")
     assert mod.main(["--repo", REPO, "--pr", "7", "--sha", HEAD_SHA]) == 2
     assert seen == [f"https://api.github.com/repos/{REPO}/pulls/7"]
+
+
+# ============ CI-MERGE-READY-CANCELLED: a run the concurrency group cancelled is not current
+# PR #49 at 6342f36: two CI pull_request runs started in the same second; the higher id was
+# cancelled before any job started (a suite with no check runs), the lower id is all green.
+# Rule: a cancelled workflow run is never current while a non-cancelled run of the same
+# (workflow, event) exists on the SHA; among those the newest counts, so a newer failed or
+# in-progress run still wins. If every run is cancelled, say so. Negative cases first.
+def cancelled(suite_id: int, run_id: int, **kw: Any) -> dict[str, Any]:
+    return workflow_run(suite_id, run_id, conclusion="cancelled", **kw)
+
+
+@pytest.mark.unit
+def test_a_newer_failed_run_beats_an_older_green_one_even_with_a_cancelled_newest() -> None:
+    runs = green_runs() + suite(red_suite(), 2, 100)
+    wruns = [
+        workflow_run(1, 1, conclusion="success"),
+        workflow_run(2, 2, conclusion="failure"),
+        cancelled(3, 3),
+    ]
+    reasons = evaluate(runs=runs, wruns=wruns)
+    assert "check 'ci-gate' is failure" in reasons
+    assert not any("no ci-gate" in r for r in reasons)
+
+
+@pytest.mark.unit
+def test_a_newer_in_progress_run_blocks_despite_an_older_green_one() -> None:
+    runs = [*green_runs(), check_run("ci-gate", None, "in_progress", run_id=200, suite_id=2)]
+    wruns = [workflow_run(1, 1, conclusion="success"), workflow_run(2, 2, status="in_progress")]
+    assert "check 'ci-gate' is in_progress" in evaluate(runs=runs, wruns=wruns)
+
+
+@pytest.mark.unit
+def test_a_newer_queued_run_without_check_runs_yet_blocks() -> None:
+    wruns = [workflow_run(1, 1, conclusion="success"), workflow_run(2, 2, status="queued")]
+    assert any("no ci-gate check run" in r for r in evaluate(wruns=wruns))
+
+
+@pytest.mark.unit
+def test_all_runs_cancelled_is_reported_explicitly() -> None:
+    wruns = [cancelled(1, 1) | {"name": "CI"}, cancelled(2, 2) | {"name": "CI"}]
+    reasons = evaluate(runs=[], wruns=wruns)
+    assert f"all CI runs on {HEAD_SHA} were cancelled" in reasons
+
+
+@pytest.mark.unit
+def test_all_runs_cancelled_with_leftover_check_runs_still_blocks() -> None:
+    runs = red_suite()  # suite 1 cancelled after some jobs ran
+    wruns = [cancelled(1, 1) | {"name": "CI"}, cancelled(2, 2) | {"name": "CI"}]
+    reasons = evaluate(runs=runs, wruns=wruns)
+    assert f"all CI runs on {HEAD_SHA} were cancelled" in reasons
+
+
+@pytest.mark.unit
+def test_a_cancelled_run_of_another_event_does_not_rescue_a_failure() -> None:
+    runs = red_suite() + suite(green_runs(), 2, 100)
+    wruns = [workflow_run(1, 1, conclusion="failure"), cancelled(2, 2, event="push")]
+    assert "check 'ci-gate' is failure" in evaluate(runs=runs, wruns=wruns)
+
+
+@pytest.mark.unit
+def test_a_rerun_job_that_failed_in_the_green_suite_blocks() -> None:
+    runs = [*green_runs(), check_run("ci-gate", "failure", run_id=99, suite_id=1)]
+    wruns = [workflow_run(1, 1, conclusion="failure"), cancelled(2, 2)]
+    assert "check 'ci-gate' is failure" in evaluate(runs=runs, wruns=wruns)
+
+
+@pytest.mark.unit
+def test_a_newer_cancelled_run_does_not_supersede_an_older_green_one() -> None:
+    """The exact PR #49 shape: newer run cancelled with no check runs, older run green."""
+    wruns = [workflow_run(1, 1, conclusion="success"), cancelled(2, 2)]
+    assert evaluate(wruns=wruns) == []
+
+
+@pytest.mark.unit
+def test_a_successful_rerun_of_a_job_in_the_green_suite_counts() -> None:
+    runs = [
+        *[r for r in green_runs() if r["name"] != "ci-gate"],
+        check_run("ci-gate", "failure", run_id=4, suite_id=1),
+        check_run("ci-gate", "success", run_id=99, suite_id=1),  # re-run of the job
+    ]
+    wruns = [workflow_run(1, 1, conclusion="success"), cancelled(2, 2)]
+    assert evaluate(runs=runs, wruns=wruns) == []
+
+
+@pytest.mark.unit
+def test_an_older_cancelled_run_is_still_superseded_by_a_newer_green_one() -> None:
+    runs = red_suite() + suite(green_runs(), 2, 100)
+    wruns = [cancelled(1, 1), workflow_run(2, 2, conclusion="success")]
+    assert evaluate(runs=runs, wruns=wruns) == []
+
+
+@pytest.mark.unit
+def test_regression_pr_49_head_with_a_concurrency_cancelled_newer_run_is_ready_on_ci() -> None:
+    """Real check and workflow runs of PR #49 at 6342f36 (fetched 2026-10-09): CI run
+    37934889373 (cancelled, suite 102781271159, no check runs) and 37934889367 (all green)."""
+    data = json.loads((FIXTURES / "pr49_6342f36_runs.json").read_text())
+    reasons = load().check_reasons(data["check_runs"], data["head_sha"], data["workflow_runs"])
+    assert reasons == []
+
+
+@pytest.mark.integration
+def test_script_reports_all_cancelled_over_http_and_exits_1() -> None:
+    stub = GitHubStub(
+        check_runs=[],
+        workflow_runs=[cancelled(1, 1) | {"name": "CI"}, cancelled(2, 2) | {"name": "CI"}],
+    )
+    with serve(stub):
+        res = run_script(stub)
+    assert res.returncode == 1, res.stdout + res.stderr
+    assert f"all CI runs on {HEAD_SHA} were cancelled" in res.stdout
+
+
+@pytest.mark.integration
+def test_script_allows_pr_49_shape_over_http() -> None:
+    data = json.loads((FIXTURES / "pr49_6342f36_runs.json").read_text())
+    sha = data["head_sha"]
+    stub = GitHubStub(
+        pr=pr(sha=sha),
+        check_runs=data["check_runs"],
+        reviews=approvals(sha),
+        workflow_runs=data["workflow_runs"],
+        page_size=5,
+    )
+    with serve(stub):
+        res = run_script(stub, sha=sha)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "merge-ready: yes" in res.stdout

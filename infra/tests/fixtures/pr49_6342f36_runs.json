@@ -1,0 +1,29 @@
+{
+ "_source": "GET /repos/nhuthuynh/racket-analytics/{actions/runs?head_sha=,commits/<sha>/check-runs} for open PR #49 head 6342f369042e450391891da31fc844fb328652e5, fetched 2026-10-09; fields trimmed to those merge_ready.py reads. CI runs 37934889373 (cancelled by the concurrency group, higher id, suite without check runs) and 37934889367 (green) started in the same second",
+ "head_sha": "6342f369042e450391891da31fc844fb328652e5",
+ "workflow_runs": [
+  {"id": 37934889373, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781271159, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"},
+  {"id": 37934889367, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781271173, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "success"},
+  {"id": 37934884072, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781256253, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"},
+  {"id": 37934884250, "workflow_id": 375162211, "name": "Claude review", "event": "pull_request", "check_suite_id": 102781256751, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "success"}
+ ],
+ "check_runs": [
+  {"id": 113845670847, "name": "ci-gate", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834496332, "name": "Flaky-test report (NFR-074)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "skipped", "check_suite": {"id": 102781271173}},
+  {"id": 113834495362, "name": "E2E (Playwright, Chromium + WebKit) with axe-core", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495275, "name": "PR policy (test immutability, size)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495269, "name": "Workflow lint (actionlint)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495230, "name": "Python types (mypy; strict on domain modules)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495145, "name": "Web lint, types, unit, coverage, bundle budget", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495106, "name": "Secret scan, dependency audit", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495038, "name": "Integration, scenario and regression suites on Compose (+ changed-lines coverage)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495037, "name": "Infra, hooks and CI-script tests (ST-001..ST-003)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834495017, "name": "Python unit suites (time-budgeted)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834494984, "name": "Python lint and format (Ruff)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834494969, "name": "SBOM (CycloneDX) and licence gate", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834494889, "name": "Locust baseline 50 RPS (ST-039; NFR-010 baseline, NFR-013, NFR-041)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834494863, "name": "Fixture and gold-set integrity (FR-151, NFR-078)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834494845, "name": "Drill library lint (FR-140, ST-053)", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},
+  {"id": 113834343921, "name": "review", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781256751}}
+ ]
+}

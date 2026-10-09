@@ -43,15 +43,25 @@ def workflow_run(
     workflow_id: int = 10,
     event: str = "pull_request",
     sha: str = HEAD_SHA,
+    conclusion: str | None = None,
+    status: str | None = None,
 ) -> dict[str, Any]:
-    """A GitHub Actions workflow run: one run (and one check suite) per trigger of a workflow."""
-    return {
+    """A GitHub Actions workflow run: one run (and one check suite) per trigger of a workflow.
+    `conclusion`/`status` are only set when given (CI-MERGE-READY-CANCELLED), so older tests
+    keep the shape they were written with."""
+    run: dict[str, Any] = {
         "id": run_id,
         "workflow_id": workflow_id,
         "event": event,
         "check_suite_id": suite_id,
         "head_sha": sha,
     }
+    if status is not None:
+        run["status"] = status
+    if conclusion is not None:
+        run["conclusion"] = conclusion
+        run.setdefault("status", "completed")
+    return run
 
 
 def review(
