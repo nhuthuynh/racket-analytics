@@ -9,9 +9,13 @@ story are, without gating on them. It fails closed:
 
 * exit 1 when a red-until row **passed** (a stale marker: the story is done, so the row must
   join the gate; retro 1 A2), when no row was selected, or when a row's file names no story;
-* exit 2 when the JUnit file is missing or unreadable.
+* exit 1 when a row was stopped by pytest-timeout (it waited, it did not fail for its story),
+  or when fewer rows ran than ``--expected-rows`` collected (the run stopped early); main
+  run 37961668800, CI-REDUNTIL-HANG;
+* exit 2 when the JUnit file is missing or unreadable, or ``--expected-rows`` is not a
+  positive number.
 
-Failed, errored and skipped rows are expected and exit 0. Standard library only.
+Other failed, errored and skipped rows are expected and exit 0. Standard library only.
 """
 
 from __future__ import annotations
@@ -24,6 +28,8 @@ from collections import defaultdict
 from pathlib import Path
 
 STORY = re.compile(r"red_until\(\s*story\s*=\s*[\"']([A-Z]+-\d+[a-z]?)[\"']")
+# pytest-timeout's own message, in a failure or in a setup/teardown error
+TIMED_OUT = re.compile(r"Timeout \(>[0-9.]+s\) from pytest-timeout")
 
 
 def outcome(case: ET.Element) -> str:
@@ -31,6 +37,20 @@ def outcome(case: ET.Element) -> str:
         if case.find(tag) is not None:
             return {"failure": "failed", "error": "error", "skipped": "skipped"}[tag]
     return "passed"
+
+
+def timed_out(case: ET.Element) -> bool:
+    return any(
+        TIMED_OUT.search(found.get("message", ""))
+        for found in (case.find("failure"), case.find("error"))
+        if found is not None
+    )
+
+
+def positive(text: str) -> int:
+    if not text.isdigit() or int(text) < 1:
+        raise argparse.ArgumentTypeError(f"not a positive number of rows: {text!r}")
+    return int(text)
 
 
 def story_of(classname: str, root: Path, cache: dict[str, str | None]) -> str | None:
@@ -47,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--junit", type=Path, required=True)
     p.add_argument("--root", type=Path, required=True, help="pytest rootdir (backend)")
     p.add_argument("--summary", type=Path)
+    p.add_argument("--expected-rows", type=positive, help="rows the step collected")
     args = p.parse_args(argv)
     try:
         cases = list(ET.parse(args.junit).getroot().iter("testcase"))  # noqa: S314 (own report)
@@ -56,9 +77,11 @@ def main(argv: list[str] | None = None) -> int:
 
     cache: dict[str, str | None] = {}
     per_story: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    stale, unnamed = [], []
+    stale, unnamed, waited = [], [], []
     for case in cases:
         cls, name = case.get("classname", ""), case.get("name", "")
+        if timed_out(case):
+            waited.append(f"{cls}::{name}")
         story = story_of(cls, args.root, cache)
         result = outcome(case)
         if story is None:
@@ -82,6 +105,9 @@ def main(argv: list[str] | None = None) -> int:
         problems.append("no red_until rows were selected (fail closed)")
     problems += [f"stale marker, the row passes: {s}" for s in stale]
     problems += [f"no story named in the file of {u}" for u in unnamed]
+    problems += [f"timed out (it waited, it did not fail for its story): {w}" for w in waited]
+    if args.expected_rows is not None and len(cases) < args.expected_rows:
+        problems.append(f"{len(cases)} of {args.expected_rows} rows ran (the run stopped early)")
     lines += ["", *(f"- {p}" for p in problems)] if problems else ["", "No stale markers."]
     text = "\n".join(lines) + "\n"
     print(text)

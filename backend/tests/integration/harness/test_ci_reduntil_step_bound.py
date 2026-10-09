@@ -71,9 +71,11 @@ def _step_run() -> str:
 
 def _step_pytest_options() -> list[str]:
     """The step's per-row and whole-run bounds, as the step passes them to pytest."""
-    line = next(x for x in _step_run().splitlines() if '-m "red_until and not nightly"' in x)
-    if "--collect-only" in line:
-        raise AssertionError(line)
+    line = next(
+        x
+        for x in _step_run().splitlines()
+        if '-m "red_until and not nightly"' in x and "--collect-only" not in x
+    )
     tokens = shlex.split(line.split("||")[0])
     keep: list[str] = []
     for i, tok in enumerate(tokens):

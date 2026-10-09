@@ -280,20 +280,30 @@ jobs:
       - name: Rows waiting on a story (red_until; listed, not gated; a stale marker fails)
         # sprint-02 §8: rows red until a story (stretch or PO-blocked) are listed separately.
         # pytest's own rc is expected to be 1 here; the report decides (W-01).
+        # CI-REDUNTIL-HANG (run 37961668800, TCR 2026-10-09): a row fails for its story in
+        # seconds; a row that waits (a store at ~64 KiB/s) is stopped at 30 s and the run at
+        # 90 s, and the report fails on a timed-out row or on fewer rows than were collected.
         working-directory: backend
+        timeout-minutes: 4
         run: |
+          rows=$(uv run --no-sync pytest -q -p no:cacheprovider --collect-only -m "red_until and not nightly" | grep -c '::' || true)
           uv run --no-sync pytest -q -p no:cacheprovider -m "red_until and not nightly" \
+            -o timeout=30 --session-timeout=90 \
             --junitxml=../reports/red-until.xml || echo "pytest rc=$? (red-until rows are expected to fail)"
           python3 ../scripts/ci/red_until_report.py --junit ../reports/red-until.xml --root . \
-            --summary "$GITHUB_STEP_SUMMARY"
+            --expected-rows "$rows" --summary "$GITHUB_STEP_SUMMARY"
       - name: Changed-lines coverage >= 85% (testing-strategy §8, NFR-071)
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: diff-cover reports/coverage-backend.xml --compare-branch="$BASE_SHA" --fail-under=85 --markdown-report reports/diff-cover-backend.md
-      - name: Service logs on failure
-        if: failure()
-        run: $COMPOSE logs --no-color --tail=200
+      - name: Service logs on failure or cancel
+        # CI-REDUNTIL-HANG: run 37961668800 was cancelled, so no store log was kept; the whole
+        # object store log goes into the uploaded reports (the store's slow writes are unexplained).
+        if: failure() || cancelled()
+        run: |
+          $COMPOSE logs --no-color --tail=200
+          $COMPOSE logs --no-color objectstore > reports/objectstore.log 2>&1 || true
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
