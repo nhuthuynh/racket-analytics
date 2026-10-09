@@ -21,7 +21,7 @@ from racket.analytics.snapshot import MetricSnapshot, SnapshotKey
 from racket.analytics.starter_stats import starter_stats
 from racket.analytics.uncertainty import InvalidPolicy
 from racket.sports.pickleball.metrics import MetricDictionary, load_dictionary
-from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game
+from tests.unit.analytics.sheets import WORKED_EXAMPLE, a_serves_and_wins_25, one_game
 
 scenarios("metric_snapshot_versioning.feature")
 
@@ -75,6 +75,45 @@ def odd_dictionary(ctx: dict[str, Any]) -> None:
         for e in shipped.entries
     )
     ctx["dictionary"] = replace(shipped, entries=entries)
+
+
+@given("a metric dictionary without the low-sample interval-width rule")
+def no_width_rule(ctx: dict[str, Any]) -> None:
+    ctx["dictionary"] = replace(ctx["dictionary"], low_sample={})
+
+
+@when("the snapshot of a match where side A serves and wins 25 rallies is stored")
+def store_a_serves_25(ctx: dict[str, Any]) -> None:
+    snap = MetricSnapshot.compute(
+        match_id=ctx["match_id"],
+        owner_id=OWNER,
+        sheet=a_serves_and_wins_25(),
+        sheet_version=26,
+        dictionary=ctx["dictionary"],
+        now=NOW,
+    )
+    assert ctx["repo"].upsert(snap) is True
+    ctx["stored"] = ctx["repo"].get(snap.key)
+
+
+@then(
+    parsers.parse(
+        "the stored {metric} of side {side} has n {n:d} and is {flag}low sample"
+    )
+)
+def stored_flag(ctx: dict[str, Any], metric: str, side: str, n: int, flag: str) -> None:
+    fields = ctx["stored"].stats[metric][side]
+    assert (fields["n"], fields["low_sample"]) == (n, flag != "not ")
+
+
+@then(
+    parsers.parse(
+        "the published card of {metric} shows a minimum sample of {n:d} {unit}"
+    )
+)
+def card_min_sample(ctx: dict[str, Any], metric: str, n: int, unit: str) -> None:
+    view = ctx["stored"].published_view(ctx["dictionary"])
+    assert view[metric]["entry"]["min_sample"] == {"unit": unit, "n": n}
 
 
 @when(parsers.parse("a snapshot of the same match at sheet version {version:d} is written"))

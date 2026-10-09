@@ -23,6 +23,7 @@ from racket.sports.pickleball.metrics import (
     MetricDictionary,
     definition_digest,
     load_dictionary,
+    low_sample_digest,
     version_bump_violations,
 )
 
@@ -253,3 +254,58 @@ def test_status_is_not_part_of_the_definition() -> None:
 
 def test_a_descriptive_metric_has_no_minimum_sample() -> None:
     assert load_dictionary().entry("AN-06").min_sample is None
+
+
+# ---------------------------------------------------------------- 5: the low-sample rule (ADR 0041)
+# The interval-width rule is a top-level, digested dictionary field; changing it needs a new
+# dictionary version recorded in the lock's ``low_sample`` rows (NFR-075; §5.2 item 2).
+@pytest.mark.parametrize(
+    "rule",
+    [None, {}, {"max_interval_width": 0}, {"max_interval_width": 1.5},
+     {"max_interval_width": "0.3"}, {"max_interval_width": True},
+     {"max_interval_width": 0.3, "min_n": 20}],
+)  # fmt: skip
+def test_a_missing_or_nonsense_low_sample_rule_is_refused(rule: object) -> None:
+    data = raw()
+    if rule is None:
+        del data["low_sample"]
+    else:
+        data["low_sample"] = rule
+    with pytest.raises(InvalidDictionary, match="low_sample"):
+        MetricDictionary.parse(data)
+
+
+def test_a_low_sample_rule_changed_without_a_bump_is_a_violation() -> None:
+    data = raw()
+    data["low_sample"] = {"max_interval_width": 0.4}
+    assert violations(data, lock()) == (
+        "low_sample: the interval-width rule changed without a dictionary version bump",
+    )
+
+
+def test_a_low_sample_digest_rewritten_in_place_is_a_violation_against_the_previous_lock() -> None:
+    data, current, previous = raw(), lock(), lock()
+    data["low_sample"] = {"max_interval_width": 0.4}
+    current["low_sample"]["0.1"] = low_sample_digest(MetricDictionary.parse(data))
+    assert violations(data, current) == ()
+    assert violations(data, current, previous) == (
+        "low_sample 0.1: locked digest rewritten; the lock is append-only, bump the version",
+    )
+
+
+def test_a_low_sample_rule_change_recorded_under_a_new_dictionary_version_passes() -> None:
+    data, current, previous = raw(), lock(), lock()
+    data["low_sample"] = {"max_interval_width": 0.4}
+    data["version"] = current["version"] = "0.2"
+    current["low_sample"]["0.2"] = low_sample_digest(MetricDictionary.parse(data))
+    assert violations(data, current, previous) == ()
+
+
+def test_a_lock_without_a_low_sample_row_is_a_violation() -> None:
+    current = lock()
+    del current["low_sample"]
+    assert violations(raw(), current) == ("low_sample: not recorded in metrics.lock.json",)
+
+
+def test_the_shipped_low_sample_rule_is_rule_0_3() -> None:
+    assert load_dictionary().low_sample == {"max_interval_width": 0.30}

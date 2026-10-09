@@ -20,7 +20,7 @@ from racket import migrations
 from racket.analytics.repository import SnapshotRepository
 from racket.analytics.snapshot import MetricSnapshot, SnapshotKey
 from racket.sports.pickleball.metrics import load_dictionary
-from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game
+from tests.unit.analytics.sheets import WORKED_EXAMPLE, a_serves_and_wins_25, one_game
 
 NOW = datetime(2026, 10, 9, 9, 0, tzinfo=UTC)
 OWNER = uuid.UUID("22222222-2222-4222-8222-222222222222")
@@ -48,6 +48,34 @@ def test_st_046a_an_older_or_equal_sheet_version_never_overwrites(db_session: An
     assert stored is not None
     assert (stored.sheet_version, stored.computed_at) == (15, newest.computed_at)
     assert stored.stats == newest.stats
+
+
+def test_st_046a_a_stored_snapshot_keeps_each_metrics_own_min_sample_flag(
+    db_session: Any,
+) -> None:
+    """ADR 0041 / invariant S6 over Postgres: a dictionary with AN-05 n = 30 stores AN-05 of
+    side A flagged at n = 25 and AN-01 not, under that dictionary's version."""
+    shipped = load_dictionary()
+    entries = tuple(
+        replace(e, min_sample={"unit": "rallies", "n": 30}) if e.id == "AN-05" else e
+        for e in shipped.entries
+    )
+    odd = replace(shipped, version="9.9", entries=entries)
+    snap = MetricSnapshot.compute(
+        match_id=uuid.uuid4(),
+        owner_id=OWNER,
+        sheet=a_serves_and_wins_25(),
+        sheet_version=26,
+        dictionary=odd,
+        now=NOW,
+    )
+    repo = SnapshotRepository(db_session)
+    assert repo.upsert(snap) is True
+    stored = repo.get(SnapshotKey(snap.key.match_id, "9.9", "PROVISIONAL-UNVERIFIED"))
+    assert stored is not None
+    an05, an01 = stored.stats["AN-05"]["A"], stored.stats["AN-01"]["A"]
+    assert (an05["n"], an05["low_sample"]) == (25, True)
+    assert (an01["n"], an01["low_sample"]) == (25, False)
 
 
 def test_st_046a_the_public_role_has_no_privilege_on_metric_snapshots(db_session: Any) -> None:

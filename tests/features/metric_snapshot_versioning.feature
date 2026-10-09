@@ -1,4 +1,4 @@
-# Sprint 3 ST-046a (FR-100, NFR-075, ADR 0040): the MetricSnapshot aggregate and its repository.
+# Sprint 3 ST-046a (FR-100, FR-101, NFR-075, ADR 0040, ADR 0041): the MetricSnapshot aggregate and its repository.
 # Steps: backend/tests/features/test_metric_snapshot_versioning.py. The QA-ACC-3 acceptance
 # scenarios over the stats route are stats_snapshot.feature (senior-qa-engineer).
 # Scoring is PROVISIONAL-UNVERIFIED (ADR 0009, ADR 0023).
@@ -29,10 +29,17 @@ Feature: A match's starter stats are kept as one snapshot per dictionary and rul
 
   Rule: A snapshot is versioned by the metric dictionary and the rules version
 
-    Scenario: A dictionary whose thresholds disagree builds no snapshot
-      Given a metric dictionary where AN-05 needs 30 rallies and the other proportions need 20
+    Scenario: A dictionary without the interval-width rule builds no snapshot
+      Given a metric dictionary without the low-sample interval-width rule
       When the snapshot of the worked-example game is computed
-      Then the computation is refused naming "AN-05"
+      Then the computation is refused naming "low_sample"
+
+    Scenario: Each metric's flag uses that metric's own minimum sample
+      Given a metric dictionary where AN-05 needs 30 rallies and the other proportions need 20
+      When the snapshot of a match where side A serves and wins 25 rallies is stored
+      Then the stored AN-05 of side A has n 25 and is low sample
+      And the stored AN-01 of side A has n 25 and is not low sample
+      And the published card of AN-05 shows a minimum sample of 30 rallies
 
     Scenario: A snapshot under another dictionary version is kept beside the first
       Given the snapshot of the worked-example game at sheet version 15 is stored
