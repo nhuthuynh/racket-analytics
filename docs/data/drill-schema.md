@@ -42,9 +42,11 @@ cd backend
 env -u APP_ENV uv run racket-drill-lint ../content/drills                 # the library, with its lock
 env -u APP_ENV uv run racket-drill-lint ../backend/tests/fixtures/drills-invalid/no-source.json
 env -u APP_ENV uv run racket-drill-lint ../content/drills --update-lock   # after adding a version
+git show origin/main:content/drills/library.lock > /tmp/base.lock
+env -u APP_ENV uv run racket-drill-lint ../content/drills --base-lock /tmp/base.lock  # as CI does
 ```
 
-Exit codes: 0 pass; 1 problems; 2 a path that does not exist or an unreadable lock. One line per problem: `FAIL <file>: drill <id>: <reason>: <detail>`.
+Exit codes: 0 pass; 1 problems; 2 a path that does not exist, or a lock (the library's or the base one) that is missing where named, unreadable or not `drill-library-lock/v1`. One line per problem: `FAIL <file>: drill <id>: <reason>: <detail>`.
 
 | Reason | When |
 |---|---|
@@ -63,8 +65,12 @@ Exit codes: 0 pass; 1 problems; 2 a path that does not exist or an unreadable lo
 | `edited without version bump` | a locked version's content digest changed |
 | `not in lock` | a new version; `--update-lock` adds it |
 | `no lock`, `invalid json` | the directory has no `library.lock`; a file is not JSON |
+| `lock entry removed` | a version locked on the base branch is gone from `library.lock` |
+| `lock entry changed` | a version locked on the base branch has another digest in `library.lock` |
 
 `--update-lock` only adds entries, and only when "not in lock" is the library's only problem. `review_status` and `deprecated_by` are outside the digest, so reviewing or deprecating a drill is not an edit.
+
+**Against the base branch** (`--base-lock PATH`, default `$RACKET_DRILL_BASE_LOCK`; directories only): the library's own lock cannot prove immutability, because a PR can change the lock with the file. With the base branch's lock, every version locked there must keep its lock line and digest, and the files are checked against the base digests, so deleting a version with its lock line fails (`deleted drill`, `lock entry removed`), an in-place edit with a rewritten lock line fails (`edited without version bump`, `lock entry changed`), and a deleted lock is not rebuilt by `--update-lock` (PE-R1-ST053-01). A base branch with no lock is an empty `drill-library-lock/v1` lock.
 
 ## 4. Negative fixtures (G03-09 b)
 
@@ -72,4 +78,4 @@ Exit codes: 0 pass; 1 problems; 2 a path that does not exist or an unreadable lo
 
 ## 5. CI
 
-The `drill-lint` job runs `racket-drill-lint ../content/drills` on every push and PR (G03-09 c). Its workflow file is the SRE's (`.github/workflows/ci.yml`); requested by the ML lane on 2026-10-07 (`docs/sprints/03/decisions/ST-053.md`).
+The `drill-lint` job runs `racket-drill-lint ../content/drills` on every push and PR (G03-09 c), with `RACKET_DRILL_BASE_LOCK` set to `content/drills/library.lock` of the PR's base commit (on a push to `main`, the previous commit), read by `git show` from a full clone. An unknown base commit fails the job; a base commit without a lock gives an empty lock. Its workflow file is the SRE's (`.github/workflows/ci.yml`); requested by the ML lane on 2026-10-07 (`docs/sprints/03/decisions/ST-053.md`).
