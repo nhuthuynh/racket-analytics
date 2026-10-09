@@ -268,7 +268,7 @@ mv mutants "$GOAL/mutants-stats" 2>/dev/null || true
 DOMAIN=$(uv run --project ../infra python -c "import yaml;print(yaml.safe_load(open('../.github/workflows/ci.yml'))['env']['DOMAIN_TEST_PATHS'])")
 echo "$DOMAIN" | grep -q 'tests/unit/analytics' || echo "DOMAIN_TEST_PATHS lacks tests/unit/analytics -> (d) no"
 env -u APP_ENV uv run pytest -q --collect-only -m unit >/dev/null   # unbudgeted warm-up, as CI
-python3 ../scripts/ci/run_with_budget.py 10 -- env -u APP_ENV uv run pytest -q -m unit $DOMAIN; echo rc=$?
+python3 ../scripts/ci/run_with_budget.py 10 -- env -u APP_ENV uv run pytest -q -n auto --dist worksteal -m unit $DOMAIN; echo rc=$?  # workers as CI (CI-DOMAIN-BUDGET)
 python3 ../scripts/ci/run_with_budget.py 60 -- env -u APP_ENV uv run pytest -q -m unit; echo rc=$?
 python3 ../scripts/ci/run_with_budget.py 600 -- env -u APP_ENV uv run pytest -q -m integration tests/integration \
   --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py; echo rc=$?     # with the G03-04 env
