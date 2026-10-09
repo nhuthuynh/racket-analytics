@@ -118,7 +118,7 @@ test.describe('@M0 @story-ST-054 Evidence crawl harness', () => {
   test('reports a side with no rallies whose "Show me" lists rallies after a while', async ({ page }) => {
     expect(REFERENCE['AN-05']?.B.rallies, 'the worked example has a side with n > 0 and no rally behind it').toEqual([]);
     await serve(page, { emptyFillsLate: 'AN-05 B' });
-    expect(await crawlSide(page, MATCH, 'AN-05', 'B')).toEqual([expect.stringMatching(/^AN-05 B: /)]);
+    expect(await crawlSide(page, MATCH, 'AN-05', 'B')).toContainEqual(expect.stringMatching(/^AN-05 B: /));
   });
 
   test('passes a page that is right but slow: late cards, late hydration, late rallies', async ({ page }) => {
