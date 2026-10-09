@@ -2,7 +2,7 @@
 
 Owner: senior-ml-cv-engineer (schema and lint); drill content: pickleball-domain-coach (FR-141, Sprint 4). Status on 2026-10-07: **schema, lint and fixtures done; no real drill exists yet.** `content/drills/` holds lint fixtures only (`pb.fixture.*`, `draft`).
 
-Sources: FR-140; QD-DR-01 (fields), QD-DR-02 (immutability), QD-DR-03 (lint rules) in `docs/requirements/brainstorm-quality-domain.md` §5; metric ids from `backend/src/racket/sports/pickleball/metrics.json` (ST-043). Decisions: `docs/sprints/03/decision-log.md` 2026-10-07 (slices, stdlib checker, interfaces, lock).
+Sources: FR-140; QD-DR-01 (fields), QD-DR-02 (immutability), QD-DR-03 (lint rules) in `docs/requirements/brainstorm-quality-domain.md` §5; metric ids from `backend/src/racket/sports/pickleball/metrics.json` (ST-043). Decisions: `docs/sprints/03/decisions/ST-053.md` 2026-10-07 (slices, stdlib checker, interfaces, lock).
 
 Code: `backend/src/racket/coaching/drills/` — `schema.json` (draft 2020-12), `schema_check.py` (the subset checker), `rules.py` (FR-140), `lock.py` (immutability), `lint.py` (CLI). Tests: `backend/tests/unit/coaching/`, IT-03-14 and `tests/features/drill_library.feature` (QA).
 
@@ -72,4 +72,4 @@ Exit codes: 0 pass; 1 problems; 2 a path that does not exist or an unreadable lo
 
 ## 5. CI
 
-The `drill-lint` job runs `racket-drill-lint ../content/drills` on every push and PR (G03-09 c). Its workflow file is the SRE's (`.github/workflows/ci.yml`); requested in `docs/sprints/03/blockers.md` on 2026-10-07.
+The `drill-lint` job runs `racket-drill-lint ../content/drills` on every push and PR (G03-09 c). Its workflow file is the SRE's (`.github/workflows/ci.yml`); requested by the ML lane on 2026-10-07 (`docs/sprints/03/decisions/ST-053.md`).
