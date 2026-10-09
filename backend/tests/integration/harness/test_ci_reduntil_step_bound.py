@@ -1,17 +1,8 @@
 """CI-REDUNTIL-HANG regression: the listed red_until step ends within its bound and fails when a
-row waits on a slow object store, instead of running until the job limit.
-
-Root cause (docs/sprints/03/decisions/CI-REDUNTIL-HANG.md): in main run 37961668800 the step
-'Rows waiting on a story' ran from 16:52:51 until the 20-minute job limit cancelled it at
-17:07:58. Its 88 rows send 174,331,413 bytes to the object store (61 rows upload the 1.72 MB
-clip at least once). The store took writes at about 64 KiB/s, as in CI-IT0213-HANG; the
-pytest-timeout dumps show the API thread in ``write_chunk`` -> ``upload_part`` -> ``recv_into``.
-At that rate each video row needs 40-160 s, so rows sat at the 120 s per-test timeout one
-after another, and the report counted a timed-out row as an expected red.
-
-This test runs the step's own pytest options (read from ci.yml) on red_until rows that write
-to the real object store through ``slow_object_store`` at ``CI_WRITE_RATE``, then the real
-report with the step's row count. Each row would need 64 s for its write.
+row waits on a slow object store, instead of running until the job limit (main run 37961668800;
+root cause in docs/sprints/03/decisions/CI-REDUNTIL-HANG.md). The step's own pytest options,
+read from ci.yml, run red_until rows that each write 64 s worth of bytes to the real store
+through ``slow_object_store`` at ``CI_WRITE_RATE``; then the real report reads the run.
 """
 
 from __future__ import annotations

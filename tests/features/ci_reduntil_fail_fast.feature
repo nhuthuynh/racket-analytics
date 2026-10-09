@@ -3,11 +3,9 @@
 # backend/tests/integration/harness/test_ci_reduntil_step_bound.py.
 @nfr-073 @ci-reduntil-hang
 Feature: The listed red_until step ends fast and fails when a row waited instead of failing
-  Main run 37961668800 ran the step for 15 minutes until the job limit cancelled it. Its rows
-  send 174 MB to the object store while the store took writes at about 64 KiB/s, so each row
-  sat until the 120 s per-test timeout, and the report counted a timed-out row as an
-  expected red. A red_until row is expected to fail because its story is missing, not
-  because it waited.
+  Main run 37961668800: rows that send 174 MB to a store taking writes at about 64 KiB/s sat
+  until the 120 s per-test timeout, one after another, until the job limit cancelled the step.
+  A red_until row fails because its story is missing, not because it waited.
 
   Scenario: A row that timed out fails the report and is named
     Given a red_until run in which one row failed for its story and one row timed out
@@ -32,3 +30,4 @@ Feature: The listed red_until step ends fast and fails when a row waited instead
     And the red_until step stops the run after at most 90 seconds
     And the red_until step gives the report the number of rows it collected
     And the red_until step has its own time limit of at most 4 minutes
+    And the job keeps the whole object store log when it fails or is cancelled

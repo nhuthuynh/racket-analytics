@@ -1,9 +1,5 @@
-"""Binds tests/features/ci_reduntil_fail_fast.feature (CI-REDUNTIL-HANG; NFR-073, NFR-074).
-
-The real report script on JUnit files shaped like pytest's, and the real ci.yml. The real-store
-path (a row waiting on a slow object store) is backend/tests/integration/harness/
-test_ci_reduntil_step_bound.py.
-"""
+"""Binds tests/features/ci_reduntil_fail_fast.feature (CI-REDUNTIL-HANG; NFR-073, NFR-074):
+the real report script on pytest-shaped JUnit files, and the real ci.yml."""
 
 from __future__ import annotations
 
@@ -33,7 +29,7 @@ TIMED_OUT = (
 
 def _run_file(tmp: Path, cases: list[tuple[str, str]], collected: int) -> dict[str, Any]:
     root = tmp / "backend"
-    (root / "tests" / "features").mkdir(parents=True)
+    (root / "tests" / "features").mkdir(parents=True, exist_ok=True)
     (root / "tests" / "features" / "test_account_deletion.py").write_text(STORY_FILE)
     body = "".join(
         f'<testcase classname="{CLS}" name="{n}">{inner}</testcase>' for n, inner in cases
@@ -69,21 +65,19 @@ def red_rows(tmp_path: Path, collected: int, reported: int) -> dict[str, Any]:
     return _run_file(tmp_path, [(f"test_row_{i}", RED) for i in range(reported)], collected)
 
 
+def _report(run: dict[str, Any], *extra: str) -> subprocess.CompletedProcess[str]:
+    args = [sys.executable, str(SCRIPT), "--junit", str(run["xml"]), "--root", str(run["root"])]
+    return subprocess.run([*args, *extra], capture_output=True, text=True, check=False)
+
+
 @when("the red_until report reads the run", target_fixture="result")
 def report(run: dict[str, Any]) -> subprocess.CompletedProcess[str]:
-    args = [sys.executable, str(SCRIPT), "--junit", str(run["xml"]), "--root", str(run["root"])]
-    args += ["--expected-rows", str(run["collected"])]
-    return subprocess.run(args, capture_output=True, text=True, check=False)
+    return _report(run, "--expected-rows", str(run["collected"]))
 
 
-@then("the report fails")
-def fails(result: subprocess.CompletedProcess[str]) -> None:
-    assert result.returncode == 1, result.stdout + result.stderr
-
-
-@then("the report passes")
-def passes(result: subprocess.CompletedProcess[str]) -> None:
-    assert result.returncode == 0, result.stdout + result.stderr
+@then(parsers.re(r"the report (?P<verdict>fails|passes)$"))
+def verdict(result: subprocess.CompletedProcess[str], verdict: str) -> None:
+    assert result.returncode == {"fails": 1, "passes": 0}[verdict], result.stdout + result.stderr
 
 
 @then("the report names the timed-out row")
@@ -105,23 +99,12 @@ def step() -> dict[str, Any]:
     return next(s for s in steps if "red_until" in s.get("name", ""))
 
 
-def _option(step: dict[str, Any], pattern: str) -> int | None:
-    found = re.search(pattern, step["run"])
-    return int(found.group(1)) if found else None
-
-
-@then(parsers.parse("the red_until step stops a row after at most {limit:d} seconds"))
-def per_row(step: dict[str, Any], limit: int) -> None:
-    seconds = _option(step, r"-o timeout=(\d+)\b")
-    assert seconds is not None, step["run"]
-    assert 0 < seconds <= limit, step["run"]
-
-
-@then(parsers.parse("the red_until step stops the run after at most {limit:d} seconds"))
-def whole_run(step: dict[str, Any], limit: int) -> None:
-    seconds = _option(step, r"--session-timeout=(\d+)\b")
-    assert seconds is not None, step["run"]
-    assert 0 < seconds <= limit, step["run"]
+@then(parsers.parse("the red_until step stops {what} after at most {limit:d} seconds"))
+def bound(step: dict[str, Any], what: str, limit: int) -> None:
+    option = {"a row": r"-o timeout=(\d+)\b", "the run": r"--session-timeout=(\d+)\b"}[what]
+    found = re.search(option, step["run"])
+    assert found is not None, step["run"]
+    assert 0 < int(found.group(1)) <= limit, step["run"]
 
 
 @then("the red_until step gives the report the number of rows it collected")
@@ -136,3 +119,43 @@ def own_limit(step: dict[str, Any], limit: int) -> None:
     minutes = step.get("timeout-minutes")
     assert isinstance(minutes, int), step
     assert 0 < minutes <= limit, step
+
+
+@then("the job keeps the whole object store log when it fails or is cancelled")
+def store_log() -> None:
+    steps = yaml.safe_load(CI.read_text())["jobs"]["integration"]["steps"]
+    logs = next(s for s in steps if s.get("name", "").startswith("Service logs"))
+    assert logs["if"].replace(" ", "") == "failure()||cancelled()", logs
+    assert "logs --no-color objectstore > reports/objectstore.log" in logs["run"], logs
+    upload = next(s for s in steps if s.get("with", {}).get("name") == "integration-reports")
+    assert upload["with"]["path"] == "reports/"
+    assert steps.index(logs) < steps.index(upload)
+
+
+# ---------------------------------------------------------------- unit edge cases of the report
+def test_a_timeout_in_setup_or_teardown_also_fails_the_report(tmp_path: Path) -> None:
+    error = '<error message="failed on setup with &quot;Failed: Timeout (&gt;120.0s) from'
+    res = _report(_run_file(tmp_path, [("t", error + ' pytest-timeout.&quot;"/>')], 1))
+    assert res.returncode == 1, res.stdout + res.stderr
+    assert "timed out" in res.stdout
+
+
+def test_an_expected_row_count_that_is_not_a_positive_number_is_refused(tmp_path: Path) -> None:
+    run = _run_file(tmp_path, [("test_a", RED)], 1)
+    for bad in ("0", "-1", "x", ""):
+        res = _report(run, "--expected-rows", bad)
+        assert res.returncode == 2, (bad, res.stdout + res.stderr)
+
+
+def test_the_summary_lists_the_timed_out_rows(tmp_path: Path) -> None:
+    summary = tmp_path / "summary.md"
+    res = _report(_run_file(tmp_path, [("t", TIMED_OUT)], 1), "--summary", str(summary))
+    assert res.returncode == 1
+    assert "timed out" in summary.read_text()
+
+
+def test_a_failure_that_only_mentions_a_timeout_in_its_text_is_still_a_red(tmp_path: Path) -> None:
+    """Only pytest-timeout's own message counts; a story's failure about a timeout is a red."""
+    own = '<failure message="assert link_timeout_s == 900">RED until ST-051</failure>'
+    res = _report(_run_file(tmp_path, [("test_a", own)], 1), "--expected-rows", "1")
+    assert res.returncode == 0, res.stdout + res.stderr
