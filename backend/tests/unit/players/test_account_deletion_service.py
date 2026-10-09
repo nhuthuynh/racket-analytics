@@ -115,9 +115,7 @@ def test_the_lock_comes_first_then_the_matches_then_the_address_then_one_commit(
     assert tombstone.response() == {"deleted": True, "purge_due_by": "2026-10-16T12:00:00Z"}
 
 
-def test_the_log_lines_carry_ids_only(
-    calls: list[str], caplog: pytest.LogCaptureFixture
-) -> None:
+def test_the_log_lines_carry_ids_only(calls: list[str], caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO, logger="racket.players.service"):
         _delete(calls, CONFIRMED)
     lines = [r for r in caplog.records if r.name == "racket.players.service"]

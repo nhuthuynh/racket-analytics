@@ -25,13 +25,17 @@ from tests.support.api import ApiDriver
 
 def _account(engine: Any, account_id: str) -> dict[str, Any] | None:
     with engine.connect() as conn:
-        row = conn.execute(
-            sa.text(
-                "SELECT email, email_key, username, display_name, deleted_at "
-                "FROM accounts WHERE id = :id"
-            ),
-            {"id": account_id},
-        ).mappings().first()
+        row = (
+            conn.execute(
+                sa.text(
+                    "SELECT email, email_key, username, display_name, deleted_at "
+                    "FROM accounts WHERE id = :id"
+                ),
+                {"id": account_id},
+            )
+            .mappings()
+            .first()
+        )
     return None if row is None else dict(row)
 
 

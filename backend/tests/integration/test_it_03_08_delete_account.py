@@ -21,6 +21,7 @@ import httpx
 from tests.support import stats as st
 from tests.support.api import BASE_URL, ApiDriver, sign_in
 
+
 def _second_device(api: ApiDriver, username: str) -> httpx.AsyncClient:
     transport = httpx.ASGITransport(app=api.app, raise_app_exceptions=False)
     client = httpx.AsyncClient(transport=transport, base_url=BASE_URL)
