@@ -1,0 +1,41 @@
+# CI-OBJSTORE-SLOW decisions
+
+Small decisions for ticket CI-OBJSTORE-SLOW (PR #52): why the CI object store (SeaweedFS 3.97, `infra/compose.yaml`) took writes at about 64 KiB/s in runs 37764445816 (CI-IT0213-HANG) and 37961668800 (CI-REDUNTIL-HANG). One file per ticket (PO rule 2026-10-07).
+
+## What the CI evidence shows
+
+1. **One 64 KiB window per ~1.01 s, on big bodies only.** Run 37764445816, job 113268514073: the store's log has `PutObjectPartHandler` starting at 10:40:10.53, as soon as the headers arrived. The 1,724,207-byte body ended at 10:40:37.18 (API log `duration_ms: 26674.0`), and the 862,104-byte stage took 13.33 s. That is 1.013 s per 65,536 bytes for both sizes. Between 10:39:45 and 10:39:53, other workers' stage+part pairs completed about 30 ms apart, so small bodies stayed fast.
+2. **It builds up over minutes and persists.** In run 37764445816 the uploads of IT-02-13 took < 0.6 s, then 3.56 s and 3.14 s (~250 KB/s), then 13.3 s each. In run 37961668800, job 113925768741, the backend suites passed, but their slowest test was `test_st_050b_the_purge_frees_an_open_uploads_part_and_staged_chunk_and_only_those` at 65.45 s for about 12.6 MB (~193 KB/s; locally it is not among the 10 slowest). Then the red_until step, a new process, was slow from its first row for 15 min.
+3. **Not the database or the disk.** The Postgres checkpoint at 10:39:53 in run 37764445816 was `write=0.002 s, sync=0.009 s`.
+
+## What was ruled out locally (each measured)
+
+Probe: `ObjectStore` writes of the clip the way `write_chunk` stores it, from 4 processes (scratch script; same shape as `tests/support/store_throughput.py`).
+
+| Candidate | Setup | Result |
+|---|---|---|
+| CPU, memory, IO throttling of the store | `docker run --cpus=1 --memory=512m --device-write-bps=/dev/vda:1mb --device-write-iops=/dev/vda:50`, CI flags | min 9.36, median 25.03 MB/s (40 writes) |
+| docker-proxy on the published port, CPU contention | 6 busy loops on 4 vCPU; `127.0.0.1:18333` (docker-proxy) vs the container IP | min 8.77 / 21.19 MB/s, median 33.92 / 35.48 MB/s (120 writes each) |
+| Volume growth on first write (`-volume.max=0`, 1024 MB volumes) | fresh store | only the first write per collection is slower, ~9 MB/s; the count depends on free disk (2 volumes on a 3 GB fs, 7 by default), not the rate |
+| A full disk | store `/data` on a 3 GB ext4 loop fs, written until full | the store **fails** (`InternalError`, HTTP 500, `failed to write to local disk`); it does not slow down |
+| Store memory | `--memory=384m` | OOM-killed within seconds under 4 writers (RSS grows to ~1.2 GB under churn); unlimited in CI |
+| How much a CI run writes | CI-selection suites on Compose with the CI flags: `2795 passed, 1 skipped in 192.40s` | 963 MB left on the store's disk (14 volume files), plus ~174 MB from red_until rows |
+| The client | botocore 1.43.108 request headers | one plain body with `Content-Length`, `Expect: 100-continue`, CRC32 header; no aws-chunked, no small parts |
+
+What is left is the runner's path from the test process to the published port. A rate of exactly one unscaled TCP window (64 KiB) per ~1 s retransmission timeout, with small requests unaffected, is the signature of a TCP transfer losing packets, for example to conntrack window tracking (`nf_conntrack_tcp_be_liberal=0`). Locally `be_liberal=0` and `tcp_loose=1`, and there is no INVALID drop rule. The runner's values are not known. This is a judgment until the runner telemetry of a slow run confirms or refutes it.
+
+## Decisions
+
+| Date | Who | Decision | Evidence | Reasoning |
+|---|---|---|---|---|
+| 2026-10-09 | sre-devops-engineer | **The integration job checks the store's write throughput alone, before the backend suites and again before the rows waiting on a story** (`tests/integration/harness/test_ci_objstore_throughput.py`: the 1.72 MB clip from 4 writers, median >= 5 MB/s and no write < 1 MB/s; `timeout-minutes: 3` each) | Red `7b66d47`, green `1db5fbd` (commands in PR #52). Local: `8 passed in 4.16s`; the negative control through `slow_object_store` at 64 KiB/s fails with both floors named | A slow store now fails one named step in seconds, instead of timing out IT-02-13 or a red_until row two minutes later. Two floors: the median catches a store that is slow overall, and the slowest write catches one stalled connection (the CI stall was 65,536 B/s, 15x under 1 MB/s). No timeout, budget or row changes |
+| 2026-10-09 | sre-devops-engineer | **Runner facts and a 15 s store sample are kept in `integration-reports/telemetry/` on every run, with the whole `objectstore.log`** | `scripts/ci/objectstore_telemetry.sh` (facts: dockerd, docker-proxy, `nf_conntrack_*`, INVALID rules, disk, cgroup; sample: a timed 1.72 MB PUT, `/proc/net/snmp` + `netstat` TCP counters, `/proc/net/stat/nf_conntrack`, `ss -tinmo` on the store port, PSI, store container stats) | The cause is in the runner, so only a runner run can name it. A slow run then shows when the throughput dropped and whether `TCPTimeouts`/`RetransSegs` or conntrack `invalid` rose with it. Green runs give the baseline |
+| 2026-10-09 | sre-devops-engineer | **No store configuration change in this PR** | Table above: neither volume size, growth, disk, CPU, memory nor IO reproduces the rate | Changing `volumeSizeLimitMB`, preallocation or volume count would only speed up the first write. Shipping it as "the fix" would claim a cause the evidence does not support (judgment) |
+| 2026-10-09 | sre-devops-engineer | **Size: this PR is over the 400-line limit. A waiver is requested; the EM decides** (`size-waiver` is not applied by this role) | `PR_LABELS='[]' python3 scripts/ci/check_pr_size.py --base origin/main --head HEAD` (number in the PR) | One concern: the gate, its test-first tests and the telemetry that names the cause. Splitting would land the gate without the evidence that explains a red gate (judgment) |
+
+## Follow-ups
+
+- **The fix of the runner path** (owner: sre-devops-engineer). When a slow run's telemetry names the mechanism, change it in the job, for example `sysctl net.netfilter.nf_conntrack_tcp_be_liberal=1` before the services start, or the test endpoint on the container IP instead of the docker-proxy port. Until then the floor steps keep the job honest: red, fast, named.
+- **Done check of this ticket:** 3 consecutive CI runs with both floor steps green, the integration and red_until steps green, and `objectstore.log` with no stall. Recorded below as the runs complete.
+
+## CI runs

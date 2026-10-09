@@ -146,62 +146,46 @@ def fake_store() -> Iterator[str]:
         server.shutdown()
 
 
+def _script(mode: str, out: Path, endpoint: str) -> subprocess.CompletedProcess[str]:
+    env = {"PATH": os.environ["PATH"], "HOME": str(out.parent), "S3_ENDPOINT_URL": endpoint}
+    env |= {"S3_ACCESS_KEY_ID": "k", "S3_SECRET_ACCESS_KEY": "s", "S3_BUCKET_MEDIA": "b"}
+    args = ["bash", str(SCRIPT), mode, str(out)]
+    return subprocess.run(args, env=env, capture_output=True, text=True, timeout=60, check=False)
+
+
 @given("the runner telemetry script", target_fixture="telemetry")
 def telemetry(tmp_path: Path, fake_store: str) -> dict[str, Any]:
-    assert SCRIPT.is_file(), SCRIPT
-    env = {
-        "PATH": os.environ["PATH"],
-        "HOME": str(tmp_path),
-        "S3_ENDPOINT_URL": fake_store,
-        "S3_ACCESS_KEY_ID": "k",
-        "S3_SECRET_ACCESS_KEY": "s",
-        "S3_REGION": "us-east-1",
-        "S3_BUCKET_MEDIA": "b",
-    }
-    return {"env": env, "out": tmp_path / "telemetry" / "out.txt"}
+    return {"endpoint": fake_store, "out": tmp_path / "telemetry" / "out.txt"}
 
 
-def _run(telemetry: dict[str, Any], mode: str) -> str:
-    res = subprocess.run(
-        ["bash", str(SCRIPT), mode, str(telemetry["out"])],
-        env=telemetry["env"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-    )
+@when(
+    parsers.re("it (records the runner facts|takes one sample of a running store)"),
+    target_fixture="text",
+)
+def run_script(telemetry: dict[str, Any], request: pytest.FixtureRequest) -> str:
+    mode = "facts" if "facts" in request.node.name else "sample"
+    res = _script(mode, telemetry["out"], telemetry["endpoint"])
     assert res.returncode == 0, res.stdout + res.stderr
     return telemetry["out"].read_text()
 
 
-@when("it records the runner facts", target_fixture="text")
-def facts(telemetry: dict[str, Any]) -> str:
-    return _run(telemetry, "facts")
-
-
-@when("it takes one sample of a running store", target_fixture="text")
-def sample(telemetry: dict[str, Any]) -> str:
-    return _run(telemetry, "sample")
-
-
 SECTIONS = {
     "the Docker daemon settings and the store's published port path": [
-        "## docker daemon",
-        "## published port path",
+        "docker daemon",
+        "published port path",
     ],
     "the conntrack settings and the firewall rules for invalid packets": [
-        "## conntrack settings",
-        "## invalid-packet rules",
+        "conntrack settings",
+        "invalid-packet rules",
     ],
-    "the free disk, the memory and the kernel": ["## disk", "## memory", "## kernel"],
+    "the free disk, the memory and the kernel": ["disk", "memory", "kernel"],
 }
 
 
 @then(parsers.parse("the facts name {what}"))
 def facts_name(text: str, what: str) -> None:
     for header in SECTIONS[what]:
-        assert re.search(rf"^{re.escape(header)}$", text, re.M), (header, text[:2000])
+        assert re.search(rf"^## {re.escape(header)}$", text, re.M), (header, text[:2000])
 
 
 @then(parsers.parse("the sample times one {size} MB write to the store"))
@@ -228,36 +212,13 @@ def sample_ct(text: str) -> None:
 
 def test_a_failed_write_is_recorded_not_fatal(tmp_path: Path) -> None:
     """A store that refuses the write must not stop the watcher: the sample says so."""
-    env = {
-        "PATH": os.environ["PATH"],
-        "HOME": str(tmp_path),
-        "S3_ENDPOINT_URL": "http://127.0.0.1:9",  # discard port: connection refused
-        "S3_ACCESS_KEY_ID": "k",
-        "S3_SECRET_ACCESS_KEY": "s",
-        "S3_REGION": "us-east-1",
-        "S3_BUCKET_MEDIA": "b",
-    }
-    out = tmp_path / "s.txt"
-    res = subprocess.run(
-        ["bash", str(SCRIPT), "sample", str(out)],
-        env=env,
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-    )
+    res = _script("sample", tmp_path / "s.txt", "http://127.0.0.1:9")  # discard port: refused
     assert res.returncode == 0, res.stdout + res.stderr
-    assert re.search(r"^write bytes=1724207 .* http=000$", out.read_text(), re.M), out.read_text()
+    text = (tmp_path / "s.txt").read_text()
+    assert re.search(r"^write bytes=1724207 .* http=000$", text, re.M), text
 
 
 def test_an_unknown_mode_is_refused(tmp_path: Path) -> None:
-    res = subprocess.run(
-        ["bash", str(SCRIPT), "nonsense", str(tmp_path / "x")],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
+    res = _script("nonsense", tmp_path / "x", "http://127.0.0.1:9")
     assert res.returncode == 2
     assert "usage" in res.stderr
