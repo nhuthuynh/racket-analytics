@@ -669,3 +669,28 @@ def test_script_refuses_a_later_unreplaced_cancelled_run_over_http() -> None:
     assert res.returncode == 1, res.stdout + res.stderr
     assert "merge-ready: no" in res.stdout
     assert "was cancelled and no later run replaced it" in res.stdout
+
+
+# ============ PE-2 (review round 1): the event suffix and the workflow-id fallback of a reason
+@pytest.mark.unit
+def test_all_cancelled_push_runs_name_the_event() -> None:
+    wruns = [cancelled(1, 1, event="push"), cancelled(2, 2, event="push")]
+    assert f"all CI runs on {HEAD_SHA} were cancelled (push)" in evaluate(runs=[], wruns=wruns)
+
+
+@pytest.mark.unit
+def test_a_cancelled_run_without_a_name_is_named_by_its_workflow_id() -> None:
+    wruns = [{**cancelled(1, 1, workflow_id=375162210), "name": None}]
+    assert f"all 375162210 runs on {HEAD_SHA} were cancelled" in evaluate(runs=[], wruns=wruns)
+
+
+@pytest.mark.unit
+def test_an_unreplaced_cancelled_push_run_names_the_event() -> None:
+    wruns = [
+        workflow_run(1, 1, event="push", conclusion="success", created_at=T0),
+        cancelled(2, 2, event="push", created_at=T1),
+    ]
+    assert (
+        f"the newest CI run on {HEAD_SHA} was cancelled and no later run replaced it (push)"
+        in evaluate(wruns=wruns)
+    )
