@@ -1,11 +1,11 @@
 {
- "_source": "GET /repos/nhuthuynh/racket-analytics/{actions/runs?head_sha=,commits/<sha>/check-runs} for open PR #49 head 6342f369042e450391891da31fc844fb328652e5, fetched 2026-10-09; fields trimmed to those merge_ready.py reads. CI runs 37934889373 (cancelled by the concurrency group, higher id, suite without check runs) and 37934889367 (green) started in the same second",
+ "_source": "GET /repos/nhuthuynh/racket-analytics/{actions/runs?head_sha=,commits/<sha>/check-runs} for open PR #49 head 6342f369042e450391891da31fc844fb328652e5, fetched 2026-10-09; fields trimmed to those merge_ready.py reads. CI runs 37934889373 (cancelled by the concurrency group, higher id, suite without check runs) and 37934889367 (green) started in the same second (created_at 2026-10-09T13:09:48Z, re-fetched for PE-1)",
  "head_sha": "6342f369042e450391891da31fc844fb328652e5",
  "workflow_runs": [
-  {"id": 37934889373, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781271159, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"},
-  {"id": 37934889367, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781271173, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "success"},
-  {"id": 37934884072, "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781256253, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"},
-  {"id": 37934884250, "workflow_id": 375162211, "name": "Claude review", "event": "pull_request", "check_suite_id": 102781256751, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "success"}
+  {"id": 37934889373, "created_at": "2026-10-09T13:09:48Z", "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781271159, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"},
+  {"id": 37934889367, "created_at": "2026-10-09T13:09:48Z", "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781271173, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "success"},
+  {"id": 37934884072, "created_at": "2026-10-09T13:09:45Z", "workflow_id": 375162210, "name": "CI", "event": "pull_request", "check_suite_id": 102781256253, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "cancelled"},
+  {"id": 37934884250, "created_at": "2026-10-09T13:09:45Z", "workflow_id": 375162211, "name": "Claude review", "event": "pull_request", "check_suite_id": 102781256751, "head_sha": "6342f369042e450391891da31fc844fb328652e5", "run_attempt": 1, "status": "completed", "conclusion": "success"}
  ],
  "check_runs": [
   {"id": 113845670847, "name": "ci-gate", "head_sha": "6342f369042e450391891da31fc844fb328652e5", "status": "completed", "conclusion": "success", "check_suite": {"id": 102781271173}},

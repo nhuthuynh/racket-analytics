@@ -3,8 +3,9 @@
 # scripts/ci/merge_ready.py over HTTP against a local GitHub API stub.
 @ticket-CI-MERGE-READY-CANCELLED @nfr-077 @nfr-078
 Feature: A CI run cancelled by its concurrency group does not decide merge readiness
-  Rule: A cancelled workflow run is never the current run while a non-cancelled run of the same
-        workflow and event exists on the head; among the others the newest counts
+  Rule: A cancelled workflow run is not the current run when a non-cancelled run of the same
+        workflow and event was created in the same second or later; among the others the
+        newest counts
 
     Scenario: A newer cancelled CI run does not hide an older failure
       Given a pull request into main whose CI run failed on the head
@@ -33,3 +34,10 @@ Feature: A CI run cancelled by its concurrency group does not decide merge readi
       And the principal-engineer and the senior-qa-engineer approved the head
       When the orchestrator runs the merge check on the head
       Then the merge is allowed
+
+    Scenario: A newer CI run cancelled by hand, with no run after it, refuses the merge (PE-1)
+      Given a pull request into main whose CI run was green on the head
+      And a later CI run of the same workflow was cancelled by hand and nothing ran after it
+      And the principal-engineer and the senior-qa-engineer approved the head
+      When the orchestrator runs the merge check on the head
+      Then the merge is refused naming "was cancelled and no later run replaced it"

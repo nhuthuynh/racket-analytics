@@ -46,6 +46,15 @@ def newer_cancelled(stub: GitHubStub) -> None:
     stub.workflow_runs.append(workflow_run(NEWER_SUITE, 2, conclusion="cancelled"))
 
 
+@given("a later CI run of the same workflow was cancelled by hand and nothing ran after it")
+def later_cancelled_by_hand(stub: GitHubStub) -> None:
+    # e.g. the run that removed a label; the older green run saw the old label set (PE-1)
+    stub.workflow_runs[0]["created_at"] = "2026-10-09T13:00:00Z"
+    stub.workflow_runs.append(
+        workflow_run(NEWER_SUITE, 2, conclusion="cancelled", created_at="2026-10-09T13:05:00Z")
+    )
+
+
 @given("a newer CI run of the same workflow is still in progress on the head")
 def newer_in_progress(stub: GitHubStub) -> None:
     stub.check_runs += [

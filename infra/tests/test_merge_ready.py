@@ -588,3 +588,84 @@ def test_script_allows_pr_49_shape_over_http() -> None:
         res = run_script(stub, sha=sha)
     assert res.returncode == 0, res.stdout + res.stderr
     assert "merge-ready: yes" in res.stdout
+
+
+# ============ PE-1 (review round 1): only a REPLACED cancelled run is ignored
+# pr-policy reads the PR labels from the event payload, so a newer run that removed a label and
+# was then cancelled by hand or by infra (no run after it) stands for a label state the older
+# green run never saw. A cancelled run is ignored only when a non-cancelled run of the same
+# (workflow, event) was created in the same second or later; otherwise it stays current and
+# blocks. Missing created_at never makes a cancelled run ignorable. Negative cases first.
+T0 = "2026-10-09T13:00:00Z"
+T1 = "2026-10-09T13:05:00Z"
+
+
+@pytest.mark.unit
+def test_a_later_cancelled_run_that_nothing_replaced_blocks_despite_an_older_green_one() -> None:
+    wruns = [
+        workflow_run(1, 1, conclusion="success", created_at=T0),
+        cancelled(2, 2, created_at=T1),
+    ]
+    reasons = evaluate(wruns=wruns)
+    assert reasons, "a cancelled newest run must not let the older green run decide"
+    assert f"the newest CI run on {HEAD_SHA} was cancelled and no later run replaced it" in reasons
+
+
+@pytest.mark.unit
+def test_a_cancelled_run_without_created_at_is_not_ignored() -> None:
+    wruns = [workflow_run(1, 1, conclusion="success"), cancelled(2, 2, created_at=None)]
+    assert any("was cancelled" in r for r in evaluate(wruns=wruns))
+
+
+@pytest.mark.unit
+def test_a_green_run_without_created_at_does_not_replace_a_cancelled_one() -> None:
+    wruns = [workflow_run(1, 1, conclusion="success", created_at=None), cancelled(2, 2)]
+    assert any("was cancelled" in r for r in evaluate(wruns=wruns))
+
+
+@pytest.mark.unit
+def test_a_later_cancelled_run_with_a_failed_newer_run_reports_the_failure() -> None:
+    runs = green_runs() + suite(red_suite(), 3, 100)
+    wruns = [
+        workflow_run(1, 1, conclusion="success", created_at=T0),
+        cancelled(2, 2, created_at=T1),
+        workflow_run(3, 3, conclusion="failure", created_at=T1),
+    ]
+    reasons = evaluate(runs=runs, wruns=wruns)
+    assert "check 'ci-gate' is failure" in reasons
+    assert not any("was cancelled" in r for r in reasons)
+
+
+@pytest.mark.unit
+def test_a_cancelled_run_replaced_by_a_later_green_run_is_ignored() -> None:
+    runs = suite(green_runs(), 3, 100)
+    wruns = [
+        workflow_run(1, 1, conclusion="success", created_at=T0),
+        cancelled(2, 2, created_at=T0),
+        workflow_run(3, 3, conclusion="success", created_at=T1),
+    ]
+    assert evaluate(runs=runs, wruns=wruns) == []
+
+
+@pytest.mark.unit
+def test_same_second_cancelled_run_is_still_ignored_pr_49() -> None:
+    wruns = [
+        workflow_run(1, 1, conclusion="success", created_at=T1),
+        cancelled(2, 2, created_at=T1),
+    ]
+    assert evaluate(wruns=wruns) == []
+
+
+@pytest.mark.integration
+def test_script_refuses_a_later_unreplaced_cancelled_run_over_http() -> None:
+    stub = GitHubStub(
+        workflow_runs=[
+            workflow_run(1, 1, conclusion="success", created_at=T0),
+            cancelled(2, 2, created_at=T1),
+        ],
+    )
+    with serve(stub):
+        res = run_script(stub)
+    assert res.returncode == 1, res.stdout + res.stderr
+    assert "merge-ready: no" in res.stdout
+    assert "was cancelled and no later run replaced it" in res.stdout

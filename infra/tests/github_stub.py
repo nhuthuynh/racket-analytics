@@ -19,6 +19,8 @@ REPO = "nhuthuynh/racket-analytics"
 PR_NUMBER = 7
 HEAD_SHA = "c2" * 20
 OLD_SHA = "c1" * 20
+# Runs created in the same second, like the two CI runs of PR #49 (CI-MERGE-READY-CANCELLED).
+SAME_SECOND = "2026-10-09T13:09:48Z"
 
 
 def check_run(
@@ -46,10 +48,12 @@ def workflow_run(
     conclusion: str | None = None,
     status: str | None = None,
     name: str = "CI",
+    created_at: str | None = SAME_SECOND,
 ) -> dict[str, Any]:
     """A GitHub Actions workflow run: one run (and one check suite) per trigger of a workflow.
     `conclusion`/`status` are only set when given (CI-MERGE-READY-CANCELLED), so older tests
-    keep the shape they were written with."""
+    keep the shape they were written with. `created_at` defaults to one shared second (PR #49
+    shape); None leaves it out."""
     run: dict[str, Any] = {
         "id": run_id,
         "name": name,
@@ -58,6 +62,8 @@ def workflow_run(
         "check_suite_id": suite_id,
         "head_sha": sha,
     }
+    if created_at is not None:
+        run["created_at"] = created_at
     if status is not None:
         run["status"] = status
     if conclusion is not None:
