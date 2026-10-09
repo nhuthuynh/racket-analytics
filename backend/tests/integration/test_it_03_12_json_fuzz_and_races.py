@@ -12,7 +12,11 @@ consistent outcome (the match is gone and nothing of it is readable, or the tag 
 match is kept); parallel purge passes are in IT-03-07.
 
 Generators and the "still bad where the server reads it" filter come from IT-02-10, so both
-files test the same input domain. Written red first: ``red_until`` ST-050 (first route).
+files test the same input domain. Written red first, one ``red_until`` per row naming the story
+that row really waits on (review round 1, F1): the match delete rows and the race wait on ST-050
+(``DELETE /matches/{id}``), the account delete rows on ST-051 (``DELETE /me``), the label rows on
+ST-052 (the labeller seam and the label route). Each story removes the markers of its own rows. A
+DELETE answered 405 (the route is not built yet) is never counted as an L11 refusal.
 """
 
 from __future__ import annotations
@@ -30,7 +34,11 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-050")]
+WAITS_ON = {
+    "delete_match": pytest.mark.red_until(story="ST-050"),
+    "delete_account": pytest.mark.red_until(story="ST-051"),
+    "label": pytest.mark.red_until(story="ST-052"),
+}
 
 OUTCOME: dict[str, Any] = {"ending": "winner", "winning_side": "B", "responsible_player": "B1"}
 RALLY_EVENT: dict[str, Any] = {
@@ -40,6 +48,7 @@ RALLY_EVENT: dict[str, Any] = {
     "outcome": OUTCOME,
 }
 Builder = Callable[[Any], Any]
+NOT_BUILT = 405  # method_not_allowed: the route of the row's story is not built yet
 # field -> (route kind, body builder, valid base value)
 FIELDS: dict[str, tuple[str, Builder, str]] = {
     "delete_match.confirm": ("delete_match", lambda v: {"confirm": v}, "delete"),
@@ -64,20 +73,40 @@ FIELDS: dict[str, tuple[str, Builder, str]] = {
 }
 
 
+def _rows(*extra: tuple[Any, str]) -> list[Any]:
+    """One param per field (times each ``(value, id)`` in ``extra``), each carrying the marker
+    of the story its route waits on."""
+    out = []
+    for field in sorted(FIELDS):
+        mark = WAITS_ON[FIELDS[field][0]]
+        if not extra:
+            out.append(pytest.param(field, marks=mark, id=field))
+        out += [pytest.param(field, v, marks=mark, id=f"{field}-{i}") for v, i in extra]
+    return out
+
+
 class Target:
-    def __init__(self, api: ApiDriver, engine: Any) -> None:
+    """Ivy's match (the delete rows); for a label row also Dana's labeller match, probed and with
+    consent, so a label body reaches the L11 check and not 409 ``match_not_ready``."""
+
+    def __init__(self, api: ApiDriver, engine: Any, kind: str) -> None:
         self.api, self.engine = api, engine
         client = api.as_user("ivy")
         self.match_id = api.run(sb.create_doubles(client, "IT-03-12"))
         api.run(sb.receive_video(client, self.match_id))
         self.ivy = st.me_id(api, "ivy")
-        st.grant_labeller(api, "dana")
-        self.label_match = api.run(sb.create_doubles(api.as_user("dana"), "IT-03-12 label"))
-        api.run(sb.receive_video(api.as_user("dana"), self.label_match))
-        st.record_consent(self.label_match)
+        self.ids = [self.match_id, self.ivy]
+        self.label_match = ""
+        if kind == "label":
+            st.grant_labeller(api, "dana")
+            self.label_match = api.run(sb.create_doubles(api.as_user("dana"), "IT-03-12 label"))
+            api.run(sb.receive_video(api.as_user("dana"), self.label_match))
+            st.probe_videos()
+            st.record_consent(self.label_match)
+            self.ids.append(self.label_match)
 
     def snapshot(self) -> dict[str, int]:
-        rows = st.rows_holding(self.engine, [self.match_id, self.ivy, self.label_match])
+        rows = st.rows_holding(self.engine, self.ids)
         return {**rows, **sb.row_counts(self.engine)}
 
     def send(self, kind: str, body: Any) -> Any:
@@ -95,27 +124,39 @@ class Target:
 
 
 @pytest.fixture
-def target(api: ApiDriver, committed_db: Any) -> Target:
-    return Target(api, committed_db)
+def make_target(api: ApiDriver, committed_db: Any) -> Callable[[str], Target]:
+    return lambda kind: Target(api, committed_db, kind)
+
+
+def _built(kind: str, response: Any) -> None:
+    assert response.status_code != NOT_BUILT, f"{kind}: route not built yet ({response.text[:200]})"
 
 
 def _refused(target: Target, kind: str, body: Any) -> None:
     before = target.snapshot()
     response = target.send(kind, body)
+    _built(kind, response)
     assert 400 <= response.status_code < 500, (
         f"{kind}: {response.status_code} {response.text[:300]} for {json.dumps(body)[:200]}"
     )
     assert target.snapshot() == before, f"{kind}: a row was written or deleted"
 
 
-def test_it_03_12_positive_control_the_valid_label_is_accepted(target: Target) -> None:
+@WAITS_ON["label"]
+def test_it_03_12_positive_control_the_valid_label_is_accepted(
+    make_target: Callable[[str], Target],
+) -> None:
+    target = make_target("label")
     response = target.send("label", RALLY_EVENT)
     assert response.status_code in (200, 201), response.text
 
 
-@pytest.mark.parametrize("field", sorted(FIELDS))
-def test_it_03_12_bad_characters_are_a_4xx_and_change_nothing(target: Target, field: str) -> None:
+@pytest.mark.parametrize("field", _rows())
+def test_it_03_12_bad_characters_are_a_4xx_and_change_nothing(
+    make_target: Callable[[str], Target], field: str
+) -> None:
     kind, build, base = FIELDS[field]
+    target = make_target(kind)
 
     @SETTINGS
     @given(value=bad_text(base))
@@ -126,19 +167,29 @@ def test_it_03_12_bad_characters_are_a_4xx_and_change_nothing(target: Target, fi
 
 
 @pytest.mark.parametrize(
-    "value",
-    ["\x00", "\ud800", "\udfff", " ", "del\x00ete"],  # noqa: PT014
-    ids=["nul", "high-surrogate", "low-surrogate", "line-separator", "inner-nul"],
+    ("field", "value"),
+    _rows(
+        ("\x00", "nul"),
+        ("\ud800", "high-surrogate"),
+        ("\udfff", "low-surrogate"),
+        ("\u2028", "line-separator"),
+        ("del\x00ete", "inner-nul"),
+    ),
 )
-@pytest.mark.parametrize("field", sorted(FIELDS))
-def test_it_03_12_named_characters_in_every_field(target: Target, field: str, value: str) -> None:
+def test_it_03_12_named_characters_in_every_field(
+    make_target: Callable[[str], Target], field: str, value: str
+) -> None:
     kind, build, _ = FIELDS[field]
+    target = make_target(kind)
     _refused(target, kind, build(value))
 
 
-@pytest.mark.parametrize("field", sorted(FIELDS))
-def test_it_03_12_any_json_value_is_never_a_5xx(target: Target, field: str) -> None:
+@pytest.mark.parametrize("field", _rows())
+def test_it_03_12_any_json_value_is_never_a_5xx(
+    make_target: Callable[[str], Target], field: str
+) -> None:
     kind, build, base = FIELDS[field]
+    target = make_target(kind)
 
     @SETTINGS
     @given(value=ANY_JSON)
@@ -146,11 +197,13 @@ def test_it_03_12_any_json_value_is_never_a_5xx(target: Target, field: str) -> N
         if value == base:
             return  # the valid value would really delete; the positive controls cover it
         response = target.send(kind, build(value))
+        _built(kind, response)
         assert response.status_code < 500, f"{field}: {response.status_code} {response.text[:300]}"
 
     check()
 
 
+@WAITS_ON["delete_match"]
 def test_it_03_12_delete_racing_a_tag_ends_in_one_consistent_outcome(api: ApiDriver) -> None:
     match_id = sb.ready_match(api, "ivy", "IT-03-12 race")
     client = api.as_user("ivy")
