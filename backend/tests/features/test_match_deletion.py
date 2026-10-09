@@ -8,6 +8,9 @@ Written red first: ``red_until`` ST-050.
 ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the module marker is lifted;
 "Someone else's match" passes and joins the per-PR gate. "Delete a tagged match" runs the purge
 in its last step, so it stays ``red_until`` ST-050b, marked on its own.
+
+ST-050b (TCR row in docs/sprints/03/decisions/ST-050b.md): the purge exists; "Delete a tagged
+match" leaves ``red_until`` and joins the per-PR gate.
 """
 
 from __future__ import annotations
@@ -25,7 +28,6 @@ from tests.support.api import ApiDriver
 FEATURE = "match_deletion.feature"
 
 
-@pytest.mark.red_until(story="ST-050b")
 @scenario(FEATURE, "Delete a tagged match")
 def test_delete_a_tagged_match() -> None:
     pass

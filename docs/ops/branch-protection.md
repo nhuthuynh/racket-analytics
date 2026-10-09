@@ -78,11 +78,21 @@ of these hold on that SHA:
   `ci-gate` itself is `success`. Any
   other check may be `skipped` or `neutral`, for example the schedule-only `flaky-report`
   (`docs/sprints/03/decisions/CI-PR-GATE.md`, row 1).
-- Only the **newest workflow run** of each workflow and event on that SHA counts. Adding or
+- Only the **current workflow run** of each workflow and event on that SHA counts. Adding or
   removing a label, or re-opening the PR, starts a new run of `ci.yml` on the same SHA, and
   `cancel-in-progress` cancels the older one. The check reads
-  `GET /repos/{repo}/actions/runs?head_sha=<SHA>` and ignores the check suites of the older
+  `GET /repos/{repo}/actions/runs?head_sha=<SHA>` and ignores the check suites of the other
   runs. A check run outside GitHub Actions is never ignored (`docs/sprints/03/decisions/CI-PR-GATE.md`, row 5).
+- The current run is the **newest run**, skipping a **cancelled run that was replaced**: a
+  run that was not cancelled was created in the same second or later. When two triggers start
+  runs in the same second, the concurrency group may cancel the newer one (PR #49), so that run
+  is skipped. A cancelled run that nothing replaced (cancelled by hand or by infra, no run after
+  it) stays current and refuses the merge with `the newest <workflow> run on <SHA> was cancelled
+  and no later run replaced it`, because `pr-policy` reads the labels from that run's event and
+  the older green run saw an older label set. A newer run that failed, is queued or is in
+  progress still wins, so a newer failure is never hidden. If every run of a workflow on the SHA
+  was cancelled, the check refuses with `all <workflow> runs on <SHA> were cancelled`
+  (`docs/sprints/03/decisions/CI-MERGE-READY-CANCELLED.md`).
 - The **principal-engineer's** latest review and at least one **senior-\*** role's latest
   review start with `Verdict: APPROVE` and were given on that SHA. No role's latest review on
   that SHA says `Verdict: CHANGES REQUESTED`.

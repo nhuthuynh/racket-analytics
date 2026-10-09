@@ -136,13 +136,21 @@ jobs:
       # measure test time, not a cold cache (run 37298471332: 11.1 s cold vs 6.8 s warm).
       - name: Warm the bytecode cache (collect only, not budgeted)
         run: uv run --no-sync pytest -q --collect-only -m unit
+      # PE-R1-DB-01 (ADR 0049): a fresh checkout has no .hypothesis/constants, so each worker's
+      # first example parsed every local module (~1.3 s per worker). Collects the domain
+      # selection and draws one example; runs no test.
+      - name: Warm the Hypothesis constants cache (not budgeted)
+        run: |
+          # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
+          uv run --no-sync python ../scripts/ci/warm_hypothesis_constants.py -m "unit and not red_until" $DOMAIN_TEST_PATHS
+      # CI-DOMAIN-BUDGET (ADR 0049): runs 37882972340 and 37918385248 hit 10 s with every test
+      # passing; ~80% of the suite is Hypothesis generation on the default profile in one process.
+      # Parallel workers (one per core, work stealing); same budget, selection and profile, and the
+      # budget still times start-up and collection. The wall time is kept as evidence.
       - name: Domain unit suite < 10 s (NFR-073)
         run: |
-          # pytest-xdist, one worker per runner core (as in the integration job, C-32), with work
-          # stealing so the Hypothesis-heavy modules spread over all workers. Serially the suite
-          # passed in 8.9 s but start-up pushed it past 10 s (CI-DOMAIN-BUDGET, ST-048.md).
           # shellcheck disable=SC2086 # DOMAIN_TEST_PATHS is a space-separated list
-          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -n auto --dist worksteal -m "unit and not red_until" $DOMAIN_TEST_PATHS
+          python3 ../scripts/ci/run_with_budget.py "$DOMAIN_UNIT_BUDGET_S" --json ../reports/budget/domain-unit.json -- uv run --no-sync pytest -q -n auto --dist worksteal -m "unit and not red_until" $DOMAIN_TEST_PATHS
       - name: Property tests, Hypothesis ci profile (>= 1,000 examples, ST-004)
         env:
           HYPOTHESIS_PROFILE: ci
@@ -155,7 +163,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: junit-unit
-          path: reports/unit.xml
+          path: |
+            reports/unit.xml
+            reports/budget/domain-unit.json
           if-no-files-found: warn
 
   drill-lint:
@@ -236,6 +246,14 @@ jobs:
             echo "MAILPIT_API_URL=http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
             echo "APP_ENV=test"
           } >> "$GITHUB_ENV"
+      - name: Runner facts and store telemetry (CI-OBJSTORE-SLOW; kept in integration-reports)
+        # Runs 37764445816 and 37961668800: the store took the clip at ~64 KiB/s minutes into the
+        # job; nothing local reproduces it. Facts once, then a timed clip write plus TCP, conntrack
+        # and pressure counters every 15 s in the background until the job ends.
+        run: |
+          scripts/ci/objectstore_telemetry.sh facts reports/telemetry/runner-facts.txt
+          cat reports/telemetry/runner-facts.txt
+          nohup scripts/ci/objectstore_telemetry.sh watch reports/telemetry/samples.txt 15 >/dev/null 2>&1 &
       - name: Object store parity IT-00-16 (ADR 0008 part C)
         working-directory: infra
         run: uv sync --locked && uv run pytest -q tests/test_object_store_parity.py
@@ -249,6 +267,12 @@ jobs:
             -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
             --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
             --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py >/dev/null
+      - name: Object store write throughput floor (before the suites)
+        # CI-OBJSTORE-SLOW: the 1.72 MB clip from 4 writers, median >= 5 MB/s and none < 1 MB/s;
+        # a store at the CI stall rate fails here, named, instead of timing out tests later.
+        working-directory: backend
+        timeout-minutes: 3
+        run: uv run --no-sync pytest -q -p no:cacheprovider tests/integration/harness/test_ci_objstore_throughput.py
       - name: Migrate the base database before the parallel workers (unbudgeted setup)
         # Workers migrate their own session databases of this one cluster at the same moment.
         # Cluster-wide objects (migration 0012's role racket_media_worker) are created here
@@ -267,23 +291,47 @@ jobs:
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
+      - name: Object store write throughput floor (after the suites, before the rows waiting on a story)
+        # CI-OBJSTORE-SLOW: the 1.72 MB clip from 4 writers, median >= 5 MB/s and none < 1 MB/s;
+        # a store at the CI stall rate fails here, named, instead of timing out tests later.
+        working-directory: backend
+        timeout-minutes: 3
+        run: uv run --no-sync pytest -q -p no:cacheprovider tests/integration/harness/test_ci_objstore_throughput.py
       - name: Rows waiting on a story (red_until; listed, not gated; a stale marker fails)
         # sprint-02 §8: rows red until a story (stretch or PO-blocked) are listed separately.
         # pytest's own rc is expected to be 1 here; the report decides (W-01).
+        # CI-REDUNTIL-HANG (run 37961668800, TCR 2026-10-09): a row fails for its story in
+        # seconds; a row that waits (a store at ~64 KiB/s) is stopped at 30 s and the run at
+        # 90 s, and the report fails on a timed-out row or on fewer rows than were collected.
         working-directory: backend
+        timeout-minutes: 4
         run: |
+          rows=$(uv run --no-sync pytest -q -p no:cacheprovider --collect-only -m "red_until and not nightly" | grep -c '::' || true)
           uv run --no-sync pytest -q -p no:cacheprovider -m "red_until and not nightly" \
+            -o timeout=30 --session-timeout=90 \
             --junitxml=../reports/red-until.xml || echo "pytest rc=$? (red-until rows are expected to fail)"
           python3 ../scripts/ci/red_until_report.py --junit ../reports/red-until.xml --root . \
-            --summary "$GITHUB_STEP_SUMMARY"
+            --expected-rows "$rows" --summary "$GITHUB_STEP_SUMMARY"
       - name: Changed-lines coverage >= 85% (testing-strategy §8, NFR-071)
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: diff-cover reports/coverage-backend.xml --compare-branch="$BASE_SHA" --fail-under=85 --markdown-report reports/diff-cover-backend.md
-      - name: Service logs on failure
-        if: failure()
-        run: $COMPOSE logs --no-color --tail=200
+      - name: Service logs on failure or cancel
+        # CI-REDUNTIL-HANG: run 37961668800 was cancelled, so no store log was kept; the whole
+        # object store log goes into the uploaded reports (the store's slow writes are unexplained).
+        if: failure() || cancelled()
+        run: |
+          $COMPOSE logs --no-color --tail=200
+          $COMPOSE logs --no-color objectstore > reports/objectstore.log 2>&1 || true
+      - name: Keep the object store log (every run; CI-OBJSTORE-SLOW)
+        # A green run's log is the baseline for a slow one (the done check: no stall in the log).
+        if: always()
+        run: |
+          mkdir -p reports
+          $COMPOSE logs --no-color objectstore > reports/objectstore.log 2>&1 || true
+          pkill -f 'objectstore_telemetry.sh watch' || true
+          grep -E '^(# sample|write )' reports/telemetry/samples.txt || true
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

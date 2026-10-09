@@ -6,6 +6,9 @@ still knows it (a later pass can find it); rows are never gone while their objec
 The next pass completes (no row, no object), and a third pass is a no-op.
 
 Written red first (QA-ACC-3): ``red_until`` ST-050.
+
+ST-050b (TCR row in docs/sprints/03/decisions/ST-050b.md): the module marker is lifted; both
+rows pass with the purge pass and join the per-PR gate.
 """
 
 from __future__ import annotations
@@ -17,8 +20,6 @@ import pytest
 
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-050")]
 
 
 def _purge_tolerating_failure() -> None:
