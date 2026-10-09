@@ -1,0 +1,22 @@
+@nfr-073 @ci-domain-budget
+Feature: The domain unit suite runs inside its 10 s budget with margin, on the same selection
+  NFR-073 gives the "rules + domain" unit suite (CI's DOMAIN_TEST_PATHS) 10 s of wall time,
+  measured by run_with_budget.py from interpreter start to exit. Main runs 37882972340 and
+  37918385248 were stopped at 10 s (exit 124) although every test passed: about 80% of the
+  suite's time is Hypothesis example generation in some 30 property tests on the default
+  profile, in one process. The suite runs in parallel test workers instead. The budget, the
+  test selection and the Hypothesis profile stay as they are.
+
+  Scenario: The budget cannot be met by changing what is measured
+    Given the CI workflow
+    Then the domain budget is 10 seconds
+    And the budgeted domain step selects "unit and not red_until" on CI's DOMAIN_TEST_PATHS only
+    And the budgeted domain step deselects, ignores and skips nothing by itself
+    And the budgeted domain step uses the default Hypothesis profile
+
+  Scenario: The domain step runs in parallel workers on the same tests with the same results
+    Given the backend unit suite on CI's DOMAIN_TEST_PATHS
+    When the budgeted domain step's command from ci.yml runs
+    And the same selection runs in one process
+    Then the step ran on more than one worker
+    And both runs executed the same test ids with the same outcomes and none failed
