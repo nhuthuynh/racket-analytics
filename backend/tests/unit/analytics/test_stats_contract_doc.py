@@ -11,16 +11,16 @@ metric missing, so an empty or moved table cannot pass by comparing nothing.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 
 from racket.analytics.starter_stats import METRICS, starter_stats
+from tests.support.paths import REPO
 from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game
 
 pytestmark = [pytest.mark.unit]
 
-CONTRACT = Path(__file__).resolve().parents[4] / "docs" / "architecture" / "api-sprint-03.md"
+CONTRACT = REPO / "docs" / "architecture" / "api-sprint-03.md"
 ROW = re.compile(r"^\|\s*(AN-0\d(?:,\s*AN-0\d)*)\s*\|(.*)\|\s*$")
 
 
