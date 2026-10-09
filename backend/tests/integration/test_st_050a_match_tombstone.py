@@ -18,12 +18,16 @@ import asyncio
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from racket.analysis_jobs.domain import JobKey
+from racket.analysis_jobs.stage import StageContext
 from racket.matches import public as matches_port
+from racket.video_ingest.domain.policy import Rejection
+from racket.video_ingest.probe import ProbeStage
 from racket.video_ingest.repository import MediaRepository, UploadRepository
 from tests.support import scorebook as sb
 from tests.support import stats as st
@@ -207,4 +211,76 @@ def test_st_050a_delete_racing_the_completing_patch_neither_deadlocks_nor_fails(
     outcome["delete"] = api.run(race())
 
     assert outcome == {"patch": "ok", "delete": 202}
+    assert st.request(api, "ivy", "match", match_id=match_id).status_code == 404
+
+
+def test_st_050a_delete_racing_the_probe_refusal_neither_deadlocks_nor_fails(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    """PE-050a-05 / QA-50a-R2-01: the probe worker refusing a file (``ProbeStage._reject``)
+    touches the match row and the upload row in one transaction; DELETE locks the upload row,
+    then the match row. The global order is upload row, then match row, or the two deadlock and
+    Postgres aborts one side (DELETE answers 500). The real ``_reject`` runs here and is held
+    after its first row lock until DELETE waits on it."""
+    client = api.as_user("ivy")
+    match_id = api.run(sb.create_doubles(client, "ST-050a probe race"))
+    api.run(tus.start(client, match_id, length=1000))
+    with Session(committed_db) as setup:
+        row = UploadRepository(setup).for_match(uuid.UUID(match_id))
+        assert row is not None
+        MediaRepository(setup).add_asset(
+            owner_id=row.owner_id, match_id=row.match_id,
+            object_key=row.object_key, size_bytes=row.length,
+        )  # fmt: skip
+        setup.commit()
+    outcome: dict[str, Any] = {}
+
+    def probe_refusal() -> None:
+        with Session(committed_db) as session:
+            try:
+                pid = session.execute(sa.text("SELECT pg_backend_pid()")).scalar_one()
+                asset = MediaRepository(session).asset_for_match(uuid.UUID(match_id))
+                assert asset is not None
+                held = {"done": False}
+
+                def hold_after_first_lock(_c: Any, _cur: Any, statement: str, *_: Any) -> None:
+                    sql = " ".join(statement.split()).upper()
+                    if held["done"] or not (
+                        "FOR UPDATE" in sql or sql.startswith("DELETE FROM UPLOAD_SESSIONS")
+                    ):
+                        return
+                    held["done"] = True
+                    deadline = time.monotonic() + 10
+                    while not _blocks_someone(committed_db, pid):  # DELETE now waits on it
+                        assert time.monotonic() < deadline, "DELETE never waited on the probe"
+                        time.sleep(0.01)
+
+                sa.event.listen(session.connection(), "after_cursor_execute", hold_after_first_lock)
+                ctx = StageContext(
+                    session=session,
+                    key=JobKey(match_id=uuid.UUID(match_id), pipeline_version="v1", stage="probe"),
+                    attempt=1,
+                    settings=cast(Any, None),
+                    store=cast(Any, None),
+                )
+                ProbeStage._reject(ctx, asset, Rejection.TOO_LONG)
+                session.commit()
+                outcome["probe"] = "ok"
+            except Exception as exc:  # noqa: BLE001 - the outcome is the assertion
+                session.rollback()
+                outcome["probe"] = type(getattr(exc, "orig", exc)).__name__
+
+    async def race() -> int:
+        deleted, _ = await asyncio.gather(
+            client.request(
+                *st.statscontract.path("delete_match", match_id=match_id),
+                json=st.statscontract.CONFIRM_BODY,
+            ),
+            asyncio.to_thread(probe_refusal),
+        )
+        return deleted.status_code
+
+    outcome["delete"] = api.run(race())
+
+    assert outcome == {"probe": "ok", "delete": 202}
     assert st.request(api, "ivy", "match", match_id=match_id).status_code == 404
