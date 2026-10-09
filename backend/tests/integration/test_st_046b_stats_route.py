@@ -49,7 +49,8 @@ def test_st_046b_the_body_carries_the_versions_the_label_and_no_store(api: ApiDr
     body = response.json()
     assert body["match_id"] == match_id
     assert body["metric_def_version"] == metrics.load_dictionary().version
-    assert isinstance(body["rules_version"], str) and body["rules_version"]
+    assert isinstance(body["rules_version"], str)
+    assert body["rules_version"]
     assert body["unofficial"] is True
     assert body["label"] == st.UNOFFICIAL
     assert body["sheet_version"] >= 1
@@ -70,9 +71,7 @@ def wider_rule(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Iterator[float
     metrics.load_dictionary.cache_clear()
 
 
-def test_st_046b_low_sample_rule_is_the_dictionarys_own(
-    api: ApiDriver, wider_rule: float
-) -> None:
+def test_st_046b_low_sample_rule_is_the_dictionarys_own(api: ApiDriver, wider_rule: float) -> None:
     match_id = st.tagged_example(api, "ivy", "ST-046b rule")
     body = st.stats_body(api, "ivy", match_id)
     assert body["low_sample_rule"] == {"max_interval_width": wider_rule}
