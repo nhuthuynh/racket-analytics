@@ -30,6 +30,7 @@ Rules:
 2. The parallel run executes the same test ids with the same outcomes as one process: `tests/features/ci_domain_budget.feature` (real suite, junit compared test by test).
 3. Each run keeps its wall time (`reports/budget/domain-unit.json` in the `junit-unit` artifact).
 4. The G03-11 (d) scorecard run uses CI's workers.
+5. (PE-R1-DB-01) An unbudgeted step before it fills Hypothesis's local-constants cache (`scripts/ci/warm_hypothesis_constants.py`, same selection, no test run). On a fresh checkout each worker's first example otherwise parsed every local module: 1.26-1.67 s per worker, ~1 s of wall locally. A cache, like the bytecode warm-up; generated values are unchanged.
 
 ## Consequences
 
@@ -39,4 +40,4 @@ Rules:
 
 ## Evidence
 
-Locally at load ≈ 2: serial wall 8.5-11.5 s; `-n 4 --dist worksteal` 5.4-6.0 s; `-n auto` 6.0-6.3 s. Red → green: `cd infra && uv run --no-sync pytest -q -p no:cacheprovider tests/test_ci_domain_budget.py tests/test_ci_domain_budget_scenarios.py` → `3 failed, 10 passed` → green. Done when 3 consecutive CI runs at the PR head show domain wall ≤ 7.5 s and pass.
+Locally at load ≈ 2: serial wall 8.5-11.5 s; `-n 4 --dist worksteal` 5.4-6.0 s; `-n auto` 6.0-6.3 s. Red → green: `cd infra && uv run --no-sync pytest -q -p no:cacheprovider tests/test_ci_domain_budget.py tests/test_ci_domain_budget_scenarios.py` → `3 failed, 10 passed` → green. CI run 37933402495 (cee8c00, cold cache): 10 s, exit 124. CI run 37935969739 (dc75b07, warmed): `budget: finished in 7.7s`. Locally, cold vs warmed: 6.5-6.8 s vs 5.6-6.1 s. The `bringing up nodes`/`98%` timestamps in the step log are block-buffered stdout, not phase times (unbuffered: first line at 0.66 s). Done when 3 consecutive CI runs at the PR head show domain wall ≤ 7.5 s and pass.

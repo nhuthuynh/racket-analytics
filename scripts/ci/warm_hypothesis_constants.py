@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""Fill Hypothesis's local-constants cache before a time-budgeted run (CI-DOMAIN-BUDGET, ADR 0049).
+"""Fill Hypothesis's local-constants cache before a budgeted run (CI-DOMAIN-BUDGET, ADR 0049).
 
-On the first example in a process, Hypothesis parses every loaded local module for constants and
-caches them under .hypothesis/constants, keyed by source hash. A fresh CI checkout has no cache,
-so each xdist worker parses the whole tree (~1.3 s per worker locally, PE-R1-DB-01). This
-collects the same selection in one process (importing the same modules) and draws one example,
-so the budgeted run reads the cache. It runs no test and changes no generated values.
-
-Usage (in backend, with its env): warm_hypothesis_constants.py PYTEST_ARGS...
-Exit: pytest's collection exit code; 3 when the cache stays empty.
+A fresh checkout has no .hypothesis/constants, so each xdist worker's first example parsed every
+local module (~1.3 s per worker; PE-R1-DB-01). This collects the same selection in one process and
+draws one example. It runs no test and changes no generated value (the cache is keyed by source).
+Usage (in backend): warm_hypothesis_constants.py PYTEST_ARGS...  Exit: pytest's; 3 if no cache.
 """
 
 from __future__ import annotations
