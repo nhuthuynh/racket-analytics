@@ -8,8 +8,8 @@ row written (deleting nothing is the "no row written" of a DELETE). The consent 
 written by the labeller-admin CLI, not a JSON route, so it is not in this file.
 
 Concurrency for the new limits (NFR-058): a DELETE racing a tag on one match ends in one
-consistent outcome (the match is gone and nothing of it is readable, or the tag landed and the
-match is kept); parallel purge passes are in IT-03-07.
+consistent outcome: the delete always wins (202) and nothing of the match is readable afterwards,
+while the tag ends as 201 (it landed first), 404 or 409; parallel purge passes are in IT-03-07.
 
 Generators and the "still bad where the server reads it" filter come from IT-02-10, so both
 files test the same input domain. Written red first, one ``red_until`` per row naming the story
@@ -129,7 +129,9 @@ def make_target(api: ApiDriver, committed_db: Any) -> Callable[[str], Target]:
 
 
 def _built(kind: str, response: Any) -> None:
+    """The refusal comes from the body check, not from a missing route or an unready match."""
     assert response.status_code != NOT_BUILT, f"{kind}: route not built yet ({response.text[:200]})"
+    assert "match_not_ready" not in response.text, f"{kind}: refused before L11 ({response.text})"
 
 
 def _refused(target: Target, kind: str, body: Any) -> None:
