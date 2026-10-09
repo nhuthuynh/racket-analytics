@@ -39,6 +39,7 @@ export const STATE_COPY = {
   error: /could not be (loaded|shown)/i,
   retry: 'Try again',
   tagRallies: 'Tag rallies',
+  nothingPublished: /each stat appears once our coach has checked how it is measured/i,
 } as const;
 const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** The browser request for D-01's numbers (api-sprint-03 §2). */
