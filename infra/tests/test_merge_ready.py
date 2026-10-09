@@ -500,7 +500,7 @@ def test_a_newer_queued_run_without_check_runs_yet_blocks() -> None:
 
 @pytest.mark.unit
 def test_all_runs_cancelled_is_reported_explicitly() -> None:
-    wruns = [cancelled(1, 1) | {"name": "CI"}, cancelled(2, 2) | {"name": "CI"}]
+    wruns = [cancelled(1, 1), cancelled(2, 2)]
     reasons = evaluate(runs=[], wruns=wruns)
     assert f"all CI runs on {HEAD_SHA} were cancelled" in reasons
 
@@ -508,7 +508,7 @@ def test_all_runs_cancelled_is_reported_explicitly() -> None:
 @pytest.mark.unit
 def test_all_runs_cancelled_with_leftover_check_runs_still_blocks() -> None:
     runs = red_suite()  # suite 1 cancelled after some jobs ran
-    wruns = [cancelled(1, 1) | {"name": "CI"}, cancelled(2, 2) | {"name": "CI"}]
+    wruns = [cancelled(1, 1), cancelled(2, 2)]
     reasons = evaluate(runs=runs, wruns=wruns)
     assert f"all CI runs on {HEAD_SHA} were cancelled" in reasons
 
@@ -565,7 +565,7 @@ def test_regression_pr_49_head_with_a_concurrency_cancelled_newer_run_is_ready_o
 def test_script_reports_all_cancelled_over_http_and_exits_1() -> None:
     stub = GitHubStub(
         check_runs=[],
-        workflow_runs=[cancelled(1, 1) | {"name": "CI"}, cancelled(2, 2) | {"name": "CI"}],
+        workflow_runs=[cancelled(1, 1), cancelled(2, 2)],
     )
     with serve(stub):
         res = run_script(stub)

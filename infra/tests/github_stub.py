@@ -45,12 +45,14 @@ def workflow_run(
     sha: str = HEAD_SHA,
     conclusion: str | None = None,
     status: str | None = None,
+    name: str = "CI",
 ) -> dict[str, Any]:
     """A GitHub Actions workflow run: one run (and one check suite) per trigger of a workflow.
     `conclusion`/`status` are only set when given (CI-MERGE-READY-CANCELLED), so older tests
     keep the shape they were written with."""
     run: dict[str, Any] = {
         "id": run_id,
+        "name": name,
         "workflow_id": workflow_id,
         "event": event,
         "check_suite_id": suite_id,
