@@ -97,20 +97,17 @@ def store_a_serves_25(ctx: dict[str, Any]) -> None:
 
 
 @then(
-    parsers.parse(
-        "the stored {metric} of side {side} has n {n:d} and is {flag}low sample"
+    parsers.re(
+        r"the stored (?P<metric>AN-\d\d) of side (?P<side>[AB]) has n (?P<n>\d+) "
+        r"and is (?P<flag>(not )?)low sample"
     )
 )
-def stored_flag(ctx: dict[str, Any], metric: str, side: str, n: int, flag: str) -> None:
+def stored_flag(ctx: dict[str, Any], metric: str, side: str, n: str, flag: str) -> None:
     fields = ctx["stored"].stats[metric][side]
-    assert (fields["n"], fields["low_sample"]) == (n, flag != "not ")
+    assert (fields["n"], fields["low_sample"]) == (int(n), flag != "not ")
 
 
-@then(
-    parsers.parse(
-        "the published card of {metric} shows a minimum sample of {n:d} {unit}"
-    )
-)
+@then(parsers.parse("the published card of {metric} shows a minimum sample of {n:d} {unit}"))
 def card_min_sample(ctx: dict[str, Any], metric: str, n: int, unit: str) -> None:
     view = ctx["stored"].published_view(ctx["dictionary"])
     assert view[metric]["entry"]["min_sample"] == {"unit": unit, "n": n}
