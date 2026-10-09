@@ -10,7 +10,8 @@ media route) answers a Range request with 206 from the store.
 Written red first (QA-ACC-3): ``red_until`` ST-047.
 
 Marker ``red_until`` ST-047 removed (ST-047-API, TCR row 2026-10-09 in
-docs/sprints/03/decisions/ST-047-API.md): the route is served and every row passes, so the file joins the per-PR gate.
+docs/sprints/03/decisions/ST-047-API.md): the route is served and every row passes, so the
+file joins the per-PR gate.
 """
 
 from __future__ import annotations

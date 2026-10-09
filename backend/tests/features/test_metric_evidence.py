@@ -4,7 +4,8 @@ The 23-rally stat is "Rallies won when receiving" for side A in ``stats.no_score
 (the server always loses: A receives 23 times and wins all 23). Red first: ``red_until`` ST-047.
 
 Marker ``red_until`` ST-047 removed (ST-047-API, TCR row 2026-10-09 in
-docs/sprints/03/decisions/ST-047-API.md): the route is served and every row passes, so the file joins the per-PR gate.
+docs/sprints/03/decisions/ST-047-API.md): the route is served and every row passes, so the
+file joins the per-PR gate.
 """
 
 from __future__ import annotations

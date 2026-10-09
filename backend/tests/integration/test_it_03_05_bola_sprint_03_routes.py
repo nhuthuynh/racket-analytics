@@ -11,8 +11,9 @@ Written red first (QA-ACC-3): ``red_until`` ST-046 (the first Sprint 3 route).
 
 The file-level marker became one marker per row (ST-046b, TCR row 2026-10-09 in
 docs/sprints/03/decisions/ST-046b.md): the stats row passes and joins the per-PR gate.
-The evidence row joins it with ST-047-API (TCR row 2026-10-09 in docs/sprints/03/decisions/ST-047-API.md);
-the inventory test now waits on ST-050 only (DELETE is not served yet).
+The evidence row joins it with ST-047-API (TCR row 2026-10-09 in
+docs/sprints/03/decisions/ST-047-API.md); the inventory test now waits on ST-050 only (DELETE is
+not served yet).
 """
 
 from __future__ import annotations
