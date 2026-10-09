@@ -6,6 +6,10 @@
   every entry is ``draft`` (fail closed, scorecard §4.0), all seven once COACH-1 is done.
 
 Written red first (QA-ACC-3): ``red_until`` ST-046 (the API part of ST-043 lands with it).
+
+Marker ``red_until`` ST-046 removed (ST-046b, TCR row 2026-10-09 in
+docs/sprints/03/decisions/ST-046b.md): the stats route is built and every row passes, so the
+file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -18,8 +22,6 @@ import pytest
 
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-046")]
 
 
 @pytest.fixture

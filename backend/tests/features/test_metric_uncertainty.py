@@ -2,6 +2,10 @@
 ADR 0005). The tag scripts come from ``stats.receive_script`` (side A receives n, wins k, never
 scores) and were checked against the reference: 8/4, 20/10, 40/22 give the stated values and
 flags; 22/40 has the Wilson interval 0.398-0.693. Written red first: ``red_until`` ST-046.
+
+Marker ``red_until`` ST-046 removed (ST-046b, TCR row 2026-10-09 in
+docs/sprints/03/decisions/ST-046b.md): the stats route is built and every row passes, so the
+file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -14,8 +18,6 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-046")]
 
 scenarios("metric_uncertainty.feature")
 

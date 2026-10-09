@@ -8,12 +8,17 @@ transaction, so "upload complete", ``Match.mark_uploaded`` and the probe job com
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from racket.matches.domain import MatchId, OwnerId
-from racket.matches.repository import MatchRepository
+from racket.matches.repository import MatchRepository, matches
+from racket.matches.scorebook.domain import project
+from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import NotFound
 
 
@@ -65,3 +70,27 @@ def clear_rejection(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) 
     )
     if match is not None and match.rejection_code is not None:
         match.clear_rejection()
+
+
+@dataclass(frozen=True)
+class LiveSheet:
+    """The projected score sheet of a live match at ``version`` (published to Analytics, R6)."""
+
+    version: int
+    owner_id: uuid.UUID
+    sheet: dict[str, Any]
+
+
+def lock_live_sheet(session: Session, match_id: uuid.UUID) -> LiveSheet | None:
+    """The sheet of a live match, read under the match row ``FOR SHARE`` lock, which the caller
+    holds to its commit (analytics-snapshots.md §4.2 step 2, invariant S8). ``None`` when the
+    match does not exist or is deleted, so a snapshot is never written for it."""
+    owner = session.execute(
+        sa.select(matches.c.owner_id)
+        .where(*MatchRepository.live(match_id))
+        .with_for_update(read=True)
+    ).scalar_one_or_none()
+    if owner is None:
+        return None
+    book = ScorebookRepository(session).load(match_id)
+    return LiveSheet(book.version, uuid.UUID(str(owner)), project(book))

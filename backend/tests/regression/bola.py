@@ -77,8 +77,6 @@ RALLY_ID_ROUTES_02 = {
 }
 _PROBES += [Probe(m, t, "match", k) for (m, t), k in MATCH_ID_ROUTES_02.items()]
 _PROBES += [Probe(m, t, "rally", k) for (m, t), k in RALLY_ID_ROUTES_02.items()]
-MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
-
 # Sprint 3 routes (IT-03-05; NFR-051), as ``scripts/measure/statscontract.py`` assumes them until
 # api-sprint-03 (PE-1). Kept out of MATRIX while the routes do not exist, because the inventory's
 # positive control requires every MATRIX route to be served. They do NOT count as covered in
@@ -92,6 +90,12 @@ MATCH_ID_ROUTES_03 = {
     },
     ("DELETE", "/matches/{match_id}"): lambda: {"json": {"confirm": "delete"}},
 }
+# The Sprint 3 routes already served, whose probes therefore join MATRIX and count as covered
+# (one TCR row per story: ST-046b adds the stats route, TCR row 2026-10-09 in
+# docs/sprints/03/decisions/ST-046b.md). The owner's empty match answers 200 (every metric n = 0).
+SERVED_03: frozenset[RouteKey] = frozenset({("GET", "/matches/{match_id}/stats")})
+_PROBES += [Probe(m, t, "match", MATCH_ID_ROUTES_03[(m, t)]) for (m, t) in sorted(SERVED_03)]
+MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
 # Routes with a path parameter that is not an owned resource ID. Each needs a reason.
 EXEMPT: dict[RouteKey, str] = {}

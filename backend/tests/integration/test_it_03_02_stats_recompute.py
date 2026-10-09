@@ -10,6 +10,10 @@
 The event-consumer seam is the QA proposal ``racket.analytics.snapshot:handle`` until PE-2
 names it (analytics-snapshots.md); a different name is a seam change, not a test change.
 Written red first (QA-ACC-3): ``red_until`` ST-046.
+
+Marker ``red_until`` ST-046 removed (ST-046b, TCR row 2026-10-09 in
+docs/sprints/03/decisions/ST-046b.md): the stats route is built and every row passes, so the
+file is in the per-PR gate and the coverage selection.
 """
 
 from __future__ import annotations
@@ -27,7 +31,7 @@ from tests.support import stats as st
 from tests.support.api import ApiDriver
 from tests.support.contract import Seam
 
-pytestmark = [pytest.mark.red_until(story="ST-046"), pytest.mark.needs_verification]
+pytestmark = [pytest.mark.needs_verification]
 
 CURRENT_WITHIN_S = 5.0  # NFR-017 analogue (scorecard G03-02)
 SNAPSHOT_REPLAY = Seam(
