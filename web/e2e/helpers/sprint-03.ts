@@ -39,7 +39,7 @@ export const PROPORTIONS = ['AN-01', 'AN-02', 'AN-05'] as const;
 
 interface SideRef {
   k?: number; n?: number; value: number | null; low_sample: boolean; count?: number; longest?: number;
-  points?: number; turns?: number; rallies: number[];
+  points?: number; turns?: number; games?: number; rallies: number[];
 }
 export type Reference = Record<string, Record<'A' | 'B', SideRef>>;
 interface RefTag { winning_side: 'A' | 'B' | null; ending: Ending; fault_kind: string | null; responsible_player: string | null }
