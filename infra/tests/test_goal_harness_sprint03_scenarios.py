@@ -254,7 +254,7 @@ def _sign_in_again(world: dict[str, Any], again_id: str) -> None:
     """G03-01 step 8 as the harness judges it: DELETE /me accepted, old session 401, empty list."""
     world["step"] = live.judge_account_deletion(
         deleted_id=world["gone_acc"],
-        status=204,
+        status=202,
         old_session=401,
         back=True,
         items=[],
