@@ -16,7 +16,7 @@
         "n": 20
       },
       "owner": "pickleball-domain-coach",
-      "status": "draft",
+      "status": "coach-reviewed",
       "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
     },
     {
@@ -32,8 +32,8 @@
         "n": 20
       },
       "owner": "pickleball-domain-coach",
-      "status": "draft",
-      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1; open issue D-1 (UI name; FR-100/FR-101 say 'side-out %')"
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1; D-1 decided 2026-10-07 (UI name 'Rallies won when receiving', ADR 0044 rule 5)"
     },
     {
       "id": "AN-03",
@@ -48,7 +48,7 @@
         "n": 10
       },
       "owner": "pickleball-domain-coach",
-      "status": "draft",
+      "status": "coach-reviewed",
       "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
     },
     {
@@ -64,7 +64,7 @@
         "n": 2
       },
       "owner": "pickleball-domain-coach",
-      "status": "draft",
+      "status": "coach-reviewed",
       "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1; open issue D-2 (forced vs unforced reliability, QD X3)"
     },
     {
@@ -80,7 +80,7 @@
         "n": 20
       },
       "owner": "pickleball-domain-coach",
-      "status": "draft",
+      "status": "coach-reviewed",
       "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
     },
     {
@@ -93,7 +93,7 @@
       "data_level": "QT",
       "min_sample": null,
       "owner": "pickleball-domain-coach",
-      "status": "draft",
+      "status": "coach-reviewed",
       "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
     },
     {
@@ -109,7 +109,7 @@
         "n": 20
       },
       "owner": "pickleball-domain-coach",
-      "status": "draft",
+      "status": "coach-reviewed",
       "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
     }
   ]

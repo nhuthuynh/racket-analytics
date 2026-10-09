@@ -3,7 +3,7 @@
 Pure functions, no I/O (sprint-03 §3.4). The input is the sheet Match & Scoring projects
 (``matches.scorebook.domain.projection.project``, ST-026), read as plain JSON, so this module
 imports nothing of that context. Formulas follow ``docs/domain/metric-dictionary.md`` v0.1
-(coach judgment, every entry ``draft`` until COACH-1):
+(coach judgment; every entry ``coach-reviewed`` since COACH-1, 2026-10-07, ADR 0044):
 
 * rule 0.1: ``replay`` rows and rows the sheet could not score (``needs_decision``) are in no
   numerator or denominator;

@@ -31,10 +31,11 @@ pytestmark = [pytest.mark.red_until(story="ST-046"), pytest.mark.needs_verificat
 
 CURRENT_WITHIN_S = 5.0  # NFR-017 analogue (scorecard G03-02)
 SNAPSHOT_REPLAY = Seam(
-    "racket.analytics.snapshot:replay_latest_event",
+    "racket.analytics.service:replay_latest_event",
     "ST-046",
-    "replay_latest_event(session, match_id) delivers the match's latest scoring event again "
-    "to the snapshot consumer (test seam; PE-2 names the consumer)",
+    "replay_latest_event(conn, match_id) delivers the match's latest scoring event again "
+    "to the snapshot consumer (test seam; analytics-snapshots.md §4.3, PE-2: the consumer "
+    "lives in service.py, snapshot.py is the pure domain module)",
 )
 STARTER_STATS = Seam("racket.analytics.starter_stats:starter_stats", "ST-044")
 
@@ -126,7 +127,7 @@ def test_it_03_02_a_failing_recompute_keeps_the_tag_and_is_retried(
     import racket.analytics.starter_stats as module
 
     monkeypatch.setattr(module, "starter_stats", fails_once)
-    for name in ("racket.analytics.snapshot", "racket.analytics.api"):
+    for name in ("racket.analytics.snapshot", "racket.analytics.service", "racket.analytics.api"):
         loaded = sys.modules.get(name)
         if loaded is not None and hasattr(loaded, "starter_stats"):
             monkeypatch.setattr(loaded, "starter_stats", fails_once)
