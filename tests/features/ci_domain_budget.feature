@@ -14,3 +14,9 @@ Feature: The domain unit suite runs inside its 10 s budget with margin, on the s
     And the same selection runs in one process
     Then the step ran on more than one worker
     And both runs executed the same test ids with the same outcomes and none failed
+
+  Scenario: A fresh checkout's Hypothesis cache is filled before the budget starts
+    Given an empty Hypothesis storage directory, as on a fresh CI checkout
+    When the Hypothesis cache warm-up step's command from ci.yml runs
+    And the budgeted domain step's command from ci.yml runs
+    Then the warm-up wrote at least 90% of the constants cache entries the domain run reads

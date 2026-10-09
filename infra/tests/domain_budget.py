@@ -106,6 +106,22 @@ def narrowing(args: list[str]) -> list[str]:
     return [a for a in args if a.split("=", 1)[0] in NARROWING or a == "-o" or a.startswith("-p")]
 
 
+WARM_SCRIPT = "warm_hypothesis_constants.py"
+
+
+def warm_step() -> dict[str, Any]:
+    steps = [s for s in unit_steps() if WARM_SCRIPT in s.get("run", "")]
+    assert len(steps) == 1, f"expected one Hypothesis cache warm-up step, got {len(steps)}"
+    return steps[0]
+
+
+def warm_command() -> list[str]:
+    """The warm-up command, as the runner executes it in ``backend``."""
+    lines = [ln for ln in warm_step()["run"].splitlines() if WARM_SCRIPT in ln]
+    assert len(lines) == 1, lines
+    return expand(lines[0].strip(), ci_env())
+
+
 def profile_set() -> bool:
     step = domain_step()
     return "HYPOTHESIS_PROFILE" in step["run"] or "HYPOTHESIS_PROFILE" in step.get("env", {})

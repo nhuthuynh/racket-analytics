@@ -20,6 +20,7 @@ from domain_budget import (
     positionals,
     pytest_args,
     run_in_backend,
+    warm_command,
 )
 from pytest_bdd import given, scenarios, then, when
 
@@ -44,6 +45,7 @@ def run_ci_command(world: dict[str, Any], tmp_path: Path) -> None:
     extra = ["-v", "-p", "no:cacheprovider", f"--junitxml={junit}"]
     res = run_in_backend([*command(), *extra])
     world["ci"] = (res, junit)
+    world["after_ci"] = _cache_entries(world)
 
 
 @when("the same selection runs in one process")
@@ -73,3 +75,31 @@ def same_results(world: dict[str, Any]) -> None:
     assert set(ci) == set(serial), sorted(set(ci) ^ set(serial))[:20]
     assert ci == serial, {k: (ci[k], serial[k]) for k in ci if ci[k] != serial[k]}
     assert not [k for k, v in ci.items() if v in {"failed", "error"}]
+
+
+def _cache_entries(world: dict[str, Any]) -> set[str]:
+    cache = world.get("hypothesis_home", Path("/nonexistent")) / "constants"
+    return {p.name for p in cache.glob("*") if not p.name.startswith(".")}
+
+
+@given("an empty Hypothesis storage directory, as on a fresh CI checkout")
+def empty_storage(world: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    world["hypothesis_home"] = tmp_path / "hypothesis"
+    monkeypatch.setenv("HYPOTHESIS_STORAGE_DIRECTORY", str(world["hypothesis_home"]))
+
+
+@when("the Hypothesis cache warm-up step's command from ci.yml runs")
+def run_warm_up(world: dict[str, Any]) -> None:
+    res = run_in_backend(warm_command())
+    assert res.returncode == 0, res.stdout[-2000:] + res.stderr[-2000:]
+    world["after_warm"] = _cache_entries(world)
+
+
+@then("the warm-up wrote at least 90% of the constants cache entries the domain run reads")
+def warm_covers_the_run(world: dict[str, Any]) -> None:
+    res, _ = world["ci"]
+    assert res.returncode == 0, res.stdout[-3000:]
+    warmed, added = world["after_warm"], world["after_ci"] - world["after_warm"]
+    # Left over: modules a test imports inside its body (e.g. racket.*.api), parsed by a worker.
+    assert len(warmed) > 50, len(warmed)
+    assert len(added) <= 0.1 * (len(warmed) + len(added)), sorted(added)

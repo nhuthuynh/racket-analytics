@@ -24,6 +24,8 @@ from domain_budget import (
     profile_set,
     pytest_args,
     unit_steps,
+    warm_command,
+    warm_step,
 )
 
 pytestmark = pytest.mark.unit
@@ -63,6 +65,14 @@ def test_a_serial_domain_command_is_rejected_by_the_guard() -> None:
     assert option(pytest_args(serial), "-n") is None
 
 
+def test_the_hypothesis_cache_warm_up_is_outside_every_budget() -> None:
+    # PE-R1-DB-01: a cold .hypothesis/constants cost each CI worker ~1.3 s of AST parsing.
+    # Warming it is not test time, like the bytecode warm-up; it must not run inside a budget.
+    assert "run_with_budget.py" not in warm_step()["run"]
+    assert "HYPOTHESIS_PROFILE" not in warm_step()["run"]
+    assert "env" not in warm_step()
+
+
 # ---------------------------------------------------------------- positive cases
 def test_the_domain_step_selects_ci_domain_paths_and_the_unit_marker_only() -> None:
     args = pytest_args()
@@ -98,3 +108,12 @@ def test_pytest_xdist_is_locked_for_the_backend() -> None:
     lock = (BACKEND / "uv.lock").read_text()
     assert re.search(r'^name = "pytest-xdist"$', lock, re.M)
     assert '"pytest-xdist' in (BACKEND / "pyproject.toml").read_text()
+
+
+def test_the_hypothesis_cache_is_warmed_before_the_domain_step_on_its_selection() -> None:
+    steps, cmd = unit_steps(), warm_command()
+    assert steps.index(warm_step()) < steps.index(domain_step())
+    assert cmd[:4] == ["uv", "run", "--no-sync", "python"], cmd
+    assert cmd[4] == "../scripts/ci/warm_hypothesis_constants.py", cmd
+    assert option(cmd, "-m") == SELECTION
+    assert positionals(cmd[5:]) == positionals(pytest_args())
