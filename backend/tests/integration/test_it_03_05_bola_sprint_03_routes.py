@@ -8,6 +8,9 @@ probe in ``tests/regression/bola.py`` (Sprint 2 table or ``MATCH_ID_ROUTES_03``)
 
 ``DELETE /me`` has no id in its path (it acts on the caller) and is covered by IT-03-08.
 Written red first (QA-ACC-3): ``red_until`` ST-046 (the first Sprint 3 route).
+
+The file-level marker became one marker per row (ST-046b, TCR row 2026-10-09 in
+docs/sprints/03/decisions/ST-046b.md): the stats row passes and joins the per-PR gate.
 """
 
 from __future__ import annotations
@@ -22,9 +25,21 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-046")]
-
-ROUTES = sorted(MATCH_ID_ROUTES_03.items())
+# One marker per row naming the story that serves the route (as IT-03-12 does): the stats row
+# joins the gate with ST-046b (TCR row 2026-10-09 in docs/sprints/03/decisions/ST-046b.md); the
+# others stay red until their story, so the red-until report has no stale row.
+WAITS_ON = {
+    ("GET", "/matches/{match_id}/stats/{metric_id}/evidence"): pytest.mark.red_until(
+        story="ST-047"
+    ),
+    ("DELETE", "/matches/{match_id}"): pytest.mark.red_until(story="ST-050"),
+}
+ROUTES = [
+    pytest.param(
+        key, kwargs, id=f"{key[0]} {key[1]}", marks=[WAITS_ON[key]] if key in WAITS_ON else []
+    )
+    for key, kwargs in sorted(MATCH_ID_ROUTES_03.items())
+]
 
 
 def _strip(response: Any) -> tuple[int, Any]:
@@ -34,7 +49,7 @@ def _strip(response: Any) -> tuple[int, Any]:
     return response.status_code, body
 
 
-@pytest.mark.parametrize(("key", "kwargs"), ROUTES, ids=[f"{m} {t}" for (m, t), _ in ROUTES])
+@pytest.mark.parametrize(("key", "kwargs"), ROUTES)
 def test_it_03_05_carlos_gets_the_missing_resource_404_on_every_sprint_3_route(
     api: ApiDriver, key: tuple[str, str], kwargs: Any
 ) -> None:
@@ -55,6 +70,7 @@ def test_it_03_05_carlos_gets_the_missing_resource_404_on_every_sprint_3_route(
     assert owner.status_code not in (404, 405), f"positive control: {owner.status_code}"
 
 
+@pytest.mark.red_until(story="ST-047")  # the evidence and DELETE routes are not served yet
 def test_it_03_05_every_match_scoped_and_label_route_has_a_probe(api: ApiDriver) -> None:
     served = {
         k
