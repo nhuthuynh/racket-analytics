@@ -57,10 +57,6 @@ def one_timed_out(tmp_path: Path) -> dict[str, Any]:
     parsers.parse("a red_until run that collected {collected:d} rows and reported {reported:d}"),
     target_fixture="run",
 )
-def stopped_early(tmp_path: Path, collected: int, reported: int) -> dict[str, Any]:
-    return _run_file(tmp_path, [(f"test_row_{i}", RED) for i in range(reported)], collected)
-
-
 @given(
     parsers.parse(
         "a red_until run that collected {collected:d} rows and reported {reported:d} "
@@ -68,7 +64,8 @@ def stopped_early(tmp_path: Path, collected: int, reported: int) -> dict[str, An
     ),
     target_fixture="run",
 )
-def all_red(tmp_path: Path, collected: int, reported: int) -> dict[str, Any]:
+def red_rows(tmp_path: Path, collected: int, reported: int) -> dict[str, Any]:
+    """``reported`` rows that failed for their story, out of ``collected``."""
     return _run_file(tmp_path, [(f"test_row_{i}", RED) for i in range(reported)], collected)
 
 
