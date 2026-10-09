@@ -22,8 +22,10 @@ function loadingAbove(route: string): string[] {
 }
 
 describe('loading boundaries and 404 status', () => {
-  it('stats (D-01), evidence (E-02) and Full Tag (L-01) have no loading boundary above them', () => {
-    for (const route of ['matches/[matchId]/stats', 'matches/[matchId]/stats/[metricId]/evidence', 'label/matches/[matchId]']) {
+  // Full Tag (L-01, `label/matches/[matchId]`) joins this list with its own ticket (ST-052, PR #14);
+  // it is not on main yet.
+  it('stats (D-01) and evidence (E-02) have no loading boundary above them', () => {
+    for (const route of ['matches/[matchId]/stats', 'matches/[matchId]/stats/[metricId]/evidence']) {
       expect(existsSync(path.join(APP, route, 'page.tsx')), route).toBe(true);
       expect(loadingAbove(route), route).toEqual([]);
     }
