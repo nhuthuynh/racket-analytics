@@ -21,6 +21,9 @@ DELETE answered 405 (the route is not built yet) is never counted as an L11 refu
 ST-050a (TCR row in docs/sprints/03/decisions/ST-050a.md): the match delete rows and the race
 pass and join the per-PR gate; their ``delete_match`` marker is removed (a row with no entry in
 ``WAITS_ON`` carries no marker).
+
+ST-051-API (TCR row in docs/sprints/03/decisions/ST-051-API.md): the account delete rows pass and
+join the per-PR gate; their ``delete_account`` entry is removed from ``WAITS_ON``.
 """
 
 from __future__ import annotations
@@ -39,7 +42,6 @@ from tests.support import stats as st
 from tests.support.api import ApiDriver
 
 WAITS_ON = {
-    "delete_account": pytest.mark.red_until(story="ST-051"),
     "label": pytest.mark.red_until(story="ST-052"),
 }
 

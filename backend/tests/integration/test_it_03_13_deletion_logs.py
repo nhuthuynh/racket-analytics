@@ -10,6 +10,9 @@ Written red first (QA-ACC-3): ``red_until`` ST-050.
 ST-050b (TCR row in docs/sprints/03/decisions/ST-050b.md): the module marker is lifted; the
 match deletion and purge row joins the per-PR gate; the account-deletion row waits on ST-051
 (``DELETE /me``), marked on its own.
+
+ST-051-API (TCR row in docs/sprints/03/decisions/ST-051-API.md): the account-deletion row's own
+marker is lifted; ``DELETE /me`` is built and the row joins the per-PR gate.
 """
 
 from __future__ import annotations
@@ -61,7 +64,6 @@ def test_it_03_13_match_deletion_and_purge_lines_hold_ids_only(
     _check_clean(records)
 
 
-@pytest.mark.red_until(story="ST-051")
 def test_it_03_13_account_deletion_lines_hold_ids_only(
     api: ApiDriver, capfd: pytest.CaptureFixture[str]
 ) -> None:
