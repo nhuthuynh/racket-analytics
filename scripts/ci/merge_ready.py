@@ -12,8 +12,12 @@ verdict ("Reviewer: <role>"). Only submitted reviews (COMMENTED, APPROVED, CHANG
 by a trusted author (author_association OWNER, MEMBER or COLLABORATOR) count, because anyone
 can review a PR on a public repo and the token owner's own PENDING review is listed too.
 A workflow triggered again on the same SHA (a label, a re-open) gets a new check suite; only
-the newest workflow run per (workflow, event) counts, so the runs the older trigger left
-behind (cancelled by `cancel-in-progress`, or failed) neither block nor hide a failure.
+the current workflow run per (workflow, event) counts, so the runs another trigger left
+behind (cancelled by `cancel-in-progress`, or failed) neither block nor hide a failure. The
+current run is the newest run, skipping a cancelled run that a non-cancelled run created in the
+same second or later replaced (a concurrency group may cancel the newer of two runs started
+together, PR #49). A cancelled run nothing replaced stays current and blocks (PE-1), and a
+newer failed or in-progress run always wins.
 
 Usage: merge_ready.py --repo OWNER/NAME --pr N --sha HEAD_SHA
 Env: GITHUB_TOKEN or GH_TOKEN (optional for a public repo); GITHUB_API_URL (default GitHub).
@@ -36,6 +40,7 @@ PRINCIPAL = "principal-engineer"
 SENIOR_PREFIX = "senior-"
 APPROVE = "APPROVE"
 CHANGES = "CHANGES REQUESTED"
+CANCELLED = "cancelled"
 GREEN = {"success"}
 GREEN_IF_NOT_GATE = {"success", "skipped", "neutral"}
 SUBMITTED = {"COMMENTED", "APPROVED", "CHANGES_REQUESTED"}
@@ -48,16 +53,69 @@ _NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 
 
 # ------------------------------------------------------------------ rule (no I/O)
-def superseded_suites(workflow_runs: Sequence[dict[str, Any]]) -> set[Any]:
-    """Check suites of workflow runs that a newer run of the same workflow and event replaced
-    on this SHA. Suites without a workflow run (other apps) are never superseded."""
-    newest: dict[tuple[Any, Any], dict[str, Any]] = {}
+def _is_cancelled(wr: dict[str, Any]) -> bool:
+    return wr.get("conclusion") == CANCELLED
+
+
+def _replaced(cancelled: dict[str, Any], others: Sequence[dict[str, Any]]) -> bool:
+    """A cancelled run is replaced when a non-cancelled run of its workflow and event was
+    created in the same second or later (a concurrency group may cancel the newer of two runs
+    started together, PR #49). Without both timestamps it is not replaced: missing data makes
+    the check stricter, never laxer."""
+    at = cancelled.get("created_at")
+    return bool(at) and any(
+        not _is_cancelled(o) and bool(o.get("created_at")) and o["created_at"] >= at for o in others
+    )
+
+
+def current_runs(workflow_runs: Sequence[dict[str, Any]]) -> dict[tuple[Any, Any], dict[str, Any]]:
+    """The current workflow run per (workflow, event) on this SHA: the newest (highest id) run
+    that is not a replaced cancelled run. A cancelled run nothing replaced stays current and
+    blocks, because pr-policy reads the labels from that run's event payload (PE-1); a newer
+    failed, queued or in-progress run always wins, so no failure is hidden."""
+    groups: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
     for wr in workflow_runs:
-        key = (wr.get("workflow_id"), wr.get("event"))
-        if key not in newest or wr["id"] > newest[key]["id"]:
-            newest[key] = wr
-    current = {wr.get("check_suite_id") for wr in newest.values()}
+        groups.setdefault((wr.get("workflow_id"), wr.get("event")), []).append(wr)
+    return {
+        key: max(
+            (wr for wr in runs if not (_is_cancelled(wr) and _replaced(wr, runs))),
+            key=lambda wr: wr["id"],
+        )
+        for key, runs in groups.items()
+    }
+
+
+def superseded_suites(workflow_runs: Sequence[dict[str, Any]]) -> set[Any]:
+    """Check suites of workflow runs that are not the current run of their workflow and event
+    on this SHA. Suites without a workflow run (other apps) are never superseded."""
+    current = {wr.get("check_suite_id") for wr in current_runs(workflow_runs).values()}
     return {wr.get("check_suite_id") for wr in workflow_runs} - current
+
+
+def cancelled_reasons(workflow_runs: Sequence[dict[str, Any]], sha: str) -> list[str]:
+    """One reason per workflow and event whose current run on this SHA was cancelled."""
+    every = {
+        key
+        for key in {(wr.get("workflow_id"), wr.get("event")) for wr in workflow_runs}
+        if all(
+            _is_cancelled(wr)
+            for wr in workflow_runs
+            if (wr.get("workflow_id"), wr.get("event")) == key
+        )
+    }
+    reasons = []
+    for key, wr in current_runs(workflow_runs).items():
+        if not _is_cancelled(wr):
+            continue
+        name = wr.get("name") or wr.get("workflow_id")
+        event = "" if wr.get("event") == "pull_request" else f" ({wr.get('event')})"
+        if key in every:
+            reasons.append(f"all {name} runs on {sha} were cancelled{event}")
+        else:
+            reasons.append(
+                f"the newest {name} run on {sha} was cancelled and no later run replaced it{event}"
+            )
+    return sorted(reasons)
 
 
 def latest_runs(
@@ -113,7 +171,9 @@ def check_reasons(
     """Every latest check run of the current suites is green; ci-gate exists and succeeded."""
     current = latest_runs(check_runs, workflow_runs).values()
     runs = sorted(current, key=lambda r: (r["name"], r["id"]))
-    reasons = [] if any(r["name"] == GATE for r in runs) else [f"no {GATE} check run on {sha}"]
+    reasons = cancelled_reasons(workflow_runs, sha)
+    if not any(r["name"] == GATE for r in runs):
+        reasons.append(f"no {GATE} check run on {sha}")
     for run in runs:
         name = run["name"]
         outcome = run.get("conclusion") if run.get("status") == "completed" else run.get("status")
