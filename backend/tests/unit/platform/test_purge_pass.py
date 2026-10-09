@@ -6,13 +6,15 @@ rows, no orphan). Then the order: objects, then rows, root last."""
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from botocore.exceptions import ClientError
 
-from racket.platform.purge import PurgeJob, main
+from racket.platform.purge import PurgeJob, _env_int, main
 from racket.video_ingest.public import MultipartRef, OriginalKey, StagingPrefix, UnsafeObjectRef
 
 pytestmark = [pytest.mark.unit]
@@ -184,3 +186,86 @@ def test_a_tombstone_older_than_six_days_is_reported_overdue(
 @pytest.mark.parametrize("argv", [[], ["--twice"], ["--once", "extra"]])
 def test_usage_errors_exit_2(argv: list[str]) -> None:
     assert main(argv) == 2
+
+
+# Added test-first in the ST-050b PR (porting P13): behaviours of the ported pass that no unit
+# test held (decisions/ST-050b.md). Negative cases first.
+
+
+def test_a_tombstone_younger_than_the_alert_age_is_not_overdue(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    log: list[str] = []
+    ports = FakePorts(log, {A: REFS}, [Due(A, timedelta(days=5, hours=23))])
+    _job(ports, FakeStore(log), log).run_once()
+    assert [r for r in caplog.records if getattr(r, "event", "") == "purge.overdue"] == []
+
+
+def test_a_failed_orphan_sweep_fails_the_pass_after_the_matches_are_purged() -> None:
+    log: list[str] = []
+    ports = FakePorts(log, {A: REFS}, [Due(A)])
+    ports.orphan_snapshot_ids = _raise  # type: ignore[method-assign]
+    result = _job(ports, FakeStore(log), log).run_once()
+    assert "rows 1" in log
+    assert log[-1] == "rollback"
+    assert (result.matches, result.failed, result.exit_code) == (1, 1, 1)
+
+
+def test_a_store_error_other_than_not_found_keeps_the_rows() -> None:
+    log: list[str] = []
+    ports = FakePorts(log, {A: [OriginalKey(f"originals/{HEX}")]}, [Due(A)])
+    store = ErrorStore(log, "AccessDenied")
+    result = _job(ports, store, log).run_once()
+    assert "rows 1" not in log
+    assert (result.matches, result.failed) == (0, 1)
+
+
+@pytest.mark.parametrize("code", ["404", "NoSuchKey", "NoSuchUpload", "NotFound"])
+def test_an_object_already_gone_counts_as_deleted(code: str) -> None:
+    log: list[str] = []
+    ports = FakePorts(log, {A: [OriginalKey(f"originals/{HEX}")]}, [Due(A)])
+    result = _job(ports, ErrorStore(log, code), log).run_once()
+    assert "rows 1" in log
+    assert (result.matches, result.failed, result.exit_code) == (1, 0, 0)
+
+
+def test_orphan_snapshots_are_swept_and_logged_with_their_match_id(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO, logger="racket.purge")
+    log: list[str] = []
+    ports = FakePorts(log, {}, [])
+    ports.orphan_snapshot_ids = lambda session: [B]  # type: ignore[method-assign]
+    result = _job(ports, FakeStore(log), log).run_once()
+    assert log == ["commit", "commit", "rollback", "orphan 2", "commit", "rollback"]
+    swept = [r for r in caplog.records if getattr(r, "event", "") == "purge.orphan_swept"]
+    assert [(r.kind, r.match_id) for r in swept] == [("snapshot", str(B))]
+    assert result.exit_code == 0
+
+
+@pytest.mark.parametrize("raw", ["abc", "0", "-1", "١", "1.5"])
+def test_a_bad_purge_setting_is_refused(monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
+    monkeypatch.setenv("PURGE_BATCH", raw)
+    with pytest.raises(ValueError, match="PURGE_BATCH"):
+        _env_int("PURGE_BATCH", 100, 1)
+
+
+@pytest.mark.parametrize(("raw", "value"), [("", 100), (" 7 ", 7)])
+def test_a_purge_setting_defaults_or_is_read(
+    monkeypatch: pytest.MonkeyPatch, raw: str, value: int
+) -> None:
+    monkeypatch.setenv("PURGE_BATCH", raw)
+    assert _env_int("PURGE_BATCH", 100, 1) == value
+
+
+def _raise(session: Any) -> list[uuid.UUID]:
+    raise RuntimeError("snapshot table unavailable")
+
+
+class ErrorStore(FakeStore):
+    def __init__(self, log: list[str], code: str) -> None:
+        super().__init__(log)
+        self.code = code
+
+    def delete(self, key: str) -> None:
+        raise ClientError({"Error": {"Code": self.code}}, "DeleteObject")
