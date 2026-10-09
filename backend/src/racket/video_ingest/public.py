@@ -27,6 +27,7 @@ __all__ = [
     "PendingUpload",
     "UploadStatus",
     "close_for_deleted_match",
+    "lock_upload_of_match",
     "media_link",
     "media_summary",
 ]
@@ -125,6 +126,14 @@ def media_link(
         content_type=ORIGINAL_CONTENT_TYPE,  # QA-RV1-05: also for originals stored before
     )
     return MediaLink(policy.check(url, session_token=session_token), policy.ttl_seconds)
+
+
+def lock_upload_of_match(session: Session, match_id: uuid.UUID) -> None:
+    """Take the match's upload row lock, held to the caller's commit. Lock order is upload row,
+    then match row: the completing PATCH (``write_chunk`` -> ``mark_uploaded``) and the upload
+    creation take them so, and a caller that then locks the match must too, or the two
+    deadlock (PE-050a-01). Waits for a PATCH in flight; a PATCH arriving later gets its 409."""
+    UploadRepository(session).for_match(match_id, for_update=True)
 
 
 def close_for_deleted_match(session: Session, match_id: uuid.UUID, at: datetime) -> None:
