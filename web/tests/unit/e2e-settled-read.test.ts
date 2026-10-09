@@ -88,6 +88,23 @@ describe('unsettledReads', () => {
     expect(unsettledReads(source)).toEqual([4]);
   });
 
+  it('accepts a read whose locator names the expected text: the read itself waits for it', () => {
+    // resumable-upload.spec.ts:132: innerText on getByText(/is NN% done/) resolves only once the
+    // text is on the page, unlike getByRole('main'), which the Loading fallback already matches.
+    for (const named of [
+      "await again.getByText(/is (\\d{1,2})% done/).innerText();",
+      "await again.getByLabel('Video').textContent();",
+      "await again.getByRole('heading', { name: 'Page not found' }).textContent();",
+      "await again.locator('li').filter({ hasText: 'Ivy' }).innerText();",
+    ]) {
+      // A named read settles the page, so a read of main after it is fine; before it, it is not.
+      const after = ["await again.goto('/');", named, "await again.locator('main').innerText();"].join('\n');
+      expect(unsettledReads(after), named).toEqual([]);
+      const before = ["await again.goto('/');", "await again.locator('main').innerText();", named].join('\n');
+      expect(unsettledReads(before), named).toEqual([2]);
+    }
+  });
+
   it('names nothing in a spec that reads text without navigating in that function', () => {
     const source = [
       "test('x', async ({ page }) => {",
