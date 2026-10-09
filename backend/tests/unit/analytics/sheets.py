@@ -101,3 +101,15 @@ def one_game(tags: Sequence[Mapping[str, Any]], first: str = "A") -> dict[str, A
 def side_a_wins_game(first: str = "A") -> list[dict[str, Any]]:
     """11-0 to A when A serves first: A wins every rally (A1 server 2 at 0-0-2 keeps serving)."""
     return [tag("A", "winner") for _ in range(11)]
+
+
+def a_serves_and_wins_25() -> dict[str, Any]:
+    """Side A serves 25 rallies and wins all of them (11-0, 11-0, 3-0; best of 5), so A's
+    AN-01 is 25/25 and A's AN-05 is 0/25: both intervals are narrower than 30 points and only
+    ``n`` decides the flag."""
+    games = [
+        {"first_serving_side": "A", "tags": side_a_wins_game()},
+        {"first_serving_side": "A", "tags": side_a_wins_game()},
+        {"first_serving_side": "A", "tags": [tag("A", "winner") for _ in range(3)]},
+    ]
+    return project(book(games, best_of=5))

@@ -102,6 +102,15 @@ def test_thresholds_come_from_config() -> None:
     assert policy.turns_flagged(2) is False
 
 
+def test_a_metric_with_its_own_threshold_is_flagged_by_it() -> None:
+    # ADR 0041 (S6): per-metric minimum n; a metric without one uses min_proportion_n.
+    policy = LowSamplePolicy(proportion_n={"AN-05": 30})
+    assert policy.proportion_flagged(0, 25, "AN-05") is True
+    assert policy.proportion_flagged(25, 25, "AN-01") is False
+    assert policy.proportion_flagged(25, 25) is False
+    assert (policy.proportion_threshold("AN-05"), policy.proportion_threshold("AN-01")) == (30, 20)
+
+
 def test_the_defaults_are_adr_0005() -> None:
     p = LowSamplePolicy()
     assert (p.min_proportion_n, p.max_interval_width, p.min_games, p.min_service_turns) == (
@@ -121,6 +130,8 @@ def test_the_defaults_are_adr_0005() -> None:
         {"max_interval_width": 0.0},
         {"max_interval_width": 1.5},
         {"min_proportion_n": True},
+        {"proportion_n": {"AN-05": 0}},
+        {"proportion_n": {"AN-05": "30"}},
     ],
 )
 def test_a_nonsense_threshold_is_refused(kwargs: dict[str, object]) -> None:

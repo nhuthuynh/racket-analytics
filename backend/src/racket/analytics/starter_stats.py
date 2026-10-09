@@ -45,7 +45,9 @@ def _round(value: float | None, places: int) -> float | None:
     return None if value is None else round(value, places)
 
 
-def proportion(k: int, rallies: Sequence[int], policy: LowSamplePolicy) -> dict[str, Any]:
+def proportion(
+    k: int, rallies: Sequence[int], policy: LowSamplePolicy, metric: str | None = None
+) -> dict[str, Any]:
     n = len(rallies)
     ci = wilson(k, n)
     return {
@@ -54,7 +56,7 @@ def proportion(k: int, rallies: Sequence[int], policy: LowSamplePolicy) -> dict[
         "value": _round(k / n if n else None, 4),
         "ci_low": _round(ci.low if ci else None, 4),
         "ci_high": _round(ci.high if ci else None, 4),
-        "low_sample": policy.proportion_flagged(k, n),
+        "low_sample": policy.proportion_flagged(k, n, metric),
         "rallies": list(rallies),
     }
 
@@ -100,10 +102,13 @@ def _side_stats(
     received = [r for r in counted if r.serving_side != side]
     out: dict[str, dict[str, Any]] = {}
     out["AN-01"] = proportion(
-        sum(r.winning_side == side for r in served), [r.number for r in served], policy
+        sum(r.winning_side == side for r in served), [r.number for r in served], policy, "AN-01"
     )
     out["AN-02"] = proportion(
-        sum(r.winning_side == side for r in received), [r.number for r in received], policy
+        sum(r.winning_side == side for r in received),
+        [r.number for r in received],
+        policy,
+        "AN-02",
     )
 
     scoring = [r for r in served if r.point_to == side]
@@ -131,7 +136,7 @@ def _side_stats(
     own_faults = [r for r in served if r.ending == "fault" and r.actor == side]
     serve_faults = [r for r in own_faults if r.fault_kind == "serve"]
     untyped = sum(r.fault_kind is None for r in own_faults)
-    an05 = proportion(len(serve_faults), [r.number for r in served], policy)
+    an05 = proportion(len(serve_faults), [r.number for r in served], policy, "AN-05")
     an05["rallies"] = [r.number for r in serve_faults]
     an05["fault_type_not_tagged"] = untyped
     an05["low_sample"] = an05["low_sample"] or untyped > 0  # a lower bound (dictionary AN-05)
@@ -159,7 +164,7 @@ def _side_stats(
     shares = {}
     flagged = False
     for category, k in counts.items():
-        p = proportion(k, [r.number for r in ended], policy)
+        p = proportion(k, [r.number for r in ended], policy, "AN-07")
         shares[category] = {key: p[key] for key in ("k", "value", "ci_low", "ci_high")}
         flagged = flagged or p["low_sample"]  # rule 0.3: n or any share's width (PE-R1-ST044-01)
     out["AN-07"] = {
