@@ -1,0 +1,22 @@
+{
+  "id": "pb.fixture.drop-and-advance",
+  "version": 1,
+  "name": "Drop and advance (fixture)",
+  "summary": "Lint fixture for ST-053, not library content: drills are written and coach-reviewed in Sprint 4 (FR-141).",
+  "skills": ["AN-04", "transition"],
+  "target_metrics": ["AN-04"],
+  "level_min": "intermediate",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 4,
+  "needs": ["full_court"],
+  "equipment": ["balls", "paddles"],
+  "setup": ["Two players per side", "Serving side drops, then moves to the kitchen line"],
+  "success_criterion": "Reach the kitchen line in 7 of 10 rallies",
+  "progressions": [],
+  "regressions": ["pb.fixture.drop-ladder"],
+  "safety_notes": "",
+  "coach_rationale": "Fixture rationale for the lint, not coaching advice (judgment)",
+  "review_status": "draft"
+}

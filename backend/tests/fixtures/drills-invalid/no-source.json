@@ -1,0 +1,21 @@
+{
+  "id": "pb.invalid.no-source",
+  "version": 1,
+  "name": "Invalid drill: no-source",
+  "summary": "Negative fixture for ST-053 (IT-03-14, G03-09): breaks exactly one FR-140 rule.",
+  "skills": ["AN-04", "third_shot_drop"],
+  "target_metrics": ["AN-04"],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": ["half_court"],
+  "equipment": ["balls", "paddles"],
+  "setup": ["Feeder at the kitchen line", "Hitter at the baseline, one step in after each set of 10"],
+  "success_criterion": "8 of 10 drops bounce in the kitchen",
+  "regressions": [],
+  "safety_notes": "",
+  "review_status": "draft",
+  "progressions": []
+}

@@ -155,6 +155,44 @@ jobs:
           path: reports/unit.xml
           if-no-files-found: warn
 
+  drill-lint:
+    # ST-053 (c), G03-09 (c): every drill in content/drills passes the FR-140 rules (QD-DR-01/02).
+    # PE-R1-ST053-01: also against the base branch's library.lock, so a PR cannot delete or edit
+    # a locked drill version by changing the lock in the same PR.
+    name: Drill library lint (FR-140, ST-053)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Base branch drill lock (an unknown base commit fails; no lock there = empty lock)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          RACKET_DRILL_BASE_LOCK: ${{ runner.temp }}/base-library.lock
+        run: |
+          set -euo pipefail
+          git cat-file -e "${BASE_SHA}^{commit}"
+          if git cat-file -e "${BASE_SHA}:content/drills/library.lock" 2>/dev/null; then
+            git show "${BASE_SHA}:content/drills/library.lock" > "$RACKET_DRILL_BASE_LOCK"
+          else
+            echo '{"schema": "drill-library-lock/v1", "drills": {}}' > "$RACKET_DRILL_BASE_LOCK"
+          fi
+          echo "base lock of ${BASE_SHA}:"
+          cat "$RACKET_DRILL_BASE_LOCK"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked
+      - run: uv run --no-sync racket-drill-lint ../content/drills
+        env:
+          RACKET_DRILL_BASE_LOCK: ${{ runner.temp }}/base-library.lock
+
   # ------------------------------------------------------------------ integration on Compose
   integration:
     name: Integration, scenario and regression suites on Compose (+ changed-lines coverage)
@@ -598,6 +636,7 @@ jobs:
       - python-lint
       - python-types
       - python-unit
+      - drill-lint
       - integration
       - fixture-integrity
       - infra-tests
