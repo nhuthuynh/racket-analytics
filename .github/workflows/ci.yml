@@ -246,6 +246,14 @@ jobs:
             echo "MAILPIT_API_URL=http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
             echo "APP_ENV=test"
           } >> "$GITHUB_ENV"
+      - name: Runner facts and store telemetry (CI-OBJSTORE-SLOW; kept in integration-reports)
+        # Runs 37764445816 and 37961668800: the store took the clip at ~64 KiB/s minutes into the
+        # job; nothing local reproduces it. Facts once, then a timed clip write plus TCP, conntrack
+        # and pressure counters every 15 s in the background until the job ends.
+        run: |
+          scripts/ci/objectstore_telemetry.sh facts reports/telemetry/runner-facts.txt
+          cat reports/telemetry/runner-facts.txt
+          nohup scripts/ci/objectstore_telemetry.sh watch reports/telemetry/samples.txt 15 >/dev/null 2>&1 &
       - name: Object store parity IT-00-16 (ADR 0008 part C)
         working-directory: infra
         run: uv sync --locked && uv run pytest -q tests/test_object_store_parity.py
@@ -259,6 +267,12 @@ jobs:
             -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
             --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
             --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py >/dev/null
+      - name: Object store write throughput floor (before the suites)
+        # CI-OBJSTORE-SLOW: the 1.72 MB clip from 4 writers, median >= 5 MB/s and none < 1 MB/s;
+        # a store at the CI stall rate fails here, named, instead of timing out tests later.
+        working-directory: backend
+        timeout-minutes: 3
+        run: uv run --no-sync pytest -q -p no:cacheprovider tests/integration/harness/test_ci_objstore_throughput.py
       - name: Migrate the base database before the parallel workers (unbudgeted setup)
         # Workers migrate their own session databases of this one cluster at the same moment.
         # Cluster-wide objects (migration 0012's role racket_media_worker) are created here
@@ -277,6 +291,12 @@ jobs:
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
+      - name: Object store write throughput floor (after the suites, before the rows waiting on a story)
+        # CI-OBJSTORE-SLOW: the 1.72 MB clip from 4 writers, median >= 5 MB/s and none < 1 MB/s;
+        # a store at the CI stall rate fails here, named, instead of timing out tests later.
+        working-directory: backend
+        timeout-minutes: 3
+        run: uv run --no-sync pytest -q -p no:cacheprovider tests/integration/harness/test_ci_objstore_throughput.py
       - name: Rows waiting on a story (red_until; listed, not gated; a stale marker fails)
         # sprint-02 §8: rows red until a story (stretch or PO-blocked) are listed separately.
         # pytest's own rc is expected to be 1 here; the report decides (W-01).
@@ -304,6 +324,14 @@ jobs:
         run: |
           $COMPOSE logs --no-color --tail=200
           $COMPOSE logs --no-color objectstore > reports/objectstore.log 2>&1 || true
+      - name: Keep the object store log (every run; CI-OBJSTORE-SLOW)
+        # A green run's log is the baseline for a slow one (the done check: no stall in the log).
+        if: always()
+        run: |
+          mkdir -p reports
+          $COMPOSE logs --no-color objectstore > reports/objectstore.log 2>&1 || true
+          pkill -f 'objectstore_telemetry.sh watch' || true
+          grep -E '^(# sample|write )' reports/telemetry/samples.txt || true
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
