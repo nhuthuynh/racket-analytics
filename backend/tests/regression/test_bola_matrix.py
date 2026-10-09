@@ -51,6 +51,10 @@ async def ivy_resources(users: dict[str, httpx.AsyncClient]) -> dict[str, str]:
 def _url(probe: Probe, resources: dict[str, str], missing: bool) -> str:
     if probe.resource == "match":
         return probe.template.format(match_id=uuid.uuid4() if missing else resources["match"])
+    if probe.resource == "metric":
+        return probe.template.format(
+            match_id=uuid.uuid4() if missing else resources["match"], metric_id="AN-01"
+        )
     if probe.resource == "rally":
         return probe.template.format(
             match_id=uuid.uuid4() if missing else resources["tagged"], rally_id=resources["rally"]
