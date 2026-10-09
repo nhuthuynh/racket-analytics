@@ -12,7 +12,7 @@ const ORIGIN = 'https://crawl-fixture.test';
 const MATCH = 'm1';
 // Every dictionary metric, whatever its status: this tests the crawl, not COACH-1's publication.
 const METRICS = Object.keys(METRIC_NAMES);
-test.use({ baseURL: ORIGIN });
+test.use({ baseURL: ORIGIN, serviceWorkers: 'block' }); // the fixture is served by page.route
 test.skip(({ browserName }) => browserName !== 'chromium', 'tests the crawl logic, not a browser: run once');
 
 interface Fixture { withoutN?: string[]; deadLinks?: boolean; emptyFillsLate?: string }

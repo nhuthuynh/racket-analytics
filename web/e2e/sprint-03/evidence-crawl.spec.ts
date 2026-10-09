@@ -10,6 +10,9 @@ import { crawlSide, openEvidence } from '../helpers/evidence-crawl';
 import { playableVideo, receivedMatch } from '../helpers/sprint-02';
 import { PUBLISHED, REFERENCE, SCREEN, statsPath, tagWorkedExampleByApi } from '../helpers/sprint-03';
 
+// playableVideo may route the media request; block the service worker so a route applies in WebKit too.
+test.use({ serviceWorkers: 'block' });
+
 test.describe('@M0 @story-ST-047 @nfr-038 Evidence crawl', { tag: '@red-until-ST-047' }, () => {
   test('E2E-03-02 every metric shows n and a working "Show me"', async ({ page }, testInfo) => {
     test.setTimeout(300_000); // 14 sides, each opening one rally's video
