@@ -129,10 +129,12 @@ def media_link(
 
 
 def lock_upload_of_match(session: Session, match_id: uuid.UUID) -> None:
-    """Take the match's upload row lock, held to the caller's commit. Lock order is upload row,
-    then match row: the completing PATCH (``write_chunk`` -> ``mark_uploaded``) and the upload
-    creation take them so, and a caller that then locks the match must too, or the two
-    deadlock (PE-050a-01). Waits for a PATCH in flight; a PATCH arriving later gets its 409."""
+    """Take the match's upload row lock, held to the caller's commit. The global lock order is
+    upload row, then match row (deletion-and-purge.md §3.1): the completing PATCH
+    (``write_chunk`` -> ``mark_uploaded``), the upload creation, the probe refusal
+    (``ProbeStage._reject``) and ``DELETE /matches/{id}`` all take them so; any new transaction
+    that touches both must too, or it can deadlock with them (PE-050a-01, PE-050a-05). Waits
+    for a PATCH in flight; a PATCH arriving later gets its 409."""
     UploadRepository(session).for_match(match_id, for_update=True)
 
 

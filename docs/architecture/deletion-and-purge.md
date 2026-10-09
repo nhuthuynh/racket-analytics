@@ -34,7 +34,9 @@ Rules: a new table that holds a `match_id`, `owner_id` or `account_id` must get 
 
 ### 3.1 `DELETE /matches/{match_id}` (ST-050)
 
-One transaction, under the match row lock (`SELECT … FOR UPDATE` through the owner filter):
+One transaction, under the match row lock (`SELECT … FOR UPDATE` through the owner filter), taken **after** the match's upload row lock (`video_ingest.public.lock_upload_of_match`).
+
+**Global lock order: upload row, then match row.** Every transaction that touches both takes (or writes) the `upload_sessions` row of the match before it locks the `matches` row: the completing tus `PATCH` (`lock_nowait`, then `mark_uploaded`), the upload creation (`_replace_expired_or_refuse`, then `refuse_upload` / `clear_rejection`), the probe refusal (`ProbeStage._reject`: `delete_for_match`, then `reject_video`) and this `DELETE`. A new transaction that touches both follows the same order, or it can deadlock with them (PE-050a-01, PE-050a-05; ITs `test_st_050a_delete_racing_the_*`).
 
 1. Owner filter: missing, not yours, malformed, or already deleted → 404 `not_found` (api-sprint-03 §4.1).
 2. Body check: `{"confirm": "delete"}` exactly, else 422 (nothing written).
