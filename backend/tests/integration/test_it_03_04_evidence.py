@@ -8,6 +8,10 @@ route proven to exist first (QA-R1S3-05). The first item's rally video link (the
 media route) answers a Range request with 206 from the store.
 
 Written red first (QA-ACC-3): ``red_until`` ST-047.
+
+Marker ``red_until`` ST-047 removed (ST-047-API, TCR row 2026-10-09 in
+docs/sprints/03/decisions/ST-047-API.md): the route is served and every row passes, so the
+file joins the per-PR gate.
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-047"), pytest.mark.needs_verification]
+pytestmark = [pytest.mark.needs_verification]
 
 
 @pytest.fixture

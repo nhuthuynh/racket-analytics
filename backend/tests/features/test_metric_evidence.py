@@ -2,6 +2,10 @@
 "A link that plays it" is the Sprint 2 rally media link answering a Range request with 206.
 The 23-rally stat is "Rallies won when receiving" for side A in ``stats.no_score_script(46)``
 (the server always loses: A receives 23 times and wins all 23). Red first: ``red_until`` ST-047.
+
+Marker ``red_until`` ST-047 removed (ST-047-API, TCR row 2026-10-09 in
+docs/sprints/03/decisions/ST-047-API.md): the route is served and every row passes, so the
+file joins the per-PR gate.
 """
 
 from __future__ import annotations
@@ -16,8 +20,6 @@ from pytest_bdd import given, scenarios, then, when
 from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
-
-pytestmark = [pytest.mark.red_until(story="ST-047")]
 
 scenarios("metric_evidence.feature")
 
@@ -91,7 +93,10 @@ def opens_stats(ctx: dict[str, Any]) -> None:
 def every_stat_checkable(ctx: dict[str, Any]) -> None:
     reference = st.statslib.starter_stats(ctx["games"])
     for metric, sides in ctx["stats"][st.statscontract.METRICS_KEY].items():
-        for side, got in sides.items():
+        # A metric is {"entry", "A", "B"} (api-sprint-03 §2.1); "entry" is the dictionary entry,
+        # not a side. Both sides must be present (KeyError otherwise; port of origin/sprint-03).
+        for side in ("A", "B"):
+            got = sides[side]
             sizes = [got.get(k) for k in ("n", "count", "turns") if k in got]
             assert sizes, f"{metric} {side} shows no sample size (NFR-038 b)"
             refs = reference[metric][side]["rallies"]
