@@ -57,7 +57,7 @@ def m():
     ],
 )
 def test_an_answer_without_a_known_visibility_is_refused(m, status: int, body: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"GitHub answered"):
         m.visibility(status, body)
 
 
@@ -83,13 +83,17 @@ def test_a_po_record_without_a_p10_row_is_not_a_confirmation(m) -> None:
 @pytest.mark.unit
 def test_a_public_repository_without_a_po_answer_is_not_met(m) -> None:
     result = m.measure(m.visibility(200, PUBLIC), confirmed_public=False)
-    assert result == {"visibility": "public", "po_confirmed_public": False, "met": False,
-                      "status": WAITING}
+    assert result == {
+        "visibility": "public",
+        "po_confirmed_public": False,
+        "met": False,
+        "status": WAITING,
+    }
 
 
 @pytest.mark.unit
 def test_a_plan_without_an_s3_dod_p10_row_is_refused(m) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="no S3-DoD-P10 row"):
         m.dod_status("| S3-DoD-P6 | x | y | z | w | **not met: waiting on P6** |\n")
 
 
@@ -149,8 +153,16 @@ def test_the_repository_po_record_and_sprint_plan_agree_on_s3_dod_p10(m) -> None
 )
 def test_live_github_visibility_agrees_with_the_sprint_plan() -> None:
     out = subprocess.run(
-        [sys.executable, str(SCRIPT), "--repo", "nhuthuynh/racket-analytics",
-         "--po", str(PO), "--dod", str(PLAN)],
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--repo",
+            "nhuthuynh/racket-analytics",
+            "--po",
+            str(PO),
+            "--dod",
+            str(PLAN),
+        ],
         capture_output=True,
         text=True,
         timeout=60,
