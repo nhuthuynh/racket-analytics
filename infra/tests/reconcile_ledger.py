@@ -39,6 +39,8 @@ def run_check(
     plan_file: Path | None = None,
     decisions: Path | None = None,
     base: str | None = None,
+    *,
+    report_only: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     cmd = [sys.executable, str(SCRIPT), str(ledger)]
     if plan_file is not None:
@@ -47,6 +49,8 @@ def run_check(
         cmd += ["--decisions", str(decisions)]
     if base is not None:
         cmd += ["--base", base]
+    if report_only:
+        cmd.append("--report-only")
     return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
 
@@ -67,3 +71,10 @@ def commit_base(repo: Path) -> str:
 def base_of_head() -> str:
     """The base a PR is checked against: the merge base of HEAD and ``origin/main``."""
     return git(REPO_ROOT, "merge-base", "HEAD", "origin/main").strip()
+
+
+def live_ledger_check(
+    ledger: Path, plan_file: Path, decisions: Path, base: str
+) -> subprocess.CompletedProcess[str]:
+    """The check as CI runs it on the live ledger: report-only, so a due row never reds main."""
+    return run_check(ledger, plan_file, decisions, base, report_only=True)

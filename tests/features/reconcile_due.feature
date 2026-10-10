@@ -45,6 +45,24 @@ Feature: Open review-rounds rows that a merged ticket names are flagged for reco
       Then the check fails
       And the report names PE-PR24-01 as due because of ticket PE-PR24-01
 
+  Rule: Run by CI on main, the check reports due rows but never turns main red
+
+    # PE-FIX031A-03 / SBE-FIX031A-R2-01: on a push to main the base is main itself, so a merged
+    # fix ticket's decision file makes its row due until the engineering-manager writes the row.
+    # That is engineering-manager work, not a broken build: CI reports it, the EM step fails on it.
+
+    Scenario: A just-merged fix ticket's row is reported, not failed, in report-only mode
+      Given a ledger with an open major row for PE-PR24-01
+      And a base branch with a ticket decision file "PE-PR24-01.md"
+      When the reconciliation check runs against the base branch in report-only mode
+      Then the check passes
+      And the report names PE-PR24-01 as due because of ticket PE-PR24-01
+
+    Scenario: A ledger without a review table is still refused in report-only mode
+      Given a ledger without a review table
+      When the reconciliation check runs in report-only mode
+      Then the check fails with a usage error
+
   Rule: A row that already names the ticket, its PR or its merge commit is reconciled
 
     Scenario: The open row's section names the ticket's merge commit

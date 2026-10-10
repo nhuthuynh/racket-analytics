@@ -94,6 +94,18 @@ def check_against_base(ctx: dict) -> None:
     ctx["out"] = run_check(ledger, adr, ctx["decisions"], ctx["base"])
 
 
+@when("the reconciliation check runs against the base branch in report-only mode")
+def check_against_base_report_only(ctx: dict) -> None:
+    ledger, adr = _write_inputs(ctx)
+    ctx["out"] = run_check(ledger, adr, ctx["decisions"], ctx["base"], report_only=True)
+
+
+@when("the reconciliation check runs in report-only mode")
+def check_report_only(ctx: dict) -> None:
+    ledger, adr = _write_inputs(ctx)
+    ctx["out"] = run_check(ledger, adr, ctx["decisions"], report_only=True)
+
+
 @when("the reconciliation check runs")
 def check(ctx: dict) -> None:
     ledger, adr = _write_inputs(ctx)

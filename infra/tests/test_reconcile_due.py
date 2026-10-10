@@ -22,6 +22,7 @@ from reconcile_ledger import (
     commit_base,
     git,
     ledger_section,
+    live_ledger_check,
     plan,
     run_check,
 )
@@ -239,13 +240,57 @@ def test_a_fix_ticket_named_after_an_open_sprint_3_finding_passes_on_its_own_pr(
     assert out.returncode == 0, out.stdout + out.stderr
 
 
-@pytest.mark.integration
-def test_the_sprint_3_ledger_has_no_open_row_a_merged_ticket_names_unreconciled() -> None:
-    """Regression for V03R1-01: six rows read open on main after their tickets merged.
+# PE-FIX031A-03 / SBE-FIX031A-R2-01: on a push to main the base is main itself, so a merged fix
+# ticket's decisions file makes its row due until the EM writes the row. CI runs the check in
+# report-only mode (due rows printed, exit 0); usage errors still fail. Negative cases first.
+@pytest.mark.unit
+@pytest.mark.parametrize(("due", "report_only", "rc"), [(1, False, 1), (0, False, 0), (0, True, 0)])
+def test_due_rows_fail_the_check_unless_report_only(due: int, report_only: bool, rc: int) -> None:
+    assert _module().exit_status(due, report_only=report_only) == rc
 
-    Only decisions files on the base (merge base with ``origin/main``) name merged tickets.
-    """
-    out = run_check(
-        SPRINT_03 / "review-rounds.md", PLAN_0039, SPRINT_03 / "decisions", base_of_head()
+
+@pytest.mark.unit
+def test_report_only_never_fails_on_due_rows() -> None:
+    assert _module().exit_status(3, report_only=True) == 0
+
+
+@pytest.mark.integration
+def test_cli_report_only_still_refuses_a_missing_plan_file(tmp_path: Path) -> None:
+    ledger = tmp_path / "rr.md"
+    ledger.write_text(OPEN_05, encoding="utf-8")
+    out = run_check(ledger, tmp_path / "no-such-adr.md", report_only=True)
+    assert out.returncode == 2, out.stdout + out.stderr
+    assert out.stderr.startswith("reconcile-due: "), out.stderr
+
+
+@pytest.mark.integration
+def test_main_stays_green_after_a_fix_ticket_named_after_an_open_finding_merges(
+    tmp_path: Path,
+) -> None:
+    """PE-FIX031A-03 as reported: the real files plus a merged PE-PR24-01.md, base = HEAD."""
+    shutil.copy(SPRINT_03 / "review-rounds.md", tmp_path / "rr.md")
+    shutil.copy(PLAN_0039, tmp_path / "0039.md")
+    shutil.copytree(SPRINT_03 / "decisions", tmp_path / "decisions")
+    commit_base(tmp_path)
+    (tmp_path / "decisions" / "PE-PR24-01.md").write_text("# fix ticket\n", encoding="utf-8")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", "merge fix ticket into main")
+    main_head = git(tmp_path, "rev-parse", "HEAD").strip()
+    out = live_ledger_check(
+        tmp_path / "rr.md", tmp_path / "0039.md", tmp_path / "decisions", main_head
     )
     assert out.returncode == 0, out.stdout + out.stderr
+    assert "PE-PR24-01 (major) named by ticket PE-PR24-01" in out.stdout
+
+
+@pytest.mark.integration
+def test_the_sprint_3_ledger_is_read_by_the_reconciliation_check() -> None:
+    """Regression for V03R1-01 as CI runs it: the real ledger, plan and decisions parse (no
+    usage error) and the due rows are printed in the job log. A due row is engineering-manager
+    work (the EM status step runs the check without ``--report-only``), never a red main."""
+    out = live_ledger_check(
+        SPRINT_03 / "review-rounds.md", PLAN_0039, SPRINT_03 / "decisions", base_of_head()
+    )
+    print(out.stdout)
+    assert out.returncode == 0, out.stdout + out.stderr
+    assert "reconcile-due: " in out.stdout
