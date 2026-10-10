@@ -40,6 +40,7 @@ from racket.video_ingest import public as video_ingest
 
 log = logging.getLogger("racket.purge")
 ORPHAN_PAGE = 500
+UPLOAD_PAGE = 500
 
 
 def _now() -> datetime:
@@ -61,8 +62,38 @@ def _env_int(name: str, default: int, minimum: int, maximum: int | None = None) 
 class ContextPorts:
     """Each step through the owning context's published port (context map rule 1)."""
 
-    def expire_uploads(self, session: Any, store: Any, now: datetime) -> int:
-        return 0
+    def __init__(self, upload_idle: timedelta = timedelta(hours=24)) -> None:
+        self.upload_idle = upload_idle
+
+    def abandoned_uploads(self, session: Any, now: datetime, limit: int) -> list[uuid.UUID]:
+        """ST-038: up to ``limit`` abandoned uploads of live matches, unlocked. Pages through
+        every candidate by id, so uploads of deleted matches (the match purge's, refs checked
+        fail-closed, §4.6) never fill a batch (PE-038-01). The composition root does the set
+        difference; neither context reads the other's table (context-map rule 1)."""
+        found: list[uuid.UUID] = []
+        after = None
+        while len(found) < limit:
+            page = video_ingest.abandoned_upload_ids(
+                session, now, self.upload_idle, after=after, limit=UPLOAD_PAGE
+            )
+            if not page:
+                break
+            live = matches.live_ids(session, [match_id for _, match_id in page])
+            found += [upload_id for upload_id, match_id in page if match_id in live]
+            after = page[-1][0]
+        return found[:limit]
+
+    def claim_upload(
+        self, session: Any, upload_id: uuid.UUID, now: datetime
+    ) -> video_ingest.AbandonedUpload | None:
+        """The upload row locked until commit, if still abandoned and its match still live."""
+        upload = video_ingest.claim_abandoned_upload(session, upload_id, now, self.upload_idle)
+        if upload is None or upload.match_id not in matches.live_ids(session, [upload.match_id]):
+            return None
+        return upload
+
+    def forget_upload(self, session: Any, upload_id: uuid.UUID) -> None:
+        video_ingest.forget_upload(session, upload_id)
 
     def tombstone_deleted_accounts(self, session: Any, now: datetime) -> list[uuid.UUID]:
         """SEC-S3-TM-05 second net: a live match of a deleted account becomes due now."""
@@ -178,7 +209,7 @@ class PurgeJob:
         started = time.perf_counter()
         result = PassResult()
         now = self.clock()
-        self._step("upload", lambda s: self._expire(s, now, result), result)
+        self._expire_uploads(now, result)
         self._step("account", lambda s: self.ports.tombstone_deleted_accounts(s, now), result)
         with self.session_factory() as session:
             due = list(self.ports.due_matches(session, self.batch))
@@ -216,8 +247,38 @@ class PurgeJob:
                            "error": type(exc).__name__},
                 )  # fmt: skip
 
-    def _expire(self, session: Any, now: datetime, result: PassResult) -> None:
-        result.uploads += self.ports.expire_uploads(session, self.store, now)
+    def _expire_uploads(self, now: datetime, result: PassResult) -> None:
+        """ST-038, one upload at a time (ST038-QA-1): its own transaction and row lock, bytes
+        first, then the row. A failure rolls back that upload only (its row and bytes stay, the
+        next pass retries it), logs ``purge.failed`` with its id, and the next upload goes on
+        (deletion-and-purge.md §4.3, §4.5)."""
+        due: list[uuid.UUID] = []
+        self._step("upload", lambda s: due.extend(self.ports.abandoned_uploads(s, now, self.batch)),
+                   result)  # fmt: skip
+        for upload_id in due:
+            with self.session_factory() as session:
+                stage = "objects"
+                try:
+                    upload = self.ports.claim_upload(session, upload_id, now)
+                    if upload is None:  # a request or another pass holds it, or it moved on
+                        session.rollback()
+                        continue
+                    for ref in upload.refs:
+                        _delete(self.store, ref)
+                    stage = "rows"
+                    self.ports.forget_upload(session, upload_id)
+                    session.commit()
+                except Exception as exc:  # noqa: BLE001 - the upload stays due; next one
+                    session.rollback()
+                    result.failed += 1
+                    self._failed("upload", upload_id, stage, exc)
+                    continue
+            result.uploads += 1
+            log.info(
+                "upload expired",
+                extra={"event": "upload.expired", "upload_id": str(upload.upload_id),
+                       "match_id": str(upload.match_id), "user_id": str(upload.owner_id)},
+            )  # fmt: skip
 
     def _purge_match(self, match_id: uuid.UUID, owner_id: uuid.UUID, result: PassResult) -> None:
         token = user_id_var.set(str(owner_id))
@@ -299,6 +360,7 @@ def main(argv: list[str] | None = None) -> int:
         job = PurgeJob(
             session_factory(engine_for(settings.database_url)),
             ObjectStore.from_settings(settings),
+            ports=ContextPorts(upload_idle=timedelta(seconds=settings.upload_expiry_seconds)),
             batch=_env_int("PURGE_BATCH", 100, 1),
             alert_after=timedelta(seconds=_env_int("PURGE_ALERT_AFTER_S", 518_400, 1)),
         )

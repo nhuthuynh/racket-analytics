@@ -55,8 +55,8 @@ class FakePorts:
         self.log, self.refs, self.due = log, refs, due
         self.claimed: set[uuid.UUID] = set()
 
-    def expire_uploads(self, session: Any, store: Any, now: datetime) -> int:
-        return 0
+    def abandoned_uploads(self, session: Any, now: datetime, limit: int) -> list[uuid.UUID]:
+        return []  # ST-038's step has its own tests (test_expire_uploads.py)
 
     def tombstone_deleted_accounts(self, session: Any, now: datetime) -> list[uuid.UUID]:
         return []
