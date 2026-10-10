@@ -26,7 +26,8 @@ class Probe:
     method: str
     template: str
     # Which of Ivy's resources the route addresses: "match" | "upload" | "rally" | "metric"
-    # (a match and a published metric id).
+    # (a match and a published metric id) | "label" (a match, both users holding the labeller
+    # role, so the owner filter is what refuses the attacker; api-sprint-03 §5.1).
     resource: str
     kwargs: Callable[[], Mapping[str, Any]] = lambda: {}
 
@@ -110,6 +111,18 @@ _PROBES += [
     Probe(m, t, "metric" if "{metric_id}" in t else "match", MATCH_ID_ROUTES_03[(m, t)])
     for (m, t) in sorted(SERVED_03)
 ]
+# Full Tag label routes (ST-052c; api-sprint-03 §5; TCR row in
+# docs/sprints/03/decisions/ST-052c.md). For a labeller's own match without a consent record the
+# owner gets 409 ``no_consent`` (a positive control: not 404/405); the attacker, also a labeller,
+# gets the 404 of a missing match.
+LABEL_ROUTES_03 = {
+    ("GET", "/label/matches/{match_id}"): lambda: {},
+    ("POST", "/label/matches/{match_id}/events"): lambda: {
+        "json": {"type": "hit", "frame": 1, "hitter": "A1"}
+    },
+    ("GET", "/label/matches/{match_id}/export"): lambda: {},
+}
+_PROBES += [Probe(m, t, "label", k) for (m, t), k in LABEL_ROUTES_03.items()]
 MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
 # Routes with a path parameter that is not an owned resource ID. Each needs a reason.

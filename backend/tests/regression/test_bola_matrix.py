@@ -6,7 +6,9 @@ user A's (Ivy's) resource IDs, and the endpoint inventory has no uncovered route
 
 The attacker calls first and the owner's positive control runs last, so a state-changing route
 (``DELETE /matches/{match_id}``) is probed against the intact resource (ST-050a, TCR row
-2026-10-09 in docs/sprints/03/decisions/ST-050a.md).
+2026-10-09 in docs/sprints/03/decisions/ST-050a.md). For the Full Tag label routes both users
+hold the labeller role, so the owner filter, not the role check, refuses Carlos (api-sprint-03
+§5.1, SEC-S3-TM-08; ST-052c, TCR row in docs/sprints/03/decisions/ST-052c.md).
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ import pytest
 from tests.regression.bola import MATRIX, Probe, all_routes, id_routes, uncovered_routes
 from tests.support import contract, scorebook, tus
 from tests.support.api import async_client, lifespan, sign_in
+from tests.support.stats import LABELLER_ADMIN
 
 
 @pytest.fixture
@@ -48,8 +51,14 @@ async def ivy_resources(users: dict[str, httpx.AsyncClient]) -> dict[str, str]:
     return {"match": match_id, "upload_url": upload.url, "tagged": tagged, "rally": rally_id}
 
 
+async def _grant_labeller(client: httpx.AsyncClient) -> None:
+    me = await client.get("/me")
+    assert me.status_code == 200, me.text
+    assert LABELLER_ADMIN.load()(["grant-labeller", "--account", str(me.json()["id"])]) == 0
+
+
 def _url(probe: Probe, resources: dict[str, str], missing: bool) -> str:
-    if probe.resource == "match":
+    if probe.resource in ("match", "label"):
         return probe.template.format(match_id=uuid.uuid4() if missing else resources["match"])
     if probe.resource == "metric":
         return probe.template.format(
@@ -77,6 +86,9 @@ async def test_other_user_gets_the_same_404_as_for_a_missing_resource(
     probe: Probe, users: dict[str, httpx.AsyncClient], ivy_resources: dict[str, str]
 ) -> None:
     carlos, ivy = users["carlos"], users["ivy"]
+    if probe.resource == "label":
+        await _grant_labeller(ivy)
+        await _grant_labeller(carlos)
 
     attacker = await carlos.request(
         probe.method, _url(probe, ivy_resources, False), **probe.kwargs()
