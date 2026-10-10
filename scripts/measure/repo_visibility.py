@@ -8,7 +8,8 @@
 Asks GitHub's API as an anonymous reader, because the property is "world-readable or not":
 HTTP 200 with "visibility": "public" or "private", or HTTP 404 (an anonymous reader cannot
 see it). The row is met when the repository is private or hidden, or when the PO's decision
-record has a P10 row confirming public ("confirmed public" / "keep public"). Otherwise it is
+record has a P10 row that opens with "Confirmed public" / "Keep public" and holds no negation,
+question, hedge or "private" (anything else fails closed). Otherwise it is
 'not met: waiting on P10 (GitHub reports "visibility": "public")'.
 
 Exit 0 met, 1 not met, 2 no usable answer or malformed input (fail closed, ADR 0014), 3 the
@@ -27,7 +28,15 @@ from pathlib import Path
 
 DOD_ROW = "S3-DoD-P10"
 API = "https://api.github.com/repos/{repo}"
-CONFIRMS_PUBLIC = re.compile(r"\b(confirmed public|keep public)\b", re.I)
+# Fail closed (ADR 0014; review PE-71-01, SBE-71-01): the P10 cell must OPEN with the
+# affirmative phrase, and any negation, question, hedge or mention of "private" anywhere in
+# it voids the confirmation. A wording this misses reads as "not met", never as "met".
+CONFIRMS_PUBLIC = re.compile(r"(confirmed|keep)\s+(the\s+repository\s+)?public\b", re.I)
+VOIDS_CONFIRMATION = re.compile(
+    r"\?|\bprivate\b|n't\b|\b(not|no|never|nor|declined?|refused?|rejected?|undecided|open"
+    r"|pending|unanswered|yet|tbd|later|unless|until|if|whether|maybe|perhaps|decide[sd]?)\b",
+    re.I,
+)
 STATUS = {
     "private": "met (repository is private)",
     "not-found": "met (repository is private: anonymous GitHub API returns 404)",
@@ -64,9 +73,14 @@ def visibility(status: int, body: str) -> str:
 def po_confirmed_public(record: str) -> bool:
     """True only when a decision-table row for P10 confirms the repository stays public."""
     return any(
-        re.match(r"P10\b", cells[0]) and len(cells) > 1 and CONFIRMS_PUBLIC.search(cells[1])
+        re.match(r"P10\b", cells[0]) and len(cells) > 1 and _confirms_public(cells[1])
         for cells in _rows(record)
     )
+
+
+def _confirms_public(decision: str) -> bool:
+    """An affirmative leading "Confirmed public" / "Keep public", with nothing that voids it."""
+    return bool(CONFIRMS_PUBLIC.match(decision)) and not VOIDS_CONFIRMATION.search(decision)
 
 
 def measure(seen: str, confirmed_public: bool) -> dict:

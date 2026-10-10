@@ -91,9 +91,7 @@ def test_a_p10_row_that_does_not_confirm_public_is_not_a_confirmation(m, decisio
         "Confirmed public is pending",
     ],
 )
-def test_a_p10_row_that_negates_or_questions_public_is_not_a_confirmation(
-    m, decision: str
-) -> None:
+def test_a_p10_row_that_negates_or_questions_public_is_not_a_confirmation(m, decision: str) -> None:
     assert m.po_confirmed_public(po_record(decision)) is False
 
 
