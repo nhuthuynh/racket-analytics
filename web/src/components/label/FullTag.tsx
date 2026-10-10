@@ -12,6 +12,7 @@ import { browserApi } from '@/lib/api/browser';
 import type { Match } from '@/lib/api/types';
 import { FAULT_KINDS, type EventLabel, type LabelDocument, type LabelFaultKind, type LabelOutcome, type LabelSession, type SavedRally } from '@/lib/label/types';
 import { reconcile, sameOutcome } from '@/lib/label/reconcile';
+import { endProblem, markProblem, startProblem } from '@/lib/label/span';
 import { ENDING_WORDS, FAULT_WORDS, exportLine, frameTime, inOrder, markLine, refusalReason, savedLine } from '@/lib/label/view';
 import { ENDINGS, type Ending, type Side } from '@/lib/tagging/types';
 import { sideNames } from '@/lib/tagging/view';
@@ -196,6 +197,8 @@ export function FullTag({
 
   function markStart() {
     if (spanHeld()) return;
+    const problem = startProblem(frame, marks);
+    if (problem) return setTagProblem(problem);
     setTagProblem(null);
     setStart(frame);
     if (end !== null && end <= frame) setEnd(null);
@@ -205,15 +208,19 @@ export function FullTag({
     if (spanHeld()) return;
     if (start === null) return setTagProblem('Press Rally start first.');
     if (frame <= start) return setTagProblem('Rally end must be after its start.');
+    const problem = endProblem(frame, marks);
+    if (problem) return setTagProblem(problem);
     setTagProblem(null);
     setEnd(frame);
   }
 
   function addMark(mark: EventLabel) {
-    if (start === null) {
-      // A mark outside a rally would be sent with the next one and refused as no_rally (PE-ST052-R1-07).
+    // Before any Rally start the mark would be refused as no_rally (PE-ST052-R1-07); outside the
+    // span it would be filed under a saved rally, which cannot be changed (PE-ST052-R1-M1).
+    const problem = markProblem(mark.frame, start, end);
+    if (problem) {
       setPending(null);
-      return setTagProblem('Press Rally start first.');
+      return setTagProblem(problem);
     }
     setTagProblem(null);
     setMarks((m) => [...m, mark].sort((a, b) => a.frame - b.frame));
