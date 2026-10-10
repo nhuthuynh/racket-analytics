@@ -203,3 +203,10 @@ def owner_has_matches(session: Session, owner_id: uuid.UUID) -> bool:
     every one of its matches (deletion-and-purge.md §4.2)."""
     found = session.execute(sa.select(matches.c.id).where(matches.c.owner_id == owner_id).limit(1))
     return found.first() is not None
+
+
+def owned_format(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> str | None:
+    """The format (``singles``/``doubles``) of a live match the owner holds, else ``None``: the
+    owner filter for another context's routes that also need the slots (Full Tag)."""
+    match = MatchRepository(session).get_owned(MatchId(match_id), OwnerId(owner_id))
+    return None if match is None else match.format.value

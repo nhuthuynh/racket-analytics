@@ -10,6 +10,9 @@ bounce events. Every command is checked against ``full-tag-labels/v1`` by buildi
 it would export and running ``validate_labels`` on it, so the export can never be invalid
 because of a command that was accepted. An event must fall inside a marked rally.
 
+A refusal names each problem as a ``LabelIssue`` (label key or ``None``, closed code; api-sprint-03
+§5.4, §6.2), which the API returns as ``error.fields``; label values are never in it (NFR-057).
+
 The session owns its state: ``add`` deep-copies the body it accepts and ``export`` returns a
 deep copy, so neither the caller's input nor a returned document is shared with the session.
 """
@@ -24,9 +27,17 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, TypeGuard
 
-from racket.dataset.labels import LABEL_SCHEMA, validate_labels
+from racket.dataset.labels import LABEL_SCHEMA, LabelProblem, validate_labels
 
 _REFERENCE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+# api-sprint-03 §5.4 / §6.2: the keys a refusal may name and its closed codes.
+LABEL_KEYS = frozenset({"type", "frame", "hitter", "facets", "start_frame", "end_frame", "outcome",
+                        "visible", "court_xy_m"})  # fmt: skip
+LABEL_CODES = frozenset({"invalid", "unknown_field", "outside_clip", "no_rally", "overlaps_rally",
+                         "out_of_order", "not_a_player"})  # fmt: skip
+# the key of a rally-level problem of the validator, by its code
+_RALLY_KEY = {"overlaps_rally": "start_frame", "out_of_order": "end_frame"}
+_WHERE = re.compile(r"^rallies\[\d+\](?:\.events\[\d+\])?(?:\.(?P<key>[a-z_]+))?")
 _FIELDS = {
     "rally": frozenset({"type", "start_frame", "end_frame", "outcome"}),
     "hit": frozenset({"type", "frame", "hitter", "facets"}),
@@ -44,8 +55,31 @@ class InvalidConsent(ValueError):
     """A consent record that would be unsafe or incomplete to store."""
 
 
+@dataclass(frozen=True, slots=True)
+class LabelIssue:
+    """One problem of a refused label: the label key it is about (``None``: the whole object)
+    and a code from ``LABEL_CODES``. Never a label value."""
+
+    field: str | None
+    code: str
+
+
 class LabelRefused(ValueError):
-    """A label command the session does not accept; the message lists every problem."""
+    """A label command the session does not accept; ``problems`` lists every problem (the
+    message describes them for people and may carry values, so it is never returned)."""
+
+    def __init__(self, message: str, *problems: LabelIssue) -> None:
+        super().__init__(message)
+        self.problems: tuple[LabelIssue, ...] = problems or (LabelIssue(None, "invalid"),)
+
+
+def _issue(problem: LabelProblem) -> LabelIssue:
+    found = _WHERE.match(problem.where)
+    key = found.group("key") if found else None
+    if key is None:
+        key = _RALLY_KEY.get(problem.code)
+    code = problem.code if problem.code in LABEL_CODES else "invalid"
+    return LabelIssue(key if key in LABEL_KEYS else None, code)
 
 
 class ExportInvalid(ValueError):
@@ -101,12 +135,17 @@ class FullTagSession:
     def add(self, body: object) -> FullTagSession:
         """A new session with ``body`` (a rally, hit or bounce) added, or ``LabelRefused``."""
         if not isinstance(body, Mapping):
-            raise LabelRefused("a label must be a JSON object")
+            raise LabelRefused("a label must be a JSON object", LabelIssue(None, "invalid"))
         kind = body.get("type")
-        if kind not in _FIELDS:
-            raise LabelRefused(f"type: must be one of {sorted(_FIELDS)}")
+        if not isinstance(kind, str) or kind not in _FIELDS:
+            raise LabelRefused(
+                f"type: must be one of {sorted(_FIELDS)}", LabelIssue("type", "invalid")
+            )
         if extra := sorted(set(body) - _FIELDS[kind]):
-            raise LabelRefused(f"unknown field(s): {', '.join(map(str, extra))}")
+            raise LabelRefused(
+                f"unknown field(s): {', '.join(map(str, extra))}",
+                LabelIssue(None, "unknown_field"),
+            )
         owned = copy.deepcopy(dict(body))  # never share the caller's nested objects
         if kind == "rally":
             candidate = FullTagSession(self.clip, self.fps, self.frame_count, self.players,
@@ -117,17 +156,24 @@ class FullTagSession:
                 event.setdefault("facets", {})
             frame = event.get("frame")
             if not _is_frame(frame):
-                raise LabelRefused("frame: must be a frame number (integer >= 0)")
+                raise LabelRefused(
+                    "frame: must be a frame number (integer >= 0)", LabelIssue("frame", "invalid")
+                )
             if frame >= self.frame_count:
                 raise LabelRefused(
-                    f"frame: {frame} is outside the clip (0..{self.frame_count - 1})"
+                    f"frame: {frame} is outside the clip (0..{self.frame_count - 1})",
+                    LabelIssue("frame", "outside_clip"),
                 )
             if not any(_contains(r, frame) for r in self.rallies):
-                raise LabelRefused(f"no rally contains frame {frame}; mark the rally first")
+                raise LabelRefused(
+                    f"no rally contains frame {frame}; mark the rally first",
+                    LabelIssue("frame", "no_rally"),
+                )
             candidate = FullTagSession(self.clip, self.fps, self.frame_count, self.players,
                                        self.rallies, (*self.events, event))  # fmt: skip
         if problems := validate_labels(candidate._document()):
-            raise LabelRefused("; ".join(p.describe() for p in problems))
+            issues = tuple(dict.fromkeys(_issue(p) for p in problems))  # one per problem, in order
+            raise LabelRefused("; ".join(p.describe() for p in problems), *issues)
         return candidate
 
     def _document(self) -> dict[str, Any]:

@@ -3,6 +3,9 @@
 the labeller role) marks the rally and the hit through the label routes, and the export is
 validated against ``full-tag-labels/v1``. Routes and the admin CLI are the QA proposals in
 ``tests/support/stats.py`` until PE-1. Written red first: ``red_until`` ST-052.
+
+ST-052c (TCR row in docs/sprints/03/decisions/ST-052c.md): the label routes are built, every row
+passes, so the module marker is removed; a received match is probed in ``_received``.
 """
 
 from __future__ import annotations
@@ -16,8 +19,6 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-pytestmark = [pytest.mark.red_until(story="ST-052")]
-
 scenarios("full_tag.feature")
 
 
@@ -30,6 +31,7 @@ def _received(ctx: dict[str, Any], user: str) -> str:
     api = ctx["api"]
     match_id = api.run(sb.create_doubles(api.as_user(user), "Full Tag"))
     api.run(sb.receive_video(api.as_user(user), match_id))
+    st.probe_videos()  # ready: the label routes answer 409 match_not_ready before the probe
     return str(match_id)
 
 

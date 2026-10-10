@@ -24,6 +24,9 @@ pass and join the per-PR gate; their ``delete_match`` marker is removed (a row w
 
 ST-051-API (TCR row in docs/sprints/03/decisions/ST-051-API.md): the account delete rows pass and
 join the per-PR gate; their ``delete_account`` entry is removed from ``WAITS_ON``.
+
+ST-052c (TCR row in docs/sprints/03/decisions/ST-052c.md): the label rows and their positive
+control pass and join the per-PR gate; their ``label`` entry is removed from ``WAITS_ON``.
 """
 
 from __future__ import annotations
@@ -41,9 +44,7 @@ from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import ApiDriver
 
-WAITS_ON = {
-    "label": pytest.mark.red_until(story="ST-052"),
-}
+WAITS_ON: dict[str, Any] = {}
 
 OUTCOME: dict[str, Any] = {"ending": "winner", "winning_side": "B", "responsible_player": "B1"}
 RALLY_EVENT: dict[str, Any] = {
@@ -153,7 +154,6 @@ def _refused(target: Target, kind: str, body: Any) -> None:
     assert target.snapshot() == before, f"{kind}: a row was written or deleted"
 
 
-@WAITS_ON["label"]
 def test_it_03_12_positive_control_the_valid_label_is_accepted(
     make_target: Callable[[str], Target],
 ) -> None:

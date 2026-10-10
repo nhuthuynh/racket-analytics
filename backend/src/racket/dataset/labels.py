@@ -56,6 +56,7 @@ class UnreadableLabels:
 class LabelProblem:
     where: str
     message: str
+    code: str = "invalid"  # closed kind of problem (api-sprint-03 §6.2); the message is for people
 
     def describe(self) -> str:
         return f"{self.where}: {self.message}"
@@ -73,8 +74,8 @@ class _Validator:
     def __init__(self) -> None:
         self.problems: list[LabelProblem] = []
 
-    def add(self, where: str, message: str) -> None:
-        self.problems.append(LabelProblem(where, message))
+    def add(self, where: str, message: str, code: str = "invalid") -> None:
+        self.problems.append(LabelProblem(where, message, code))
 
     # --- document -------------------------------------------------------------------
 
@@ -125,7 +126,9 @@ class _Validator:
                 start, end = bounds
                 if previous_end is not None and start <= previous_end:
                     self.add(
-                        where, f"starts before rallies[{i - 1}] ends (overlap or out of order)"
+                        where,
+                        f"starts before rallies[{i - 1}] ends (overlap or out of order)",
+                        "overlaps_rally",
                     )
                 previous_end = end
             self.outcome(f"{where}.outcome", rally.get("outcome"), players)
@@ -141,12 +144,12 @@ class _Validator:
                 self.add(f"{where}.{name}", "must be a frame number (integer >= 0)")
                 ok = False
             elif _is_int(frame_count) and value >= frame_count:
-                self.add(f"{where}.{name}", f"must be within 0..{frame_count - 1}")
+                self.add(f"{where}.{name}", f"must be within 0..{frame_count - 1}", "outside_clip")
                 ok = False
         if not (ok and _is_int(start) and _is_int(end)):
             return None
         if start >= end:
-            self.add(where, "start_frame must be before end_frame")
+            self.add(where, "start_frame must be before end_frame", "out_of_order")
             return None
         return start, end
 
@@ -171,7 +174,9 @@ class _Validator:
                 self.add(f"{where}.responsible_player", "must be null for a replay")
             elif players and responsible not in players:
                 self.add(
-                    f"{where}.responsible_player", f"{responsible!r} is not one of {list(players)}"
+                    f"{where}.responsible_player",
+                    f"{responsible!r} is not one of {list(players)}",
+                    "not_a_player",
                 )
             elif side is not None and isinstance(responsible, str):
                 expected = _RESPONSIBLE_SIDE[ending]
@@ -215,9 +220,11 @@ class _Validator:
                 self.add(f"{at}.frame", "must be a frame number (integer >= 0)")
             else:
                 if bounds is not None and not bounds[0] <= frame <= bounds[1]:
-                    self.add(f"{at}.frame", f"outside the rally ({bounds[0]}..{bounds[1]})")
+                    self.add(
+                        f"{at}.frame", f"outside the rally ({bounds[0]}..{bounds[1]})", "no_rally"
+                    )
                 if last_frame is not None and frame < last_frame:
-                    self.add(f"{at}.frame", "events must be in frame order")
+                    self.add(f"{at}.frame", "events must be in frame order", "out_of_order")
                 if kind == "hit" and frame in hit_frames:
                     self.add(f"{at}.frame", "two hits on one frame")
                 if kind == "hit":
@@ -231,7 +238,7 @@ class _Validator:
     def hit(self, at: str, event: Mapping[str, Any], players: tuple[str, ...]) -> None:
         hitter = event.get("hitter")
         if players and hitter not in players:
-            self.add(f"{at}.hitter", f"{hitter!r} is not one of {list(players)}")
+            self.add(f"{at}.hitter", f"{hitter!r} is not one of {list(players)}", "not_a_player")
         facets = event.get("facets", {})
         if not isinstance(facets, Mapping):
             self.add(f"{at}.facets", "must be an object")
