@@ -1,0 +1,5 @@
+# Experiment variant: the store's loopback at MTU 1500 (MSS 1448 instead of 65483).
+services:
+  objectstore:
+    cap_add: [NET_ADMIN]
+    entrypoint: ["/bin/sh", "-c", "ip link set lo mtu 1500 && exec /bin/sh -c \"$$0\""]

@@ -19,16 +19,16 @@ concurrency:
 
 env:
   COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
-  ITERATIONS: "15"
+  ITERATIONS: "8"
 
 jobs:
   paths:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -45,27 +45,15 @@ jobs:
           cat /etc/docker/daemon.json || true
           sysctl net.ipv4.tcp_congestion_control net.ipv4.tcp_rmem net.ipv4.tcp_wmem net.core.default_qdisc
           ip link show | grep -E 'mtu' | head
-      - name: Sample the store sockets every 0.5 s
+      - name: Sample the store's own sockets every 0.25 s (its network namespace)
         run: |
           mkdir -p reports
-          nohup bash -c 'while :; do echo "# t=$(date +%s.%N)"; ss -tinmo state established "( sport = :8333 or dport = :8333 )"; sleep 0.5; done' >reports/ss.txt 2>&1 &
-      - name: Phase 1 - docker-proxy vs the container IP (userland proxy on, the CI default)
-        run: scripts/ci/experiments/objstore_stall_loop.sh reports/phase1.jsonl "$ITERATIONS" proxy direct
-      - name: Phase 1 report
+          nohup bash -c 'while :; do p=$(cat reports/run.storepid 2>/dev/null); if [ -n "$p" ]; then echo "# t=$(date +%s.%N)"; sudo nsenter -t "$p" -n ss -tinmoH state established 2>/dev/null; fi; sleep 0.25; done' >reports/ss.txt 2>&1 &
+      - name: Store variants base / rmem / mtu, interleaved per iteration
+        run: scripts/ci/experiments/objstore_stall_loop.sh reports/run.jsonl "$ITERATIONS" "base rmem mtu" proxy direct
+      - name: Report
         if: always()
-        run: python3 scripts/ci/experiments/objstore_stall_report.py reports/phase1.jsonl reports/ss.txt
-      - name: Phase 2 - userland proxy off, the same 127.0.0.1 port through kernel DNAT
-        run: |
-          cfg=$( (cat /etc/docker/daemon.json 2>/dev/null || echo '{}') | jq '. + {"userland-proxy": false}')
-          echo "$cfg" | sudo tee /etc/docker/daemon.json
-          sudo systemctl restart docker
-          docker info --format '{{.ServerVersion}}'
-          scripts/ci/experiments/objstore_stall_loop.sh reports/phase2.jsonl "$ITERATIONS" dnat direct
-      - name: Phase 2 report
-        if: always()
-        run: |
-          python3 scripts/ci/experiments/objstore_stall_report.py reports/phase2.jsonl reports/ss.txt
-          pkill -f 'ss -tinmo' || true
+        run: python3 scripts/ci/experiments/objstore_stall_report.py reports/run.jsonl reports/ss.txt
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
