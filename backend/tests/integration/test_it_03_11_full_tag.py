@@ -72,8 +72,20 @@ def _label_rows(engine: Any) -> int:
         )
 
 
+def _control_label_route_is_served(api: ApiDriver) -> None:
+    st.grant_labeller(api, "dana")
+    own = _received(api, "dana", "IT-03-11 own (control)")
+    st.probe_videos()  # ready, so only an unserved route can fail the control
+    st.record_consent(own)
+    control = st.fulltag(api, "dana", "label_match", match_id=own)
+    assert control.status_code == 200, f"positive control: {control.status_code} {control.text}"
+
+
 @pytest.mark.parametrize("route", sorted(st.FULLTAG_ROUTES))
 def test_it_03_11_a_player_gets_404_on_every_label_route(api: ApiDriver, route: str) -> None:
+    """Positive control first (as in the labeller row below): Dana's own consented match opens
+    (200), because a route that is not served is also a 404 and would pass vacuously."""
+    _control_label_route_is_served(api)
     match_id = _received(api, "ivy", "IT-03-11 player")
     st.record_consent(match_id)
     body = HIT if route == "label_events" else None

@@ -109,6 +109,10 @@ class Target:
             st.probe_videos()
             st.record_consent(self.label_match)
             self.ids.append(self.label_match)
+            # Positive control: the label routes are served and Dana's consented match opens;
+            # an unserved route is a 404, which would count as an L11 refusal (vacuous pass).
+            opened = st.fulltag(api, "dana", "label_match", match_id=self.label_match)
+            assert opened.status_code == 200, f"positive control: {opened.status_code}"
 
     def snapshot(self) -> dict[str, int]:
         rows = st.rows_holding(self.engine, self.ids)
