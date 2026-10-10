@@ -35,6 +35,7 @@ from racket.analysis_jobs import public as analysis_jobs
 from racket.analytics import public as analytics
 from racket.matches import public as matches
 from racket.platform.logs import configure_logging, user_id_var
+from racket.players import public as players
 from racket.video_ingest import public as video_ingest
 
 log = logging.getLogger("racket.purge")
@@ -64,7 +65,17 @@ class ContextPorts:
         return 0
 
     def tombstone_deleted_accounts(self, session: Any, now: datetime) -> list[uuid.UUID]:
-        return []
+        """SEC-S3-TM-05 second net: a live match of a deleted account becomes due now."""
+        caught: list[uuid.UUID] = []
+        for account_id in players.tombstoned_account_ids(session):
+            for match_id in matches.tombstone_owned_by(session, account_id, now):
+                caught.append(match_id)
+                log.info(
+                    "match deleted",
+                    extra={"event": "match.deleted", "match_id": str(match_id),
+                           "user_id": str(account_id)},
+                )  # fmt: skip
+        return caught
 
     def due_matches(self, session: Any, limit: int) -> list[matches.DueMatch]:
         return matches.due_for_purge(session, limit)
@@ -96,13 +107,17 @@ class ContextPorts:
         analytics.purge_match(session, match_id)
 
     def due_accounts(self, session: Any, limit: int) -> list[uuid.UUID]:
-        return []
+        """Deleted accounts with no match row left (their matches are purged first)."""
+        ids = players.tombstoned_account_ids(session, limit)
+        return [a for a in ids if not matches.owner_has_matches(session, a)]
 
     def claim_account(self, session: Any, account_id: uuid.UUID) -> bool:
-        return False
+        return players.claim_for_purge(session, account_id) and not matches.owner_has_matches(
+            session, account_id
+        )
 
     def purge_account(self, session: Any, account_id: uuid.UUID) -> None:
-        return None
+        players.purge_account(session, account_id)
 
 
 @dataclass
