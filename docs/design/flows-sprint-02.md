@@ -1,6 +1,6 @@
 # Sprint 2 flows: Quick Tag, key map, score sheet, correction history, rally video
 
-- **Status:** Draft v0.1, 2026-10-06 (principal-designer). **Written after the screens were built** (review round 1, PD-S2R1-03 / PD-R1-06-S2). Sprint-02 §0.1 asked for this file before any Sprint 2 UI story started; it did not exist, and the FE built from the Gherkin and the decision log (decision-log 2026-10-05, senior-frontend-engineer). This version therefore does two jobs: it **specifies** every screen and state, and it **records where the built screens differ** from that specification (§9). The design review DR-02 (§11) is **not yet held**; until it is, this file is a proposal and the Sprint 2 UI stories keep "Design review held" open (sprint-02 §14 DoR row R7).
+- **Status:** v0.2, 2026-10-10 (principal-designer, chair, ticket DR-HELD-03): **design review DR-02 (sprint-02 DoR R7) is held**; outcome and the chair's R2-1 walk record in §13.4; §9 PD-FL2-01..05 are built as specified. v0.1 history: Draft v0.1, 2026-10-06 (principal-designer). **Written after the screens were built** (review round 1, PD-S2R1-03 / PD-R1-06-S2). Sprint-02 §0.1 asked for this file before any Sprint 2 UI story started; it did not exist, and the FE built from the Gherkin and the decision log (decision-log 2026-10-05, senior-frontend-engineer). This version therefore does two jobs: it **specifies** every screen and state, and it **records where the built screens differ** from that specification (§9). The design review DR-02 (§11) is **not yet held**; until it is, this file is a proposal and the Sprint 2 UI stories keep "Design review held" open (sprint-02 §14 DoR row R7).
 - **Stories:** ST-027 Quick Tag (screen family T); ST-028a key map, ST-028b remapping (K); ST-029 score call (T, S); ST-030 score sheet (S); ST-031 undo and correction history (S, H); ST-032 corrections and "needs your decision" (S); ST-037 rally video (V).
 - **Requirements:** FR-027, FR-048..FR-053, FR-055; NFR-011..NFR-014, NFR-028..NFR-031, NFR-033, NFR-034, NFR-036d, NFR-055, NFR-058.
 - **Design sources:** DES FR-UX-60 (layout), FR-UX-61 (key map), FR-UX-62 (score feedback), FR-UX-70 (score sheet) in `docs/requirements/brainstorm-design.md`; HAX [DPA/DESIGN-11]; target sizes [DPA/DESIGN-02, DPA/DESIGN-10]; focus not obscured [DPA/DESIGN-07]; contrast [DPA/DESIGN-03, DPA/DESIGN-04].
@@ -179,6 +179,8 @@ Found by reading the shipped components at `971c4d7` against §3-§7 (not yet wa
 | PD-FL2-04 | minor | T-01 | No playable video: "The video cannot be played here right now. Rally times come from this page's clock." The player is not told that those times will not match the video, so V-01 later starts at the wrong moment | "The video cannot be played here right now. Reload the page to try again. If you tag without it, the rally times will not match the video." | senior-frontend-engineer |
 | PD-FL2-05 | nit | T-01, S-01 | "Undo" on T-01, "Undo last change" on S-01 for the same command | "Undo last change" on both | senior-frontend-engineer |
 
+**Status 2026-10-10 (DR-02 R2-2 accepted all five; chair checked the shipped code on `main` `25a5af0`):** all five are built as specified, so §3-§7 stand as written and this table is history. PD-FL2-01: `RallyCorrections.tsx:80` `aria-label` "Switch winner, rally n, to …". PD-FL2-02: disclosures with option buttons, no `<select>` in `web/src/components/score-sheet` (`grep -rn '<select' web/src/components/score-sheet` → nothing). PD-FL2-03: `ScoreSheetTable.tsx:127` "provisional, not yet checked against the rulebook" (coach's words, R2-4). PD-FL2-04: `QuickTag.tsx:40-43` "… If you tag without it, the rally times will not match the video." PD-FL2-05: `QuickTag.tsx:395` and `ScoreSheetView.tsx:260` both "Undo last change".
+
 Accepted as built (designer, 2026-10-06): the V-01 "cannot play" copy (QA-S2-UI-03), the T-02 one-question form, the K-01 dialog, the per-game tables with stacked rows, the decision buttons' words, and H-01 without a "who" column.
 
 ## 10. HAX checklist (Sprint 2 scope) [DPA/DESIGN-11]
@@ -229,6 +231,7 @@ Accepted as built (designer, 2026-10-06): the V-01 "cannot play" copy (QA-S2-UI-
 | Date | Participants | Outcome | Findings |
 |---|---|---|---|
 | 2026-10-06 | principal-designer (author) | Draft written after the build, from the shipped components and the Gherkin | §9 PD-FL2-01..05, routed in `review-rounds.md` |
+| 2026-10-10 (chair's record, ticket DR-HELD-03; decider cells of 2026-10-06 and 2026-10-07, last in `1433a92`) | principal-designer (chair), senior-frontend-engineer (R2-1 walk, R2-2, R2-5), pickleball-domain-coach (R2-1, R2-4, R2-7), business-analyst (R2-1, R2-3), product-manager (R2-1, R2-5, R2-7), security-privacy-engineer (R2-6) | **Held. Sprint 2 DoR R7 closed.** Every R2-1..R2-7 cell is filled and every decision is an accept; no reject. §9 is built as specified. The R2-1 walk record is in §13.4 | PD-WALK-S2-01..03 (minor), §13.4 |
 | Opened 2026-10-06; decisions due end of 2026-10-07; hard date 2026-11-02 (the DR-01 hard date, sprint-02 §0.1) | principal-designer (chair), pickleball-domain-coach (SME), senior-frontend-engineer, business-analyst, product-manager; security-privacy-engineer for R2-6 | **Not yet held.** Same asynchronous format as `flows-sprint-01.md` §10.2: each participant writes accept or reject with one line of reason in the "Decision" column below and commits it under ADR 0022. While any cell is empty, the Sprint 2 UI stories (ST-027..ST-032, ST-037 FE) keep "Design review held" open (sprint-02 DoR R7) and §9 stays a proposal | — |
 
 ### 13.1 Agenda (chair's proposals, judgment unless cited)
@@ -257,3 +260,42 @@ Accepted as built (designer, 2026-10-06): the V-01 "cannot play" copy (QA-S2-UI-
 - **Decision (chair):** hold DR-02 **this sprint**, together with DR-01 and DR-03, with one brief per decider (`flows-sprint-03.md` §13.2) that the orchestrator runs as a scheduled decider task (ADR 0037 rule 2; sprint-03 §3.3 DR-02-COACH/-BA/-PM/-SEC). **Due end of 2026-10-08.** If a cell is still empty then: "not held" is recorded here and the PO is asked (blockers.md P14) to choose (a) wait or (b) a recorded waiver for the Sprint 3 UI stories. The routed decider rows PD-RV2-DR-COACH/-BA/-PM/-SEC stay with their deciders; only a decision written in this file closes them.
 - **R2-1 walk not run in this round:** no live stack and the disk is under the Compose build floor (see `flows-sprint-01.md` §10.4).
 - **Review round 2 (2026-10-07, PD-R1-06):** the disk reason no longer decides it (the floor applies only to a Compose build; a local-process stack behind the committed Caddyfile is enough, `docs/sprints/03/smoke.md`). The walk waits on the senior-frontend-engineer, with whom the method was accepted; business-analyst R2-1 cell still pending. Status and request: `flows-sprint-03.md` §13.1a.
+
+### 13.4 Outcome on 2026-10-10: held; R2-1 walk record (chair, ticket DR-HELD-03; PD-R1-06 / PD-R2R-02 / QA-R2V-12 / DR-02 / E-3 / R2-5)
+
+Read at `origin/main` `25a5af0`. Every §13.1 cell is written, signed and dated, and every one is an accept:
+
+| # | Decided by | Result |
+|---|---|---|
+| R2-1 | chair (method); senior-frontend-engineer (**walk run**, 2026-10-07); product-manager, pickleball-domain-coach, business-analyst (method) | Accept the built screens; one minor finding and two screens not walked live, rows below |
+| R2-2 | senior-frontend-engineer | Accept all five; all built (§9 status) |
+| R2-3 | business-analyst | Accept `O` for forced error; FR-051 changed by the BA |
+| R2-4 | pickleball-domain-coach | Accept, with the condition that the call keeps the serving side's score first (built: `tagLine` uses `score_after`); PD-FL2-03 words accepted |
+| R2-5 | senior-frontend-engineer, product-manager | Accept both: the ending press saves; the E-3 focus rule is built (DR-02-FE, `web/tests/unit/dr02-e3-focus-after-decision.test.tsx`, `web/e2e/sprint-03/focus-after-decision.spec.ts`) |
+| R2-6 | security-privacy-engineer | Accept, with the condition that no V-01 state shows the URL, its query or its expiry |
+| R2-7 | pickleball-domain-coach, product-manager | Accept: keep "Forced error"; shown with the unverified label until κ ≥ 0.6 |
+
+**R2-1 walk record** (the chair's record of the senior-frontend-engineer's walk of 2026-10-07, P14; method as `flows-sprint-01.md` §10.1 R-1: local-process HTTPS stack from `sprint-03` `723bb7f` behind the committed Caddyfile, Playwright Chromium 360×780 touch, axe WCAG 2.2 AA, targets, sideways scroll at 320 px, a screenshot per screen):
+
+| Screen | Walked | What was checked against §3-§7 and §11 | Result |
+|---|---|---|---|
+| T-00 | yes | Match without video: no tagging controls | as specified |
+| T-01 | yes | Empty, then 6 rallies tagged by keys only; call "Rally 6: us. Score 5-0-2." with the serving side's score first and "Your side serves"; order check "Mark the rally end first." | as specified |
+| T-02 | yes | The question and its error ("Choose who serves first in game 1." in the summary and on the fieldset) | as specified, one minor finding (PD-WALK-S2-01) |
+| T-03 | **no** | The 60 s fixture ends before two games reach 11 | not walked live (PD-WALK-S2-02) |
+| K-01 | yes | Focus on "Close" at open; Esc returns focus to "Keyboard shortcuts"; single-key switch on | as specified |
+| S-01 | yes | PD-FL2-03 rules line; Switch winner on rally 2: focus stays on "Switch winner", status "Rally 2 corrected. The score sheet is up to date.", "corrected by you" | as specified |
+| H-01 | yes | "Rally 2: won by changed from the other side to your side at …" | as specified |
+| V-01 | yes, on a VP9 stand-in | Video focused, `readyState` 4, starts at the rally. Playwright Chromium has no H.264 decoder (SRE-S2-05), so the walk used the repo's VP9 stand-in | as specified; the H.264 original is not walked (PD-WALK-S2-03) |
+
+Every walked screen: 0 axe violations, 0 px sideways scroll at 320 px, no tagging control under 48 px.
+
+**Findings, added as rows by the chair** (each minor; routed in `docs/sprints/03/review-rounds.md`, deferred to the Sprint 4 carry-over row C4-MIN):
+
+| Id | Screen | Finding | Disposition | Owner |
+|---|---|---|---|---|
+| PD-WALK-S2-01 | T-02 | On the error state the "Other side" radio input measures 23×24 px (the error border narrows the fieldset). The label row is the larger target, so a player can still hit it, but §0 asks ≥ 24×24 for every control and the repo's own check (`web/e2e/helpers/axe.ts` `expectTargetsAtLeast24`) counts inputs | Deferred to C4-MIN: keep the radio ≥ 24×24 in the error state (the border outside the input's box), test-first with an E2E target check on T-02's error state | senior-frontend-engineer |
+| PD-WALK-S2-02 | T-03 | Not walked live, and no E2E covers it: only the unit test `web/tests/unit/quick-tag.test.tsx:168` ("Match won by your side.") does. The designer's "Match over" state has no live check | Deferred to C4-MIN: an E2E (or the next walk) on a fixture long enough for a full match, or with a seeded sheet two rallies from the end | senior-qa-engineer (test), senior-frontend-engineer (walk) |
+| PD-WALK-S2-03 | V-01 | Not walked on an H.264 original: Playwright Chromium cannot decode it, and CI's E2E jobs also use the VP9 stand-in (`ci.yml` step "Install ffmpeg (the rally-video specs build a decodable VP9 stand-in; W-01)") | Deferred to C4-MIN: one walk in WebKit or Chrome on an H.264 phone clip; real clips wait on the PO (P11) | senior-frontend-engineer; human PO (P11) for the clips |
+
+**Why held with these three rows open:** each is a minor of the built screens, not a design decision left open; every decider accepted; the screens a walk could not reach have other evidence (T-03: unit test; V-01: the walk on the stand-in plus the Sprint 2 E2E-02-04 in both Chromium and WebKit jobs). Holding the review does not close them: they stay routed with an owner and a sprint (ADR 0030).
