@@ -246,7 +246,7 @@ def test_t_ac_2_creates_racing_delete_me_leave_no_match_behind(
     deleted, creates = ps.race_creates_against_delete_me(api, "ivy", RACING_CREATES)
 
     assert deleted == 202
-    assert sorted({status for status, _ in creates}) <= [201, 401], creates
+    assert {status for status, _ in creates} <= {201, 401}, creates
     assert ps.live_matches_of_deleted_accounts(committed_db) == 0, (
         "a create committed after DELETE /me: a live match of a deleted account"
     )
