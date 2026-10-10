@@ -52,6 +52,7 @@ Sprint 3 screens:
 ## 4. Result
 
 - **Rows run:** 0 of 38 on VoiceOver and 0 of 38 on TalkBack.
+- **Count (FIX-03-1b):** `python3 scripts/measure/a11y_manual.py docs/sprints/03/a11y-manual.md --dod docs/sprints/sprint-03.md` counts the result cells of §3 (each cell `pass`, `fail: <words heard>` or `not run`) into the S3-DoD-P6 status and exits 3 if sprint-03 §9.1 says otherwise; CI runs the same check (`infra/tests/test_a11y_manual_tally.py`).
 - **Findings:** none yet (nothing run).
 - **Disposition:** QA-R3-GATE-01 / C-06 stays **Open** (waiting on P6). The agents cannot run it: there is no device or human tester in the session. Recorded so that G03-12 counts it, as sprint-03 §0.4 says, unless the PO chooses option (b) for P6 in writing.
 - **Disposition at review round 1 (senior-qa-engineer, 2026-10-07):** the PO chose option (b) for P6 (`po-input-2026-10-05.md` addendum, P12). QA-R3-GATE-01 / C-06 stays **Open** and is reported as sprint-DoD row **S3-DoD-P6 "not met: waiting on P6"** (sprint-03 §9.1, decision-log 2026-10-07); it is not counted in G03-12. Until every row has a result, no sprint report may call Sprint 3 "fully WCAG-checked": the automated part (axe 0 serious/critical and the 24x24 rule on D, E, X and L, including the D/E empty, loading and error states of E2E-03-08) is the only accessibility evidence, and NFR-027 (b) is **not met** for Sprint 3.
