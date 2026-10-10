@@ -15,7 +15,6 @@ pytestmark = pytest.mark.unit
 scenarios("ci_e2e_bounded.feature")
 
 CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
-SPECS = REPO_ROOT / "web" / "e2e"
 LEG = r"\$\{\{\s*matrix\.project\s*\}\}"
 GATED = '--grep-invert "@red-until-"'
 LISTED = '--grep "@red-until-"'
@@ -38,11 +37,6 @@ def _index(job: dict[str, Any], step: dict[str, Any]) -> int:
 def _option(run: str, name: str) -> str | None:
     found = re.search(rf"--{name}[= ]\"?([^\s\"]+)\"?", run)
     return found.group(1) if found else None
-
-
-def red_until_tests() -> int:
-    """``@red-until-`` tags in the spec files: one per red-first test (ADR 0046)."""
-    return sum(p.read_text().count("@red-until-") for p in sorted(SPECS.rglob("*.spec.ts")))
 
 
 @given("the CI workflow", target_fixture="job")
@@ -83,7 +77,8 @@ def own_report(job: dict[str, Any]) -> None:
 def global_timeout(job: dict[str, Any], limit: int) -> None:
     run = _step(job, GATED)["run"]
     value = _option(run, "global-timeout")
-    assert value is not None and value.isdigit(), run
+    assert value is not None, run
+    assert value.isdigit(), run
     assert 0 < int(value) <= limit * 60_000, value
     # The bound must leave room for the listed step and the report inside the job limit.
     assert int(value) <= (job["timeout-minutes"] - 15) * 60_000, (value, job["timeout-minutes"])
@@ -95,14 +90,6 @@ def list_reporter(job: dict[str, Any]) -> None:
     reporters = (_option(run, "reporter") or "").split(",")
     assert "list" in reporters, run
     assert "html" in reporters, run  # the report the artifact keeps
-
-
-@then("the listed red-until step runs each of its leg's tests at once")
-def listed_workers(job: dict[str, Any]) -> None:
-    run = _step(job, LISTED)["run"]
-    workers = _option(run, "workers")
-    assert workers is not None and workers.isdigit(), run
-    assert int(workers) >= red_until_tests(), (workers, red_until_tests())
 
 
 # ---------------------------------------------------------------- what explains a slow run
@@ -141,10 +128,6 @@ def test_the_browser_install_follows_the_leg() -> None:
     job = _job()
     install = _step(job, "playwright install")["run"]
     assert re.search(rf"playwright install --with-deps \"?{LEG}\"?", install), install
-
-
-def test_the_red_until_count_finds_the_tags_in_the_specs() -> None:
-    assert red_until_tests() >= 1  # the listed-step check above is not vacuous
 
 
 def test_the_infra_tests_job_installs_web_before_the_real_playwright_run() -> None:

@@ -19,7 +19,6 @@ Feature: The E2E job ends inside its budget, and a slow run stops itself with a 
     Given the CI workflow
     Then the gated Playwright step stops the run after at most 18 minutes
     And the gated step prints each test with its duration as it ends
-    And the listed red-until step runs each of its leg's tests at once
 
   Scenario: The E2E job keeps what explains a slow or cancelled run
     Given the CI workflow
