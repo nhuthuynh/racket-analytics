@@ -136,6 +136,34 @@ def test_a_cell_outside_pass_fail_words_not_run_is_refused(m, cell: str) -> None
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("cell", ["failover", "passive voice not read"])
+def test_a_result_word_without_a_word_boundary_is_refused(m, cell: str) -> None:
+    text = manual(1, voiceover=1, talkback=1).replace(
+        "| 1 | screen 1 | pass |", f"| 1 | screen 1 | {cell} |"
+    )
+    with pytest.raises(ValueError, match="row 1"):
+        m.tally(text)
+
+
+@pytest.mark.unit
+def test_a_row_with_fewer_cells_than_the_header_is_refused(m) -> None:
+    text = manual(2).replace("| 2 | screen 2 | not run | not run |", "| 2 | short |")
+    with pytest.raises(ValueError, match="row 2 has 2 cells"):
+        m.tally(text)
+
+
+@pytest.mark.integration
+def test_a_short_row_exits_2_as_malformed(tmp_path) -> None:
+    path = tmp_path / "m.md"
+    path.write_text(manual(2).replace("| 2 | screen 2 | not run | not run |", "| 2 | y |"))
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(path)], capture_output=True, text=True, timeout=60
+    )
+    assert out.returncode == 2, out.stdout + out.stderr
+    assert "row 2 has 2 cells" in out.stderr
+
+
+@pytest.mark.unit
 def test_not_met_counts_rows_run_on_both_screen_readers(m) -> None:
     t = m.tally(manual(38, voiceover=38, talkback=10))
     assert t["status"] == "not met: waiting on P6 (10 of 38 rows run)"
