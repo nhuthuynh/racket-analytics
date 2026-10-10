@@ -100,6 +100,17 @@ def lock_live_sheet(session: Session, match_id: uuid.UUID) -> LiveSheet | None:
     return LiveSheet(book.version, uuid.UUID(str(owner)), project(book))
 
 
+def lock_live_match(session: Session, match_id: uuid.UUID) -> bool:
+    """The live match row ``FOR SHARE`` until the caller commits, so a row another context keys
+    by this match (the consent record, ST-052b) is written before a deletion or after it, never
+    across it (deletion-and-purge.md §3.3). ``False`` when the match does not exist or is
+    deleted: the caller writes nothing (PE-052b-R1-01)."""
+    found = session.execute(
+        sa.select(matches.c.id).where(*MatchRepository.live(match_id)).with_for_update(read=True)
+    ).first()
+    return found is not None
+
+
 @dataclass(frozen=True)
 class DueMatch:
     match_id: uuid.UUID

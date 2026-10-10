@@ -126,7 +126,10 @@ def grant_role(session: Session, account_id: uuid.UUID, role: str, at: datetime)
 
 
 def revoke_role(session: Session, account_id: uuid.UUID, role: str) -> bool:
-    if role not in ROLES:
+    """Take a role from a live account (operator CLI). ``False`` for an unknown or deleted
+    account or an unknown role, so a mistyped id is refused (api-sprint-03 §5.5; PE-052b-R1-02).
+    Idempotent for a live account that does not hold the role."""
+    if role not in ROLES or not lock_live_account(session, account_id):
         return False
     session.execute(
         sa.delete(account_roles).where(

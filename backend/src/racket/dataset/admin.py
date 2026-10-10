@@ -4,7 +4,8 @@
 * ``grant-labeller --account <id>`` / ``revoke-labeller --account <id>``
 * ``consent --match <id> --record <reference> [--by <operator account id>]``
 
-Exit 0 done, 1 refused (unknown account or match, invalid id or reference), 2 usage. Every input
+Exit 0 done, 1 refused (unknown or deleted account or match, invalid id or reference), 2
+usage. The consent is written under the live match row's ``FOR SHARE`` lock. Every input
 is checked before the database is opened. Logs ids only, never the reference (NFR-057).
 """
 
@@ -73,7 +74,8 @@ def main(argv: list[str] | None = None) -> int:
         if match_id is None:
             return 1
         with _session() as session:
-            if not matches.existing_ids(session, [match_id]):
+            if not matches.lock_live_match(session, match_id):  # held to the commit
+                session.rollback()
                 return 1
             LabelRepository(session).save_consent(record)
             session.commit()
