@@ -1,6 +1,7 @@
 """``ContextPorts.expire_uploads``, the purge pass's ST-038 step, with fakes (FR-024, NFR-066 d;
 deletion-and-purge.md §4.4). Negative cases first: nothing abandoned means no store call and no
-row delete; a store failure keeps the row (bytes first, then the row: never an orphan). Then the
+row delete; an upload of a deleted match is left to that match's purge (fail-closed ref checks,
+deletion-and-purge.md §4.6; IT ``test_st_050b_purge_refs_fail_closed``); a store failure keeps the row (bytes first, then the row: never an orphan). Then the
 order (abort the multipart upload, delete the staging folder, then forget the row), a missing
 object counting as freed, the idle setting reaching the policy, and the ids-only log line."""
 
@@ -45,7 +46,7 @@ class FakeStore:
 
 @pytest.fixture
 def seen(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    state: dict[str, Any] = {"log": [], "found": [_abandoned()], "idle": None}
+    state: dict[str, Any] = {"log": [], "found": [_abandoned()], "idle": None, "deleted": set()}
 
     def abandoned_uploads(session: Any, now: datetime, idle: timedelta) -> list[AbandonedUpload]:
         state["idle"] = idle
@@ -55,7 +56,11 @@ def seen(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         state["log"].append(f"forget {upload_id.int}")
 
     monkeypatch.setattr(purge.video_ingest, "abandoned_uploads", abandoned_uploads)
+    def live_ids(session: Any, ids: list[uuid.UUID]) -> set[uuid.UUID]:
+        return {i for i in ids if i not in state["deleted"]}
+
     monkeypatch.setattr(purge.video_ingest, "forget_upload", forget_upload)
+    monkeypatch.setattr(purge.matches, "live_ids", live_ids, raising=False)
     return state
 
 
@@ -65,6 +70,12 @@ def _client_error(code: str) -> ClientError:
 
 def test_nothing_abandoned_touches_neither_store_nor_rows(seen: dict[str, Any]) -> None:
     seen["found"] = []
+    assert purge.ContextPorts().expire_uploads(object(), FakeStore(seen["log"]), NOW) == 0
+    assert seen["log"] == []
+
+
+def test_an_upload_of_a_deleted_match_is_left_to_the_match_purge(seen: dict[str, Any]) -> None:
+    seen["deleted"] = {MATCH}
     assert purge.ContextPorts().expire_uploads(object(), FakeStore(seen["log"]), NOW) == 0
     assert seen["log"] == []
 
