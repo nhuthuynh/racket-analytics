@@ -21,7 +21,7 @@ from racket.matches.repository import MatchRepository, matches
 from racket.matches.scorebook.domain import project
 from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import NotFound
-from racket.video_ingest.public import close_for_deleted_match
+from racket.video_ingest.public import close_for_deleted_match, lock_upload_of_match
 
 __all__ = ["Tombstone", "confirm_deletion"]  # the deletion rules Identity & Players reuses
 
@@ -150,18 +150,29 @@ def existing_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:
 
 def tombstone_owned_by(session: Session, owner_id: uuid.UUID, at: datetime) -> list[uuid.UUID]:
     """Tombstone every live match of an owner and close their uploads, in the caller's
-    transaction (``DELETE /me`` step 3; the pass's second net, SEC-S3-TM-05). Returns the ids."""
-    ids = [
-        uuid.UUID(str(i))
-        for i in session.execute(
+    transaction (``DELETE /me`` step 3; the pass's second net, SEC-S3-TM-05). Returns the ids.
+
+    One match at a time, in the global lock order (deletion-and-purge.md §3.1): its upload row,
+    then its match row, as ``DELETE /matches/{id}`` and the completing tus PATCH take them, so
+    none of them deadlocks with this (SQA-051-01). Ids in a fixed order; a match tombstoned by a
+    parallel request meanwhile is skipped."""
+    live = session.execute(
+        sa.select(matches.c.id).where(
+            matches.c.owner_id == owner_id, matches.c.deleted_at.is_(None)
+        )
+    ).scalars()
+    ids: list[uuid.UUID] = []
+    for match_id in sorted(uuid.UUID(str(i)) for i in live):
+        lock_upload_of_match(session, match_id)
+        tombstoned = session.execute(
             sa.update(matches)
-            .where(matches.c.owner_id == owner_id, matches.c.deleted_at.is_(None))
+            .where(matches.c.id == match_id, matches.c.deleted_at.is_(None))
             .values(deleted_at=at, updated_at=at)
             .returning(matches.c.id)
         ).scalars()
-    ]
-    for match_id in ids:
-        close_for_deleted_match(session, match_id, at)
+        if list(tombstoned):
+            close_for_deleted_match(session, match_id, at)
+            ids.append(match_id)
     return ids
 
 

@@ -102,8 +102,8 @@ class UploadRepository:
 
     def for_match(self, match_id: uuid.UUID, *, for_update: bool = False) -> UploadSession | None:
         query = sa.select(UploadSession).where(upload_sessions.c.match_id == match_id)
-        if for_update:
-            query = query.with_for_update()
+        if for_update:  # a locked read sees the row as committed, not as loaded earlier
+            query = query.with_for_update().execution_options(populate_existing=True)
         return self.session.execute(query).scalar_one_or_none()
 
     def delete_for_match(self, match_id: uuid.UUID) -> None:

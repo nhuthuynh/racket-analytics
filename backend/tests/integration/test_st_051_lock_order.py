@@ -3,9 +3,9 @@ and Postgres neither deadlocks with the transactions that race it nor leaves a s
 
 The global lock order is the account row, then the match's upload row, then the match row
 (deletion-and-purge.md §3.1, §3.3 (1)). Each race below replays the other transaction with the
-real service or repository calls, holds it right after its first row lock until ``DELETE /me``
-waits on it, and then lets it go on. Out of order, Postgres finds a deadlock and aborts one
-side (``DELETE /me`` answers 500).
+real service or repository calls. ``DELETE /me`` starts once that transaction holds its first
+row lock, which it keeps until ``DELETE /me`` waits on it; then it goes on. Out of order,
+Postgres finds a deadlock and aborts one side (``DELETE /me`` answers 500).
 
 1. The completing tus ``PATCH`` holds the upload row, then marks the match uploaded.
 2. An upload creation that replaces an expired upload of the match (``UploadService.create``).
@@ -18,6 +18,7 @@ Not an accepted test file: new, so no TCR row is needed.
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -51,6 +52,12 @@ def _blocks_someone(engine: Any, pid: int) -> bool:
         )
 
 
+async def _delete_me_once(client: Any, locked: threading.Event) -> int:
+    """``DELETE /me`` once the racing transaction holds its first row lock."""
+    assert await asyncio.to_thread(locked.wait, 10), "the racing transaction never locked"
+    return await _delete_me(client)
+
+
 def _wait_until_blocking(engine: Any, pid: int) -> None:
     deadline = time.monotonic() + 10
     while not _blocks_someone(engine, pid):  # DELETE /me now waits on this transaction
@@ -75,6 +82,7 @@ def test_st_051_delete_me_racing_the_completing_patch_neither_deadlocks_nor_fail
     upload = api.run(tus.start(client, match_id, length=1000))
     upload_id = uuid.UUID(upload.url.rsplit("/", 1)[1])
     outcome: dict[str, Any] = {}
+    locked = threading.Event()
 
     def completing_patch() -> None:
         with Session(committed_db) as session:
@@ -82,6 +90,7 @@ def test_st_051_delete_me_racing_the_completing_patch_neither_deadlocks_nor_fail
                 pid = session.execute(sa.text("SELECT pg_backend_pid()")).scalar_one()
                 row = UploadRepository(session).lock_nowait(upload_id)
                 assert row is not None
+                locked.set()
                 _wait_until_blocking(committed_db, pid)
                 asset_id = MediaRepository(session).add_asset(
                     owner_id=row.owner_id, match_id=row.match_id,
@@ -95,7 +104,9 @@ def test_st_051_delete_me_racing_the_completing_patch_neither_deadlocks_nor_fail
                 outcome["patch"] = type(getattr(exc, "orig", exc)).__name__
 
     async def race() -> int:
-        deleted, _ = await asyncio.gather(_delete_me(client), asyncio.to_thread(completing_patch))
+        deleted, _ = await asyncio.gather(
+            _delete_me_once(client, locked), asyncio.to_thread(completing_patch)
+        )
         return deleted
 
     outcome["delete"] = api.run(race())
@@ -126,6 +137,7 @@ def test_st_051_delete_me_racing_an_upload_creation_that_replaces_an_expired_one
         )
     state = api.app.state
     outcome: dict[str, Any] = {}
+    locked = threading.Event()
 
     def creation() -> None:
         with Session(committed_db) as session:
@@ -138,6 +150,7 @@ def test_st_051_delete_me_racing_an_upload_creation_that_replaces_an_expired_one
                     if held["done"] or not ("FOR UPDATE" in sql or "FOR SHARE" in sql):
                         return
                     held["done"] = True
+                    locked.set()
                     _wait_until_blocking(committed_db, pid)
 
                 sa.event.listen(session.connection(), "after_cursor_execute", hold_after_first_lock)
@@ -151,7 +164,9 @@ def test_st_051_delete_me_racing_an_upload_creation_that_replaces_an_expired_one
                 outcome["create"] = type(getattr(exc, "orig", exc)).__name__
 
     async def race() -> int:
-        deleted, _ = await asyncio.gather(_delete_me(client), asyncio.to_thread(creation))
+        deleted, _ = await asyncio.gather(
+            _delete_me_once(client, locked), asyncio.to_thread(creation)
+        )
         return deleted
 
     outcome["delete"] = api.run(race())
