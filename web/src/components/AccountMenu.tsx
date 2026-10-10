@@ -91,6 +91,11 @@ export function AccountMenu({
             </Link>
           </li>
           <li>
+            <Link href="/settings/account" className="touch-link">
+              Your account
+            </Link>
+          </li>
+          <li>
             <button type="button" className="button button--secondary" onClick={chooseSignOut}>
               Sign out
             </button>

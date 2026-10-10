@@ -7,7 +7,7 @@ import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpe
 import { SIGNED_IN_URL, signInByLink, uniqueEmail } from '../helpers/sprint-01';
 import { ACCOUNT_PATH, SCREEN, signInWithNthLink } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-051 @nfr-066 Delete my account', { tag: '@red-until-ST-051' }, () => {
+test.describe('@M0 @story-ST-051 @nfr-066 Delete my account', () => {
   test('E2E-03-04 the confirmation states the consequences; both devices signed out; signing in again is empty', async ({ browser }, testInfo) => {
     test.setTimeout(180_000);
     const email = uniqueEmail('ivy');
@@ -31,6 +31,9 @@ test.describe('@M0 @story-ST-051 @nfr-066 Delete my account', { tag: '@red-until
     const typed = dialog.getByRole('textbox');
     if (await typed.count()) await typed.fill('delete');
     await dialog.getByRole('button', { name: /Delete/ }).last().click();
+    // X-03 is shown once DELETE /me has answered; check the sessions only then, not while the
+    // request is in flight (G03-FE-R1-02; TCR row 2026-10-07).
+    await expect(phone.getByRole('heading', { level: 1 })).toHaveText('Your account has been deleted');
 
     for (const device of [phone, laptop]) {
       expect((await device.request.get('/api/me')).status()).toBe(401);
