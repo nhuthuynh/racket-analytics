@@ -1,6 +1,6 @@
 # 0043. Sprint 3 UX: deletion is confirmed in a dialog without a typed word; "Show me" rallies open on the score sheet; a Full Tag rally is saved only with its ending
 
-- **Status:** Proposed (principal-designer, 2026-10-07, task PD-1; review round 1, PD-R1S3-01). Becomes Accepted when design review DR-03 records the deciders' cells R3-4, R3-5 and R3-8 in `docs/design/flows-sprint-03.md` §13.1.
+- **Status:** Accepted (2026-10-10, principal-designer as DR-03 chair, ticket DR-HELD-03). The condition set when it was Proposed (2026-10-07, task PD-1; review round 1, PD-R1S3-01), the deciders' cells R3-4, R3-5 and R3-8 in `docs/design/flows-sprint-03.md` §13.1, is met: every one is an accept (two with amendments, see the note at the end).
 - **Date:** 2026-10-07
 - **Deciders:** principal-designer (proposes); product-manager, business-analyst, security-privacy-engineer, senior-frontend-engineer (DR-03 cells)
 - **Consulted:** pickleball-domain-coach (SME, DR-03); senior-qa-engineer (the red-first specs, routed rows PD-FL3-01..03)
@@ -58,3 +58,13 @@ Option 1 in each group, as specified in `flows-sprint-03.md` §3 (E-01), §4 (X-
 - `web/e2e/sprint-03/full-tag.spec.ts:37-51`: "Rally end" then "Export"; `docs/data/gold-label-schema.md` §4: `outcome` on every rally.
 - `docs/architecture/api-sprint-03.md` §4.1 (confirmation body), §3.1 (media through the Sprint 2 route), §5.2 (one label per request).
 - (judgment) where marked above; no usability study was run.
+
+## Note, 2026-10-10 (principal-designer, DR-03 chair; ticket DR-HELD-03)
+
+Accepted on the deciders' cells of DR-03 (`flows-sprint-03.md` §13.1, written 2026-10-07; outcome §13.1b):
+
+- **R3-4 (evidence opens on S-01):** senior-frontend-engineer accept, product-manager accept, both with one wording amendment that does not change the decision: when the browser blocks autoplay, V-01 focuses the `<video>` element, not "the native play button" (a page cannot focus one native control). Folded into `flows-sprint-03.md` §3.
+- **R3-5 (dialog, Cancel focused, no typed word):** security-privacy-engineer, business-analyst and product-manager accept. The BA confirms the dialog meets FR-006's "confirmation page": what FR-006 makes testable is that the consequences are stated and confirmed before anything is deleted. So the open "Cons" of option 1 is closed.
+- **R3-8 (Full Tag rally saved only with its ending):** security-privacy-engineer accept (condition: a test that a labeller gets 404 on another account's match); senior-frontend-engineer accept with two key amendments (`<` / `>` for one second; players on `3`-`6` as on T-01). Neither changes the decision. Folded into §6.
+- Built and tested as decided: X-01/X-02 dialogs, `?play=<rally_id>` on S-01, E2E-03-05 with the ending step (PD-FL3-01 fixed in `723bb7f`, TCR accepted).
+- Design review DR-03 as a whole is not yet held: one cell outside this ADR (business-analyst on R3-9, states and checklists) is empty. That does not affect this ADR's three decisions.

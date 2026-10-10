@@ -1,6 +1,6 @@
 # Sprint 1 flows: sign-in, first run, capture guide, match setup, upload
 
-- **Status:** Draft v0.1, 2026-10-03 (principal-designer). The design review is held as a PR with the domain coach as subject-matter expert (SME), the senior-frontend-engineer (feasibility), the business-analyst (criteria) and the security-privacy-engineer (sign-in, upload) [DPA/DESIGN-15]. This document is part of Sprint 1's Definition of Ready (sprint-00 §4).
+- **Status:** v0.2, 2026-10-10 (principal-designer, chair, ticket DR-HELD-03): **design review DR-01 (Sprint 1 DoR P7) is held**; outcome in §10, the accepted amendments R-2a, R-2b, R-3 and R-5 are applied to U-01, U-03, U-04 and §6. v0.1 history: Draft v0.1, 2026-10-03 (principal-designer). The design review is held as a PR with the domain coach as subject-matter expert (SME), the senior-frontend-engineer (feasibility), the business-analyst (criteria) and the security-privacy-engineer (sign-in, upload) [DPA/DESIGN-15]. This document is part of Sprint 1's Definition of Ready (sprint-00 §4).
 - **Stories:**
   - ST-013 sign-in;
   - ST-014 sign-out;
@@ -253,7 +253,7 @@ The order follows FR-021. Answers from the last match are pre-filled where it is
 - **Leaving:** "You can use other pages while this tab stays open. If you close it, you can resume later from this page by choosing the same video."
   - This copy **never** promises an upload continues after the tab is closed (FR-022, OQ-18 recommendation; SPIKE-06 may change it).
 - **Large files (> 1 GB):** a dismissible hint: "Keep your screen on until the upload finishes." (FR-UX-32, judgment)
-- **Controls:** "Pause" / "Resume" (48 px). "Cancel upload" (secondary) opens a confirmation: "Cancel this upload? The part already sent will be deleted." with "Cancel upload" and "Keep uploading".
+- **Controls:** "Pause" / "Resume" (48 px). **No "Cancel upload" control** (DR-01 R-5, product-manager, 2026-10-07): the ways out are an expired upload freeing its slot (ST-038) and "Delete match" on M-02 (ST-050), which removes the upload. A standalone `DELETE /uploads/{id}` stays unscheduled backlog.
 - **Announcements:** state changes are announced. The percentage is announced at most every 10%.
 - **Damaged chunk** (checksum mismatch, IT-01-06): invisible to the user. The client re-sends from the server's offset. If 3 consecutive retries fail: "Paused: we're having trouble sending your video. Retrying…" (judgment).
 
@@ -270,19 +270,20 @@ The order follows FR-021. Answers from the last match are pre-filled where it is
   - not a readable video, judged by content and not the extension: "This file is not a video we can read";
   - too large: "Videos must be 10 GB or smaller";
   - too long: "Videos must be 2 hours 30 minutes or shorter".
+  - a file in an accepted container whose codec we cannot decode (`unsupported_video`) gets the **same** message as not readable, "This file is not a video we can read": the player does the same thing in both cases (DR-01 R-3, chair and business-analyst, 2026-10-07; FR-023).
 - Each message is followed by a "Choose a different video" link → the file button.
 - **Nothing is kept from a rejected file, and the page says so:** "Nothing from this file was saved." (NFR-060; Gherkin "no match video is stored from that file"). The caps are provisional (R-05) and come from config.
 
 ### U-04 Resume an unfinished upload (return visit)
 
 - **Trigger:** the server reports an unfinished upload session for one of the user's matches. Server state is the source of truth, because sign-out clears local storage (FR-011). Dependency for the BE: the match read model exposes the upload offset and expiry. principal-engineer to confirm in ST-017.
-- **Banner on M-01 and M-02:**
+- **Banner on M-01 only** (DR-01 R-2b): on M-02 the upload panel already shows the resume prompt below, so a banner there would repeat it:
   - "Your upload of 'Sat doubles' is 64% done."
   - Button "Resume upload".
   - Text "It will be kept until {date, time}" (from `Upload-Expires`).
   - Gherkin §7.4: "she is offered to resume from 64%".
 - **Resume:** "To continue, choose the same video: **Sat doubles.mp4 (3.0 GB)**." The browser cannot reopen the file by itself after the tab was closed (judgment; SPIKE-06 confirms). The user taps "Choose video". The client checks name, size and last-modified date, then HEAD returns the offset and the upload continues from it (tus [AQS/STACK-06]).
-  - Different file → error summary: "This is not the same video. Choose 'Sat doubles.mp4' (3.0 GB), or cancel this upload and start again."
+  - Different file → error summary: "This is not the same video. Choose 'Sat doubles.mp4' (3.0 GB)." (DR-01 R-2a: no "or cancel this upload" while the page has no such action. Now that "Delete match" ships on M-02 (ST-050), "or delete this match and start again" may be added, test-first with a TCR row; routed as PD-WALK-S1-03.)
   - Expired session → "This upload expired on {date}. Start the upload again." The expired session is removed (Sprint 2, ST-038).
 
 ### Upload states summary
@@ -295,6 +296,9 @@ The order follows FR-021. Answers from the last match are pre-filled where it is
 | Offline | "Paused: waiting for connection". It resumes automatically when the connection returns and announces "Resuming", then "Uploading" (Gherkin §7.4, "Connection drops mid-upload") |
 | Low-confidence | N/A in R1. Probe facts are read from the file, not inferred. A VFR flag, if shown, is a fact ("Variable frame rate") |
 | Low-sample | N/A: no metric |
+| Quota (429 on create) (DR-01 R-5) | The panel stays idle ("No video yet", the chooser). Error summary: "You have too many unfinished uploads. Finish one of them from Your matches, then try again." with a link to `/matches`, where each unfinished upload shows its own "It will be kept until <date>." No expiry in this message (product-manager). When the ST-050 copy follow-up lands: "Finish or delete one of them from Your matches, then try again." (PD-WALK-S1-03) |
+| Conflict before any byte (409) (DR-01 R-5) | The panel stays idle, as on the quota row |
+| Failure after bytes were sent (DR-01 R-5) | The progress and the state "Stopped" stay, so the player sees how far it got |
 
 ## 7. HAX checklist (Sprint 1 scope) [DPA/DESIGN-11]
 
@@ -348,6 +352,7 @@ Component rules: `component-accessibility-checklist.md`. "✓" means the design 
 | 2026-10-03 | principal-designer (author) | Draft written | Self-check against the designer DoD: every screen has its states; WCAG and HAX checklists applied; copy aligned with the Gherkin strings |
 | Sprint 0 D8 (planned) | + pickleball-domain-coach (SME), senior-frontend-engineer, business-analyst, security-privacy-engineer | Not held. DoR P7 stayed open while ST-013..ST-019 were built (review round 1 finding PD-R1-06) | — |
 | 2026-10-06 (scheduled by the engineering-manager, 2026-10-05; format and fallback date decided by the chair 2026-10-05, §10.2) | principal-designer (chair, records the outcome), pickleball-domain-coach, senior-frontend-engineer, business-analyst, security-privacy-engineer, product-manager (R-5, D-1, D-8) | **Not held by the 2026-10-06 date: carried to Sprint 2 row DR-01, hard date 2026-11-02 (§10.3).** Originally: asynchronous, in the repo (§10.1 "Decision at review" column); decisions due by end of 2026-10-06; if any cell is still empty then, P7 carries to Sprint 2 with a hard date of 2026-11-02 (§10.2) | Agenda: (1) walk A-01..A-04, F-01, G-01, Q-01..Q-07, M-01/M-02, U-01..U-04 against the built screens; (2) confirm or reject the two FE deviations in `docs/sprints/01/decision-log.md` (U-04 "different file" copy without "or cancel this upload and start again" while Cancel upload is hidden until Sprint 2; resume banner on M-01 only); (3) ST-018 fourth refusal string for codecs; (4) ST-019 copy without a "Tag this match" button; (5) D-1..D-8 still open; (6) added by the engineering-manager on 2026-10-05 (PD-R2-04): pickleball-domain-coach signs off `docs/domain/capture-guide-wording.md`, which is still `draft` and was due on Sprint 1 D3. The coach updates that doc's §5 sign-off row; ST-015 keeps it in `open` until then. Input to the chair (principal-designer view in PD-R1-06, judgment): accept both U-04 deviations, because copy must not offer an action the page lacks, and amend U-04. The principal-designer replaces this row with the outcome and makes any U-04 amendment |
+| 2026-10-10 (chair's record, ticket DR-HELD-03; decider cells of 2026-10-06 and 2026-10-07, last in `1433a92`) | principal-designer (chair), senior-frontend-engineer (R-1 live walk, R-2a, R-2b, R-6), business-analyst (R-3, D-1, D-2), pickleball-domain-coach (R-4, R-7), product-manager (R-5, D-1, D-8), security-privacy-engineer (D-8) | **Held. DoR P7 closed.** Every §10.1 "Decision at review" cell is filled and every decision is an accept; no reject. Amendments applied: U-01 (no Cancel upload, R-5), U-03 (codec message, R-3), U-04 (banner on M-01 only, R-2b; different-file copy, R-2a), §6 states (quota, conflict, failure after bytes, R-5). D-5, D-6, D-7 stay open items with their owners (they are not review cells). Details §10.5 | R-1 walk findings PD-WALK-S1-01..03 (minor, senior-frontend-engineer), §10.5 |
 
 ### 10.1 Chair's pre-read for the 2026-10-06 review (PD-R1-06, prepared 2026-10-05)
 
@@ -403,3 +408,28 @@ The §10.2 fallback (step 3) is applied. On 2026-10-06 only the chair's cells an
 - **R-1 walk not run in this round:** no stack is up (`curl -sk https://localhost:43000/` → 000) and the disk is under the 16 GB Compose build floor (`df -h /` → 15 G free; blockers.md row 2026-10-07 SRE). The FE's live Playwright run (DR-02 R2-1 cell: 86 passed, 6 skipped, 3 failed for known H.264 reasons) is input to the walk, not the walk itself.
 - **Review round 2 (2026-10-07, PD-R1-06):** still not held. Left: R-1 walk (senior-frontend-engineer with the chair; the disk floor applies only to a Compose build, and a local-process HTTPS stack as in `docs/sprints/03/smoke.md` is enough, so the walk now waits on the FE, not on disk), D-1 (PM + BA), D-2 (BA). R-3 is closed (chair and BA accept). Status and request to the orchestrator: `flows-sprint-03.md` §13.1a; escalation blockers.md P14, due end of 2026-10-08.
 
+### 10.5 Outcome on 2026-10-10: held (chair, ticket DR-HELD-03; PD-R1-06 / PD-R2R-02 / QA-R2V-12 / DR-01)
+
+Read at `origin/main` `25a5af0`. Every decider cell of §10.1 is written, signed and dated, and every one is an accept:
+
+| # | Decided by | Result |
+|---|---|---|
+| R-1 | chair (method, 2026-10-06); senior-frontend-engineer (**walk run**, 2026-10-07: 0 axe violations, 0 targets under 24×24 px, 0 px sideways scroll at 320 px on every walked screen) | Accept the built screens; three minor findings, rows below |
+| R-2a, R-2b | chair; senior-frontend-engineer | Accept; U-04 amended (§6) |
+| R-3 | chair; business-analyst | Accept; U-03 amended (§6), FR-023 changed by the BA |
+| R-4 | chair; pickleball-domain-coach | Accept: "You can still tag this match." stays, as reassurance |
+| R-5 | chair; product-manager | Accept the §6 states and shipped copy; no Cancel control; §6 amended |
+| R-6 | chair; senior-frontend-engineer | Done (C-37); re-checked in the R-1 walk: 48 px |
+| R-7 | coach | Closed 2026-10-05 |
+| D-1, D-2 | business-analyst, product-manager (D-1) | Accept, close |
+| D-8 | product-manager, security-privacy-engineer | Accept (the line is the FE's to build, test-first) |
+
+**Findings of the R-1 walk, added as rows by the chair** (each minor: none breaks a WCAG criterion or a requirement; each is routed in `docs/sprints/03/review-rounds.md` and deferred to the Sprint 4 carry-over row C4-MIN):
+
+| Id | Screen | Finding | Disposition | Owner |
+|---|---|---|---|---|
+| PD-WALK-S1-01 | U-01 / M-02 | M-02's "Status" row still says "Awaiting upload" while the panel shows "Uploading 38%" (the status is read once at page load). Two words for one fact on one screen | Deferred to C4-MIN: the status row follows the panel's state (or is hidden while the panel is active), test-first | senior-frontend-engineer |
+| PD-WALK-S1-02 | Q-01 | The route's loading view renders first (`<title>` "Loading", no `<h1>`) before the question. A screen-reader user hears "Loading" as the page name | Deferred to C4-MIN: the loading view keeps the question's title and `<h1>`, or the page renders without a loading view | senior-frontend-engineer |
+| PD-WALK-S1-03 | U-04, §6 quota | ST-050 ships "Delete match", so the R-5 follow-up applies: U-04 may say "or delete this match and start again" and the 429 message "Finish or delete one of them…" | Deferred to C4-MIN: test-first, with a row in `test-change-requests.md` for each changed expected string, decided by QA first | senior-frontend-engineer (with the chair for the words) |
+
+Not walked: A-03 (transient), WebKit and screen readers (a11y-manual, waiting on P6). These are recorded limits of the walk, not open review items: E2E measures A-03 with axe and targets (`web/e2e/sprint-01/error-states-a11y.spec.ts:80`, the exchange held so the screen stays) and runs WebKit in CI (`E2E (Playwright, webkit) with axe-core`, run 38055904509 on `main`, success), and the screen-reader pass is a sprint-DoD row waiting on a human (P6).

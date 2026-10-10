@@ -1,6 +1,6 @@
 # Sprint 3 flows: stats dashboard, "Show me" evidence, deletion, Full Tag
 
-- **Status:** Draft v0.1, 2026-10-07 (principal-designer, task PD-1; review round 1, PD-R1S3-01). **Written before any Sprint 3 UI was built** (`ls web/src/app/matches/[matchId]/` → `page.tsx sheet tag`; no `web/src/app/settings` or `web/src/app/label`). Design review **DR-03 is opened in §13 and is not yet held.** Until §13 records "held", this file is a proposal, and no Sprint 3 UI story (ST-047 UI, ST-048, ST-050 UI, ST-051 UI, ST-052 UI) starts unless the PO records a waiver first (sprint-03 §0.1; ADR 0037 rule 2; DoR R7).
+- **Status:** v0.2, 2026-10-10 (principal-designer, chair, ticket DR-HELD-03): the deciders' accepted amendments of DR-03 R3-1, R3-3, R3-4, R3-6, R3-7, R3-8 and R3-9 are folded into §0-§11 (PD-R3S3-01). **DR-03 outcome (§13, §13.1b): decided on R3-1..R3-8; not yet held, because one decider cell is empty: business-analyst on R3-9.** v0.1 history: Draft v0.1, 2026-10-07 (principal-designer, task PD-1; review round 1, PD-R1S3-01). **Written before any Sprint 3 UI was built** (`ls web/src/app/matches/[matchId]/` → `page.tsx sheet tag`; no `web/src/app/settings` or `web/src/app/label`). Design review **DR-03 is opened in §13 and is not yet held.** Until §13 records "held", this file is a proposal, and no Sprint 3 UI story (ST-047 UI, ST-048, ST-050 UI, ST-051 UI, ST-052 UI) starts unless the PO records a waiver first (sprint-03 §0.1; ADR 0037 rule 2; DoR R7).
 - **Stories:** ST-048 stats dashboard (screen family D); ST-047 "Show me" evidence (E); ST-050 delete a match, ST-051 delete my account (X); ST-052 Full Tag (L).
 - **Requirements:** FR-006, FR-007, FR-027, FR-055, FR-100..FR-103, FR-150, FR-151; NFR-011, NFR-027, NFR-028, NFR-033, NFR-034, NFR-038, NFR-039, NFR-055, NFR-057, NFR-058, NFR-066.
 - **Design sources:** DES FR-UX-70..72 (score sheet, metric card, charts) and FR-UX-90 (deletion) in `docs/requirements/brainstorm-design.md`; HAX [DPA/DESIGN-11]; targets [DPA/DESIGN-02, DPA/DESIGN-10]; contrast [DPA/DESIGN-03, DPA/DESIGN-04]; focus not obscured [DPA/DESIGN-07]; error summary [DPA/DESIGN-13]. Everything else is (judgment).
@@ -64,7 +64,7 @@
 | Metric (`entry.name`) | Main value | Supporting text (always shown) |
 |---|---|---|
 | AN-01 Rallies won on serve | "57%" | "4 of 7 rallies · n = 7 · range 25% to 84%" |
-| AN-02 Rallies won when receiving (name pending the coach, COACH-1) | "33%" | "2 of 6 rallies · n = 6 · range 10% to 70%" |
+| AN-02 Rallies won when receiving (coach's name, COACH-1; P-4 closed) | "33%" | "2 of 6 rallies · n = 6 · range 10% to 70%" |
 | AN-03 Points per service turn | "2" | "4 points in 2 service turns" |
 | AN-04 Unforced errors per game | "2" | "2 unforced errors in 1 game"; then per player "Ivy 1 · Dana 1"; then "player not tagged in 1 rally" when `player_not_tagged` > 0 (Gherkin §7.1) |
 | AN-05 Serve faults | "29%" | "2 of 7 serves · n = 7 · range 8% to 64%"; "fault type not tagged in n rallies" when > 0 ("lower bound", metric-dictionary AN-05) |
@@ -75,18 +75,18 @@
 - **n = 0 for a side** (e.g. the other side never served): main value "—", text "No rallies yet · n = 0"; no range; no "Show me" button; text "No rallies behind this yet." instead. A disabled button is not used: it cannot take focus and says nothing about why (judgment).
 - **Low sample:** see §0. Example: AN-01, your side: "57%" (de-emphasised), "4 of 7 rallies · n = 7 · range 25% to 84%", tag "low sample", "Low sample: fewer than 20 rallies, or the range is wider than 30 points. Treat it as a rough guide."
 - **"Show me":** visible text "Show me the 7 rallies" (n from the side's sample; for AN-04 the number of error rallies, for AN-06 "Show me the runs' rallies"); accessible name starts with the visible words (SC 2.5.3): "Show me the 7 rallies, Rallies won on serve, your side". One button per side, so two per card (E2E-03-02). It opens E-01 below that side block.
-- **Layout shift:** while loading, each card's place is reserved at its final height (skeleton blocks of the same size), so the numbers arriving move nothing (NFR-039, timing spec `timing-layout-shift` = 0).
+- **Layout shift:** while loading, each card's place is reserved at its final height (skeleton blocks of the same size), so the numbers arriving move nothing (NFR-039, timing spec `timing-layout-shift` = 0). Cards with a conditional line (AN-04 "player not tagged…", AN-05 "fault type not tagged…") reserve the height of their tallest variant, per metric id (DR-03 R3-1, FE condition 1).
 
 ### D-01 states
 
 | State | What the player sees | Source |
 |---|---|---|
-| Empty: no video yet | "You can see stats once this match's video is received and rallies are tagged." and "Back to the match". No cards | FR-100 |
+| Empty: no video yet | "You can see stats once this match's video is received and rallies are tagged." and "Back to the match". No cards. The stats answer is 200 with n = 0 both here and in the next row, so D-01 also reads the match (as M-02 does) and chooses by its status (DR-03 R3-9, FE amendment) | FR-100 |
 | Empty: no rally tagged | "No rallies are tagged yet, so there are no stats to show." and the primary link "Tag rallies" (to T-01). No cards, no numbers, no "Show me" (E2E-03-08) | FR-100 |
 | Loading | A region with `aria-busy="true"` and a polite status "Loading your stats…"; reserved skeleton cards; no numbers, no "Show me" (E2E-03-08) | NFR-011, NFR-039 |
 | Error | Alert "Your stats could not be loaded. Try again. Reference: …" and a "Try again" button that loads again (focus stays on it). No numbers are shown from an earlier load | NFR-058 |
 | Offline | Alert "Your stats could not be loaded because the connection dropped. Try again." and "Try again" | NFR-058 |
-| Draft hidden: some entries not published | Only published cards. Below the last card: "More stats will appear here once our coach has checked how they are measured." It never names or counts the hidden ones (FR-102; E2E-03-03 checks no draft heading) | FR-102 |
+| Draft hidden: some entries not published | Only published cards, and nothing else: no line about hidden entries. The §2.1 body holds published entries only and says nothing about hidden ones, so the client cannot know when to print a "more to come" line without hard-coding the dictionary, which it must not (DR-03 R3-1, FE condition 2; BA: FR-102 is met either way). The chair drops the line until the contract carries a nameless field such as `"more_to_come": true` (PE-R3S3-07, deferred to C4-MIN, principal-engineer). Nothing ever names or counts a hidden entry (FR-102; E2E-03-03 checks no draft heading) | FR-102 |
 | Draft hidden: none published (`metrics` = `{}`, rallies tagged) | "No stats are ready to show yet. Each stat appears once our coach has checked how it is measured." and "Back to the match". This is not the error state | FR-102; api-sprint-03 §2.1 |
 | Low-sample | Tag and reason in text, value de-emphasised, never hidden (§0) | FR-101 |
 | Low-confidence | N/A: no automatic call. The one uncertainty in the inputs is the rules preset, shown by the unofficial notice (HAX G2) | FR-055 |
@@ -99,7 +99,7 @@
 
 - **Opens with** "Show me …" (a disclosure button, `aria-expanded="true"`; pressing it again closes the panel). Focus stays on the button; the panel follows it directly in reading order, so the next Tab lands on the first rally (keyboard path, E2E-03-06).
 - **Content:** an `<h3>` "Rallies behind “Rallies won on serve”, your side"; a list labelled the same way (`aria-label`), with up to 10 items in video order (api-sprint-03 §3.1). Each item is one link: "Rally 3 · game 1 · 0:12" (rally number from the sheet, game, start time m:ss floored).
-- **Each link** goes to `S-01` at `/matches/{id}/sheet?play=<rally_id>`: the score sheet scrolls that row into view and opens V-01 for it, which fetches a fresh short-lived link and loads the video at the rally start (NFR-055, NFR-014). The player lands where they can **check the call and correct it** in one more tap (HAX G9, G11; ADR 0043). Playback starts if the browser allows it; otherwise the native play button is focused (no sound starts on its own, judgment).
+- **Each link** goes to `S-01` at `/matches/{id}/sheet?play=<rally_id>`: the score sheet scrolls that row into view and opens V-01 for it, which fetches a fresh short-lived link and loads the video at the rally start (NFR-055, NFR-014). The player lands where they can **check the call and correct it** in one more tap (HAX G9, G11; ADR 0043). Playback starts if the browser allows it; otherwise the `<video>` element is focused, so its native controls are one key away (a page cannot focus one native control; DR-03 R3-4, FE amendment, accepted by the PM). No sound starts on its own (judgment).
 - **More than 10:** under the list, a link "See all 23" (exact words, Gherkin §7.3) to E-02.
 
 ### E-02 All rallies behind a stat
@@ -114,7 +114,7 @@
 | Loading | Inside the panel: `aria-busy="true"` region and status "Loading the rallies…"; the space of 3 items reserved | Same, whole list |
 | Error | Alert in the panel "The rallies for this stat could not be loaded. Try again. Reference: …" and "Try again"; no rally links (E2E-03-08) | Same alert at the top |
 | Offline | "… could not be loaded because the connection dropped. Try again." | Same |
-| Stale (a correction since D-01 loaded: `total` differs from the card's n) | The panel shows the server's list and the line "These stats changed since you opened this page. Reload the stats to see the new numbers." with a "Reload the stats" button | Same line |
+| Stale (a correction since D-01 loaded: the evidence `sheet_version` differs from the stats `sheet_version`; both bodies carry it, api-sprint-03 §2.1, §3.1. Not "total vs n": a correction can change the rallies behind a stat and leave n the same; DR-03 R3-9, FE amendment) | The panel shows the server's list and the line "These stats changed since you opened this page. Reload the stats to see the new numbers." with a "Reload the stats" button | Same line |
 | Deleted / unpublished metric (404) | Alert "This stat is no longer available. Reload the stats." | The not-found page |
 | Low-sample | The low-sample tag stays on the card above the panel | Subtitle repeats "low sample" when flagged |
 | Low-confidence | N/A: every rally is the player's own tag | N/A |
@@ -158,7 +158,7 @@
   - "You will be signed out on every device."
   - "It cannot be undone."
   - "Stored files are removed within 7 days."
-  - "If you sign in again with the same email address, you start with a new, empty account." (**depends on PM-1**; this is the contract default, api-sprint-03 §4.2. If the PM decides "refused", the line becomes "You will not be able to sign in with this email address again." and FR-007's Gherkin follows.)
+  - "If you sign in again with the same email address, you start with a new, empty account." (**PM-1 decided 2026-10-07: a new, empty account**, DR-03 R3-6; the contract default, api-sprint-03 §4.2.)
 - **Buttons:** "Cancel" (focused) and "Delete my account". No typed confirmation (ADR 0043).
 - **After 202:** the device is cleared as at sign-out (FR-UX-91; the same clean-up the account menu runs), then **X-03** at `/signed-out?deleted=1`: `<h1>` "Your account has been deleted"; "The app's data on this device has been cleared. Its stored files are removed within 7 days." (security amendment, DR-03 R3-7, SEC-S3-TM-12: the old "Nothing from it is kept on this device." over-promised, because browser history and files the user saved stay); link "Sign in". The A-05 page with this text, not a new page.
 - **Other devices:** their next request gets 401 and they follow the existing signed-out path to A-01 (FR-007 "signed out everywhere"). No message there names the deletion: the other device may be someone else's view (judgment).
@@ -173,12 +173,12 @@ Same as X-01 (Deleting "Deleting…", Error "Your account was not deleted. Try a
 
 - **Who:** only accounts with the labeller role, only on a match they own that has a consent record (api-sprint-03 §5.1). Everyone else gets "Page not found" (FR-150 "not available"; E2E-03-05). **Entry in Sprint 3:** the direct address, from the team's labelling runbook; no link in the player UI, because the client cannot yet tell a labeller from a player (open item P-1).
 - **Layout (desktop first, reflows at 320 px):** `<h1>` "Full Tag: <match title>"; the line "Internal labelling tool. Labels are saved as you go."; the video (native controls hidden while stepping, judgment: the custom bar below replaces them); the **frame readout** "Frame 1520 of 3600 · 0:25.33" (plain digits, no thousands separator, so it equals the export's frame numbers; a polite live region that announces only after stepping stops for 500 ms, so holding a key does not flood the screen reader, judgment).
-- **Stepping bar** (`role="group"` "Move through the video"): "Previous frame" (`,`), "Next frame" (`.`), "Back 1 second" (Shift+`,`), "Forward 1 second" (Shift+`.`), "Play or pause" (Space). Same frame keys as T-01's key map (flows-sprint-02 K-01). No dragging needed (SC 2.5.7; NFR-030).
+- **Stepping bar** (`role="group"` "Move through the video"): "Previous frame" (`,`), "Next frame" (`.`), "Back 1 second" (`<`), "Forward 1 second" (`>`), "Play or pause" (Space). Same frame keys as T-01's key map (flows-sprint-02 K-01). Keys are matched by `KeyboardEvent.key`, so the one-second keys are listed as `<` and `>`, not "Shift+`,`": Shift+`,` gives `<` on a US layout but `;` on a German one (DR-03 R3-8, FE amendment 1). All of them stay under the SC 2.1.4 switch. No dragging needed (SC 2.5.7; NFR-030).
 - **Tag bar** (`role="group"` "Tag at this frame"), each ≥ 48 px:
   1. "Rally start" (`S`), "Rally end" (`E`): `aria-pressed` toggles; the rally in progress shows "Rally 3: frames 1520 to …".
-  2. "Hit" (`H`) → group "Who hit it?" with one button per player nickname (`1`-`4`), grouped "Your side" / "Other side" as on T-01. Optional "Shot details" disclosure with the facet choices of `gold-label-schema.md` §4 (contact, trajectory, intent, technique; one radio group each, all optional).
+  2. "Hit" (`H`) → group "Who hit it?" with one button per player nickname (`3`-`6`, in slot order, the same keys as T-01's players; `1`/`2` stay "Won by", DR-03 R3-8, FE amendment 2), grouped "Your side" / "Other side" as on T-01. Optional "Shot details" disclosure with the facet choices of `gold-label-schema.md` §4 (contact, trajectory, intent, technique; one radio group each, all optional).
   3. "Bounce" (`B`) → "Ball in view?" Yes / No; then optional "Where on the court (metres)": two number fields "Across" and "Along" (no pointer needed; empty means `null`, gold-label-schema §4).
-  4. After "Rally end": the question **"How did rally 3 end?"**: "Won by" (Your side / Other side), "Who ended it (optional)", and the ending buttons "Winner", "Unforced error", "Forced error", "Fault" (then "Fault kind": serve, foot, two bounce, kitchen (non-volley zone), other), "Replay". **Choosing the ending saves the rally with its hits and bounces** (one request per label, api-sprint-03 §5.2), as on T-01 ("Ending (saves the rally)"). A rally without an outcome is never saved: the export is a gold set, and a guessed default would enter it as truth (judgment; ADR 0043).
+  4. After "Rally end": the question **"How did rally 3 end?"**: "Won by" (Your side `1` / Other side `2`), "Who ended it (optional)", and the ending buttons "Winner", "Unforced error", "Forced error", "Fault" (then "Fault kind": serve, foot, two bounce, kitchen (non-volley zone), other), "Replay". **Choosing the ending saves the rally with its hits and bounces** (one request per label, api-sprint-03 §5.2), as on T-01 ("Ending (saves the rally)"). A rally without an outcome is never saved: the export is a gold set, and a guessed default would enter it as truth (judgment; ADR 0043).
 - **Events list:** `<h2>` "Rally 3 so far": an ordered list "Hit by Carlos at frame 1530", "Bounce in view at frame 1544", each with "Remove" while the rally is unsaved. Saved rallies are listed under `<h2>` "Saved rallies" ("Rally 1: frames 6 to 70, unforced error by B2, 3 events"). No edit or delete after saving in Sprint 3 (api-sprint-03 §5.2); the list says "Saved labels cannot be changed yet."
 - **Esc:** clears the unsaved rally's marks after the question "Drop rally 3 and its 2 events?" (Yes / No).
 - **Export:** "Export labels" (secondary) downloads `labels-<match id>.json` (`full-tag-labels/v1`); status "Exported 3 rallies with 41 events." If a rally is unsaved, the export still runs on the saved rallies and the status adds "Rally 4 is not saved yet: choose how it ended to include it." (judgment: never block an export, never include an unsaved rally).
@@ -193,7 +193,7 @@ Same as X-01 (Deleting "Deleting…", Error "Your account was not deleted. Try a
 | Video not ready (409 `match_not_ready`, incl. variable frame rate) | Alert "This match's video is not ready for frame-by-frame labelling." | api-sprint-03 §5.2 |
 | Empty | "No rallies labelled yet. Step to the first serve and press Rally start." | — |
 | Loading | `aria-busy` region "Loading the match…"; then the video's own loading | — |
-| Error (label refused, 422 `invalid_label`) | Alert "This label was not saved: <reason>." per field code: `outside_clip` "the frame is outside the video", `no_rally` "it is outside a rally", `overlaps_rally` "it overlaps rally n", `out_of_order` "it is before the last event of this rally", `not_a_player` "choose a player of this match"; the unsaved marks stay | api-sprint-03 §5.4 |
+| Error (label refused, 422 `invalid_label`) | Alert "This label was not saved: <reason>." per field code: `outside_clip` "the frame is outside the video", `no_rally` "it is outside a rally", `overlaps_rally` "it overlaps rally n" (the 422 body has field codes only, so n is computed by the client from the saved rallies in `GET /label/matches/{id}`; when none matches, "it overlaps a saved rally"; DR-03 R3-9, FE amendment 2), `out_of_order` "it is before the last event of this rally", `not_a_player` "choose a player of this match"; the unsaved marks stay | api-sprint-03 §5.4 |
 | Error (other) / Offline | "The label was not saved. Try again. Reference: …" / "… because the connection dropped. Try again." Marks kept | NFR-058 |
 | Rate limited (429) | "Too many labels in a short time. Wait a moment, then save again." | api-sprint-03 §5.2 |
 | Low-confidence | N/A: every label is the labeller's own | — |
@@ -229,7 +229,7 @@ Same as X-01 (Deleting "Deleting…", Error "Your account was not deleted. Try a
 | G11 Make clear why the system did what it did | D-01, E-01 | "How is this measured?" (the coach's definition) and "Show me" (the rallies behind it) on every card |
 | G14 Update and adapt cautiously | D-01 | A definition change is a new dictionary version; the card shows the version it used |
 | G16 Convey the consequences of user actions | X-01, X-02 | The dialogs list what goes, that it cannot be undone, and the 7-day purge |
-| G18 Notify users about changes | E-01 stale line; D-01 "More stats will appear here once our coach has checked…" | The player is told when the numbers or the set of stats changed |
+| G18 Notify users about changes | E-01 stale line (by `sheet_version`) | The player is told when the numbers changed. Telling them the set of stats will grow waits on a contract field (§2 Draft hidden; PE-R3S3-07) |
 | G3-G8, G12, G13, G15, G17 | — | No automatic call, recommendation or learning in Sprint 3. L-01 (internal) remembers the single-key setting (G12, G17) |
 
 ## 9. WCAG 2.2 AA design-level checklist per screen
@@ -268,10 +268,10 @@ The red-first E2E specs assumed this UI (`web/e2e/helpers/sprint-03.ts`, "until 
 | # | Item | Owner | Needed by |
 |---|---|---|---|
 | P-1 | A labeller link on M-02 needs the role in `GET /me` (e.g. `"roles": ["labeller"]`); not in api-sprint-03 | principal-engineer (contract), then FE | Sprint 4 (Sprint 3 uses the direct address) |
-| P-2 | X-02 re-sign-in line depends on PM-1 (new empty account vs refused) | product-manager | DR-03 |
+| P-2 | **Closed 2026-10-07** (DR-03 R3-6, PM-1): signing in again gives a new, empty account | product-manager | — |
 | P-3 | X-01 copy for clips and plans ("Plans keep a note …", FR-006, FR-UX-90) when those features ship | principal-designer | the sprint that ships plans (Sprint 4) |
-| P-4 | AN-02's UI name ("Rallies won when receiving" proposed; FR-100 says "side-out %") and the "How is this measured?" words of every entry | pickleball-domain-coach (COACH-1) | DR-03 |
-| P-5 | Whether "Forced error" stays a separate AN-07 row while κ ≥ 0.6 is unproven (flows-sprint-02 E-2, DR-02 R2-7) | pickleball-domain-coach, product-manager | DR-02 / DR-03 |
+| P-4 | **Closed 2026-10-07** (DR-03 R3-2, COACH-1: "Rallies won when receiving"). Was: AN-02's UI name ("Rallies won when receiving" proposed; FR-100 says "side-out %") and the "How is this measured?" words of every entry | pickleball-domain-coach (COACH-1) | DR-03 |
+| P-5 | **Closed 2026-10-07** (DR-02 R2-7 coach and PM; DR-03 R3-2: Forced errors stays a row, shown with the unverified label until κ ≥ 0.6). Was: whether "Forced error" stays a separate AN-07 row while κ ≥ 0.6 is unproven (flows-sprint-02 E-2, DR-02 R2-7) | pickleball-domain-coach, product-manager | DR-02 / DR-03 |
 
 ## 12. Traceability
 
@@ -289,7 +289,8 @@ The red-first E2E specs assumed this UI (`web/e2e/helpers/sprint-03.ts`, "until 
 | Date | Participants | Outcome | Findings |
 |---|---|---|---|
 | 2026-10-07 | principal-designer (author) | Draft written before the build, from the contract, the Gherkin and the red-first specs | §10 PD-FL3-01..03, routed |
-| Opened 2026-10-07; decisions due **end of 2026-10-08**; escalation to the PO the same day if a blocking cell is empty (blockers.md P14) | principal-designer (chair), senior-frontend-engineer, pickleball-domain-coach (SME), business-analyst, product-manager, security-privacy-engineer, each invoked by the orchestrator with the brief in §13.2 (ADR 0037 rule 2) | **Not yet held.** Asynchronous, in the repository, like DR-01/DR-02: each decider writes accept or reject with one line of reason in its cell, signed and dated, and commits it (ADR 0022). A decider that cannot write files returns the text; the chair commits it, attributed | — |
+| 2026-10-10 (chair's record, ticket DR-HELD-03; decider cells of 2026-10-07, `1433a92` and earlier) | principal-designer (chair), senior-frontend-engineer, pickleball-domain-coach (SME), business-analyst, product-manager, security-privacy-engineer | **Decided on R3-1..R3-8; not yet held: one cell left, business-analyst on R3-9** (§13.1b). Every item is accepted by every decider who wrote; no reject. The accepted amendments are folded into §0-§11. ADR 0043 is Accepted (its condition, the cells of R3-4, R3-5 and R3-8, is met). The chair does not write the BA's cell (ADR 0037 rule 2) | R3-1 two FE conditions, R3-4 one, R3-7 one (security), R3-8 two, R3-9 three: all folded in. PE-R3S3-07 (contract field for "more to come") stays deferred to C4-MIN |
+| Opened 2026-10-07; decisions due **end of 2026-10-08**; escalation to the PO the same day if a blocking cell is empty (blockers.md P14) | principal-designer (chair), senior-frontend-engineer, pickleball-domain-coach (SME), business-analyst, product-manager, security-privacy-engineer, each invoked by the orchestrator with the brief in §13.2 (ADR 0037 rule 2) | **Not yet held on 2026-10-07** (superseded by the 2026-10-10 row above). Asynchronous, in the repository, like DR-01/DR-02: each decider writes accept or reject with one line of reason in its cell, signed and dated, and commits it (ADR 0022). A decider that cannot write files returns the text; the chair commits it, attributed | — |
 
 ### 13.1 Agenda (chair's proposals, judgment unless cited)
 
@@ -309,12 +310,33 @@ DR-03 is **held** when every "Decides" role has a cell. A reject sends the item 
 
 ### 13.1a Status on 2026-10-07, review round 2 (chair; PD-R1S3-01, PD-R1-06 family)
 
-- **Still not held.** Non-author cells present: R3-2 (coach), R3-3 (coach), R3-5 (security), R3-7 (security, with an amendment, now applied to X-03 in §5 and §7), R3-8 (security). Empty: senior-frontend-engineer R3-1, R3-4, R3-8, R3-9; business-analyst R3-1, R3-5, R3-9; product-manager R3-3, R3-4, R3-5, R3-6; senior-ml-cv-engineer R3-8 (consulted, not blocking). ADR 0043 stays Proposed until R3-4, R3-5 and R3-8 have their deciders' cells.
+- *(History; superseded by §13.1b of 2026-10-10.)* **Still not held on 2026-10-07.** Non-author cells present then: R3-2 (coach), R3-3 (coach), R3-5 (security), R3-7 (security, with an amendment, now applied to X-03 in §5 and §7), R3-8 (security). Empty on that date: the senior-frontend-engineer's R3-1, R3-4, R3-8, R3-9 (written later the same day, review round 2); business-analyst R3-1, R3-5, R3-9; product-manager R3-3, R3-4, R3-5, R3-6; senior-ml-cv-engineer R3-8 (consulted, not blocking). ADR 0043 stays Proposed until R3-4, R3-5 and R3-8 have their deciders' cells.
 - **The chair does not write other roles' cells** (§13, ADR 0037 rule 2): a decision the decider did not make would close DoR R7 on paper only. No chair-side work blocks the review now. The brief per role is in §13.2.
 - **R3-3 conflict** with sprint-03.md:35 is written in the R3-3 row; the product-manager's cell settles it.
 - **DR-01 R-1 / DR-02 R2-1 walk.** The disk reason given in round 1 is replaced. Free space moves with the other lanes' stacks (`df -h /` at 16:48 UTC on 2026-10-07 → 15G avail, under the 16 GB floor again), and the floor applies only to a Compose image build. The walk does not need one: the pre-review smoke ran the Compose topology from local processes behind the committed Caddyfile (`docs/sprints/03/smoke.md` §pre-review). What blocks it is the method both sides accepted: the walk is run **with the senior-frontend-engineer** on a live HTTPS stack, and the chair's role has no shell to run a stack. **Needed (orchestrator):** invoke senior-frontend-engineer to bring up that stack (smoke.md method or Compose when ≥ 16 GB) and run R-1 / R2-1 with the chair in the same pass as its DR-03 cells.
 - **DR-01 D-1, D-2 and DR-02 R2-1 business-analyst cell** stay with the business-analyst (brief §13.2), and D-1 also with the product-manager.
 - **Escalation unchanged:** blockers.md P14. Due **end of 2026-10-08**. If a blocking cell is still empty then, the PO chooses (a) wait (default) or (b) a waiver in their own words.
+
+### 13.1b Outcome recorded on 2026-10-10 (chair, ticket DR-HELD-03; PD-R1S3-01, PD-R3S3-01)
+
+Read at `origin/main` `25a5af0`. One line per item: who decided, and what the chair did with it.
+
+| # | Deciders' cells | Result | Folded into |
+|---|---|---|---|
+| R3-1 | FE accept with 2 conditions; BA accept | **Decided: accept** | §2 Layout shift (tallest variant per metric id); §2 Draft hidden (the "more to come" line is dropped until the contract has a nameless field; PE-R3S3-07, C4-MIN) |
+| R3-2 | coach accept | **Decided: accept** | §2 AN-02 name; §11 P-4, P-5 closed |
+| R3-3 | coach accept; PM accept, option (a) | **Decided: accept** | §0 already says one notice per page. The PM's own follow-up, `sprint-03.md:35` → "every stats page … once before the first card" with a decision-log row, is still to do (`sed -n 35p docs/sprints/sprint-03.md` still says "every metric card"); owner product-manager, PD-R1S3-01-PM |
+| R3-4 | FE accept with 1 amendment; PM accept with it | **Decided: accept as amended** | §3 E-01: the `<video>` is focused, not "the native play button" |
+| R3-5 | security accept; BA accept; PM accept | **Decided: accept** | No change needed (dialog, Cancel focused, no typed word). The BA's FR-006 wording follow-up stays with the BA |
+| R3-6 | PM accept (PM-1: new, empty account) | **Decided: accept** | §5 X-02 line; §11 P-2 closed |
+| R3-7 | security accept with 1 amendment | **Decided: accept as amended** | §5 X-03 and §7 (already applied in round 2) |
+| R3-8 | security accept with 1 condition; FE accept with 2 amendments; ML consulted, not blocking | **Decided: accept as amended** | §6 stepping keys `<` / `>` matched by `key`; hitter keys `3`-`6`, "Won by" `1` / `2`. The security condition (a labeller gets 404 on another account's match, SEC-S3-TM-08) is a test, not a design change |
+| R3-9 | FE accept with 3 amendments; **business-analyst: no cell** | **Not decided: the BA's cell is empty.** The FE's amendments are folded in anyway, because they correct the spec to what the contract allows and the built UI does | §3 E stale by `sheet_version`; §6 L-01 `overlaps_rally` computed by the client; §2 D-01 reads the match to choose between the two empty states |
+
+- **Outcome: DR-03 is not yet held.** The rule above §13.1a ("held when every 'Decides' role has a cell") is not met for R3-9: `grep '^| R3-9 ' docs/design/flows-sprint-03.md | grep -c 'business-analyst: \*\*'` → 0. The BA's brief (§13.2) named R3-9, and the BA's row in `blockers.md` (2026-10-07) listed it as still open; the cells written on 2026-10-07 (`1433a92`) are R3-1 and R3-5 only. The EM's sprint-close row ("every DR-03 decider cell is now written") missed it. The chair does not write it (ADR 0037 rule 2).
+- **What is left, and who:** the business-analyst writes R3-9 ("business-analyst: **accept** / **reject** (date): reason"). When it is an accept, the chair changes the 2026-10-10 row of §13 to "Held" and ticks DoR R7 with a decision row, in the same PR or the next. A reject goes back to the chair the same day. The product-manager writes the `sprint-03.md:35` follow-up of R3-3.
+- **No Sprint 3 UI is blocked by this.** The UI was built from v0.1 plus the FE amendments (decision-log 2026-10-07, FE row), and every item it depends on (R3-1, R3-4, R3-5, R3-8) is decided. R3-9 is the states and checklists item, and its FE amendments are already in the built code (`web/src/components/stats/EvidencePanel.tsx:103` compares `sheetVersion`; `web/src/lib/label/view.ts:70` "it overlaps a saved rally"; `web/src/components/stats/StatsDashboard.tsx:46` reads the match status).
+- **ADR 0043 is Accepted** (2026-10-10): its stated condition, the deciders' cells of R3-4, R3-5 and R3-8, is met. R3-9 is not one of its items.
 
 ### 13.2 Decider briefs (DR-01, DR-02 and DR-03 in one invocation per role)
 
