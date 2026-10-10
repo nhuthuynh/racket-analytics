@@ -200,6 +200,30 @@ describe('Full Tag save after a lost response (PE-ST052-R1-04)', () => {
     expect(await screen.findByText('Rally 1: frames 0 to 20, winner, 2 events')).toBeVisible();
   });
 
+  it('a hit tagged after stepping back into a saved rally is refused, so it is never filed under that rally (PE-ST052-R1-M1)', async () => {
+    const s = fakeServer();
+    s.rallies.push({ id: 'r1', start_frame: 0, end_frame: 30, outcome: { ending: 'winner', winning_side: 'A', responsible_player: null, fault_kind: null }, events: [] });
+    render(<FullTag match={match} initial={s.read()} api={s.api} download={vi.fn()} />);
+    press('>');
+    for (let i = 0; i < 40; i += 1) press('.');
+    await userEvent.click(screen.getByRole('button', { name: /Rally start/ }));
+    for (let i = 0; i < 90; i += 1) press(',');
+    press('h');
+    press('3');
+    expect(screen.getByText('Frame 10 is before Rally start (frame 100). Tag hits and bounces inside the rally.')).toBeVisible();
+    press('>');
+    press('>');
+    for (let i = 0; i < 30; i += 1) press('.');
+    press('e');
+    await choose('Winner');
+    expect(await screen.findByText('Rally 2: frames 100 to 160, winner, 0 events')).toBeVisible();
+    expect(s.labelEvent.mock.calls.map(([, l]) => l.type)).toEqual(['rally']);
+    expect(s.rallies).toEqual([
+      expect.objectContaining({ start_frame: 0, end_frame: 30, events: [] }),
+      expect.objectContaining({ start_frame: 100, end_frame: 160, events: [] }),
+    ]);
+  });
+
   it('nothing reached the server (same version): the retry sends the rally and its events as before', async () => {
     const s = fakeServer();
     const lost = vi.fn().mockRejectedValueOnce(new ApiError(0, 'network_error'));

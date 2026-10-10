@@ -234,6 +234,40 @@ describe('L-01 tagging and saving (ADR 0043: the ending saves the rally)', () =>
     expect(a.labelEvent).not.toHaveBeenCalled();
   });
 
+  it('a hit or bounce outside the rally being labelled is refused in words and makes no mark (PE-ST052-R1-M1)', async () => {
+    const { a } = setup();
+    for (let i = 0; i < 20; i += 1) press('.');
+    await userEvent.click(screen.getByRole('button', { name: /Rally start/ }));
+    for (let i = 0; i < 10; i += 1) press(',');
+    press('h');
+    await userEvent.click(within(screen.getByRole('group', { name: 'Who hit it?' })).getByRole('button', { name: 'Carlos' }));
+    expect(screen.getByText('Frame 10 is before Rally start (frame 20). Tag hits and bounces inside the rally.')).toBeVisible();
+    for (let i = 0; i < 20; i += 1) press('.');
+    await userEvent.click(screen.getByRole('button', { name: /Rally end/ }));
+    press('.');
+    await userEvent.click(screen.getByRole('button', { name: /^Bounce/ }));
+    await userEvent.click(within(screen.getByRole('group', { name: 'Ball in view?' })).getByRole('button', { name: 'Yes' }));
+    expect(screen.getByText('Frame 31 is after Rally end (frame 30). Tag hits and bounces inside the rally.')).toBeVisible();
+    expect(screen.queryByText(/^Hit by|^Bounce (in|not in) view/)).toBeNull();
+    expect(screen.getByText('Rally 1: frames 20 to 30')).toBeVisible();
+    expect(a.labelEvent).not.toHaveBeenCalled();
+  });
+
+  it('Rally start after a tagged event, or Rally end before one, is refused so no mark is left outside (PE-ST052-R1-M1)', async () => {
+    setup();
+    await markRallyWithHit();
+    for (let i = 0; i < 15; i += 1) press(',');
+    await userEvent.click(screen.getByRole('button', { name: /Rally end/ }));
+    expect(screen.getByText('Rally end must be at or after the last hit or bounce (frame 10).')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: /Rally start/ }));
+    expect(screen.getByText('Rally 1: frames 5 to 20')).toBeVisible(); // still holds the hit at 10
+    for (let i = 0; i < 6; i += 1) press('.');
+    await userEvent.click(screen.getByRole('button', { name: /Rally start/ }));
+    expect(screen.getByText('Rally start must be at or before the first hit or bounce (frame 10).')).toBeVisible();
+    expect(screen.getByText('Rally 1: frames 5 to 20')).toBeVisible();
+    expect(screen.getByText('Hit by Carlos at frame 10')).toBeVisible();
+  });
+
   it('nothing is saved at "Rally end": the outcome question appears and the marks are listed', async () => {
     const { a } = setup();
     await markRallyWithHit();
