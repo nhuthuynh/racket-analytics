@@ -5,9 +5,10 @@
 
 Reads the result tables of the manual's section 3 (columns "VoiceOver iOS" and "TalkBack
 Android"). Each cell is exactly "pass", "fail: <words heard>" or "not run", optionally followed
-by a count "(k of w)" where w is the number of rows the row covers. A row like "1-24" stands for
-every row it covers: a bare "pass"/"fail: ..." there means all of them were run, a count means
-only k were ("not run" needs k = 0; "pass"/"fail" need 1 <= k <= w). Partial counts on the two
+by a count "(k of w)" where w is the number of rows the row covers (a count alone is never the
+words heard: "fail: (3 of 24)" is malformed). A row like "1-24" stands for every row it covers:
+a bare "pass"/"fail: ..." there means all of them were run, a count means only k were ("not
+run" needs k = 0; "pass"/"fail" need 1 <= k <= w). Partial counts on the two
 screen readers need not be the same rows, so only rows proven run on both are counted for the
 status. The status is "met (n of n rows run)" only when every row has a result on both screen
 readers, otherwise "not met: waiting on P6 (k of n rows run)", where k counts rows run on both.
@@ -27,9 +28,11 @@ from pathlib import Path
 DEVICES = {"voiceover": "VoiceOver iOS", "talkback": "TalkBack Android"}
 DOD_ROW = "S3-DoD-P6"
 ROW_ID = re.compile(r"^(\d+)(?:\s*[-\u2013]\s*(\d+))?$")
+COUNT = r"\(\s*(?P<k>\d+)\s+of\s+(?P<w>\d+)\s*\)"
+# "fail:" needs words heard: a count alone (e.g. "fail: (3 of 24)") is not words (PE-R2-01).
 CELL = re.compile(
-    r"^(?:(?P<result>pass|fail:\s*\S.*?)|(?P<not_run>not run))"
-    r"(?:\s*\((?P<k>\d+) of (?P<w>\d+)\))?$",
+    r"^(?:(?P<result>pass|fail:\s*(?!\(\s*\d+\s+of\s+\d+\s*\)$)\S.*?)|(?P<not_run>not run))"
+    rf"(?:\s*{COUNT})?$",
     re.I,
 )
 
