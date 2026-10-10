@@ -14,6 +14,9 @@ Written red first (QA-ACC-3): ``red_until`` ST-038.
 ST-050b (TCR row in docs/sprints/03/decisions/ST-050b.md): the module marker is lifted; rows 1
 and 3 (nothing is expired) pass once the purge pass exists and join the per-PR gate; row 2 (the
 expiry itself) waits on ST-038, marked on its own.
+
+ST-038 (TCR row in docs/sprints/03/decisions/ST-038.md): the expiry is built; row 2 loses its
+``red_until`` and joins the per-PR gate. No step, fixture or assertion changes.
 """
 
 from __future__ import annotations
@@ -21,7 +24,6 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-import pytest
 import sqlalchemy as sa
 
 from tests.support import scorebook as sb
@@ -78,7 +80,6 @@ def test_it_03_09_an_upload_idle_for_23h59_is_kept(api: ApiDriver, committed_db:
     assert _staged(committed_db, match_id) == staged
 
 
-@pytest.mark.red_until(story="ST-038")
 def test_it_03_09_an_upload_idle_for_24h_is_expired_and_its_bytes_freed(
     api: ApiDriver, committed_db: Any
 ) -> None:

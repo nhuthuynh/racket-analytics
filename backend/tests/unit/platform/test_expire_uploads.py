@@ -1,9 +1,10 @@
 """``ContextPorts.expire_uploads``, the purge pass's ST-038 step, with fakes (FR-024, NFR-066 d;
 deletion-and-purge.md §4.4). Negative cases first: nothing abandoned means no store call and no
 row delete; an upload of a deleted match is left to that match's purge (fail-closed ref checks,
-deletion-and-purge.md §4.6; IT ``test_st_050b_purge_refs_fail_closed``); a store failure keeps the row (bytes first, then the row: never an orphan). Then the
-order (abort the multipart upload, delete the staging folder, then forget the row), a missing
-object counting as freed, the idle setting reaching the policy, and the ids-only log line."""
+§4.6; IT ``test_st_050b_purge_refs_fail_closed``); a store failure keeps the row (bytes first,
+then the row: never an orphan). Then the order (abort the multipart upload, delete the staging
+folder, then forget the row), a missing object counting as freed, the idle setting reaching the
+policy, and the ids-only log line."""
 
 from __future__ import annotations
 
@@ -56,6 +57,7 @@ def seen(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         state["log"].append(f"forget {upload_id.int}")
 
     monkeypatch.setattr(purge.video_ingest, "abandoned_uploads", abandoned_uploads)
+
     def live_ids(session: Any, ids: list[uuid.UUID]) -> set[uuid.UUID]:
         return {i for i in ids if i not in state["deleted"]}
 
