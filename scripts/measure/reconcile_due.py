@@ -3,7 +3,7 @@
 
     reconcile_due.py docs/sprints/03/review-rounds.md \
         --plan docs/decisions/0039-*.md --decisions docs/sprints/03/decisions \
-        --base origin/main [--json out.json]
+        --base origin/main [--report-only] [--json out.json]
 
 A ticket PR that closes a finding writes no review-rounds row, so ``open_defects.py`` keeps
 counting the finding as open after the ticket merged (V03R1-01, goal scorecard G03-12). This
@@ -17,7 +17,10 @@ reconciled once its latest row, or that row's section heading, names the ticket,
 
 Exit 0 when nothing is due, 1 when a row is due (the engineering-manager writes the row), 2 on
 a usage error (no review table, unreadable plan or decisions dir, a base git cannot read; fail
-closed, ADR 0014).
+closed, ADR 0014). ``--report-only`` prints the due rows but exits 0 for them (usage errors still
+exit 2): CI runs it that way on the live ledger, because on a push to main the base is main
+itself and a just-merged fix ticket's row stays due until the EM writes it; that is EM work, not
+a red main (PE-FIX031A-03). The EM status step runs the check without it.
 Limit: a finding closed by work that names no id (for example a CI run on main) is not seen.
 """
 
@@ -157,12 +160,20 @@ def decision_stems(decisions: Path, base: str | None) -> list[str]:
     return sorted(n[: -len(".md")] for n in names)
 
 
+def exit_status(due: int, *, report_only: bool) -> int:
+    """1 when a row is due, unless only reporting; usage errors are handled before this."""
+    return 1 if due and not report_only else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("ledger", type=Path, help="review-rounds Markdown file")
     parser.add_argument("--plan", type=Path, help="ADR with the per-ticket plan (ADR 0039)")
     parser.add_argument("--decisions", type=Path, help="the sprint's ticket decisions dir")
     parser.add_argument("--base", help="git ref; only decisions files on it count (merged)")
+    parser.add_argument(
+        "--report-only", action="store_true", help="print due rows but exit 0 for them"
+    )
     parser.add_argument("--json", type=Path, help="also write the result here")
     args = parser.parse_args(argv)
     try:
@@ -188,7 +199,7 @@ def main(argv: list[str] | None = None) -> int:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         result = {"open": open_count, "due": len(due), "rows": due}
         args.json.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    return 1 if due else 0
+    return exit_status(len(due), report_only=args.report_only)
 
 
 if __name__ == "__main__":
