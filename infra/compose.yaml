@@ -78,6 +78,13 @@ services:
           "$$S3_BUCKET_MEDIA" "$$S3_BUCKET_MEDIA" > /etc/seaweedfs/s3.json
         exec weed server -dir=/data -ip=objectstore -ip.bind=0.0.0.0 -volume.max=0 \
           -master.volumeSizeLimitMB=1024 -filer -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+    # CI-OBJSTORE-STALL: the filer sends each chunk to the volume server over this container's
+    # loopback (MSS 65483 B). The kernel default receive buffer (128 KiB on the CI runners) holds
+    # two such segments; the queue is pruned, segments drop and that kept-alive connection
+    # crawls at ~150 KB/s on retransmission timeouts (runs 38059526467, 38064153385). 1 MiB
+    # holds 16. A namespaced sysctl: no capability, and only this container's TCP.
+    sysctls:
+      net.ipv4.tcp_rmem: "4096 1048576 33554432"
     ports:
       - 127.0.0.1:${S3_HOST_PORT:-8333}:8333
     volumes:
