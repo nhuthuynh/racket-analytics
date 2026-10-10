@@ -33,12 +33,14 @@ from racket.platform.errors import (
     LengthRequired,
     NotFound,
     PayloadTooLarge,
+    Unauthenticated,
 )
 from racket.platform.logs import SECURITY_LOGGER
 from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
 from racket.platform.slis import SLIRecorder, UploadEvent
 from racket.platform.storage import ObjectStore, is_missing_upload
+from racket.players import public as players
 from racket.video_ingest.domain import (
     ExpiryPolicy,
     ObjectKeyPolicy,
@@ -243,8 +245,11 @@ class UploadService:
         now = self.clock()
         # The existing-session check runs before the size cap: a 413 records a refusal on the
         # match, which must never touch a match with its video or a live upload (PE-R1-01).
-        self._replace_expired_or_refuse(match_id, now)
+        replaces = self._refuse_unexpired(match_id, now)
         if self.policy.check_declared_length(length) is not None:
+            if replaces:
+                self._lock_live_account(owner_id)
+                self._replace_expired_or_refuse(match_id, now)
             self._reject(match_id, owner_id, Rejection.TOO_LARGE, now)  # T-UV-2, NFR-053
             self.session.commit()
             self._delete_replaced_bytes()
@@ -257,6 +262,12 @@ class UploadService:
         # see each other's sessions (C-02, PE-R3R-01; READ COMMITTED reads after the lock).
         self.uploads.lock_owner(owner_id)
         self._check_quota(owner_id, length, now)
+        # SEC-S3-TM-05: the account row FOR SHARE, held to the commit, before anything is written
+        # and before the expired upload row is locked: account row, upload row, match row is the
+        # global lock order, which DELETE /me also takes (deletion-and-purge.md §3.1, PE-051-01).
+        self._lock_live_account(owner_id)
+        if replaces:
+            self._replace_expired_or_refuse(match_id, now)
         retry_at = RateLimiter(self.session, clock=self.clock).hit(
             f"upload:create:{owner_id}",
             limit=self.settings.upload_create_limit_per_hour,
@@ -295,10 +306,28 @@ class UploadService:
         SLI.upload_event(UploadEvent.CREATED)
         return upload
 
-    def _replace_expired_or_refuse(self, match_id: uuid.UUID, now: datetime) -> None:
-        """§6.3 check 2: an unexpired session is a 409; an expired one is replaced."""
+    def _lock_live_account(self, owner_id: uuid.UUID) -> None:
+        """SEC-S3-TM-05: the account row FOR SHARE until the commit; a deleted account is 401
+        and nothing is written."""
+        if not players.lock_live_account(self.session, owner_id):
+            self.session.rollback()
+            raise Unauthenticated("the account was deleted")
+
+    def _refuse_unexpired(self, match_id: uuid.UUID, now: datetime) -> bool:
+        """§6.3 check 2, without a lock: an unexpired session is a 409. True when an expired
+        one is to be replaced, under its row lock once the account row is held."""
         if not self.uploads.exists_for_match(match_id):
-            return  # a racing creation is still caught by the unique constraint (R1-03)
+            return False  # a racing creation is still caught by the unique constraint (R1-03)
+        existing = self.uploads.for_match(match_id)
+        if existing is None:
+            return False
+        if not existing.is_expired(now):
+            raise UploadExists("the match already has an upload")
+        return True
+
+    def _replace_expired_or_refuse(self, match_id: uuid.UUID, now: datetime) -> None:
+        """Replace the expired session under its row lock; the caller holds the account row
+        (PE-051-01). Re-checked under the lock: a parallel creation may have replaced it."""
         existing = self.uploads.for_match(match_id, for_update=True)
         if existing is None:
             return
@@ -356,6 +385,8 @@ class UploadService:
         """Ownership first (404 for others, T-UV-8), then expiry (410 for the owner, §6.4)."""
         upload_id = parse_upload_id(raw_upload_id)
         upload = None if upload_id is None else self.uploads.get_owned(upload_id, owner_id)
+        if upload is not None and not matches.owns_match(self.session, upload.match_id, owner_id):
+            upload = None  # the match was deleted: its uploads are gone too (ST-050)
         if upload is None:
             self._deny(owner_id, route, method)
             raise UploadNotFound("no such upload for this owner")

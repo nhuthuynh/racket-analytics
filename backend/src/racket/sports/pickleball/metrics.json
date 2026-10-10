@@ -1,0 +1,119 @@
+{
+  "sport": "pickleball",
+  "version": "0.1",
+  "source": "docs/domain/metric-dictionary.md",
+  "low_sample": {
+    "max_interval_width": 0.3
+  },
+  "entries": [
+    {
+      "id": "AN-01",
+      "version": "0.1",
+      "name": "Rallies won on serve",
+      "definition": "Of the rallies your side served, the share your side won.",
+      "formula": "rallies where winning_side = S and serving_side = S / rallies where serving_side = S",
+      "unit": "proportion",
+      "data_level": "QT",
+      "min_sample": {
+        "unit": "rallies",
+        "n": 20
+      },
+      "owner": "pickleball-domain-coach",
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
+    },
+    {
+      "id": "AN-02",
+      "version": "0.1",
+      "name": "Rallies won when receiving",
+      "definition": "Of the rallies the other side served, the share your side won.",
+      "formula": "rallies where winning_side = S and serving_side != S / rallies where serving_side != S",
+      "unit": "proportion",
+      "data_level": "QT",
+      "min_sample": {
+        "unit": "rallies",
+        "n": 20
+      },
+      "owner": "pickleball-domain-coach",
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1; D-1 decided 2026-10-07 (UI name 'Rallies won when receiving', ADR 0044 rule 5)"
+    },
+    {
+      "id": "AN-03",
+      "version": "0.1",
+      "name": "Points per service turn",
+      "definition": "On average, how many points your side scored each time it got the serve.",
+      "formula": "points scored by S while serving / service turns of S (a turn starts when S gains the serve or at the game start and ends at the side-out or the game end)",
+      "unit": "points_per_turn",
+      "data_level": "QT",
+      "min_sample": {
+        "unit": "service_turns",
+        "n": 10
+      },
+      "owner": "pickleball-domain-coach",
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
+    },
+    {
+      "id": "AN-04",
+      "version": "0.1",
+      "name": "Unforced errors per game",
+      "definition": "How many rallies per game ended with a mistake by your side that the other side did not force.",
+      "formula": "rallies with ending = unforced_error attributed to S / games in scope; per player only where responsible_player is tagged",
+      "unit": "count_per_game",
+      "data_level": "QT",
+      "min_sample": {
+        "unit": "games",
+        "n": 2
+      },
+      "owner": "pickleball-domain-coach",
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1; open issue D-2 (forced vs unforced reliability, QD X3)"
+    },
+    {
+      "id": "AN-05",
+      "version": "0.1",
+      "name": "Serve faults",
+      "definition": "Of your side's serves, the share that were faults.",
+      "formula": "rallies with ending = fault and fault_subtype = serve attributed to S while serving_side = S / rallies where serving_side = S; a lower bound when a serving-side fault has no subtype",
+      "unit": "proportion",
+      "data_level": "QT",
+      "min_sample": {
+        "unit": "rallies",
+        "n": 20
+      },
+      "owner": "pickleball-domain-coach",
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
+    },
+    {
+      "id": "AN-06",
+      "version": "0.1",
+      "name": "Longest scoring run",
+      "definition": "The most points your side scored in a row before the other side scored.",
+      "formula": "longest maximal sequence of points scored by S with no point by the other side; serve-only rallies do not break a run; runs reset at game end; histogram 1, 2, 3, 4, 5+",
+      "unit": "points",
+      "data_level": "QT",
+      "min_sample": null,
+      "owner": "pickleball-domain-coach",
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
+    },
+    {
+      "id": "AN-07",
+      "version": "0.1",
+      "name": "How rallies ended",
+      "definition": "Of the rallies your side ended, how many were winners you hit, unforced errors, forced errors or faults.",
+      "formula": "for rallies whose ending is attributed to S: the share of winner, unforced_error, forced_error and fault (n = those rallies)",
+      "unit": "proportion_mix",
+      "data_level": "QT",
+      "min_sample": {
+        "unit": "rallies",
+        "n": 20
+      },
+      "owner": "pickleball-domain-coach",
+      "status": "coach-reviewed",
+      "source": "QD §3.2 (coach judgment, UNVERIFIED); docs/domain/metric-dictionary.md v0.1"
+    }
+  ]
+}

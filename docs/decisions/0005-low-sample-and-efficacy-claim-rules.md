@@ -67,3 +67,5 @@ Chosen option: **Option 2.**
 - The coach reviews the thresholds at the first analytics retro.
 
 ## Notes
+
+- **2026-10-07, pickleball-domain-coach (metric owner, COACH-1 item 5): thresholds reviewed, no change proposed.** n ≥ 20, interval wider than 30 points, count metrics < 2 games, AN-03 < 10 service turns are kept for R1 (judgment; no coaching source verified, DOM G2). Why: at p = 0.5 the 95% Wilson width is 0.401 at n = 20, 0.296 at n = 40 and 0.267 at n = 50 (computed with the dictionary's z = 1.95996), so a near-even share stays flagged until about 40 rallies, roughly two games of one side's serves. One amateur game is too few rallies to tell a player's pattern from luck, so flagging single-game proportions is the honest result. Skewed shares (p ≈ 0.1) clear the width rule from n = 20 (width 0.273), which is when the n rule takes over. The status stays Proposed: acceptance is with the product-manager (PM-1) and the business-analyst (proposer). The golden hand count (metric-dictionary §2b) applies these values; ADR 0041 keeps them in the dictionary as the single source.

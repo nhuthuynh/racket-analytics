@@ -17,10 +17,15 @@ test('@M0 @story-ST-006 Carlos cannot open Ivy\'s match', async ({ browser }, te
 
   const carlos = await (await browser.newContext()).newPage();
   await signInAs(carlos, 'Carlos');
+  // The match page streams (/matches/loading.tsx): "Page not found" replaces the Loading…
+  // fallback after page.goto resolves, so wait for it before reading (CI-E2E-MAIN-RED).
+  const heading = carlos.getByRole('heading', { level: 1 });
   await carlos.goto(ivysMatch);
+  await expect(heading).toHaveText('Page not found');
   const notYours = (await carlos.getByRole('main').innerText()).trim();
 
   await carlos.goto(ivysMatch.replace(/[0-9a-f-]{36}/i, '00000000-0000-4000-8000-000000000000'));
+  await expect(heading).toHaveText('Page not found');
   const missing = (await carlos.getByRole('main').innerText()).trim();
 
   expect(notYours).toMatch(/not found/i);

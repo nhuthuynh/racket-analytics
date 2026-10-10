@@ -28,6 +28,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 FROM base AS api
 ENV API_APP=racket.platform.app:app
+# Scheduler for the purge/expiry job (SRE-PURGE, ADR 0038); the compose `purge` service runs it.
+COPY infra/docker/purge_schedule.py /opt/racket/purge_schedule.py
 USER app
 EXPOSE 8000
 # Graceful SIGTERM (AQS/OPS-02): uvicorn drains in-flight requests.

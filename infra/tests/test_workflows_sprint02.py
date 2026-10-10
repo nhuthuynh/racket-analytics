@@ -92,6 +92,8 @@ def test_domain_budget_measures_the_rules_and_domain_suite_only() -> None:
         "tests/unit/matches",
         "tests/unit/players",
         "tests/unit/video_ingest",
+        # ST-054 (NFR-073): the analytics domain (TCR row 2026-10-06, accepted 2026-10-07).
+        "tests/unit/analytics",
     ]
     for p in paths:
         assert (REPO_ROOT / "backend" / p).is_dir(), p

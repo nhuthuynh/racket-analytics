@@ -67,8 +67,8 @@ def test_no_built_service_pulls_the_dockerfile_frontend_from_docker_hub_uncondit
 
 # ---------------------------------------------------------------- positive cases
 @pytest.mark.unit
-def test_the_five_app_services_are_the_built_ones() -> None:
-    assert sorted(built()) == ["api", "mailer", "migrate", "web", "worker"]
+def test_the_six_app_services_are_the_built_ones() -> None:
+    assert sorted(built()) == ["api", "mailer", "migrate", "purge", "web", "worker"]
 
 
 @pytest.mark.unit

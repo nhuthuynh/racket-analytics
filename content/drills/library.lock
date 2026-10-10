@@ -1,0 +1,10 @@
+{
+  "schema": "drill-library-lock/v1",
+  "drills": {
+    "pb.fixture.drop-and-advance@1": "faf1f65901cbc98ef090c45a4246b0d0b3e7b65858e0634fc2f1d4d433add42e",
+    "pb.fixture.drop-ladder@1": "615c3efd85bf7fc99d82c2ff20575c2bac5f90e7e5c38457c4f550b949540c29",
+    "pb.fixture.drop-ladder@2": "fdafa79c89755e86308245fbe06f1d072eefb5201f7f36b87e1d3a9747f0d5ae",
+    "pb.fixture.drop-ladder@3": "e3c0263087044402bf18ec3d32a9679e026d87744238525472fbf556bf3739bf",
+    "pb.fixture.serve-target@1": "c680a7083342502265ed1652b2ab3a16b98b372dd0466678ec84e6dd371c24c7"
+  }
+}
