@@ -118,14 +118,12 @@ def test_every_problem_uses_a_contract_key_and_code_and_never_a_label_value(
 
 def test_the_closed_sets_are_the_contracts() -> None:
     # api-sprint-03 §5.4 / §6.2, verbatim
-    assert LABEL_KEYS == frozenset({
-        "type", "frame", "hitter", "facets", "start_frame", "end_frame", "outcome", "visible",
-        "court_xy_m",
-    })  # fmt: skip
-    assert LABEL_CODES == frozenset({
-        "invalid", "unknown_field", "outside_clip", "no_rally", "overlaps_rally", "out_of_order",
-        "not_a_player",
-    })  # fmt: skip
+    keys = {"type", "frame", "hitter", "facets", "start_frame", "end_frame", "outcome", "visible",
+            "court_xy_m"}  # fmt: skip
+    codes = {"invalid", "unknown_field", "outside_clip", "no_rally", "overlaps_rally",
+             "out_of_order", "not_a_player"}  # fmt: skip
+    assert frozenset(keys) == LABEL_KEYS
+    assert frozenset(codes) == LABEL_CODES
 
 
 def test_an_accepted_label_after_a_refusal_still_works() -> None:

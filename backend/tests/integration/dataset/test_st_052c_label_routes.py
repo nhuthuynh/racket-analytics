@@ -217,5 +217,6 @@ def test_st_052c_an_invalid_label_lists_each_problem_by_label_key_and_code(
     response = st.fulltag(api, "dana", "label_events", json_body=body, match_id=match_id)
     assert st.refusal(response) == (422, "invalid_label", fields), response.text
     assert response.json()["error"]["message"] == "This label is not valid."
-    assert "Z9" not in response.text and "note" not in response.text
+    assert "Z9" not in response.text
+    assert "note" not in response.text
     assert _stored_labels(committed_db) == before

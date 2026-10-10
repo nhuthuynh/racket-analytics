@@ -5,6 +5,10 @@ Order of checks: session (401) -> Origin on POST (403, edge middleware) -> label
 -> body (422 ``invalid_label``). A non-labeller and another account's match get exactly the
 answer of an unknown match id, so neither the tool nor the match is revealed (SEC-S3-TM-08).
 Label values are never echoed or logged (NFR-057).
+
+``POST`` takes, in the global lock order (deletion-and-purge §3.1): the account row ``FOR SHARE``,
+the live match row ``FOR SHARE`` (so a ``DELETE /matches/{id}`` commits before the label or after
+it, never across it; a match deleted meanwhile is 404, PE-052c-R1-01), then the label session row.
 """
 
 from __future__ import annotations
@@ -157,6 +161,8 @@ def add_label(
             raise InvalidLabel("not finite", [FieldError(None, "invalid")])
         if not players.lock_live_account(session, target.owner_id):  # SEC-S3-TM-05
             raise Unauthenticated("the account was deleted")
+        if not matches.lock_live_match(session, target.match_id):  # held to the commit
+            raise LabelNotFound("the match was deleted")
         settings = request.app.state.settings
         retry_at = RateLimiter(session, clock=lambda: now).hit(
             f"label:command:{target.owner_id}",
@@ -169,8 +175,9 @@ def add_label(
         row = repo.lock_or_create(target.match_id, target.owner_id, now)
         try:
             after = _session_of(target, row).add(body)
-        except LabelRefused:
-            raise InvalidLabel("label refused", [FieldError(None, "invalid")]) from None
+        except LabelRefused as refused:  # api-sprint-03 §5.4: one entry per problem, no values
+            fields = [FieldError(p.field, p.code) for p in refused.problems]
+            raise InvalidLabel("label refused", fields) from None
         version = int(row.version) + 1
         repo.save(target.match_id, version, list(after.rallies), list(after.events), now)
         session.commit()
