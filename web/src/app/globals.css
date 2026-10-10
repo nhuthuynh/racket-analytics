@@ -972,6 +972,52 @@ main:focus-visible,
   min-block-size: var(--size-target-touch);
 }
 
+/* L-01 Full Tag (ST-052; flows-sprint-03 §6): bars in normal flow (no sticky bar, SC 2.4.11),
+ * wrapping at 320 px; tag buttons 48px (size.target-touch). Pressed: filled plus a check mark. */
+.full-tag .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-target-gap);
+  align-items: center;
+}
+
+.button-row__label {
+  flex-basis: 100%;
+  font-weight: var(--font-weight-bold);
+}
+
+.frame-readout {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+}
+
+.tag-button[aria-pressed='true']::before {
+  content: '✓ ' / '';
+}
+
+.full-tag__question {
+  font-weight: var(--font-weight-bold);
+}
+
+.full-tag__marks li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-target-gap);
+  align-items: center;
+  padding-block: var(--space-1);
+}
+
+.key-table {
+  border-collapse: collapse;
+}
+
+.key-table th,
+.key-table td {
+  text-align: start;
+  padding: var(--space-1) var(--space-2);
+  border-block-end: 1px solid var(--color-border-subtle);
+}
+
 /* D-01 stats and E-01/E-02 evidence (ST-048, ST-047; flows-sprint-03 §0, §2, §3). Proven pairs
  * only: values in text, low sample as a tag in warning-text on warning-surface, de-emphasis by
  * size and weight in text-secondary (never under 4.5:1), bars in the progress pair. */

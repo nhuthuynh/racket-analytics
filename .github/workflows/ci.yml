@@ -494,6 +494,8 @@ jobs:
         env:
           # web-tls (ADR 0029): Secure `__Host-` cookies need https in WebKit.
           BASE_URL: https://localhost:3000
+          # E2E-03-05 (ST-052): the labeller-admin CLI in this job's api container.
+          E2E_ADMIN_CMD: docker compose -f ${{ github.workspace }}/infra/compose.yaml --env-file ${{ github.workspace }}/infra/env.example exec -T api python -m racket.dataset.admin
         # --global-timeout: the run stops itself with its report and the running test named
         # (list reporter) instead of being cancelled at the job limit (CI-E2E-JOURNEYS-TIMEOUT).
         run: |

@@ -13,7 +13,7 @@ import { signInByLink, uniqueEmail } from '../helpers/sprint-01';
 import { receivedMatch } from '../helpers/sprint-02';
 import { SCREEN, admin, labelPath } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-052 @fr-150 Full Tag', { tag: '@red-until-ST-052' }, () => {
+test.describe('@M0 @story-ST-052 @fr-150 Full Tag', () => {
   test('E2E-03-05 a player, and a labeller on a match of another account, cannot open Full Tag; a labeller frame-steps their own match by keys, tags a hit and exports', async ({ page, browser }, testInfo) => {
     test.setTimeout(180_000);
     const matchId = await receivedMatch(page, 'E2E-03-05 full tag');
@@ -50,6 +50,11 @@ test.describe('@M0 @story-ST-052 @fr-150 Full Tag', { tag: '@red-until-ST-052' }
     await labeller.getByRole('button', { name: 'Carlos', exact: true }).click();
     for (let i = 0; i < 10; i += 1) await labeller.keyboard.press('.');
     await labeller.getByRole('button', { name: /Rally end/ }).click();
+    // L-01 saves a rally only with its ending (flows-sprint-03 §6 step 4, ADR 0043 R3-8;
+    // PD-FL3-01, TCR row 2026-10-07): a gold label never gets a guessed outcome.
+    await labeller.getByRole('group', { name: 'Won by' }).getByRole('button', { name: 'Other side' }).click();
+    await labeller.getByRole('button', { name: 'Winner', exact: true }).click();
+    await expect(labeller.getByRole('heading', { name: 'Saved rallies' })).toBeVisible();
     const download = labeller.waitForEvent('download');
     await labeller.getByRole('button', { name: /Export/ }).click();
     const file = await (await download).path();
