@@ -283,6 +283,8 @@ jobs:
         # pytest-xdist: one worker per runner core, each on its own session database (C-32).
         # The suite grew (IT-02-10 + IT-03-12 fuzz = 52% of 728 s serial); the 600 s budget
         # does not change. The budget record and the 25 slowest tests are kept per run.
+        # The store's write floor runs alone in its own steps, never beside the workers that
+        # load the same store (run 38020043986: 0.571 MB/s inside the suites, 2 passed alone).
         working-directory: backend
         run: |
           python3 ../scripts/ci/run_with_budget.py "$INTEGRATION_BUDGET_S" --json ../reports/integration-budget.json -- \
@@ -290,6 +292,7 @@ jobs:
               -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
+              --ignore-glob='tests/integration/harness/test_ci_objstore_*.py' \
               --cov --cov-report=xml:../reports/coverage-backend.xml --junitxml=../reports/integration.xml
       - name: Object store write throughput floor (after the suites, before the rows waiting on a story)
         # CI-OBJSTORE-SLOW: the 1.72 MB clip from 4 writers, median >= 5 MB/s and none < 1 MB/s;

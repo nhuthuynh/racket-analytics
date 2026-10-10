@@ -306,6 +306,14 @@ export function createApiClient(options: ApiClientOptions) {
     async stats(id: string): Promise<Stats> {
       return parsed(await request('GET', `${matchPath(id)}/stats`), parseStats);
     },
+    /** X-01 (ST-050): hidden at once, purged within 7 days; only after the confirmation (§4.1). */
+    async deleteMatch(id: string): Promise<void> {
+      await request('DELETE', matchPath(id), { confirm: 'delete' });
+    },
+    /** X-02 (ST-051): the account, every match and every session (§4.2). */
+    async deleteAccount(): Promise<void> {
+      await request('DELETE', '/me', { confirm: 'delete' });
+    },
     /** E-01/E-02: up to 10 rallies behind a metric and side, in video order; `cursor` pages on. */
     async evidence(id: string, metricId: string, side: Side, cursor: string | null = null): Promise<Evidence> {
       const query = `?side=${side}&limit=10${cursor === null ? '' : `&cursor=${encodeURIComponent(cursor)}`}`;

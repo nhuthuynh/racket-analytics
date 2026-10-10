@@ -1096,3 +1096,27 @@ main:focus-visible,
 .evidence-panel__reserved {
   min-block-size: 9rem;
 }
+
+/* Deletion (ST-050, ST-051; flows-sprint-03 §4, §5): the error outline style on the page (text
+ * and border in `error` on `bg`, a proven 6.54:1 pair), 48px high; a plain list of consequences. */
+.button--danger {
+  background: var(--color-bg);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.button--danger:hover {
+  background: var(--color-error-surface);
+  border-color: var(--color-error);
+}
+
+.consequences {
+  margin: 0;
+  padding-inline-start: var(--space-6);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.delete-section {
+  margin-block-start: var(--space-8);
+}

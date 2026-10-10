@@ -5,6 +5,7 @@
 // probe decides (facts, probe failure, or a refusal such as "too long"), then stops.
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { DeleteMatch } from '@/components/DeleteMatch';
 import { MatchFacts } from '@/components/MatchFacts';
 import { MatchUpload } from '@/components/MatchUpload';
 import { PageTitle } from '@/components/PageTitle';
@@ -127,6 +128,7 @@ export function MatchDetail({
           onProblem={setProblemShown}
         />
       ) : null}
+      <DeleteMatch match={match} />
     </div>
   );
 }
