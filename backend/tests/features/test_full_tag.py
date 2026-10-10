@@ -87,6 +87,14 @@ def player(ctx: dict[str, Any]) -> None:
 
 @then("the Full Tag mode is not available to her")
 def not_available(ctx: dict[str, Any]) -> None:
+    # Positive control: the routes are served (a labeller's own consented match opens), so
+    # Ivy's 404 is "not available", not an unserved route.
+    own = _received(ctx, "dana")
+    st.probe_videos()
+    st.grant_labeller(ctx["api"], "dana")
+    st.record_consent(own)
+    control = st.fulltag(ctx["api"], "dana", "label_match", match_id=own)
+    assert control.status_code == 200, f"positive control: {control.status_code}"
     for name in st.FULLTAG_ROUTES:
         response = st.fulltag(ctx["api"], "ivy", name, match_id=ctx["match"])
         assert response.status_code == 404, f"{name}: {response.status_code}"
