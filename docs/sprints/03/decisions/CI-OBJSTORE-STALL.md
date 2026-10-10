@@ -49,7 +49,6 @@ Done when the preflight passes and its slowest write stays above the floor in 3 
 
 | Check | Head | Result |
 |---|---|---|
-| Local loop: 30 fresh Compose stores (`infra/compose.yaml` at the fix) x 4 writers x 3 rounds of the clip through docker-proxy | `06df3b6` | (filled when it completes) |
-| CI run 1 | | |
-| CI run 2 | | |
-| CI run 3 | | |
+| Local loop: 30 fresh Compose stores (`infra/compose.yaml` at the fix) x 4 writers x 3 rounds of the clip through docker-proxy | `06df3b6` (compose unchanged since) | **30 iterations, 360 writes, 0 under 1 MB/s**; min 7.52 MB/s, median 44.9 MB/s, slowest write 0.344 s; each store reported `tcp_rmem 4096 1048576 33554432` |
+| Before the final head: CI run [38065985055](https://github.com/nhuthuynh/racket-analytics/actions/runs/38065985055) attempt 1 | `7d5a70c` | success (all jobs incl. `ci-gate`; integration job with both floor steps green) |
+| 3 consecutive CI runs at the final head | the head of PR #66 | Recorded in a PR #66 comment, so that recording them does not move the head |
