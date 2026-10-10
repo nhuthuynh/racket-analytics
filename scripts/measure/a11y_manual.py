@@ -80,6 +80,8 @@ def tally(text: str) -> dict:
         m = ROW_ID.match(cells[0])
         if columns is None or not m:
             continue
+        if len(cells) <= max(columns.values()):
+            raise ValueError(f"row {cells[0]} has {len(cells)} cells, fewer than its table header")
         first, last = int(m[1]), int(m[2] or m[1])
         for n in range(first, last + 1):
             expected = len(seen) + 1
