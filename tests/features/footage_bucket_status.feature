@@ -7,11 +7,21 @@ Feature: The S3-DoD-P11 status is measured from the PO's answer and the footage 
   I want the footage bucket's status measured from the PO record and the object store
   So that "met" is only reported when the PO named a provider and the bucket refuses strangers
 
+  # A probe answers two anonymous questions: may a stranger list the bucket, and may a stranger
+  # read an object in it (a canary object put with credentials, deleted afterwards). Refusing the
+  # listing alone proves nothing about the objects (PE-FIX031d-R1-1, F1).
+
   Rule: The measurement fails closed
 
     Scenario: A probe with an unexpected anonymous answer is refused
       Given the PO record answers P11 with "Provider: Example Cloud, eu-west"
-      And the footage bucket exists and an anonymous read gets HTTP 500
+      And the footage bucket exists, an anonymous listing gets HTTP 500 and an anonymous object read gets HTTP 403
+      When the footage bucket is measured
+      Then the measurement is refused as malformed
+
+    Scenario: A probe of an existing bucket without an anonymous object read is refused
+      Given the PO record answers P11 with "Provider: Example Cloud, eu-west"
+      And the footage bucket exists, an anonymous listing gets HTTP 403 and no object read was probed
       When the footage bucket is measured
       Then the measurement is refused as malformed
 
@@ -19,27 +29,33 @@ Feature: The S3-DoD-P11 status is measured from the PO's answer and the footage 
 
     Scenario: Without a PO answer the row is not met, waiting on P11
       Given the PO record has no P11 answer
-      And the footage bucket exists and an anonymous read gets HTTP 403
+      And the footage bucket exists, an anonymous listing gets HTTP 403 and an anonymous object read gets HTTP 403
       When the footage bucket is measured
       Then the status is "not met: waiting on P11"
 
     Scenario: A provider without a bucket is not met
       Given the PO record answers P11 with "Provider: Example Cloud, eu-west"
-      And the footage bucket does not exist and an anonymous read gets HTTP 403
+      And the footage bucket does not exist and an anonymous listing gets HTTP 403
       When the footage bucket is measured
       Then the status is "not met: P11 answered, footage bucket not built (C3-08)"
 
-    Scenario: A bucket that anyone can read is not met
+    Scenario: A bucket that anyone can list is not met
       Given the PO record answers P11 with "Provider: Example Cloud, eu-west"
-      And the footage bucket exists and an anonymous read gets HTTP 200
+      And the footage bucket exists, an anonymous listing gets HTTP 200 and an anonymous object read gets HTTP 403
+      When the footage bucket is measured
+      Then the status is "not met: footage bucket is readable without credentials"
+
+    Scenario: A bucket that refuses listing but serves its objects to anyone is not met
+      Given the PO record answers P11 with "Provider: Example Cloud, eu-west"
+      And the footage bucket exists, an anonymous listing gets HTTP 403 and an anonymous object read gets HTTP 200
       When the footage bucket is measured
       Then the status is "not met: footage bucket is readable without credentials"
 
     Scenario: A provider and a private bucket are met
       Given the PO record answers P11 with "Provider: Example Cloud, eu-west"
-      And the footage bucket exists and an anonymous read gets HTTP 403
+      And the footage bucket exists, an anonymous listing gets HTTP 403 and an anonymous object read gets HTTP 401
       When the footage bucket is measured
-      Then the status is "met (provider: Example Cloud, eu-west; anonymous read refused)"
+      Then the status is "met (provider: Example Cloud, eu-west; anonymous listing and object read refused)"
 
   Rule: The sprint-DoD row says what the measurement says
 

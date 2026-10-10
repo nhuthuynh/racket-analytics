@@ -5,9 +5,15 @@ from __future__ import annotations
 import json
 
 
-def probe(exists: bool, anonymous_status: int) -> str:
-    """A recorded bucket probe: the shape `--from-probe` reads instead of calling a store."""
-    return json.dumps({"exists": exists, "anonymous_status": anonymous_status})
+def probe(exists: bool, anonymous_status: int, anonymous_object_status: int | None = None) -> str:
+    """A recorded bucket probe: the shape `--from-probe` reads instead of calling a store.
+
+    `anonymous_status` answers an anonymous listing of the bucket root; `anonymous_object_status`
+    answers an anonymous GET of a canary object put with credentials (omitted when None)."""
+    answer: dict = {"exists": exists, "anonymous_status": anonymous_status}
+    if anonymous_object_status is not None:
+        answer["anonymous_object_status"] = anonymous_object_status
+    return json.dumps(answer)
 
 
 def po_record(p11: str | None = None) -> str:
