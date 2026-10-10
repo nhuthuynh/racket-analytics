@@ -7,7 +7,7 @@ import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpe
 import { SIGNED_IN_URL, signInByLink, uniqueEmail } from '../helpers/sprint-01';
 import { ACCOUNT_PATH, SCREEN, signInWithNthLink } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-051 @nfr-066 Delete my account', { tag: '@red-until-ST-051' }, () => {
+test.describe('@M0 @story-ST-051 @nfr-066 Delete my account', { tag: '@red-until-ST-052' }, () => {
   test('E2E-03-04 the confirmation states the consequences; both devices signed out; signing in again is empty', async ({ browser }, testInfo) => {
     test.setTimeout(180_000);
     const email = uniqueEmail('ivy');
