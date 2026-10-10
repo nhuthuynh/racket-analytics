@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 import pytest
-from a11y_manual_fixtures import manual, sprint_plan
+from a11y_manual_fixtures import HEAD, TAIL, manual, sprint_plan
 from conftest import REPO_ROOT, SCRIPTS_DIR
 
 MEASURE = SCRIPTS_DIR / "measure"
@@ -82,6 +82,57 @@ def test_a_range_row_with_a_result_counts_all_its_rows_as_run(m) -> None:
         24,
         "not met: waiting on P6 (24 of 25 rows run)",
     )
+
+
+def _range_manual(voiceover: str, talkback: str, rest: str = "pass") -> str:
+    """Rows 1-24 as one range row with the given cells, then rows 25-38 with `rest` on both."""
+    lines = [f"| 1-24 | earlier screens | {voiceover} | {talkback} |"]
+    lines += [f"| {n} | screen {n} | {rest} | {rest} |" for n in range(25, 39)]
+    return HEAD + "\n".join(lines) + "\n" + TAIL
+
+
+# PE-R1-01 / SBE-FIX031b-R1-01: a range row's partial count must never read as the whole range.
+
+
+@pytest.mark.unit
+def test_a_range_row_with_a_partial_count_counts_only_the_rows_run(m) -> None:
+    t = m.tally(_range_manual("pass (3 of 24)", "pass (3 of 24)"))
+    assert (t["voiceover"], t["talkback"], t["met"]) == (17, 17, False)
+    assert t["status"].startswith("not met: waiting on P6")
+
+
+@pytest.mark.unit
+def test_partial_counts_on_both_readers_count_only_rows_proven_run_on_both(m) -> None:
+    # 3 of 24 on VoiceOver and 1 of 24 on TalkBack need not be the same rows: none is proven.
+    t = m.tally(_range_manual("pass (3 of 24)", "fail: one (1 of 24)", rest="not run"))
+    assert (t["voiceover"], t["talkback"], t["both"]) == (3, 1, 0)
+    assert t["status"] == "not met: waiting on P6 (0 of 38 rows run)"
+
+
+@pytest.mark.unit
+def test_a_range_row_with_a_full_count_counts_every_row(m) -> None:
+    t = m.tally(_range_manual("pass (24 of 24)", "fail: one heading skipped (24 of 24)"))
+    assert t["status"] == "met (38 of 38 rows run)"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "cell",
+    ["pass (3 of 20)", "pass (0 of 24)", "pass (25 of 24)", "not run (2 of 24)"],
+)
+def test_a_count_that_does_not_fit_the_row_is_refused(m, cell: str) -> None:
+    with pytest.raises(ValueError, match="row 1-24"):
+        m.tally(_range_manual(cell, "pass"))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("cell", ["passive", "failed to start", "fail", "fail:", "passed", "pass!"])
+def test_a_cell_outside_pass_fail_words_not_run_is_refused(m, cell: str) -> None:
+    text = manual(2, voiceover=2, talkback=2).replace(
+        "| 2 | screen 2 | pass |", f"| 2 | screen 2 | {cell} |"
+    )
+    with pytest.raises(ValueError, match="row 2"):
+        m.tally(text)
 
 
 @pytest.mark.unit

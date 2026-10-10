@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from a11y_manual_fixtures import manual, sprint_plan
+from a11y_manual_fixtures import HEAD, TAIL, manual, sprint_plan
 from conftest import SCRIPTS_DIR
 from pytest_bdd import given, parsers, scenarios, then, when
 
@@ -53,6 +53,23 @@ def one_missing(ctx: dict) -> None:
 @given("a manual of 38 rows with every result recorded on both screen readers")
 def all_run(ctx: dict) -> None:
     _write(ctx, manual(38, voiceover=38, talkback=38))
+
+
+@given(parsers.parse('a manual of 38 rows whose row 2 on VoiceOver says "{cell}"'))
+def odd_cell(ctx: dict, cell: str) -> None:
+    text = manual(38, voiceover=38, talkback=38)
+    _write(ctx, text.replace("| 2 | screen 2 | pass |", f"| 2 | screen 2 | {cell} |"))
+
+
+@given(
+    parsers.parse(
+        'a manual whose rows 1-24 say "{cell}" and rows 25 to 38 say "pass" on both screen readers'
+    )
+)
+def partial_range(ctx: dict, cell: str) -> None:
+    rows = [f"| 1-24 | earlier screens | {cell} | {cell} |"]
+    rows += [f"| {n} | screen {n} | pass | pass |" for n in range(25, 39)]
+    _write(ctx, HEAD + "\n".join(rows) + "\n" + TAIL)
 
 
 @given(parsers.parse('a sprint plan whose S3-DoD-P6 row says "{status}"'))

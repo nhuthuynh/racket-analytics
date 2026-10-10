@@ -19,6 +19,11 @@ Feature: The S3-DoD-P6 status is counted from the screen-reader manual
       When the manual is tallied
       Then the tally is refused as malformed
 
+    Scenario: A cell outside "pass", "fail: <words heard>" and "not run" is refused
+      Given a manual of 38 rows whose row 2 on VoiceOver says "passive"
+      When the manual is tallied
+      Then the tally is refused as malformed
+
   Rule: The status is "met" only when every row has a result on both screen readers
 
     Scenario: No row run is not met, waiting on P6
@@ -35,6 +40,11 @@ Feature: The S3-DoD-P6 status is counted from the screen-reader manual
       Given a manual of 38 rows with every result recorded on both screen readers
       When the manual is tallied
       Then the status is "met (38 of 38 rows run)"
+
+    Scenario: A range row with a partial count counts only the rows run
+      Given a manual whose rows 1-24 say "pass (3 of 24)" and rows 25 to 38 say "pass" on both screen readers
+      When the manual is tallied
+      Then the status is "not met: waiting on P6 (17 of 38 rows run)"
 
   Rule: The sprint-DoD row says what the manual says
 
