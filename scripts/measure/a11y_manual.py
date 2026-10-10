@@ -4,10 +4,13 @@
     a11y_manual.py docs/sprints/03/a11y-manual.md [--dod docs/sprints/sprint-03.md]
 
 Reads the result tables of the manual's section 3 (columns "VoiceOver iOS" and "TalkBack
-Android"). A cell holds a result only when it starts with "pass" or "fail"; "not run" is the
-only other word allowed. A row like "1-24" stands for every row it covers. The status is
-"met (n of n rows run)" only when every row has a result on both screen readers, otherwise
-"not met: waiting on P6 (k of n rows run)", where k counts rows run on both.
+Android"). Each cell is exactly "pass", "fail: <words heard>" or "not run", optionally followed
+by a count "(k of w)" where w is the number of rows the row covers. A row like "1-24" stands for
+every row it covers: a bare "pass"/"fail: ..." there means all of them were run, a count means
+only k were ("not run" needs k = 0; "pass"/"fail" need 1 <= k <= w). Partial counts on the two
+screen readers need not be the same rows, so only rows proven run on both are counted for the
+status. The status is "met (n of n rows run)" only when every row has a result on both screen
+readers, otherwise "not met: waiting on P6 (k of n rows run)", where k counts rows run on both.
 
 Exit 0 met, 1 not met, 2 malformed manual or plan (fail closed, ADR 0014), 3 the sprint
 plan's S3-DoD-P6 status cell says something other than the tally.
@@ -24,6 +27,11 @@ from pathlib import Path
 DEVICES = {"voiceover": "VoiceOver iOS", "talkback": "TalkBack Android"}
 DOD_ROW = "S3-DoD-P6"
 ROW_ID = re.compile(r"^(\d+)(?:\s*[-\u2013]\s*(\d+))?$")
+CELL = re.compile(
+    r"^(?:(?P<result>pass|fail:\s*\S.*?)|(?P<not_run>not run))"
+    r"(?:\s*\((?P<k>\d+) of (?P<w>\d+)\))?$",
+    re.I,
+)
 
 
 def _cells(line: str) -> list[str]:
@@ -37,13 +45,22 @@ def _section_3(text: str) -> str:
     return re.split(r"^## ", parts[1], maxsplit=1, flags=re.M)[0]
 
 
-def _ran(cell: str, rid: str) -> bool:
-    word = cell.lower()
-    if word.startswith(("pass", "fail")):
-        return True
-    if word.startswith("not run"):
-        return False
-    raise ValueError(f"row {rid}: {cell!r} is neither a result (pass/fail) nor 'not run'")
+def _ran(cell: str, rid: str, width: int) -> int:
+    """How many of the row's `width` rows the cell records as run (fail closed on anything else)."""
+    m = CELL.match(cell.strip())
+    if not m:
+        raise ValueError(
+            f"row {rid}: {cell!r} is not 'pass', 'fail: <words heard>' or 'not run'"
+            " (optionally followed by '(k of w)')"
+        )
+    if m["k"] is None:
+        return width if m["result"] else 0
+    k, w = int(m["k"]), int(m["w"])
+    low = 1 if m["result"] else 0
+    high = width if m["result"] else 0
+    if w != width or not low <= k <= high:
+        raise ValueError(f"row {rid}: the count in {cell!r} does not fit a row of {width} row(s)")
+    return k
 
 
 def tally(text: str) -> dict:
@@ -70,10 +87,11 @@ def tally(text: str) -> dict:
                 raise ValueError(f"row {n} is out of order or numbered twice (expected {expected})")
             seen.append(n)
         width = last - first + 1
-        ran = {k: _ran(cells[i], cells[0]) for k, i in columns.items()}
+        ran = {k: _ran(cells[i], cells[0], width) for k, i in columns.items()}
         for k, r in ran.items():
-            run[k] += width if r else 0
-        both += width if all(ran.values()) else 0
+            run[k] += r
+        # Rows proven run on both: partial counts on the two readers may be different rows.
+        both += max(0, sum(ran.values()) - width * (len(ran) - 1))
     if not seen:
         raise ValueError("no result table with VoiceOver iOS and TalkBack Android columns")
     rows = len(seen)

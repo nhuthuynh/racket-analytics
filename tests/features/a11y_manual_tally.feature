@@ -41,10 +41,10 @@ Feature: The S3-DoD-P6 status is counted from the screen-reader manual
       When the manual is tallied
       Then the status is "met (38 of 38 rows run)"
 
-    Scenario: A range row with a partial count counts only the rows run
+    Scenario: A range row with a partial count counts only the rows proven run on both
       Given a manual whose rows 1-24 say "pass (3 of 24)" and rows 25 to 38 say "pass" on both screen readers
       When the manual is tallied
-      Then the status is "not met: waiting on P6 (17 of 38 rows run)"
+      Then the status is "not met: waiting on P6 (14 of 38 rows run)"
 
   Rule: The sprint-DoD row says what the manual says
 
