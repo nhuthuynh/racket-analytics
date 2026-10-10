@@ -106,6 +106,12 @@ def fetch(repo: str) -> tuple[int, str]:
         return exc.code, exc.read().decode("utf-8", "replace")
 
 
+def recorded(path: Path) -> tuple[int, str]:
+    """A recorded answer {"status": n, "body": "..."}, so tests never call GitHub."""
+    answer = json.loads(path.read_text(encoding="utf-8"))
+    return int(answer["status"]), str(answer["body"])
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     source = parser.add_mutually_exclusive_group(required=True)
@@ -115,11 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dod", type=Path, help="sprint plan whose S3-DoD-P10 row must agree")
     args = parser.parse_args(argv)
     try:
-        if args.repo:
-            status, body = fetch(args.repo)
-        else:
-            recorded = json.loads(args.from_answer.read_text(encoding="utf-8"))
-            status, body = int(recorded["status"]), str(recorded["body"])
+        status, body = fetch(args.repo) if args.repo else recorded(args.from_answer)
         confirmed = po_confirmed_public(args.po.read_text(encoding="utf-8"))
         result = measure(visibility(status, body), confirmed)
         claimed = dod_status(args.dod.read_text(encoding="utf-8")) if args.dod else None
