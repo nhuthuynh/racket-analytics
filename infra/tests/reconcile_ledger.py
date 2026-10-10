@@ -35,11 +35,35 @@ def plan(prs: list[tuple[str, str, str]], commits: list[tuple[str, str, str]]) -
 
 
 def run_check(
-    ledger: Path, plan_file: Path | None = None, decisions: Path | None = None
+    ledger: Path,
+    plan_file: Path | None = None,
+    decisions: Path | None = None,
+    base: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     cmd = [sys.executable, str(SCRIPT), str(ledger)]
     if plan_file is not None:
         cmd += ["--plan", str(plan_file)]
     if decisions is not None:
         cmd += ["--decisions", str(decisions)]
+    if base is not None:
+        cmd += ["--base", base]
     return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+
+def git(repo: Path, *args: str) -> str:
+    """Run git in a throwaway repo with a fixed identity; return stdout."""
+    cmd = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", *args]
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=True).stdout
+
+
+def commit_base(repo: Path) -> str:
+    """Make ``repo`` a git repo whose one commit (the base) holds every file now in it."""
+    git(repo, "init", "-q")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "--allow-empty", "-m", "base")
+    return git(repo, "rev-parse", "HEAD").strip()
+
+
+def base_of_head() -> str:
+    """The base a PR is checked against: the merge base of HEAD and ``origin/main``."""
+    return git(REPO_ROOT, "merge-base", "HEAD", "origin/main").strip()

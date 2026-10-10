@@ -28,6 +28,23 @@ Feature: Open review-rounds rows that a merged ticket names are flagged for reco
       When the reconciliation check runs
       Then the check fails with a usage error
 
+  Rule: Only a decision file already on the base branch names a merged ticket
+
+    Scenario: A fix ticket's own decision file, added by its open PR, does not fail that PR
+      Given a ledger with an open major row for PE-PR24-01
+      And a base branch without a ticket decision file for PE-PR24-01
+      And the ticket PR adds a ticket decision file "PE-PR24-01.md"
+      When the reconciliation check runs against the base branch
+      Then the check passes
+      And the report says 1 open row and 0 due
+
+    Scenario: The same decision file once merged into the base branch names the finding
+      Given a ledger with an open major row for PE-PR24-01
+      And a base branch with a ticket decision file "PE-PR24-01.md"
+      When the reconciliation check runs against the base branch
+      Then the check fails
+      And the report names PE-PR24-01 as due because of ticket PE-PR24-01
+
   Rule: A row that already names the ticket, its PR or its merge commit is reconciled
 
     Scenario: The open row's section names the ticket's merge commit

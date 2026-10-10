@@ -8,12 +8,23 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
-from reconcile_ledger import PLAN_0039, SCRIPT, SPRINT_03, ledger_section, plan, run_check
+from reconcile_ledger import (
+    PLAN_0039,
+    SCRIPT,
+    SPRINT_03,
+    base_of_head,
+    commit_base,
+    git,
+    ledger_section,
+    plan,
+    run_check,
+)
 
 
 def _module():  # loaded from scripts/measure, not a package
@@ -155,8 +166,80 @@ def test_cli_names_the_due_row_with_its_line_and_writes_json(tmp_path: Path) -> 
     assert data["due"] == 1
 
 
+# PE-FIX031A-01: a ticket PR adds its decisions file before it merges, so only the decisions
+# files on the base branch name merged tickets. Negative case first.
+OPEN_PR24 = ledger_section("S", [("PE-PR24-01", "major", "**Open.** F1")])
+
+
+def _repo_with_open_row(tmp_path: Path) -> tuple[Path, Path, str]:
+    (tmp_path / "decisions").mkdir()
+    (tmp_path / "decisions" / "OTHER-1.md").write_text("# d\n", encoding="utf-8")
+    ledger = tmp_path / "rr.md"
+    ledger.write_text(OPEN_PR24, encoding="utf-8")
+    return ledger, tmp_path / "decisions", commit_base(tmp_path)
+
+
+@pytest.mark.integration
+def test_cli_a_decision_file_not_yet_on_the_base_names_no_merged_ticket(tmp_path: Path) -> None:
+    ledger, decisions, base = _repo_with_open_row(tmp_path)
+    (decisions / "PE-PR24-01.md").write_text("# the fix ticket's own PR\n", encoding="utf-8")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", "ticket PR")
+    out = run_check(ledger, None, decisions, base)
+    assert out.returncode == 0, out.stdout + out.stderr
+    assert "reconcile-due: 1 open blocker/major rows, 0 due" in out.stdout
+
+
+@pytest.mark.integration
+def test_cli_an_untracked_decision_file_names_no_merged_ticket(tmp_path: Path) -> None:
+    ledger, decisions, base = _repo_with_open_row(tmp_path)
+    (decisions / "PE-PR24-01.md").write_text("# not committed\n", encoding="utf-8")
+    assert run_check(ledger, None, decisions, base).returncode == 0
+
+
+@pytest.mark.integration
+def test_cli_refuses_a_base_ref_git_cannot_resolve(tmp_path: Path) -> None:
+    ledger, decisions, _ = _repo_with_open_row(tmp_path)
+    out = run_check(ledger, None, decisions, "no-such-ref")
+    assert out.returncode == 2, out.stdout + out.stderr
+    assert out.stderr.startswith("reconcile-due: "), out.stderr
+
+
+@pytest.mark.integration
+def test_cli_a_decision_file_on_the_base_names_its_merged_ticket(tmp_path: Path) -> None:
+    (tmp_path / "decisions").mkdir()
+    (tmp_path / "decisions" / "PE-PR24-01.md").write_text("# merged\n", encoding="utf-8")
+    ledger = tmp_path / "rr.md"
+    ledger.write_text(OPEN_PR24, encoding="utf-8")
+    base = commit_base(tmp_path)
+    out = run_check(ledger, None, tmp_path / "decisions", base)
+    assert out.returncode == 1, out.stdout + out.stderr
+    assert "PE-PR24-01 (major) named by ticket PE-PR24-01" in out.stdout
+
+
+@pytest.mark.integration
+def test_a_fix_ticket_named_after_an_open_sprint_3_finding_passes_on_its_own_pr(
+    tmp_path: Path,
+) -> None:
+    """PE-FIX031A-01 as reported: the real ledger, plan and decisions, plus PE-PR24-01.md."""
+    shutil.copy(SPRINT_03 / "review-rounds.md", tmp_path / "rr.md")
+    shutil.copy(PLAN_0039, tmp_path / "0039.md")
+    shutil.copytree(SPRINT_03 / "decisions", tmp_path / "decisions")
+    base = commit_base(tmp_path)
+    (tmp_path / "decisions" / "PE-PR24-01.md").write_text("# fix ticket\n", encoding="utf-8")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", "fix ticket PR")
+    out = run_check(tmp_path / "rr.md", tmp_path / "0039.md", tmp_path / "decisions", base)
+    assert out.returncode == 0, out.stdout + out.stderr
+
+
 @pytest.mark.integration
 def test_the_sprint_3_ledger_has_no_open_row_a_merged_ticket_names_unreconciled() -> None:
-    """Regression for V03R1-01: six rows read open on main after their tickets merged."""
-    out = run_check(SPRINT_03 / "review-rounds.md", PLAN_0039, SPRINT_03 / "decisions")
+    """Regression for V03R1-01: six rows read open on main after their tickets merged.
+
+    Only decisions files on the base (merge base with ``origin/main``) name merged tickets.
+    """
+    out = run_check(
+        SPRINT_03 / "review-rounds.md", PLAN_0039, SPRINT_03 / "decisions", base_of_head()
+    )
     assert out.returncode == 0, out.stdout + out.stderr

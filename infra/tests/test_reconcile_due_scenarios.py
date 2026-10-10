@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
-from reconcile_ledger import ledger_section, plan, run_check
+from reconcile_ledger import commit_base, git, ledger_section, plan, run_check
 
 pytestmark = [pytest.mark.scenario, pytest.mark.integration]
 
@@ -61,12 +61,42 @@ def decision_file(ctx: dict, name: str) -> None:
     (ctx["decisions"] / name).write_text("# decisions\n", encoding="utf-8")
 
 
-@when("the reconciliation check runs")
-def check(ctx: dict) -> None:
+@given(parsers.parse("a base branch without a ticket decision file for {finding}"))
+def base_without(ctx: dict, finding: str) -> None:
+    (ctx["decisions"] / "OTHER-1.md").write_text("# decisions\n", encoding="utf-8")
+    ctx["base"] = commit_base(ctx["tmp"])
+
+
+@given(parsers.parse('a base branch with a ticket decision file "{name}"'))
+def base_with(ctx: dict, name: str) -> None:
+    (ctx["decisions"] / name).write_text("# decisions\n", encoding="utf-8")
+    ctx["base"] = commit_base(ctx["tmp"])
+
+
+@given(parsers.parse('the ticket PR adds a ticket decision file "{name}"'))
+def pr_adds(ctx: dict, name: str) -> None:
+    (ctx["decisions"] / name).write_text("# decisions\n", encoding="utf-8")
+    git(ctx["tmp"], "add", "-A")
+    git(ctx["tmp"], "commit", "-q", "-m", "ticket PR")
+
+
+def _write_inputs(ctx: dict) -> tuple[Path, Path]:
     ledger = ctx["tmp"] / "review-rounds.md"
     ledger.write_text(ctx["ledger"], encoding="utf-8")
     adr = ctx["tmp"] / "0039.md"
     adr.write_text(plan(ctx["prs"], ctx["commits"]), encoding="utf-8")
+    return ledger, adr
+
+
+@when("the reconciliation check runs against the base branch")
+def check_against_base(ctx: dict) -> None:
+    ledger, adr = _write_inputs(ctx)
+    ctx["out"] = run_check(ledger, adr, ctx["decisions"], ctx["base"])
+
+
+@when("the reconciliation check runs")
+def check(ctx: dict) -> None:
+    ledger, adr = _write_inputs(ctx)
     ctx["out"] = run_check(ledger, adr, ctx["decisions"])
 
 
