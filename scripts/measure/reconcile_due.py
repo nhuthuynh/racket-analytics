@@ -2,17 +2,22 @@
 """Open review-rounds rows that a merged ticket names, with no ledger row for it (FIX-03-1a).
 
     reconcile_due.py docs/sprints/03/review-rounds.md \
-        --plan docs/decisions/0039-*.md --decisions docs/sprints/03/decisions [--json out.json]
+        --plan docs/decisions/0039-*.md --decisions docs/sprints/03/decisions \
+        --base origin/main [--json out.json]
 
 A ticket PR that closes a finding writes no review-rounds row, so ``open_defects.py`` keeps
 counting the finding as open after the ticket merged (V03R1-01, goal scorecard G03-12). This
 check lists every open blocker/major row (as ``open_defects.py`` reads it) that a merged ticket
 names: a commit of the ADR 0039 per-ticket plan whose subject scope names one of the row's ids,
-or a ticket decisions file ``<id>.md`` / ``<id>-*.md``. The row is reconciled once its latest
-row, or that row's section heading, names the ticket, its PR (``#n``) or its merge commit.
+or a ticket decisions file ``<id>.md`` / ``<id>-*.md`` that is on the base branch (``--base``,
+a git ref): a ticket PR adds its own decisions file before it merges, so a file only on the PR's
+head names no merged ticket (PE-FIX031A-01). Without ``--base`` every file counts. The row is
+reconciled once its latest row, or that row's section heading, names the ticket, its PR
+(``#n``) or its merge commit.
 
 Exit 0 when nothing is due, 1 when a row is due (the engineering-manager writes the row), 2 on
-a usage error (no review table, unreadable plan or decisions dir; fail closed, ADR 0014).
+a usage error (no review table, unreadable plan or decisions dir, a base git cannot read; fail
+closed, ADR 0014).
 Limit: a finding closed by work that names no id (for example a CI run on main) is not seen.
 """
 
@@ -21,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -130,19 +136,39 @@ def due_rows(ledger_text: str, tickets: list[dict[str, Any]]) -> list[dict[str, 
     return due
 
 
+def decision_stems(decisions: Path, base: str | None) -> list[str]:
+    """Stems of the ``*.md`` ticket decisions files; with ``base``, only those on that ref."""
+    if not decisions.is_dir():
+        raise ValueError(f"not a directory: {decisions}")
+    names = {p.name for p in decisions.glob("*.md")}
+    if base is not None:
+        if base.startswith("-"):
+            raise ValueError(f"not a git ref: {base}")
+        argv = ["git", "-C", str(decisions), "ls-tree", "--name-only", f"{base}^{{commit}}", "."]
+        out = subprocess.run(  # noqa: S603 - fixed argv, no shell; base is the caller's own ref
+            argv,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if out.returncode != 0:
+            raise ValueError(f"cannot list {decisions} at base {base}: {out.stderr.strip()}")
+        names &= set(out.stdout.splitlines())
+    return sorted(n[: -len(".md")] for n in names)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("ledger", type=Path, help="review-rounds Markdown file")
     parser.add_argument("--plan", type=Path, help="ADR with the per-ticket plan (ADR 0039)")
     parser.add_argument("--decisions", type=Path, help="the sprint's ticket decisions dir")
+    parser.add_argument("--base", help="git ref; only decisions files on it count (merged)")
     parser.add_argument("--json", type=Path, help="also write the result here")
     args = parser.parse_args(argv)
     try:
         text = args.ledger.read_text(encoding="utf-8")
         plan_text = args.plan.read_text(encoding="utf-8") if args.plan else ""
-        if args.decisions is not None and not args.decisions.is_dir():
-            raise ValueError(f"not a directory: {args.decisions}")
-        stems = sorted(p.stem for p in args.decisions.glob("*.md")) if args.decisions else []
+        stems = decision_stems(args.decisions, args.base) if args.decisions else []
         open_count = len(open_defects(text))
         due = due_rows(text, ticket_index(plan_text, stems))
     except (OSError, ValueError) as exc:

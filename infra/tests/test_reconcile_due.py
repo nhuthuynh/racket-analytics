@@ -179,6 +179,12 @@ def _repo_with_open_row(tmp_path: Path) -> tuple[Path, Path, str]:
     return ledger, tmp_path / "decisions", commit_base(tmp_path)
 
 
+@pytest.mark.unit
+def test_a_base_that_reads_as_a_git_option_is_refused(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="not a git ref"):
+        _module().decision_stems(tmp_path, "--output=x")
+
+
 @pytest.mark.integration
 def test_cli_a_decision_file_not_yet_on_the_base_names_no_merged_ticket(tmp_path: Path) -> None:
     ledger, decisions, base = _repo_with_open_row(tmp_path)
