@@ -148,6 +148,17 @@ def existing_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:
     return {uuid.UUID(str(i)) for i in found}
 
 
+def live_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """Which of ``ids`` are live matches (not tombstoned): the upload expiry leaves the uploads
+    of a deleted match to that match's purge (ST-038; deletion-and-purge.md §4.4, §4.6)."""
+    if not ids:
+        return set()
+    found = session.execute(
+        sa.select(matches.c.id).where(matches.c.id.in_(ids), matches.c.deleted_at.is_(None))
+    ).scalars()
+    return {uuid.UUID(str(i)) for i in found}
+
+
 def tombstone_owned_by(session: Session, owner_id: uuid.UUID, at: datetime) -> list[uuid.UUID]:
     """Tombstone every live match of an owner and close their uploads, in the caller's
     transaction (``DELETE /me`` step 3; the pass's second net, SEC-S3-TM-05). Returns the ids.

@@ -65,9 +65,12 @@ class ContextPorts:
         self.upload_idle = upload_idle
 
     def expire_uploads(self, session: Any, store: Any, now: datetime) -> int:
-        """ST-038: bytes first, then the row (no orphan); one transaction for the step."""
+        """ST-038: bytes first, then the row (no orphan); one transaction for the step. The
+        upload of a deleted match is the match purge's (its refs are checked fail-closed, §4.6)."""
         freed = 0
-        for upload in video_ingest.abandoned_uploads(session, now, self.upload_idle):
+        found = video_ingest.abandoned_uploads(session, now, self.upload_idle)
+        live = matches.live_ids(session, [u.match_id for u in found])
+        for upload in (u for u in found if u.match_id in live):
             for ref in upload.refs:
                 _delete(store, ref)
             video_ingest.forget_upload(session, upload.upload_id)
