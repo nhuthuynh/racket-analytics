@@ -26,22 +26,30 @@
 
 | ID | What is measured | Target | Method (detail in §4) | Actual | Met | Evidence |
 |---|---|---|---|---|---|---|
-| G03-01 | **Goal works end to end, live (API, real time).** Runs of the full journey over https through the web origin, each as a fresh account. Every step of a run must pass:<br>1. magic-link sign-in; a doubles match; the 60 s fixture uploaded; "Video received";<br>2. the coach's worked example (14 rallies) tagged; after **each** tag the stats equal the reference for the rallies so far;<br>3. stats = reference for AN-01..AN-07 × 2 sides (k, n, value, Wilson bounds ±0.001, low-sample flag, by-player counts, run histogram, ending mix); `rules_version`, `metric_def_version` and the label "unofficial scoring (rules not yet verified)" present;<br>4. "Show me" for every metric and side with n > 0: ≤ 10 items, total = n, every item behind the metric; the first item's rally video answers Range with 206;<br>5. rally 3 corrected → stats equal the corrected reference;<br>6. a second account → 404 on stats and evidence;<br>7. DELETE the match → 404 on the match and its stats, gone from the list;<br>8. DELETE the account → the old session 401; signing in again with the same address gives an empty account | **5 of 5 runs pass (100%)** | `scripts/measure/live_stats.py --runs 5` | | | |
-| G03-02 | **Real-time behaviour of the goal steps, live:** (a) tag → stats current, every tag of the 5 G03-01 runs (70 samples); (b) correction → stats current (5 samples, one per run); (c) DELETE match → hidden from the owner (match 404 and not listed), 5 samples | **(a) p95 ≤ 5,000 ms, n ≥ 70 (NFR-017 analogue); (b) p95 ≤ 5,000 ms, n ≥ 5; (c) p95 ≤ 60,000 ms, n ≥ 5 (NFR-066 a, ADR 0006)** | `live_stats.py` summary `tag_to_stats`, `correction_to_stats`, `delete_hidden` | | | |
-| G03-03 | **Purge leaves nothing, live (NFR-066 b):** after the 5 runs, the purge job is run once on the stack; (a) rows in any public table whose `match_id`, `owner_id` or `account_id` column, or `matches.id` / `accounts.id`, holds a deleted match or account id; (b) rally video links taken before deletion and still within their TTL, fetched after the purge; (c) the purge job is scheduled at least daily in Compose (NFR-066 c) | **(a) 0 rows; (b) every checked link 404 (object gone), ≥ 1 link checked; (c) schedule present, interval ≤ 24 h** | `live_stats.py --psql … --purge-cmd …` summary `purge`; `grep` of the scheduler config (§4) | | | |
-| G03-04 | **Integration-test pass rate** against real Postgres, the object store and Mailpit: (a) every Sprint 3 IT id IT-03-01..IT-03-14 plus the BOLA matrix with its inventory diff (NFR-051); (b) every Sprint 1 and Sprint 2 IT id (IT-01-01..13 except 11, IT-02-01..12 except 07), the upload-resume regression and the strict sandbox (no regression) | **(a) 100% passed, 0 failed, 0 skipped, every required id present; (b) 100% passed, every id present** | `pytest --junitxml`, `scripts/measure/junit_rate.py` | | | |
-| G03-05 | **API read latency and availability, live:** open loop at 50 RPS for 60 s on GET stats, GET evidence (AN-01, side A) and GET match, for a match tagged with the worked example (NFR-010 "dashboard", NFR-041) | **p95 ≤ 300 ms, p99 ≤ 800 ms, availability ≥ 99.5%, 0 unexpected 4xx, achieved rate ≥ 47.5 RPS** | `scripts/measure/stats_latency.py --rps 50 --duration 60` | | | |
-| G03-06 | **E2E pass rate,** Playwright in Chrome for Testing (ADR 0036) over https against the Compose stack, every spec, including:<br>- E2E-03-01 journey v2 (tag → stats = reference → Show me plays → delete match → gone);<br>- E2E-03-02 evidence crawl;<br>- E2E-03-03 definition shown, draft hidden, low-sample text;<br>- E2E-03-04 delete account;<br>- E2E-03-05 Full Tag (labeller tags and exports; player refused);<br>- E2E-03-06 keyboard-only and 320/360 px on stats and evidence;<br>- E2E-03-07 S-01 move offered only on the latest kept rally (C3-03);<br>- E2E-03-08 S-01 "Move back" offered only on the first rally of its game (C3-03);<br>- E2E-03-09 D-01 and E-01 error, empty, nothing-published and loading states with axe and 24x24, and "Show me" opening S-01 at the rally (ST-048; PD-R1S3-03);<br>- every Sprint 1 and Sprint 2 spec, root specs included (no regression) | **100% of non-skipped tests passed, 0 failed, every E2E-03 id present and not skipped; earlier skips ≤ 6, each naming its API binding; 0 flaky over 3 repeats of every spec (NFR-074)** | `playwright test` (junit, json), `junit_rate.py`, `--repeat-each=3`, `flaky_report.py` | | | |
-| G03-07 | **Browser timings, live** (`web/e2e/sprint-03/timing.spec.ts`, ST-054; 20 samples each): (a) stats dashboard interactive, warm; (b) "Show me" rally → first video frame playing, 9/1.5 Mbit/s and 4× CPU (reference profile); (c) cumulative layout shift while the stats load (CLS × 1000) | **(a) p95 ≤ 2,000 ms (NFR-011); (b) p95 ≤ 1,500 ms (NFR-014); (c) p95 = 0 (NFR-039); each ≥ 20 samples** | `scripts/measure/pw_timings.py` on the timing JSON report | | | |
-| G03-08 | **Metric correctness:**<br>(a) golden matches GS-AN-1 v1 (3 matches × every coach-reviewed metric × 2 sides) equal the coach's hand counts exactly (NFR-004), and the manifest check passes (FR-151, NFR-078);<br>(b) FR-101 examples and ADR 0005 thresholds (8/4, 20/10, 40/22, one game) as executable scenarios;<br>(c) FR-109 attribution conservation, property suite at ≥ 1,000 generated matches;<br>(d) metric dictionary: draft entries absent, a definition change bumps the version (FR-102);<br>(e) the coach's review record lists every shown entry as `coach-reviewed` with its QD-AN-03 evidence | **(a) 100% exact, 0 mismatches, manifest rc=0; (b) 100% passed; (c) 0 violations, ≥ 1,000 examples; (d) 100% passed; (e) every entry the API shows is `coach-reviewed` or `verified` in metric-dictionary §3** | `pytest -m golden_an`, `-m "analytics and scenario"`, `-m conservation`, `racket-manifest-check`, a `grep` | | | |
-| G03-09 | **Full Tag and drill lint:** (a) IT-03-11 and E2E-03-05 (labeller only; consent required; export validates against `gold-label-schema` v1 with the tagged frame and player); (b) drill lint: the valid fixture library passes and each of the 5 FR-140 negative fixtures fails naming the drill and its reason; (c) the lint runs as a CI job on the PR | **(a) passed; (b) 1 pass + 5 named failures, 0 wrong verdicts; (c) the CI job exists and was green on the last run at the head** | `junit_rate.py` on the G03-04/G03-06 reports; `racket-drill-lint` (name per ST-053) on the fixtures; `actions_list` | | | |
-| G03-10 | **Accessibility of the Sprint 3 screens** (stats dashboard D, evidence E, deletion X, Full Tag L) and every earlier family: (a) axe serious/critical (WCAG 2.2 AA tags) on every page an E2E test checks; (b) targets below 24×24 CSS px; (c) keyboard-only stats, evidence and Full Tag (E2E-03-05, E2E-03-06); (d) stats at 320 and 360 px with no sideways scrolling (NFR-034) | **(a) 0, with ≥ 1 axe check per family D, E, X, L and per earlier family; (b) 0, with ≥ 1 target check per family D, E, X, L and on the D-01/E-01 empty, loading and error states (E2E-03-09; PD-R1S3-03); (c) passed; (d) passed** | From the G03-06 Playwright JSON report | | | |
-| G03-11 | **Test strength, coverage and speed:** (a) backend changed lines against the Sprint 2 head `ce91984`; analytics line coverage; rules and aggregates; web unit; (b) mutation score on `sports/pickleball/rules` (gate) and on the starter-stats module (first gate); (c) differential oracle; (d) fast tests: domain suite (CI's `DOMAIN_TEST_PATHS`, which must include `tests/unit/analytics`), backend unit, integration | **(a) changed lines ≥ 85%; analytics ≥ 90% line (NFR-071); rules and aggregates ≥ 95% line / ≥ 90% branch; web ≥ 80% line; (b) rules ≥ 0.85; starter stats ≥ 0.80; (c) 100,000 sequences, 0 disagreements; (d) domain < 10 s, unit ≤ 60 s, integration < 10 min, all 0 failed (NFR-073)** | `pytest --cov`, `diff-cover`, `coverage report`, `vitest --coverage`, `mutation_score.py`, `tests.oracle.differential`, `run_with_budget.py` | | | |
-| G03-12 | **Open defects:** blocker or major findings whose latest disposition is open in `docs/sprints/03/review-rounds.md` (which starts with the 14 carried Sprint 2 rows), plus open product-defect rows in `smoke.md` and `blockers.md` not yet in review-rounds, plus open GitHub issues labelled `bug` with `blocker` or `major` | **0** | `scripts/measure/open_defects.py`, GitHub issue search (§4) | | | |
+| G03-01 | **Goal works end to end, live (API, real time).** Runs of the full journey over https through the web origin, each as a fresh account. Every step of a run must pass:<br>1. magic-link sign-in; a doubles match; the 60 s fixture uploaded; "Video received";<br>2. the coach's worked example (14 rallies) tagged; after **each** tag the stats equal the reference for the rallies so far;<br>3. stats = reference for AN-01..AN-07 × 2 sides (k, n, value, Wilson bounds ±0.001, low-sample flag, by-player counts, run histogram, ending mix); `rules_version`, `metric_def_version` and the label "unofficial scoring (rules not yet verified)" present;<br>4. "Show me" for every metric and side with n > 0: ≤ 10 items, total = n, every item behind the metric; the first item's rally video answers Range with 206;<br>5. rally 3 corrected → stats equal the corrected reference;<br>6. a second account → 404 on stats and evidence;<br>7. DELETE the match → 404 on the match and its stats, gone from the list;<br>8. DELETE the account → the old session 401; signing in again with the same address gives an empty account | **5 of 5 runs pass (100%)** | `scripts/measure/live_stats.py --runs 5` | VR3: 5 of 5 runs passed (100%); every step of every run ok; `delete_account` per run `{status 202, old_session 401, items_after_sign_in []}` | yes | VR3, head `fb920bc`, stack `racket-goal03` (https://localhost:43000, fresh volumes and bucket): `live_stats.py --runs 5 … --purge-cmd "$DC exec -T purge python -m racket.platform.purge --once" --json reports/goal03/live-stats.json` → **rc=0 in 23 s**, `runs_passed 5`; failing-keys `jq` prints nothing; run keys `setup, tag_to_stats, stats, evidence, correction, other_account, delete_match, delete_account` all `ok true`; `stats` `diffs []`, `evidence` `problems []` |
+| G03-02 | **Real-time behaviour of the goal steps, live:** (a) tag → stats current, every tag of the 5 G03-01 runs (70 samples); (b) correction → stats current (5 samples, one per run); (c) DELETE match → hidden from the owner (match 404 and not listed), 5 samples | **(a) p95 ≤ 5,000 ms, n ≥ 70 (NFR-017 analogue); (b) p95 ≤ 5,000 ms, n ≥ 5; (c) p95 ≤ 60,000 ms, n ≥ 5 (NFR-066 a, ADR 0006)** | `live_stats.py` summary `tag_to_stats`, `correction_to_stats`, `delete_hidden` | VR3: (a) p95 34.3 ms, n = 70; (b) p95 24.0 ms, n = 5; (c) p95 22.2 ms, n = 5 | yes | VR3, head `fb920bc`: `jq .summary reports/goal03/live-stats.json` → `tag_to_stats` n 70, p50 18.9, p95 34.3, max 47.6, ok true; `correction_to_stats` n 5, p95 24.0, ok true; `delete_hidden` n 5, p95 22.2, ok true |
+| G03-03 | **Purge leaves nothing, live (NFR-066 b):** after the 5 runs, the purge job is run once on the stack; (a) rows in any public table whose `match_id`, `owner_id` or `account_id` column, or `matches.id` / `accounts.id`, holds a deleted match or account id; (b) rally video links taken before deletion and still within their TTL, fetched after the purge; (c) the purge job is scheduled at least daily in Compose (NFR-066 c) | **(a) 0 rows; (b) every checked link 404 (object gone), ≥ 1 link checked; (c) schedule present, interval ≤ 24 h** | `live_stats.py --psql … --purge-cmd …` summary `purge`; `grep` of the scheduler config (§4) | VR3: (a) 0 rows in all 20 columns; (b) 5 links checked, all 404; (c) `purge` service running, `PURGE_INTERVAL_S: "86400"`, first scheduled pass at start ok | yes | VR3, head `fb920bc`: `live_stats.py` `.summary.purge` → `ok true`, every `rows` value 0 (`matches.id`, `accounts.id`, `match_rallies.match_id`, `metric_snapshots.match_id`, `label_sessions.owner_id`, … 20 keys), `media [404,404,404,404,404]`, `problems []` (purge run with `exec -T purge`); `$DC config \| grep -nE 'PURGE_(INTERVAL\|SCHEDULE)'` → `351: PURGE_INTERVAL_S: "86400"`, rc=0; `$DC logs purge` → `purge.schedule.started interval_s 86400`, `purge.run run 1 status ok exit_code 0 next_run_in_s 86400` |
+| G03-04 | **Integration-test pass rate** against real Postgres, the object store and Mailpit: (a) every Sprint 3 IT id IT-03-01..IT-03-14 plus the BOLA matrix with its inventory diff (NFR-051); (b) every Sprint 1 and Sprint 2 IT id (IT-01-01..13 except 11, IT-02-01..12 except 07), the upload-resume regression and the strict sandbox (no regression) | **(a) 100% passed, 0 failed, 0 skipped, every required id present; (b) 100% passed, every id present** | `pytest --junitxml`, `scripts/measure/junit_rate.py` | VR3: (a) IT-03 + BOLA 183/183 (100%), 0 failed, 0 skipped, missing none; (b) earlier 317/317 (100%), missing none; strict sandbox 10/10 | yes | VR3, head `fb920bc`, fresh dev Postgres + fresh dev object store (`RA_DEV_STATE=.local/goal03`) + goal03 Mailpit: backend IT `691 passed, 2 skipped in 390.84s`, rc=0 (the 2 skips are the strict-sandbox file's Compose-only cases, run separately); sandbox on `racket-goal03` → `10 passed`, rc=0; `junit_rate.py` IT-03 → rc=0 `selected 183, passed 183, failed 0, skipped 0, missing []`; earlier → rc=0 `selected 317, passed 317, missing []` |
+| G03-05 | **API read latency and availability, live:** open loop at 50 RPS for 60 s on GET stats, GET evidence (AN-01, side A) and GET match, for a match tagged with the worked example (NFR-010 "dashboard", NFR-041) | **p95 ≤ 300 ms, p99 ≤ 800 ms, availability ≥ 99.5%, 0 unexpected 4xx, achieved rate ≥ 47.5 RPS** | `scripts/measure/stats_latency.py --rps 50 --duration 60` | VR3: p95 32.5 ms, p99 114.9 ms, availability 100% (3,000 requests), 0 unexpected, 50.01 RPS | yes | VR3, head `fb920bc`: `stats_latency.py --api http://127.0.0.1:48000 --seed-api https://localhost:43000/api … --rps 50 --duration 60 --json reports/goal03/stats-latency.json` → rc=0, `ok true`, `p50_ms 14.0`, `p95_ms 32.5`, `p99_ms 114.9`, `max_ms 345.4`, `availability 1.0`, `status_unexpected 0`, `achieved_rps 50.008`. Precondition note: still no SRE dry-run row in §6 (rule 5; VR2-S3-05 open in part) |
+| G03-06 | **E2E pass rate,** Playwright in Chrome for Testing (ADR 0036) over https against the Compose stack, every spec, including:<br>- E2E-03-01 journey v2 (tag → stats = reference → Show me plays → delete match → gone);<br>- E2E-03-02 evidence crawl;<br>- E2E-03-03 definition shown, draft hidden, low-sample text;<br>- E2E-03-04 delete account;<br>- E2E-03-05 Full Tag (labeller tags and exports; player refused);<br>- E2E-03-06 keyboard-only and 320/360 px on stats and evidence;<br>- E2E-03-07 S-01 move offered only on the latest kept rally (C3-03);<br>- E2E-03-08 S-01 "Move back" offered only on the first rally of its game (C3-03);<br>- E2E-03-09 D-01 and E-01 error, empty, nothing-published and loading states with axe and 24x24, and "Show me" opening S-01 at the rally (ST-048; PD-R1S3-03);<br>- every Sprint 1 and Sprint 2 spec, root specs included (no regression) | **100% of non-skipped tests passed, 0 failed, every E2E-03 id present and not skipped; earlier skips ≤ 6, each naming its API binding; 0 flaky over 3 repeats of every spec (NFR-074)** | `playwright test` (junit, json), `junit_rate.py`, `--repeat-each=3`, `flaky_report.py` | VR3: 120 selected: 114 passed, 0 failed, 6 skipped (100% of non-skipped); missing none; 6 skip reasons, all Sprint 1, each naming its API binding; **0 flaky** over ×3 | yes | VR3, head `fb920bc`, Chrome for Testing 141.0.7390.54, `E2E_ADMIN_CMD` on `racket-goal03`: `playwright test --workers=1` → rc=0 in 533 s; `junit_rate.py … --allow-skips` → rc=0 (`selected 120, passed 114, failed 0, skipped 6, rate 1.0, missing []`); `--repeat-each=3` → rc=0, `342 passed, 18 skipped` (26.2 m); `flaky_report.py --fail-on-flaky` → "2 runs, 120 tests, 0 flaky", rc=0. WebKit is not in this count (CI only; no CI run at the head, see G03-09 c) |
+| G03-07 | **Browser timings, live** (`web/e2e/sprint-03/timing.spec.ts`, ST-054; 20 samples each): (a) stats dashboard interactive, warm; (b) "Show me" rally → first video frame playing, 9/1.5 Mbit/s and 4× CPU (reference profile); (c) cumulative layout shift while the stats load (CLS × 1000) | **(a) p95 ≤ 2,000 ms (NFR-011); (b) p95 ≤ 1,500 ms (NFR-014); (c) p95 = 0 (NFR-039); each ≥ 20 samples** | `scripts/measure/pw_timings.py` on the timing JSON report | VR3: (a) p95 231 ms, n = 20; (b) p95 837 ms, n = 20; (c) CLS × 1000 p95 = 0, n = 20 | yes | VR3, head `fb920bc`: `playwright test e2e/sprint-03/timing.spec.ts --repeat-each=20` → rc=0, `40 passed (2.8m)`; `pw_timings.py … --min-n 20` → rc=0, `ok true`: dashboard-interactive n 20, p50 180.3, p95 231.2; show-me-first-frame n 20, p50 731.5, p95 837.4, max 933.6; layout-shift n 20, p95 0.0, max 0.0; `unchecked []` |
+| G03-08 | **Metric correctness:**<br>(a) golden matches GS-AN-1, **v2** since `7a6ffe5` (AN-07 rule 0.3 per share, AN-06 `longest_by_game`; TCR row "GS-AN-1 v2"; v1 at planning; wording amended by the engineering-manager at the close, 2026-10-08, PE-R2S3-04-FOLLOWUP; VR3 measured v2) (3 matches × every coach-reviewed metric × 2 sides) equal the coach's hand counts exactly (NFR-004), and the manifest check passes (FR-151, NFR-078);<br>(b) FR-101 examples and ADR 0005 thresholds (8/4, 20/10, 40/22, one game) as executable scenarios;<br>(c) FR-109 attribution conservation, property suite at ≥ 1,000 generated matches;<br>(d) metric dictionary: draft entries absent, a definition change bumps the version (FR-102);<br>(e) the coach's review record lists every shown entry as `coach-reviewed` with its QD-AN-03 evidence | **(a) 100% exact, 0 mismatches, manifest rc=0; (b) 100% passed; (c) 0 violations, ≥ 1,000 examples; (d) 100% passed; (e) every entry the API shows is `coach-reviewed` or `verified` in metric-dictionary §3** | `pytest -m golden_an`, `-m "analytics and scenario"`, `-m conservation`, `racket-manifest-check`, a `grep` | VR3: (a) 31/31, 0 mismatches, manifest rc 0; (b) 15/15; (c) 1,000 examples, 0 failing; scenario 1/1; (d) draft-hidden and definition-shown passed; (e) 7 metrics returned live, 7 dated `coach-reviewed` rows | yes | VR3, head `fb920bc`, fresh dev Postgres: `pytest -m golden_an` → `31 passed`, rc=0; `-m "analytics and scenario"` → `15 passed`, rc=0; `-m conservation` → `1 passed`; property → `1000 passing, 0 failing, and 64 invalid`, `max_examples=1000`; `racket-manifest-check tests/regression/golden_matches` → `OK … GS-AN-1 v2, 6 files`, rc=0; `junit_rate.py` golden rc=0 (31/31), analytics rc=0 (15/15, missing []), conservation rc=0 (2/2); (e) grep → 7; live: 7 metrics in the stats response (demo walk §9.5). **Provisional line:** 15 of the 21 frozen-value comparisons are AN-01/02/03/05/06 (3 matches × 5, `@needs-verification`), counted from `golden-an.xml` |
+| G03-09 | **Full Tag and drill lint:** (a) IT-03-11 and E2E-03-05 (labeller only; consent required; export validates against `gold-label-schema` v1 with the tagged frame and player); (b) drill lint: the valid fixture library passes and each of the 5 FR-140 negative fixtures fails naming the drill and its reason; (c) the lint runs as a CI job on the PR | **(a) passed; (b) 1 pass + 5 named failures, 0 wrong verdicts; (c) the CI job exists and was green on the last run at the head** | `junit_rate.py` on the G03-04/G03-06 reports; `racket-drill-lint` (name per ST-053) on the fixtures; `actions_list` | VR3: (a) IT-03-11 15/15 and E2E-03-05 1/1 passed; (b) 1 pass + 5 named failures, 0 wrong verdicts; (c) the `drill-lint` job exists in `ci.yml`, but **no CI run at the head** (origin `sprint-03` is `723bb7f`, 7 commits behind; latest ci.yml run 37643676432 at `09f1f67`, failure) | no | VR3, head `fb920bc`: `junit_rate.py --include test_it_03_11_` → rc=0 (15/15); `--include E2E-03-05` → rc=0 (1/1); `racket-drill-lint ../content/drills` → `ok, 0 problem(s), metric dictionary v0.1`, rc=0; 5 files in `backend/tests/fixtures/drills-invalid/` → rc=1 each (`criterion no number`, `duration over 45`, `no source`, `progression cycle`, `unknown metric: AN-99`, each naming its drill id); `grep -n drill-lint .github/workflows/ci.yml` → job at line 155, needed by `ci-gate` (line 590); `git fetch origin sprint-03` → `723bb7f`, `git rev-list --count FETCH_HEAD..HEAD` → 7; `actions_list list_workflow_runs ci.yml branch sprint-03` → 4 runs, latest 37643676432 at `09f1f67` (conclusion failure); none at `fb920bc`. Cannot run in this sandbox: a CI run needs the push and a dispatch on GitHub |
+| G03-10 | **Accessibility of the Sprint 3 screens** (stats dashboard D, evidence E, deletion X, Full Tag L) and every earlier family: (a) axe serious/critical (WCAG 2.2 AA tags) on every page an E2E test checks; (b) targets below 24×24 CSS px; (c) keyboard-only stats, evidence and Full Tag (E2E-03-05, E2E-03-06); (d) stats at 320 and 360 px with no sideways scrolling (NFR-034) | **(a) 0, with ≥ 1 axe check per family D, E, X, L and per earlier family; (b) 0, with ≥ 1 target check per family D, E, X, L and on the D-01/E-01 empty, loading and error states (E2E-03-09; PD-R1S3-03); (c) passed; (d) passed** | From the G03-06 Playwright JSON report | VR3: (a) 0 serious/critical over 55 axe attachments, families D, E, X, L and every earlier family present; (b) 0 below 24×24, D, E, X, L and D-01/E-01 empty, loading, error all present; (c) E2E-03-05 and E2E-03-06 keyboard passed; (d) stats and evidence at 320/360 passed | yes | VR3, head `fb920bc`, from `reports/goal03/e2e.json`: axe attachments 55, `axe serious/critical` errors 0; axe names include `D-01`, `D-01-definitions/-empty/-loading/-error`, `E-01`, `E-01-empty/-error/-loading/-keyboard`, `E-02-empty`, `X-01`, `X-02`, `L-01` and A, F, G, H, K, M, Q, S, T, U, V families; `targets below 24x24` errors 0; `targets-` names include `D-01`, `D-01-320/360`, `D-01-empty/-loading/-error`, `D-01-not-found-320/360`, `E-01-320/360`, `E-01-empty/-error/-loading`, `E-02-empty`, `X-01`, `X-02`, `L-01`; E2E-03-05, E2E-03-06 keyboard, 320 px, 360 px and not-found 320/360 among the passed (`e2e.xml`, 0 failures). Manual screen-reader pass (NFR-027 b) is not part of this row (§4 G03-10, S3-DoD-P6) |
+| G03-11 | **Test strength, coverage and speed:** (a) backend changed lines against the Sprint 2 head `ce91984`; analytics line coverage; rules and aggregates; web unit; (b) mutation score on `sports/pickleball/rules` (gate) and on the starter-stats module (first gate); (c) differential oracle; (d) fast tests: domain suite (CI's `DOMAIN_TEST_PATHS`, which must include `tests/unit/analytics`), backend unit, integration | **(a) changed lines ≥ 85%; analytics ≥ 90% line (NFR-071); rules and aggregates ≥ 95% line / ≥ 90% branch; web ≥ 80% line; (b) rules ≥ 0.85; starter stats ≥ 0.80; (c) 100,000 sequences, 0 disagreements; (d) domain < 10 s, unit ≤ 60 s, integration < 10 min, all 0 failed (NFR-073)** | `pytest --cov`, `diff-cover`, `coverage report`, `vitest --coverage`, `mutation_score.py`, `tests.oracle.differential`, `run_with_budget.py` | VR3: (a) changed lines 94% (1,758 lines, 91 missing); analytics 98.1% line (461/470); rules + aggregates 99.57% line / 98.41% branch; web 91.64% lines; (b) rules 0.8635 (386/447), starter stats 0.9251 (309/334); (c) 100,000 sequences, 0 disagreements; (d) domain 8.0 s, unit 12.2 s, integration 350.1 s, all 0 failed | yes | VR3, head `fb920bc`, fresh dev Postgres + object store: coverage run → `2664 passed, 1 skipped, 22 deselected in 664.56s`, rc=0; `diff-cover==10.6.0 … --compare-branch=ce91984 --fail-under=85` → `Coverage: 94%`, rc=0; analytics `coverage report --fail-under=90` rc=0 (`coverage-backend.json`: 461/470 lines, 100/104 branches); rules `coverage json` → lines 918/922, branches 309/314; vitest `68 files, 580 passed`, `Lines 91.64% (6677/7286)`; oracle rc=0 `{sequences: 100000, disagreements: 0}`; `mutation_score.py` rules rc=0 `status measured, score 0.8635`; starter stats rc=0 `score 0.9251`; `DOMAIN_TEST_PATHS` includes `tests/unit/analytics`; budgets: 10 → `1199 passed, 1 skipped in 6.99s`, `finished in 8.0s`, rc=0; 60 → `1833 passed … 10.89s`, `12.2s`, rc=0; 600 → `592 passed, 2 skipped in 346.16s`, `350.1s`, rc=0 |
+| G03-12 | **Open defects:** blocker or major findings whose latest disposition is open in `docs/sprints/03/review-rounds.md` (which starts with the 14 carried Sprint 2 rows), plus open product-defect rows in `smoke.md` and `blockers.md` not yet in review-rounds, plus open GitHub issues labelled `bug` with `blocker` or `major` | **0** | `scripts/measure/open_defects.py`, GitHub issue search (§4) | VR3: 3 open blockers (PE-R1S3-01/QA-R1S3-04, PD-R1S3-01, PD-R1-06/DR-01/DR-02 group); GitHub 0 | no | VR3, head `fb920bc`: `open_defects.py --json reports/goal03/open-defects.json docs/sprints/03/review-rounds.md` → rc=1, `open 3` (lines 413, 414, 415/272); `search_issues` `is:open label:bug` in nhuthuynh/racket-analytics → `total_count 0`; smoke.md/blockers.md: no open product-defect row outside review-rounds. All three need roles other than the verifier (PR merge by the orchestrator/reviewers/PO; BA and PM decider cells; the FE screen walk with the chair) |
 
 **Overall:** the Sprint 3 goal is met only when all 12 rows are "yes". A row whose method could not run is "no", never "n/a" (fail closed, ADR 0014). `@needs-verification` results never count toward a Must FR (QD-QG-P5): metrics that read the provisional score sequence (AN-01, AN-02, AN-03, AN-05, AN-06) are reported on their own line in G03-08. Human-gated rows (sprint-03 §0.4) stay in G03-12 unless the PO chose option (b) in writing before the verifier runs.
 
 **Status note (engineering-manager, review round 1, 2026-10-07; not a verifier result):** the goal is **not met**. The stats, evidence, delete-match and delete-account routes are not served at `15a7551` (openapi: no `/stats` or `/evidence` path; `/matches/{match_id}` and `/me` have only `get`), and `api-sprint-03.md` and `flows-sprint-03.md` do not exist. The pre-review smoke at `316a514` gives `live_stats.py` rc 1, runs passed 0/1 (QA-R1S3-06). G03-12 at this step: `open_defects.py` rc=1, open 9. Under PO P12 (b), C-06, SEC-RV3-01 and BLK-GOLD-01 are sprint-DoD rows (sprint-03 §9.1), not G03-12 rows.
+
+**Verification round 1 (2026-10-07, head `fdeeb53`; §7): met 0 / 12.** Goal not met.
+
+**Verification round 2 (2026-10-07, head `593f7ff`; §8): met 2 / 12** (G03-02, G03-05). Goal not met. VR2's values are in §8.3.
+
+**Verification round 3 (2026-10-08, head `fb920bc`; §9): met 10 / 12.** Goal not met: G03-09 (no CI run at the head) and G03-12 (3 open blockers). The table above holds the VR3 values.
+
+**Release CI (sre-devops-engineer, 2026-10-08, PR #4; not a verifier result; decision-log row of this date):** CI metric on the PR head: the `drill-lint` job **succeeded** on runs 37715576115 (`2ba4dd1`) and 37718386760 (`f554edd`), which closes the "no CI run at the head" gap of G03-09 (c) for the job itself. `ci-gate` is **failure** on both runs: PR policy (PR size, no EM size waiver), Integration (600 s NFR-073 budget exceeded, exit 124) and E2E (WebKit PD-R3S2-02 only, at `f554edd`). At `7ef4c50` (run 37719909230) Integration passed (542 s), so `ci-gate` is red on PR policy (size) and the WebKit PD-R3S2-02 E2E test only. Per-job detail: `ci-status.md`. Final head result: `ci-status.md` last row. **CI metric (G03-09 c, `ci-gate` on the PR head): not met.**
 
 ## 3. Rules for the verifier
 
@@ -240,7 +248,7 @@ jq -r '[.. | objects | select(has("attachments")) | .attachments[] | select(.nam
 
 - Screen families D (dashboard), E (evidence), X (deletion), L (Full Tag) with the screen ids of `flows-sprint-03.md` (PD-1). E2E-03-05, E2E-03-06 and the 320/360 px cases must be among the passed cases of `e2e-rate.json`.
 - (b) counts only when every family D, E, X, L has a `targets-` attachment and the D-01/E-01 empty, loading and error states have theirs (E2E-03-09; PD-R1S3-03, decision-log 2026-10-07); a family without one is "no", not 0.
-- The manual screen-reader pass (NFR-027 b, C3-06) is a human item; while open it counts in G03-12. PO P12 option (b) moved it out of the goal: it is sprint-DoD row S3-DoD-P6 "not met: waiting on P6" and not in G03-12 (decision-log 2026-10-07).
+- The manual screen-reader pass (NFR-027 b, C3-06) is a human item. Under PO P12 option (b) it is **deferred** (ADR 0030 rule 1) to sprint-DoD row S3-DoD-P6 "not met: waiting on P6" and is **not counted in G03-12** (decision-log 2026-10-07; EM reconciliation in review round 2, review-rounds.md). It is not part of G03-10's pass either: G03-10 counts only the automated checks, and NFR-027 (b) stays not met for Sprint 3.
 
 ### G03-11: test strength, coverage and speed
 
@@ -324,4 +332,285 @@ One row per method, written by its author after an end-to-end run on an isolated
 | G03-08 correctness | senior-qa-engineer with pickleball-domain-coach | `fb69a7d` | 1 | 2026-10-07 | Dry-run 1: `golden_an` 28/31 (3 = hand count, COACH-1); `analytics and scenario` 0/15 (routes, ST-046); conservation scenario 1/1 and the property `1000 passing, 0 failing`; manifest rc=0; (e) 0 dated `coach-reviewed` rows. Method changed (3 defects): the 1,000-example property is in `tests/unit/analytics` and was not selected by `-m conservation`; `--require 'Low-sample'` matched no test id (`test_lowsample_flag`); the (e) grep counted the undated "(planned)" row |
 | G03-09 Full Tag and lint | senior-ml-cv-engineer with senior-qa-engineer | `bac3d81` | 1 | 2026-10-07 | Dry-run 1 by the QA co-author (the ML author's own row still due): (b) `racket-drill-lint ../content/drills` → `ok, 0 problem(s)`, rc=0, and each of the 5 negative fixtures rc=1 naming its drill and FR-140 reason (met at this head); (a) IT-03-11 and E2E-03-05 red until ST-052; (c) `grep -i drill .github/workflows/ci.yml` → nothing: no lint job in CI yet (SRE/ML), so (c) is "no". Method unchanged |
 | G03-11 strength, coverage, speed | senior-qa-engineer | `4fff02c` | 1 | 2026-10-07 | Dry-run 1, dev Postgres + object store: coverage run `2224 passed, 1 failed` (the BOLA inventory guard, QA's own regression QA-R1S3-03, fixed in `99a711f`); diff-cover vs `ce91984` 96% of 584 lines, rc=0; analytics 99.56% line / 98.57% branch; rules + aggregates 99.57% / 98.41%; web lines 91.84% (477 tests); oracle 100,000 sequences, 0 disagreements; mutation rules 0.8635 (386/447), starter stats 0.8698 (274/315); `DOMAIN_TEST_PATHS` includes `tests/unit/analytics`; domain 1110 passed in 8.5 s of 10; unit 1620 passed in 12.2 s of 60; integration 264 s of 600 but `50 failed, 50 errors`, all IT-03 `red_until` rows (the budget command does not exclude `red_until`, so (d) stays "no" until those stories land: intended). Note: the two `coverage report` lines must run before the mutation steps, which delete `backend/.coverage` (order as written) |
-| G03-12 open defects | engineering-manager | | | | |
+| G03-12 open defects | engineering-manager | `661f6c9` | 1 | 2026-10-07 | Dry-run 1 (late, after VR1; VR1-S3-03), whole method: `open_defects.py --json <scratch>/dry/open-defects.json docs/sprints/03/review-rounds.md` → rc=1, open 4 (PD-R1S3-01, PD-R1-06 group, PE-R1S3-01, QA-R1S3-06), JSON written; negative: the same script on `progress.md` → rc=2 (fails closed); `search_issues` `is:open label:bug` → 0; `smoke.md`, `blockers.md` → no Severity table (rc=2 each), `grep -i 'product.defect'` → none. Method unchanged |
+
+## 7. Verification round 1 (2026-10-07; senior-qa-engineer with sre-devops-engineer, independent verifiers)
+
+**Totals: 0 of 12 met.** The Sprint 3 goal is **not met** and was **not demonstrated** on the live stack. The cause is the same for most rows: the Sprint 3 stories ST-046, ST-047, ST-050, ST-051 and ST-052 are not built at the head. There is no stats, evidence, DELETE match, DELETE account or purge route, and no `racket.platform.purge` or `racket.dataset.admin` module. The platform underneath works: every Sprint 0-2 IT and E2E passed, with no regression.
+
+### 7.1 Stack under test
+
+- **Head:** `fdeeb53` (`git rev-parse HEAD`), branch `sprint-03`, clean tree.
+- **Preflight:** `bash scripts/disk-precheck.sh` gave rc=0 with 13 GB free. `scripts/dev-chrome.sh` reports Chrome for Testing 141.0.7390.54.
+- **Stack:** Compose project `racket-goal03`, built from this tree, fresh volumes (`ps -a` and `volume ls` were empty before the start). Ports were remapped as in §4.0, with `RA_DEV_STATE=.local/goal03`.
+- **Start:** `flock .local/evidence-e2e.lock $DC up -d --build --wait` returned rc=0 in 1 m 53 s, and all 9 long-running services were healthy.
+  - **Deviation from §4.0 (method defect, routed to sre-devops-engineer):** the first `up --build` failed with rc=1, `invalid peer certificate: UnknownIssuer` in `uv sync`. `infra/compose.yaml` has no way to pass the `extra_ca` build secret that `docs/process/ci-cd.md` requires behind the sandbox proxy.
+  - **Workaround:** the verifier added a local, uncommitted override `.local/goal03/build-ca.override.yaml` (top-level `secrets.extra_ca.file: /root/.ccr/ca-bundle.crt` plus `build.secrets: [extra_ca]` on migrate, api, worker, mailer and web). `DC` therefore carries `-f .local/goal03/build-ca.override.yaml`.
+- **Front door:** `http://localhost:43000/` returned 400. `https://localhost:43000/` with `--cacert root.crt` returned 200, and `/api/healthz` returned `{"status":"ok"}`. Alembic is at `0013`.
+- **Routes:** the openapi at the head has 14 match paths. None is `/stats` or `/evidence`. `/matches/{match_id}` and `/me` serve `get` only.
+- **G03-04, 08 and 11:** these ran on `scripts/dev-postgres.sh` and `scripts/dev-objectstore.sh`, with the goal03 Mailpit (`127.0.0.1:48025`, SMTP `41025`).
+- **Teardown:** `flock … $DC down -v --rmi local --remove-orphans` returned rc=0, leaving 0 `racket-goal03` containers and 0 volumes. Dev Postgres and the object store were stopped.
+- **Disk:** `df -h /` showed 14G free at the start, 9.4G before a prune, 14G after `docker builder prune -af` (4.933 GB reclaimed, ops/disk-and-prune.md step 2), 11G before teardown and 14G after.
+- **Reports:** under `reports/goal03/` (git-ignored).
+
+### 7.2 Preconditions (§3), checked before trusting the methods
+
+| Rule | Status |
+|---|---|
+| 5 Dry-run first | **Not complete.** G03-05 (`stats_latency.py`, SRE) and G03-12 (`open_defects.py`, EM) have no dry-run row in §6. The ML author's own G03-09 row is still due. The verifier ran every method anyway and reports what it gave |
+| 6 Reconciliation first | **Not complete.** The reconciliation-log table in `review-rounds.md` has only the Planning row. The EM's round-2 dispositions exist (`review-rounds.md` line 252), but there is no reconciliation row for round 1 or round 2 |
+
+### 7.3 Summary
+
+| ID | Target (short) | Actual | Met | Owner to fix |
+|---|---|---|---|---|
+| G03-01 | 5/5 live journeys | 0/5 (`stats` 404, `evidence` no items, DELETE match and `/me` 405) | no | senior-backend-engineer (ST-046, ST-047, ST-050, ST-051) |
+| G03-02 | tag/correction → stats p95 ≤ 5 s; delete hidden p95 ≤ 60 s | n = 0 / 0 / 0 | no | senior-backend-engineer |
+| G03-03 | purge leaves 0 rows, links 404, schedule ≤ 24 h | 14 columns with rows left, 0 links checked, no purge module, no schedule | no | senior-backend-engineer (ST-050) with sre-devops-engineer (Compose schedule) |
+| G03-04 | IT-03 100%; earlier 100% | IT-03 64/177 (36.2%); earlier 317/317; sandbox 10/10 | no | senior-backend-engineer |
+| G03-05 | p95 ≤ 300 ms at 50 RPS | not measured (stats never reachable, rc=1 before load) | no | senior-backend-engineer (route), then sre-devops-engineer (dry-run row) |
+| G03-06 | 100% non-skipped, every E2E-03 id, 0 flaky | 97/113 non-skipped (16 failed, all Sprint 3), 6 named skips, 0 flaky | no | senior-frontend-engineer (D/E/X/L screens, ST-048), after the backend routes |
+| G03-07 | dashboard ≤ 2 s, first frame ≤ 1.5 s, CLS 0 | n = 0 for all three | no | senior-frontend-engineer |
+| G03-08 | golden 100%, scenarios 100%, conservation, review record | golden 31/31, manifest rc 0, conservation 1,000/0; **scenarios 0/15** | no | senior-backend-engineer |
+| G03-09 | Full Tag IT and E2E; lint 1 + 5; CI job green at the head | lint 1 + 5 correct; IT-03-11 0/15; E2E-03-05 fails (no `racket.dataset.admin`); no CI run at the head | no | senior-ml-cv-engineer (ST-052) |
+| G03-10 | axe 0 and targets 0 with D/E/X/L coverage; keyboard; 320/360 | axe 0 of 40 but no D/E/X/L page; 2 target failures (D-01 not-found 320/360, QA-R1S3-01) | no | senior-frontend-engineer |
+| G03-11 | coverage, mutation, oracle, budgets | coverage met (96%, 99.15%, 99.57/98.41%, 91.84%), oracle 100,000/0; **mutation not scored** (both rc=1); integration budget 229 s but 63 failed, 50 errors | no | senior-qa-engineer (mutation harness, see 7.4); senior-backend-engineer (IT reds) |
+| G03-12 | 0 open blocker/major | 4 open blockers; GitHub 0 | no | engineering-manager |
+
+**Met: 0 / 12.**
+
+### 7.4 New findings from this round (Open rows go to `review-rounds.md` through the EM's reconciliation)
+
+| Id | Severity | Finding | Owner |
+|---|---|---|---|
+| VR1-S3-01 | major | **The mutation gate cannot score at the head** (NFR-072). `mutation_score.py` gives rc=1 with `status: not_checked` for both targets, because mutmut's clean test run inside `backend/mutants/` fails. `tests/unit/analytics/test_stats_contract_doc.py` (`38b5da4`) reads `docs/architecture/api-sprint-03.md`, and `tests/unit/sports/pickleball/test_metric_dictionary_status_sync.py` reads `docs/domain/metric-dictionary.md`, both through a path relative to the backend root that `mutants/` does not contain (`FileNotFoundError: …/backend/docs/…`). The CI nightly mutation job is affected the same way. Fix: `--ignore` these doc-sync tests in the mutation runs, or resolve the docs path from the repo root. Needs a TCR row if a test changes | senior-qa-engineer |
+| VR1-S3-02 | minor | **`compose up --build` cannot build behind a TLS-intercepting proxy without a local override.** `infra/compose.yaml` passes no `extra_ca` build secret, so goal-scorecard §4.0 cannot run as written in this sandbox | sre-devops-engineer |
+| VR1-S3-03 | minor | The §3 rule 5 and rule 6 preconditions were not met before verification: no G03-05 or G03-12 dry-run row, and no round-1 or round-2 reconciliation row (7.2) | engineering-manager |
+
+### 7.5 Sprint demo script (sprint-03 §12), run in real time on `racket-goal03`
+
+The walk ran on 2026-10-07 from 18:52:43 UTC. The API steps used the verifier's scratch script (`demo_walk.py`, built on `scripts/measure` helpers; log in `reports/goal03/demo-walk.txt`). The browser steps were the E2E run above.
+
+| Step | What happened | Result |
+|---|---|---|
+| 1 Sign in, tagged worked-example match | Sign-in 0.65 s, match created, video `video_received` at 0.88 s, game started 201, the 14 worked-example rallies tagged at 201 each by 1.16 s, score sheet 200 | works |
+| 2 Stats: 7 cards per side, n, ranges, low sample, notice | `GET /matches/{id}/stats` returned 404 `not_found`. E2E-03-03 failed and no stats page exists | **fails** |
+| 3 "Show me" plays the rallies | `GET …/stats/AN-01/evidence?side=A` returned 404. E2E-03-02 failed | **fails** |
+| 4 Correct rally 3; "Rallies won when receiving" 33% → 40% | The rally can be corrected (Sprint 2), but there are no stats to show the change. `live_stats` `correction` returned 404 | **fails** |
+| 5 360 px stacked cards, AN-07 bar | No stats page. E2E-03-06 at 320/360 failed | **fails** |
+| 6 Delete the match; purge log; empty inventory | `DELETE /matches/{id}` returned 405, and the match is still listed. Purge: `No module named racket.platform.purge` | **fails** |
+| 7 Delete the account from a second session; first signed out | `DELETE /me` returned 405, and the first session's `GET /me` still returned 200 | **fails** |
+| 8 Labeller Full Tag, export validates; player gets not found | `python -m racket.dataset.admin` gave `No module named racket.dataset.admin`. E2E-03-05 failed | **fails** |
+| 9 Drill lint | Valid library `ok, 0 problem(s)` with rc 0. Each of the 5 negative files gave rc 1 and named its drill and reason | works |
+| 10 Scorecard and test report | This section: 0/12 met; golden 31/31; conservation 1,000/0; mutation not scored; evidence crawl failed; open defects 4 | shown, goal not met |
+| 11 PO questions | Not a verifier step | n/a |
+
+**Verdict:** the demo cannot be given. Only steps 1 and 9 work end to end.
+
+**Not runnable in this sandbox:** WebKit (CI only). Its result belongs to the CI E2E job, and the last run at `09f1f67` failed, which counts in G03-12. That is not in this round's totals.
+
+## 8. Verification round 2 (2026-10-07; senior-qa-engineer with sre-devops-engineer, independent verifiers)
+
+**Totals: 2 of 12 met** (G03-02, G03-05). The Sprint 3 goal is **not met**. Much more of it now works live than in round 1. Stats, evidence, the correction recompute, delete match, delete account and the purge all work on the live HTTPS stack. The demo walk shows the coach's worked-example numbers. What still blocks the goal:
+
+- harness and test-side defects whose fixes wait on undecided TCR rows;
+- two front-end defects (CLS 52; the not-found page answers 200), one flaky E2E and one timing sample that timed out;
+- stale `red_until` markers that drop the IT-03 tests out of the coverage gate;
+- no Compose purge schedule;
+- no CI run at the head;
+- 4 open blockers.
+
+### 8.1 Stack under test
+
+- **Head:** `593f7ff` (`git rev-parse HEAD`), branch `sprint-03`, clean tree.
+- **Preflight:** `bash scripts/disk-precheck.sh` gave `ok, 13 GB free` (rc=0). `scripts/dev-chrome.sh` reports Chrome for Testing 141.0.7390.54.
+- **Clean state:**
+  - The VR1 reports were moved to `reports/goal03-vr1/`.
+  - `.local/goal03` was deleted and rebuilt from `infra/env.example` as in §4.0.
+  - Before the start there were 0 `racket-goal03` containers and 0 volumes, so the database volume and the object-store bucket are new.
+- **Start:** `flock .local/evidence-e2e.lock $DC up -d --build --wait` returned rc=0 in 40 s from the build cache, and all 9 long-running services were healthy.
+  - `DC` still carries `-f .local/goal03/build-ca.override.yaml`. VR1-S3-02 is still open: `infra/compose.yaml` has no `extra_ca` build secret.
+  - The image was built from the head: `python -c "import racket.platform.purge, racket.dataset.admin"` in `api` printed `mods ok`.
+- **Front door:** `http://localhost:43000/` returned 400. `https://localhost:43000/` with `--cacert root.crt` returned 200, and `/api/healthz` returned `{"status":"ok"}`. Alembic is at `0017`.
+- **Openapi:** `/matches/{match_id}` serves `delete` and `get`, and `/me` serves `delete` and `get`. These paths now exist: `/matches/{match_id}/stats`, `/matches/{match_id}/stats/{metric_id}/evidence`, `/label/matches/{match_id}` (with `/events` and `/export`).
+- **G03-04, 08 and 11:** these ran on `scripts/dev-postgres.sh` and `scripts/dev-objectstore.sh`, with the goal03 Mailpit.
+- **Teardown:**
+  - `flock … $DC down -v --rmi local --remove-orphans` returned rc=0, leaving 0 containers and 0 volumes.
+  - Dev Postgres and the object store were stopped (rc 0 each).
+  - The verifier's mutant copies under `reports/` were deleted.
+- **Disk:** `df -h /` showed 14G free at the start, 7.8G before teardown, 9.7G after teardown and 11G after removing the mutant copies.
+- **Reports:** under `reports/goal03/` (git-ignored).
+
+### 8.2 Preconditions (§3)
+
+| Rule | Status |
+|---|---|
+| 5 Dry-run first | **Still incomplete.** G03-05 (`stats_latency.py`, SRE) has no row in §6. The verifier ran it and reports the measurement. It met its target, and the row is counted as met because the method ran end to end as written. The missing row is a process finding (VR2-S3-05) |
+| 6 Reconciliation first | Met. The EM's goal-round-1 reconciliation rows exist in `review-rounds.md` (VR1-S3-03 Fixed) |
+
+### 8.3 Summary
+
+| ID | Target (short) | Actual (VR2) | Met | Owner to fix |
+|---|---|---|---|---|
+| G03-01 | 5/5 live journeys | 0/5. Steps 1-7 pass 5/5. Step 8 fails in every run because the harness reuses the spent Mailpit link (BE-GR1-01). The product passed a manual check | no | senior-qa-engineer (BE-GR1-01, `live_stats.py`) |
+| G03-02 | p95 ≤ 5 s / 5 s / 60 s | 18.2 ms (n 70) / 21.5 ms (n 5) / 41.8 ms (n 5) | **yes** | — |
+| G03-03 | 0 rows, links 404, schedule ≤ 24 h | 0 rows in all 20 columns, 5/5 links 404, **no `purge` service or schedule** | no | sre-devops-engineer (Compose `purge` service with `PURGE_INTERVAL_S`, SRE-PURGE slice b) |
+| G03-04 | IT-03 100%; earlier 100% | IT-03 162/177; earlier 316/317 (IT-02-05 inventory); sandbox 10/10 | no | senior-qa-engineer (decide the TCR rows for `bola.py` and IT-03-11 `_received`) |
+| G03-05 | p95 ≤ 300, p99 ≤ 800, ≥ 99.5%, ≥ 47.5 RPS | 17.9 ms / 53.2 ms / 100% / 50.0 RPS, 0 unexpected | **yes** | — (sre-devops-engineer still owes the §6 dry-run row) |
+| G03-06 | 100% non-skipped, 0 flaky | 108/113, 5 failed (E2E-03-02, -04, -05, -06 ×2), 1 flaky (E2E-03-08 loading) | no | senior-qa-engineer (G03-FE-R1-01/02, the E2E-03-05 and FE-404 TCR rows); senior-frontend-engineer (the E2E-03-08 flake) |
+| G03-07 | 2 s / 1.5 s / CLS 0, n ≥ 20 each | 434 ms (n 20) / 604 ms (**n 19**) / **CLS 52** | no | senior-frontend-engineer (`d590a1c` route groups to `sprint-03`; the show-me first-frame timeout) |
+| G03-08 | golden, scenarios, conservation, review record 100% | golden 31/31, manifest 0, conservation 1,000/0, (e) 7/7; **scenarios 13/15** | no | senior-qa-engineer (TCR rows `test_starter_stats.py`, `test_metric_evidence.py`) |
+| G03-09 | Full Tag IT and E2E; lint; CI at head | lint 1 + 5 correct; IT-03-11 4/15; E2E-03-05 fails; no CI run at the head | no | senior-ml-cv-engineer (IT-03-11/E2E-03-05 with QA's TCR decision); sre-devops-engineer (push and dispatch CI) |
+| G03-10 | axe 0 and targets 0 with D/E/X/L and states; keyboard; 320/360 | axe 0/53 and targets 0 with D/E/X/L; **no `E-01-empty` target check**; E2E-03-05 fails | no | senior-qa-engineer (E-01 empty-state check in `states.spec.ts`) |
+| G03-11 | coverage, mutation, oracle, budgets | **changed lines 78%**; analytics 90.4%; rules 99.57/98.41%; web 91.67%; mutation 0.8635 / 0.9251; oracle 100,000/0; integration 283 s, **14 failed** | no | senior-qa-engineer (stale IT-03 `red_until` markers, BOLA TCR) |
+| G03-12 | 0 | 4 open blockers; GitHub 0 | no | engineering-manager |
+
+**Met: 2 / 12.**
+
+### 8.4 New findings from this round (Open rows go to `review-rounds.md` through the EM's reconciliation)
+
+| Id | Severity | Finding | Owner |
+|---|---|---|---|
+| VR2-S3-01 | major | **The IT-03 files still carry `pytestmark = red_until(story=…)` although their stories are built and the rows pass in G03-04.** The coverage and gate selection `not red_until` therefore drops them. Diff coverage falls to 78% (e.g. `analytics/api.py` 54.7%, `platform/purge.py` 59.6%), and the per-PR gate does not run the Sprint 3 ITs. Fix: remove the markers for built stories, with a TCR row | senior-qa-engineer |
+| VR2-S3-02 | major | **No Compose `purge` service or schedule** (NFR-066 c). The contract (decision-log 2026-10-07, principal-engineer) names a `purge` service, and `statscontract.PURGE_SERVICE = "purge"`, but `docker compose config --services` has none. `infra/docker/purge_schedule.py` exists but is not wired in | sre-devops-engineer |
+| VR2-S3-03 | minor | **Flaky E2E-03-08 loading** (1 of 3 repeats): "D-01 never asked the API for its numbers in the browser" (NFR-074) | senior-frontend-engineer |
+| VR2-S3-04 | minor | **One `show-me-first-frame` sample in 20 timed out at 60 s** under the reference profile (`window.__s3.firstFrame` never set). The run has only 19 samples | senior-frontend-engineer |
+| VR2-S3-05 | minor | The G03-05 dry-run row is still missing from §6 (rule 5), and the scorecard §4 G03-03 command still names `api`, not the contract's `purge` service | sre-devops-engineer |
+
+### 8.5 Sprint demo script (sprint-03 §12), run in real time on `racket-goal03`
+
+The walk ran on 2026-10-07 from 21:52:00 UTC. The API steps used the verifier's scratch script (`demo_walk.py`, built on `scripts/measure` helpers; log in `reports/goal03/demo-walk.txt`). The browser steps are the E2E run of 8.3.
+
+| Step | What happened (elapsed time) | Result |
+|---|---|---|
+| 1 Sign in, tagged worked-example match | Sign-in 200 (1.68 s), match created, `video_received` (1.91 s), game 201, 14 rallies tagged (2.37 s) | works |
+| 2 Stats: 7 cards, n, range, low sample, notice | 7 metrics, label `unofficial scoring (rules not yet verified)`, rules `PROVISIONAL-UNVERIFIED`, definitions `0.1`. AN-01 A: k 4, n 7, 0.5714, `low_sample true` (57%, n = 7, as scripted). In the browser, E2E-03-03 (definition, draft hidden, low sample) passed | works |
+| 3 "Show me" on "Rallies won on serve" | AN-01 A evidence: 7 items, total 7. The first rally's video answered Range with 206. In the browser, E2E-03-01 passed, but the crawl E2E-03-02 failed (test-side, G03-FE-R1-01) | works (API); crawl red |
+| 4 Correct rally 3 | 200. AN-02 A changed from 0.3333 (n 6) to 0.4 (n 5), as scripted (33% → 40%), with stats current in < 0.6 s | works |
+| 5 360 px stacked cards | E2E-03-06 "stats and evidence at 320/360 px" passed. The not-found page at 320/360 answers 200, not 404 | works; not-found red |
+| 6 Delete match; purge log; empty inventory | DELETE 202. Match 404 and not listed (3.00 s). `racket.platform.purge --once` rc 0, log `purge pass … matches 10, accounts 5, failed 0`. Inventory for the match: matches 0, rallies 0, snapshots 0, media 0. **No scheduled purge in Compose** (G03-03 c) | works by hand; not scheduled |
+| 7 Delete the account from a second session | The second session signed in (200), DELETE /me returned 202, and the first session's `GET /me` returned 401. In the browser, E2E-03-04 failed (test-side, G03-FE-R1-02) | works (API) |
+| 8 Labeller Full Tag, export, player not found | E2E-03-05 failed: the export holds no hit (`hits` `[]`). IT-03-11 failed 11 of 15 (`409 match_not_ready`, test-side TCR) | **fails** |
+| 9 Drill lint | The valid library gave `ok, 0 problem(s)` with rc 0. Each of the 5 negative files gave rc 1 and named its drill and reason | works |
+| 10 Scorecard and test report | This section: 2/12; golden 31/31; conservation 1,000/0; mutation 0.8635 / 0.9251; evidence crawl red; open defects 4 | shown, goal not met |
+| 11 PO questions | Not a verifier step | n/a |
+
+**Verdict:** the demo runs through the API end to end for steps 1-4, 6, 7 and 9, in real time. It cannot yet be given as scripted: step 8 (Full Tag) fails, the browser crawl and account-deletion specs are red, and the purge has no schedule.
+
+**Not runnable in this sandbox:** WebKit runs only on CI, and there is no CI run at `593f7ff` (G03-09 c). The manual screen-reader pass (NFR-027 b) is human-gated (S3-DoD-P6). Neither is in this round's totals.
+
+## 9. Verification round 3 (2026-10-08; senior-qa-engineer with sre-devops-engineer, independent verifiers)
+
+**Totals: 10 of 12 met** (G03-01 to G03-08, G03-10, G03-11). The Sprint 3 goal is **not met**, because two rows are still "no":
+
+- **G03-09 (c):** there is no CI run at the head. Origin `sprint-03` is 7 commits behind, and the last `ci.yml` run, at `09f1f67`, failed. This cannot be run from the sandbox: it needs the push and a CI dispatch on GitHub. WebKit also runs only there.
+- **G03-12:** 3 blockers are still open. Closing each one needs a role other than the verifier, or the PO.
+
+Everything the goal promises the player worked live over HTTPS on a fresh stack, in real time:
+
+- the 7 stats per side equal the reference after every tag and after a correction;
+- "Show me" works;
+- delete match, delete account and the purge leave 0 rows and 0 objects, and the purge is scheduled daily;
+- a labeller can Full Tag a match and export it, and the export validates;
+- a player gets "not found".
+
+The full browser suite was green (0 flaky over 3 repeats), and the timings, coverage, mutation and budget checks all met their targets.
+
+### 9.1 Stack under test
+
+- **Head:** `fb920bc` (`git rev-parse HEAD`), branch `sprint-03`, clean tree. The head was unchanged at teardown (`git status --short` empty).
+- **Preflight:**
+  - `bash scripts/disk-precheck.sh` → `ok, 10 GB free` (rc=0). That is at the floor, so the verifier pruned only its own data before the build (ops/disk-and-prune.md):
+    - removed the `pw-out*` trace folders of its own VR1/VR2 reports and of `reports/goal02-qadry`;
+    - moved the VR2 reports to `reports/goal03-vr2/`;
+    - ran `docker builder prune -af` (2.125 GB).
+  - Free space went from 11G to 17G.
+  - `scripts/dev-chrome.sh` reports Chrome for Testing 141.0.7390.54.
+  - The `racket-fegr2` stack (another lane) was left running.
+- **Clean state:**
+  - `.local/goal03` was deleted and rebuilt from `infra/env.example` as in §4.0.
+  - Before the start there were 0 `racket-goal03` containers and 0 volumes, so the database volume and the object-store bucket are new.
+  - The dev Postgres and the dev object store were started fresh under the new `RA_DEV_STATE`.
+- **Start:** `flock .local/evidence-e2e.lock $DC up -d --build --wait` → rc=0 in 134 s. All 10 long-running services were healthy, including `purge`.
+  - `DC` still carries the verifier-local `-f .local/goal03/build-ca.override.yaml`, because VR1-S3-02 is still open (`grep extra_ca infra/compose.yaml` → nothing).
+  - The override now also needs a `purge` entry, because `purge` is a new build service.
+  - The image was built from the head: `python -c "import racket.platform.purge, racket.dataset.admin"` in `api` printed `mods ok`.
+- **Front door:**
+  - `http://localhost:43000/` → 400.
+  - `https://localhost:43000/` with `--cacert root.crt` → 200.
+  - `/api/healthz` → `{"status":"ok"}`.
+  - Alembic is at `0017`.
+  - `$DC config --services` includes `purge`.
+- **G03-04, 08 and 11:** these ran on `scripts/dev-postgres.sh` and `scripts/dev-objectstore.sh` (fresh), with the goal03 Mailpit.
+- **Teardown:**
+  - `flock … $DC down -v --rmi local --remove-orphans` → rc=0, leaving 0 `racket-goal03` containers and 0 volumes.
+  - Dev Postgres and the object store were stopped (rc 0 each).
+  - The mutant copies and the Playwright trace folders under `reports/goal03/` were deleted.
+- **Disk:** `df -h /` showed:
+  - 17G free after the prune and 13G after `up --build`;
+  - 9.2G before teardown (the reports and mutant copies of this round), under the 10 GB floor;
+  - 12G after teardown.
+  - All live stack runs (G03-01..03, 05, 06, 07, demo) finished before the coverage and mutation steps, which took the space.
+- **Reports:** under `reports/goal03/` (git-ignored). The driver logs are `e2e-driver.log` and `g11-driver.log`.
+
+### 9.2 Preconditions (§3)
+
+| Rule | Status |
+|---|---|
+| 5 Dry-run first | **Still incomplete.** G03-05 (`stats_latency.py`, sre-devops-engineer) still has no row in §6 and no decision-log row (`grep -n 'stats_latency' docs/sprints/03/decision-log.md` → no dry-run row). As in VR2, the method ran end to end as written and met its target, so the row counts. The missing row is VR3-S3-02 |
+| 6 Reconciliation first | Met. The EM's reconciliation rows for VR2 (VR2-S3-01..05) are in `review-rounds.md` ("Reconciliation first … verification-round-2 findings", line 399) |
+
+### 9.3 Summary
+
+| ID | Target (short) | Actual (VR3) | Met | Owner to fix |
+|---|---|---|---|---|
+| G03-01 | 5/5 live journeys | 5/5, rc=0, no failing key | **yes** | — |
+| G03-02 | p95 ≤ 5 s / 5 s / 60 s | 34.3 ms (n 70) / 24.0 ms (n 5) / 22.2 ms (n 5) | **yes** | — |
+| G03-03 | 0 rows, links 404, schedule ≤ 24 h | 0 rows in 20 columns; 5/5 links 404; `purge` service with `PURGE_INTERVAL_S 86400`, first run ok | **yes** | — |
+| G03-04 | IT-03 100%; earlier 100% | IT-03 + BOLA 183/183; earlier 317/317; sandbox 10/10 | **yes** | — |
+| G03-05 | p95 ≤ 300, p99 ≤ 800, ≥ 99.5%, ≥ 47.5 RPS | 32.5 ms / 114.9 ms / 100% / 50.0 RPS, 0 unexpected | **yes** | — (sre-devops-engineer still owes the §6 dry-run row) |
+| G03-06 | 100% non-skipped, 0 flaky | 114/114 non-skipped, 6 named Sprint 1 skips, 0 flaky over ×3 | **yes** | — |
+| G03-07 | 2 s / 1.5 s / CLS 0, n ≥ 20 each | 231 ms / 837 ms / 0, n 20 each | **yes** | — |
+| G03-08 | golden, scenarios, conservation, review record | 31/31, 15/15, 1,000/0 and 1/1, manifest 0, (e) 7/7 | **yes** | — |
+| G03-09 | Full Tag IT and E2E; lint; CI at the head | IT-03-11 15/15, E2E-03-05 passed, lint 1 + 5; **no CI run at `fb920bc`** | no | sre-devops-engineer (push `sprint-03` and dispatch `ci.yml`; the orchestrator owns the push) |
+| G03-10 | axe 0 and targets 0 with D/E/X/L and states; keyboard; 320/360 | axe 0/55; targets 0, every family and state present incl. `E-01-empty`; keyboard and 320/360 passed | **yes** | — |
+| G03-11 | coverage, mutation, oracle, budgets | 94%; analytics 98.1%; rules 99.57/98.41%; web 91.64%; mutation 0.8635 / 0.9251; oracle 100,000/0; 8.0 s / 12.2 s / 350 s, 0 failed | **yes** | — |
+| G03-12 | 0 | 3 open blockers; GitHub 0 | no | engineering-manager (escalation; the fixes need the orchestrator, reviewers and PO for the PRs, the business-analyst and product-manager for the DR-03/D-1/D-2/R2-3 cells, and senior-frontend-engineer with the chair for the R-1/R2-1 walk) |
+
+**Met: 10 / 12.**
+
+**Not runnable in this sandbox (not counted as met):**
+
+- the CI run at the head, which includes WebKit and the `drill-lint` job. It runs only on GitHub Actions after the push (G03-09 c).
+- the manual screen-reader pass (NFR-027 b), which is human-gated (S3-DoD-P6).
+
+### 9.4 New findings from this round (Open rows go to `review-rounds.md` through the EM's reconciliation)
+
+| Id | Severity | Finding | Owner |
+|---|---|---|---|
+| VR3-S3-01 | minor | **VR1-S3-02 is still open, and it grew.** `infra/compose.yaml` passes no `extra_ca` build secret, so §4.0 `up --build` still needs a verifier-local override behind the sandbox proxy. Since SRE-PURGE (`cad2451`), the override must also cover the new `purge` build service | sre-devops-engineer |
+| VR3-S3-02 | minor | The G03-05 dry-run row is still missing from §6 and from the decision log. This is the rule-5 half of VR2-S3-05, still not done after three rounds | sre-devops-engineer |
+| VR3-S3-03 | minor | **The verifier's own reports fill the disk.** Free space fell to 9.2G before teardown, under the 10 GB floor. The cause is the Playwright `pw-out*` folders (about 1.3 GB per ×3 run) plus the mutant copies of §4 G03-11. §4 has no step to delete them during the run, and `live_stats.py`/`stats_latency.py` do not record free disk in their JSON. Proposal: §4 deletes `pw-out-repeat` after `flaky_report.py` and the mutant copies after scoring (this round did both, by hand) | senior-qa-engineer (method author) |
+
+### 9.5 Sprint demo script (sprint-03 §12), run in real time on `racket-goal03`
+
+The walk ran on 2026-10-08 from 01:04:20 UTC, after the E2E runs.
+
+- **API steps:** the verifier's scratch script (`demo_walk_vr3.py`, built on `scripts/measure` helpers). Log in `reports/goal03/demo-walk.txt` and `demo-walk-step8.txt`.
+- **Browser steps:** the E2E run of 9.3.
+
+| Step | What happened (elapsed time) | Result |
+|---|---|---|
+| 1 Sign in, tagged worked-example match | Sign-in 200 (2.36 s), match created, `video_received` (2.63 s), game 201, 14 rallies tagged (3.13 s) | works |
+| 2 Stats: 7 cards, n, range, low sample, notice | 7 metrics, label `unofficial scoring (rules not yet verified)`, rules `PROVISIONAL-UNVERIFIED`, definitions `0.1`. AN-01 A: k 4, n 7, 0.5714, `low_sample true` (57%, n = 7, as scripted). In the browser, E2E-03-03 (definition shown, draft hidden, low sample) passed | works |
+| 3 "Show me" on "Rallies won on serve" | AN-01 A evidence: 7 items, total 7. The first rally's video answered Range with 206 (3.20 s). In the browser, E2E-03-01 and the crawl E2E-03-02 passed | works |
+| 4 Correct rally 3 | 200. AN-02 A changed from 0.3333 (k 2, n 6) to 0.4 (k 2, n 5), as scripted (33% → 40%), with stats current in < 0.6 s | works |
+| 5 360 px stacked cards | E2E-03-06 "stats and evidence at 320/360 px" passed, and so did the not-found page at 320/360 (HTTP 404). G03-07 CLS 0 | works |
+| 6 Delete match; purge log; empty inventory | DELETE 202. Match 404 and not listed (3.83 s). `exec -T purge python -m racket.platform.purge --once` rc 0, log `purge pass … matches 9, accounts 4, failed 0`. Inventory for the match: matches 0, rallies 0, snapshots 0, media 0. The `purge` service also ran its scheduled pass at start (`next_run_in_s 86400`) | works |
+| 7 Delete the account from a second session | The second session signed in (200), DELETE /me returned 202, and the first session's `GET /me` returned 401 (7.38 s). In the browser, E2E-03-04 passed | works |
+| 8 Labeller Full Tag, export, player not found | A new account got 404 on `/label/matches/{id}` before the role. `racket.dataset.admin grant-labeller` rc 0, then 409 (no consent). `consent` rc 0, then Full Tag 200 (fps 60, 3,600 frames, players A1-B2). Rally label 201, hit label (frame 40, B1) 201, export 200 `attachment; filename="labels-<id>.json"`. `validate_labels(export)` → `()`, schema `full-tag-labels/v1`. A player account got 404 on the label route and the export. The verifier's first attempt sent `outcome: "A"` instead of the schema's outcome object and got 422 `invalid_label`: a verifier input error, and the refusal was correct. In the browser, E2E-03-05 (keys, hit, export, player refused) passed | works |
+| 9 Drill lint | The valid library gave `ok, 0 problem(s)` with rc 0. Each of the 5 negative files gave rc 1 and named its drill and reason | works |
+| 10 Scorecard and test report | This section: 10/12. Golden 31/31; conservation 1,000/0; mutation 0.8635 / 0.9251; evidence crawl green; **open defects 3, not the scripted 0** | shown, goal not met |
+| 11 PO questions | Not a verifier step | n/a |
+
+**Verdict:** steps 1-9 of the demo run end to end in real time on the live HTTPS stack. Step 10 cannot be given as scripted: the scorecard is 10/12, with no CI run at the head and 3 open blockers.

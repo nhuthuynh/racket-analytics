@@ -437,3 +437,51 @@ Backend paths are relative to `backend/tests/`; feature files are under `tests/f
 | NFR-027 (b) Manual screen-reader pass | C-06 | No | P6 (human tester) |
 | NFR-073 Fast tests | — | Yes (G02-12) | — |
 | NFR-074 Flaky rate | — | Yes (0 flaky ×3, every spec) | — |
+
+## 13. Sprint 3 test files per story (engineering-manager, 2026-10-08, sprint close; QA-R1S3-13)
+
+Backend paths are relative to `backend/tests/`; feature files are under `tests/features/` (`starter_stats`, `metric_uncertainty`, `metric_dictionary`, `metric_evidence`, `attribution_conservation`, `match_deletion`, `account_deletion`, `full_tag`, `drill_library`, plus the `corrections_replay` addition); browser specs are under `web/e2e/sprint-03/`; web unit tests are under `web/tests/unit/`. Evidence for the table is verification round 3 at `fb920bc` (`docs/sprints/03/goal-scorecard.md` §9): IT-03 + BOLA 183/183, scenarios 15/15, golden 31/31, E2E 114 passed (6 named Sprint 1 skips), 0 flaky ×3.
+
+| Story | Unit | Integration / regression | Scenario (step module → feature) | E2E / other | Gap at close |
+|---|---|---|---|---|---|
+| ST-043 | `unit/sports/pickleball/test_metric_dictionary.py`, `test_metric_dictionary_status_sync.py` | `integration/test_it_03_03_dictionary_in_api.py` | `features/test_metric_dictionary.py` → `metric_dictionary.feature` | `definitions.spec.ts` (E2E-03-03) | E2E draft check vacuous (PE-R3S3-06, minor) |
+| ST-044 | `unit/analytics/test_starter_stats.py`, `test_uncertainty.py`, `test_stats_contract_doc.py` | `integration/test_it_03_01_stats_snapshot.py`; `regression/` GS-AN-1 v2 (`-m golden_an`) | `features/test_starter_stats.py` → `starter_stats.feature`; `test_metric_uncertainty.py` → `metric_uncertainty.feature` | `journey-v2.spec.ts` (E2E-03-01); `live_stats.py` (G03-01) | TDD order not shown (R3-IN-1) |
+| ST-045 | `unit/analytics/test_attribution.py` (property, profile `ci`, 1,000 examples) | — | `features/test_attribution_conservation.py` → `attribution_conservation.feature` | — | TDD order not shown (R3-IN-1) |
+| ST-046 | `unit/analytics/test_snapshot.py`, `test_service.py` | `integration/test_it_03_02_stats_recompute.py`, `test_it_03_05_bola_sprint_03_routes.py` | `starter_stats.feature` (API-bound) | `journey-v2.spec.ts`; `stats_latency.py` (G03-05) | T-DL-4 held-recompute IT (PE-R3S3-03) |
+| ST-047 | `unit/analytics/test_evidence.py`; web `st-048-stats-view` | `integration/test_it_03_04_evidence.py` | `features/test_metric_evidence.py` → `metric_evidence.feature`; `evidence_deep_link.feature` | `evidence-crawl.spec.ts` (E2E-03-02), `timing.spec.ts` (show-me first frame) | Spec drift (PD-R3S3-01) |
+| ST-048 | web `st-048-stats-dashboard`, `st-048-stats-view`, `g03-route-boundaries` | — | browser-bound | `journey-v2`, `definitions`, `states` (E2E-03-08), `keyboard-and-narrow` (E2E-03-06), `timing.spec.ts` | DR-03 not recorded held; built before it (retro 3 M3) |
+| ST-049 | — | `regression/` golden matches GS-AN-1 v2 + coach hand count (`docs/domain/hand-counts/GS-AN-1-v1.json`) | — | `racket-manifest-check` | 15 of 21 comparisons `@needs-verification` (OQ-01) |
+| ST-050 | `unit/platform/test_purge_pass.py`, `test_storage_delete_prefix.py`, `unit/video_ingest/test_object_refs.py`; web `st-050-delete-match` | `integration/test_it_03_06_delete_match_purge.py`, `test_it_03_07_purge_store_failure.py`, `test_it_03_12_json_fuzz_and_races.py`, `test_it_03_13_deletion_logs.py` | `features/test_match_deletion.py` → `match_deletion.feature` | `journey-v2.spec.ts` (X-01); `live_stats.py --purge-cmd` (G03-03) | T-DL-3 two-owner IT, T-DL-4 IT (PE-R3S3-03); SEC-S3-TM-03 |
+| ST-051 | web `st-051-delete-account`, `account-menu` | `integration/test_it_03_08_delete_account.py` | `features/test_account_deletion.py` → `account_deletion.feature` | `delete-account.spec.ts` (E2E-03-04) | T-AC-2 race, T-AC-3, T-AC-5 ITs (PE-R3S3-03, SEC-S3-TM-07); X-03 copy not asserted (PD-R3S3-02) |
+| ST-038 | — | `integration/test_it_03_09_abandoned_upload_expiry.py` | — | — | — |
+| ST-042 | — | `integration/test_it_03_10_worker_grants.py`, `test_it_03_10b_worker_column_grants.py`; infra Compose identity tests | — | live (smoke.md) | SEC-S3-TM-11 deferred |
+| ST-052 | `unit/dataset/test_full_tag.py`, `test_full_tag_any_json.py`, `test_admin_cli.py`, `test_label_api_inputs.py`; web `st-052-full-tag` | `integration/test_it_03_11_full_tag.py` | `features/test_full_tag.py` → `full_tag.feature` | `full-tag.spec.ts` (E2E-03-05) | P11 bucket (no real footage); SEC-S3-TM-09/-10 |
+| ST-053 | `unit/coaching/test_drill_schema_check.py`, `test_drill_rules.py`, `test_drill_lock.py` | `integration/test_it_03_14_drill_lint.py` | `features/test_drill_library.py` → `drill_library.feature` | CI `drill-lint` job (`4d8af6d`), no run at the head | G03-09 (c) |
+| ST-054 | — | — | — | `journey-v2`, `evidence-crawl`, `timing.spec.ts` | Locust on stats/evidence in CI (SRE) |
+| C3-03 | web `c3-03-move-offer` | — | `features/test_corrections_replay.py` → `corrections_replay.feature` (move offer) | `move-offer.spec.ts` (E2E-03-07) | — |
+| SEC-RV3-02 | `unit/platform/test_settings_sprint03.py` | — | — | — | Other dev-only secrets (SEC-R3S3-04) |
+
+## 14. Sprint 3 outcome per requirement (engineering-manager, 2026-10-08, sprint close)
+
+"Live" means shown by the independent verifier on a fresh Compose stack over https (VR3, `fb920bc`). The sprint goal is not met (G03-09 c, G03-12), and no Sprint 3 ticket is merged to `main`, so no requirement below is DoD-done.
+
+| Requirement | Story | Shown live (goal metric) | Open at close |
+|---|---|---|---|
+| FR-100 Starter stats AN-01..AN-07 per side | ST-044, ST-046, ST-048 | Yes (G03-01 5/5, after every tag; G03-08 golden 31/31) | Rules unverified (OQ-01): "unofficial" notice, once per page (DR-03 R3-3) |
+| FR-101 n, Wilson range, "low sample" in text | ST-044, ST-048 | Yes (G03-01 Wilson ±0.001 and flags; E2E-03-03; scenarios 15/15) | ADR 0005 still Proposed (PM-1 accept); ADR 0041 dictionary field (PE-R3S3-08) |
+| FR-102 Only coach-reviewed entries, "How is this measured?" | ST-043 | Yes (7/7 coach-reviewed, ADR 0044; IT-03-03 draft hidden) | `verified` needs the second reviewer (P9) |
+| FR-103 "Show me" evidence, ≤ 10 + "see all n", video at the rally | ST-047 | Yes (G03-01 Range 206, total = n; E2E-03-02 crawl; G03-07 837 ms) | PD-R3S3-01 (spec text) |
+| FR-109 Attribution conservation | ST-045 | Yes (1,000 / 0, G03-08) | — |
+| FR-006 Delete a match | ST-050 | Yes (G03-01 404 + leaves the list; G03-02 c 22.2 ms; G03-03 0 rows) | Security ITs (PE-R3S3-03); FR-006 "confirmation page" wording (BA follow-up) |
+| FR-007 Delete my account | ST-051 | Yes (G03-01 old session 401, empty account on re-sign-in) | T-AC-2/-3/-5 ITs |
+| FR-024 Abandoned uploads expire | ST-038 | Integration only (IT-03-09) | — |
+| FR-140 Drill schema and lint | ST-053 | Yes locally (1 pass + 5 named failures) | CI run at the head (G03-09 c) |
+| FR-150 Full Tag on consented matches | ST-052 | Yes (IT-03-11 15/15; E2E-03-05; demo step 8) | P11 bucket before real footage |
+| FR-151 Gold-label schema export | ST-052, ST-049 | Yes (export validates `full-tag-labels/v1`; manifest rc 0) | ADR 0035 Proposed |
+| NFR-004 Golden matches | ST-049 | Yes (GS-AN-1 v2 31/31) | — |
+| NFR-010, NFR-011, NFR-039 | ST-046, ST-048, ST-054 | Yes (G03-05 32.5 ms; G03-07 231 ms; CLS 0) | NFR-010 Locust baseline not in CI |
+| NFR-028 Target size, NFR-027 (a) axe | ST-048, ST-050..052 | Yes (G03-10: 55 checks, 0 issues; 0 small targets) | NFR-027 (b) manual pass: S3-DoD-P6 |
+| NFR-054 Least-privilege worker | ST-042 | Yes (IT-03-10/-10b; live permission denied) | SEC-S3-TM-11 deferred |
+| NFR-066 (a-d) Deletion windows | ST-050, ST-051, SRE-PURGE | Yes (hidden 22.2 ms p95; purge daily, 0 rows, 0 objects) | Legal adequacy (OQ-05, NFR-070) |
+| NFR-072 Mutation (rules; starter stats new) | — | Yes (0.8635; 0.9251) | — |
+| NFR-073 Fast tests, NFR-074 flaky rate | — | Yes (8.0 / 12.2 / 350.1 s; 0 flaky ×3) | — |
