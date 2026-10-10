@@ -1,5 +1,0 @@
-# Experiment variant: a 1 MiB default TCP receive buffer in the store's network namespace.
-services:
-  objectstore:
-    sysctls:
-      net.ipv4.tcp_rmem: "4096 1048576 33554432"

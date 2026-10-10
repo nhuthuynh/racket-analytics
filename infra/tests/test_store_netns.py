@@ -21,7 +21,7 @@ def test_a_buffer_one_byte_short_of_the_budget_is_refused() -> None:
 
 @pytest.mark.parametrize("value", ["", "4096 131072", "4096 lots 33554432", "4096 1048576 4096"])
 def test_a_malformed_or_inconsistent_tcp_rmem_is_refused(value: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="tcp_rmem"):
         default_rmem(value)
 
 
