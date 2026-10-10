@@ -13,7 +13,7 @@ import { signInByLink, uniqueEmail } from '../helpers/sprint-01';
 import { receivedMatch } from '../helpers/sprint-02';
 import { SCREEN, admin, labelPath } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-052 @fr-150 Full Tag', { tag: '@red-until-ST-052' }, () => {
+test.describe('@M0 @story-ST-052 @fr-150 Full Tag', () => {
   test('E2E-03-05 a player, and a labeller on a match of another account, cannot open Full Tag; a labeller frame-steps their own match by keys, tags a hit and exports', async ({ page, browser }, testInfo) => {
     test.setTimeout(180_000);
     const matchId = await receivedMatch(page, 'E2E-03-05 full tag');
