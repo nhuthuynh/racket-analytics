@@ -49,7 +49,7 @@ async function measured(page: Page): Promise<{ interactiveAt: number; cls: numbe
   return page.evaluate(() => ({ interactiveAt: window.__s3!.interactiveAt!, cls: window.__s3!.cls ?? 0 }));
 }
 
-test.describe('@M0 @story-ST-054 Sprint 3 timings', { tag: '@red-until-ST-048' }, () => {
+test.describe('@M0 @story-ST-054 Sprint 3 timings', () => {
   test('dashboard-interactive (warm) and layout-shift', async ({ page }, testInfo) => {
     expect(PUBLISHED.length, 'no coach-reviewed metric (COACH-1)').toBeGreaterThan(0);
     const matchId = await receivedMatch(page, 'Timing stats');

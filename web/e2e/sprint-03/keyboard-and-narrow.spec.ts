@@ -8,7 +8,7 @@ import { signInByLink } from '../helpers/sprint-01';
 import { receivedMatch } from '../helpers/sprint-02';
 import { PUBLISHED, SCREEN, noSidewaysScroll, statsPath, tagWorkedExampleByApi } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-048 @nfr-034 Keyboard and narrow screens', { tag: '@red-until-ST-048' }, () => {
+test.describe('@M0 @story-ST-048 @nfr-034 Keyboard and narrow screens', () => {
   test('E2E-03-06 keyboard-only stats and evidence', async ({ page }, testInfo) => {
     expect(PUBLISHED.length, 'no coach-reviewed metric (COACH-1)').toBeGreaterThan(0);
     const matchId = await receivedMatch(page, 'E2E-03-06 keyboard');

@@ -13,7 +13,7 @@ import {
   tagWorkedExampleOnT01,
 } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-054 @needs-verification Journey v2', { tag: '@red-until-ST-048' }, () => {
+test.describe('@M0 @story-ST-054 @needs-verification Journey v2', { tag: '@red-until-ST-050' }, () => {
   test('E2E-03-01 tag the worked example, stats equal the reference, Show me plays, delete the match', async ({ page }, testInfo) => {
     test.setTimeout(240_000);
     expect(PUBLISHED.length, 'no coach-reviewed metric to show (COACH-1, FR-102)').toBeGreaterThan(0);
