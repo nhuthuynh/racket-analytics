@@ -62,7 +62,9 @@ def bucket_exists_no_object_probe(ctx: dict, listing: str) -> None:
 
 
 @given(
-    parsers.re(r"the footage bucket does not exist and an anonymous listing gets HTTP (?P<listing>\d+)")
+    parsers.re(
+        r"the footage bucket does not exist and an anonymous listing gets HTTP (?P<listing>\d+)"
+    )
 )
 def bucket_absent(ctx: dict, listing: str) -> None:
     _record(ctx, False, listing, None)

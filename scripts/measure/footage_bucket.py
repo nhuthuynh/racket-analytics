@@ -4,12 +4,16 @@
     footage_bucket.py --po docs/requirements/po-input-2026-10-05.md
         [--dod docs/sprints/sprint-03.md]   # the plan's row must agree
         [--endpoint URL --bucket NAME]      # live probe; credentials from S3_ACCESS_KEY_ID/SECRET
-        [--from-probe probe.json]           # recorded {"exists": bool, "anonymous_status": n}
+        [--from-probe probe.json]           # recorded {"exists": bool, "anonymous_status": n,
+                                            #   "anonymous_object_status": n}
 
 The row is met only when (1) the PO decision record has a P11 table row naming the provider
-("Provider: <name>") and (2) the footage bucket exists (authenticated HEAD) and refuses an
-anonymous read (HTTP 401/403). An anonymous 403 alone proves nothing: S3 stores answer 403 for
-a missing bucket too. Without a provider the status is "not met: waiting on P11".
+("Provider: <name>") and (2) the footage bucket exists (authenticated HEAD) and refuses both an
+anonymous listing (GET of the bucket root) and an anonymous read of an object in it (GET of a
+canary object put with credentials and deleted afterwards), each with HTTP 401/403. An anonymous
+403 alone proves nothing: S3 stores answer 403 for a missing bucket too, and a bucket policy or
+object ACL can serve every object to anyone while listing still answers 403. Without a provider
+the status is "not met: waiting on P11".
 
 Exit 0 met, 1 not met, 2 malformed input or an unexpected answer (fail closed, ADR 0014), 3 the
 sprint plan's S3-DoD-P11 status says something other than the measurement.
@@ -23,12 +27,15 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path
 
 DOD_ROW = "S3-DoD-P11"
 PROVIDER = re.compile(r"\bprovider\s*:\s*([^.;]*[^\s.;])", re.I)
 REFUSED = (401, 403)
+CANARY_PREFIX = "footage-bucket-probe/"
 
 
 def _rows(text: str):
@@ -49,13 +56,29 @@ def po_provider(record: str) -> str | None:
     return None
 
 
-def bucket_state(exists: bool, anonymous_status: int) -> str:
-    """'absent', 'public' or 'private' from a probe; ValueError for any other anonymous answer."""
+def bucket_state(
+    exists: bool, anonymous_status: int, anonymous_object_status: int | None = None
+) -> str:
+    """'absent', 'public' or 'private' from a probe; ValueError for any other anonymous answer.
+
+    `anonymous_status` answers an anonymous listing of the bucket; `anonymous_object_status` an
+    anonymous GET of a canary object. An existing bucket is private only when both are refused.
+    """
     if anonymous_status not in (200, *REFUSED):
         raise ValueError(f"anonymous read answered HTTP {anonymous_status}, not 200/401/403")
     if not exists:
         return "absent"
-    return "public" if anonymous_status == 200 else "private"
+    if anonymous_object_status is None:
+        raise ValueError(
+            "no anonymous read of the canary object was probed: a refused listing says nothing "
+            "about whether the bucket's objects can be read"
+        )
+    if anonymous_object_status not in (200, *REFUSED):
+        raise ValueError(
+            f"anonymous read of the canary object answered HTTP {anonymous_object_status}, "
+            "not 200/401/403"
+        )
+    return "public" if 200 in (anonymous_status, anonymous_object_status) else "private"
 
 
 def status_text(provider: str | None, state: str | None) -> str:
@@ -65,7 +88,7 @@ def status_text(provider: str | None, state: str | None) -> str:
     if state == "public":
         return "not met: footage bucket is readable without credentials"
     if state == "private":
-        return f"met (provider: {provider}; anonymous read refused)"
+        return f"met (provider: {provider}; anonymous listing and object read refused)"
     return "not met: P11 answered, footage bucket not built (C3-08)"
 
 
@@ -93,8 +116,21 @@ def dod_verdict(status: str) -> str:
     return status.split("(", 1)[0].strip()
 
 
-def probe(endpoint: str, bucket: str) -> tuple[bool, int]:
-    """Live probe: authenticated HEAD for existence, then an anonymous GET of the bucket."""
+def anonymous_get(url: str) -> int:
+    """The HTTP status an anonymous (unsigned) GET of `url` answers."""
+    if not url.startswith(("http://", "https://")):
+        raise ValueError(f"endpoint {url!r} is not http(s)")
+    try:
+        with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 (scheme checked)
+            return response.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+
+
+def probe(endpoint: str, bucket: str) -> tuple[bool, int, int | None]:
+    """Live probe: authenticated HEAD for existence, an anonymous GET of the bucket (listing) and,
+    when the bucket exists, an anonymous GET of a canary object put with credentials, which is
+    deleted again whatever happens."""
     import boto3  # only the live probe needs boto3
     from botocore.client import Config
     from botocore.exceptions import ClientError
@@ -115,22 +151,31 @@ def probe(endpoint: str, bucket: str) -> tuple[bool, int]:
         if code != 404:
             raise ValueError(f"authenticated HEAD of {bucket!r} answered HTTP {code}") from exc
         exists = False
-    url = f"{endpoint.rstrip('/')}/{bucket}"
-    if not url.startswith(("http://", "https://")):
-        raise ValueError(f"endpoint {endpoint!r} is not http(s)")
+    root = f"{endpoint.rstrip('/')}/{bucket}"
+    listing = anonymous_get(root)
+    if not exists:
+        return exists, listing, None
+    key = f"{CANARY_PREFIX}{uuid.uuid4().hex}"
     try:
-        with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 (scheme checked)
-            return exists, response.status
-    except urllib.error.HTTPError as exc:
-        return exists, exc.code
+        s3.put_object(Bucket=bucket, Key=key, Body=b"footage bucket privacy probe")
+    except ClientError as exc:
+        code = exc.response["ResponseMetadata"]["HTTPStatusCode"]
+        raise ValueError(f"authenticated PUT of the canary object answered HTTP {code}") from exc
+    try:
+        return exists, listing, anonymous_get(f"{root}/{urllib.parse.quote(key)}")
+    finally:
+        s3.delete_object(Bucket=bucket, Key=key)
 
 
-def recorded(path: Path) -> tuple[bool, int]:
-    """A recorded probe {"exists": bool, "anonymous_status": n}, so tests need no store."""
+def recorded(path: Path) -> tuple[bool, int, int | None]:
+    """A recorded probe {"exists": bool, "anonymous_status": n, "anonymous_object_status": n},
+    so tests need no store. `anonymous_object_status` may be absent only for a missing bucket
+    (bucket_state refuses an existing bucket without it)."""
     answer = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(answer.get("exists"), bool):
         raise ValueError(f"{path}: 'exists' must be true or false")
-    return answer["exists"], int(answer["anonymous_status"])
+    obj = answer.get("anonymous_object_status")
+    return answer["exists"], int(answer["anonymous_status"]), None if obj is None else int(obj)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -153,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
         state = bucket_state(*seen) if seen else None
         result = measure(po_provider(args.po.read_text(encoding="utf-8")), state)
         result["anonymous_status"] = seen[1] if seen else None
+        result["anonymous_object_status"] = seen[2] if seen else None
         claimed = dod_status(args.dod.read_text(encoding="utf-8")) if args.dod else None
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print(f"footage_bucket: {exc}", file=sys.stderr)
