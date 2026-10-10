@@ -18,6 +18,8 @@ import {
   parseTagged,
   parseVersioned,
 } from '@/lib/tagging/parse';
+import { parseEvidence, parseStats } from '@/lib/stats/parse';
+import type { Evidence, Stats } from '@/lib/stats/types';
 import type {
   CorrectableField,
   CorrectionValue,
@@ -98,6 +100,8 @@ export interface ApiClientOptions {
   headers?: Record<string, string>;
 }
 
+const METRIC_ID_RE = /^AN-\d{2}$/;
+
 const SUPPORT_REF_RE = /^ref_[0-9a-f]{16}$/;
 
 async function toApiError(response: Response): Promise<ApiError> {
@@ -176,6 +180,11 @@ export function createApiClient(options: ApiClientOptions) {
 
   function rallyPath(id: string): string {
     if (!isPublicId(id)) throw new ApiError(404, 'not_found');
+    return id;
+  }
+
+  function metricPath(id: string): string {
+    if (!METRIC_ID_RE.test(id)) throw new ApiError(404, 'not_found');
     return id;
   }
 
@@ -291,6 +300,16 @@ export function createApiClient(options: ApiClientOptions) {
     },
     async rallyMedia(id: string, rallyId: string): Promise<RallyMedia> {
       return parsed(await request('GET', `${matchPath(id)}/rallies/${rallyPath(rallyId)}/media`), parseRallyMedia);
+    },
+    // Sprint 3 (ST-046..ST-048): docs/architecture/api-sprint-03.md §2, §3.
+    /** D-01: the published metrics of the match, always current with the score sheet. */
+    async stats(id: string): Promise<Stats> {
+      return parsed(await request('GET', `${matchPath(id)}/stats`), parseStats);
+    },
+    /** E-01/E-02: up to 10 rallies behind a metric and side, in video order; `cursor` pages on. */
+    async evidence(id: string, metricId: string, side: Side, cursor: string | null = null): Promise<Evidence> {
+      const query = `?side=${side}&limit=10${cursor === null ? '' : `&cursor=${encodeURIComponent(cursor)}`}`;
+      return parsed(await request('GET', `${matchPath(id)}/stats/${metricPath(metricId)}/evidence${query}`), parseEvidence);
     },
   };
 }

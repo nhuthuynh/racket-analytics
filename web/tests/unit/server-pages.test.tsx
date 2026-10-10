@@ -36,9 +36,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 const SignInPage = (await import('@/app/page')).default;
-const MatchesPage = (await import('@/app/matches/page')).default;
-const NewMatchPage = (await import('@/app/matches/new/page')).default;
-const MatchPage = (await import('@/app/matches/[matchId]/page')).default;
+const MatchesPage = (await import('@/app/matches/(list)/page')).default;
+const NewMatchPage = (await import('@/app/matches/(list)/new/page')).default;
+const MatchPage = (await import('@/app/matches/[matchId]/(pages)/page')).default;
 
 const ID = '0b8f6c1e-3f3a-4c55-9a51-8d1f0e7d2a10';
 const match: Match = {

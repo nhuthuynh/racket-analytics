@@ -13,7 +13,7 @@ import { PUBLISHED, REFERENCE, SCREEN, statsPath, tagWorkedExampleByApi } from '
 // playableVideo may route the media request; block the service worker so a route applies in WebKit too.
 test.use({ serviceWorkers: 'block' });
 
-test.describe('@M0 @story-ST-047 @nfr-038 Evidence crawl', { tag: '@red-until-ST-047' }, () => {
+test.describe('@M0 @story-ST-047 @nfr-038 Evidence crawl', () => {
   test('E2E-03-02 every metric shows n and a working "Show me"', async ({ page }, testInfo) => {
     test.setTimeout(300_000); // 14 sides, each opening one rally's video
     expect(PUBLISHED.length, 'no coach-reviewed metric to crawl (COACH-1)').toBeGreaterThan(0);

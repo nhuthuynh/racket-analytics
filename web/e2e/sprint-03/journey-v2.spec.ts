@@ -13,7 +13,7 @@ import {
   tagWorkedExampleOnT01,
 } from '../helpers/sprint-03';
 
-test.describe('@M0 @story-ST-054 @needs-verification Journey v2', { tag: '@red-until-ST-048' }, () => {
+test.describe('@M0 @story-ST-054 @needs-verification Journey v2', { tag: '@red-until-ST-050' }, () => {
   test('E2E-03-01 tag the worked example, stats equal the reference, Show me plays, delete the match', async ({ page }, testInfo) => {
     test.setTimeout(240_000);
     expect(PUBLISHED.length, 'no coach-reviewed metric to show (COACH-1, FR-102)').toBeGreaterThan(0);
@@ -62,6 +62,7 @@ test.describe('@M0 @story-ST-054 @needs-verification Journey v2', { tag: '@red-u
       await expect(dialog).toContainText(what);
     }
     await expectNoBlockingA11yViolations(page, testInfo, SCREEN.deleteMatch);
+    await expectTargetsAtLeast24(page, testInfo, SCREEN.deleteMatch); // NFR-028 on X-01 too (PD-R1S3-03)
     const typed = dialog.getByRole('textbox');
     if (await typed.count()) await typed.fill('delete');
     await dialog.getByRole('button', { name: /Delete/ }).last().click();

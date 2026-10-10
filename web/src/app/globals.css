@@ -971,3 +971,128 @@ main:focus-visible,
   align-items: center;
   min-block-size: var(--size-target-touch);
 }
+
+/* D-01 stats and E-01/E-02 evidence (ST-048, ST-047; flows-sprint-03 §0, §2, §3). Proven pairs
+ * only: values in text, low sample as a tag in warning-text on warning-surface, de-emphasis by
+ * size and weight in text-secondary (never under 4.5:1), bars in the progress pair. */
+.stats-cards {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.stat-card {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--border-radius);
+}
+
+/* While loading, each card's place is reserved (NFR-039): the reserved cards are taller than the
+ * screen together, so nothing below them is in view when the numbers replace them. */
+.stat-card--reserved {
+  min-block-size: 28rem;
+  border: 0;
+  background: var(--color-surface);
+}
+
+.stat-card h3,
+.evidence-panel h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+}
+
+.stat-card__sides {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+@media (min-width: 48em) {
+  .stat-card__sides {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stat-side {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.stat-side__value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+}
+
+.stat-side__value--low {
+  font-size: var(--font-size-md);
+  font-weight: normal;
+  color: var(--color-text-secondary);
+}
+
+.stat-side__show {
+  max-inline-size: 100%;
+  text-align: center;
+}
+
+.tag {
+  display: inline-block;
+  padding-inline: var(--space-2);
+  border-radius: var(--border-radius);
+  font-weight: var(--font-weight-bold);
+}
+
+.tag--warning {
+  color: var(--color-warning-text);
+  background: var(--color-warning-surface);
+}
+
+.bar-list,
+.evidence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bar-list__row {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.bar {
+  display: block;
+  block-size: var(--space-3);
+  border: var(--border-control-width) solid var(--color-progress-track);
+  border-radius: var(--border-radius);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.bar__fill {
+  display: block;
+  block-size: 100%;
+  background: var(--color-primary);
+}
+
+.evidence-list {
+  gap: 0;
+}
+
+.evidence-panel {
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-control-width) solid var(--color-border-subtle);
+}
+
+/* Reserved space for about three rallies while the list loads (flows-sprint-03 §3 Loading). */
+.evidence-panel__reserved {
+  min-block-size: 9rem;
+}
