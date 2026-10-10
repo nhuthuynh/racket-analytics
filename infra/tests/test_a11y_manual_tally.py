@@ -50,20 +50,20 @@ def test_a_manual_without_a_result_table_is_refused(m) -> None:
 
 @pytest.mark.unit
 def test_a_gap_in_the_row_numbers_is_refused(m) -> None:
-    with pytest.raises(ValueError, match="row 4"):
+    with pytest.raises(ValueError, match="expected 4"):
         m.tally(manual(4, ids=["1", "2", "3", "5"]))
 
 
 @pytest.mark.unit
 def test_a_duplicate_row_number_is_refused(m) -> None:
-    with pytest.raises(ValueError, match="row 2"):
+    with pytest.raises(ValueError, match="row 2 is out of order"):
         m.tally(manual(3, ids=["1", "2", "2"]))
 
 
 @pytest.mark.unit
 def test_a_cell_that_is_neither_a_result_nor_not_run_is_refused(m) -> None:
     text = manual(2).replace("| 2 | screen 2 | not run |", "| 2 | screen 2 | looked fine |")
-    with pytest.raises(ValueError, match="row 2.*looked fine"):
+    with pytest.raises(ValueError, match=r"row 2.*looked fine"):
         m.tally(text)
 
 

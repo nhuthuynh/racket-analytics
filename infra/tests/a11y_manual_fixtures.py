@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-HEAD = "## 3. Script and results\n\n| # | Screen / state | VoiceOver iOS | TalkBack Android |\n|---|---|---|---|\n"
+HEAD = (
+    "## 3. Script and results\n\n"
+    "| # | Screen / state | VoiceOver iOS | TalkBack Android |\n"
+    "|---|---|---|---|\n"
+)
 TAIL = "\n## 4. Result\n"
 
 

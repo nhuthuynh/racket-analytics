@@ -23,7 +23,7 @@ from pathlib import Path
 
 DEVICES = {"voiceover": "VoiceOver iOS", "talkback": "TalkBack Android"}
 DOD_ROW = "S3-DoD-P6"
-ROW_ID = re.compile(r"^(\d+)(?:\s*[-–]\s*(\d+))?$")
+ROW_ID = re.compile(r"^(\d+)(?:\s*[-\u2013]\s*(\d+))?$")
 
 
 def _cells(line: str) -> list[str]:
@@ -50,7 +50,7 @@ def tally(text: str) -> dict:
     """Rows and rows run per screen reader from the manual's section 3 tables."""
     columns: dict[str, int] | None = None
     seen: list[int] = []
-    run = {key: 0 for key in DEVICES}
+    run = dict.fromkeys(DEVICES, 0)
     both = 0
     for line in _section_3(text).splitlines():
         if not line.lstrip().startswith("|"):
@@ -67,7 +67,7 @@ def tally(text: str) -> dict:
         for n in range(first, last + 1):
             expected = len(seen) + 1
             if n != expected:
-                raise ValueError(f"row {n} is out of order or numbered twice (expected row {expected})")
+                raise ValueError(f"row {n} is out of order or numbered twice (expected {expected})")
             seen.append(n)
         width = last - first + 1
         ran = {k: _ran(cells[i], cells[0]) for k, i in columns.items()}
@@ -77,11 +77,14 @@ def tally(text: str) -> dict:
     if not seen:
         raise ValueError("no result table with VoiceOver iOS and TalkBack Android columns")
     rows = len(seen)
-    met = both == rows
-    status = f"met ({rows} of {rows} rows run)" if met else (
-        f"not met: waiting on P6 ({both} of {rows} rows run)"
-    )
-    return {"rows": rows, **run, "both": both, "met": met, "status": status}
+    return {"rows": rows, **run, "both": both, "met": both == rows, "status": status(both, rows)}
+
+
+def status(both: int, rows: int) -> str:
+    """The sprint-DoD wording (sprint-03 section 9.1) for `both` of `rows` rows run."""
+    if both == rows:
+        return f"met ({rows} of {rows} rows run)"
+    return f"not met: waiting on P6 ({both} of {rows} rows run)"
 
 
 def dod_status(plan: str) -> str:
