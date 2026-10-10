@@ -1,0 +1,126 @@
+"""S3-DoD-P6 tally (FIX-03-1b; sprint-03 §9.1; NFR-027 b; PO P12 option b).
+
+The manual screen-reader pass needs a human tester with an iPhone (VoiceOver) and an Android
+phone (TalkBack); the agents have neither (P6). The row's status is therefore counted from the
+result cells of docs/sprints/03/a11y-manual.md §3, and the sprint plan must say the same.
+
+Negative cases first: a manual without rows, with a gap or a duplicate in its numbering, or a
+cell that is neither a result nor "not run" never reads as met (fail closed, ADR 0014).
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import subprocess
+import sys
+
+import pytest
+from a11y_manual_fixtures import manual, sprint_plan
+from conftest import REPO_ROOT, SCRIPTS_DIR
+
+MEASURE = SCRIPTS_DIR / "measure"
+SCRIPT = MEASURE / "a11y_manual.py"
+MANUAL = REPO_ROOT / "docs" / "sprints" / "03" / "a11y-manual.md"
+PLAN = REPO_ROOT / "docs" / "sprints" / "sprint-03.md"
+
+
+def _load():
+    spec = importlib.util.spec_from_file_location("a11y_manual", SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["a11y_manual"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(scope="module")
+def m():
+    return _load()
+
+
+# --- unit: negative cases first -------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_a_manual_without_a_result_table_is_refused(m) -> None:
+    with pytest.raises(ValueError, match="no result table"):
+        m.tally("## 3. Script and results\n\nNothing.\n\n## 4. Result\n")
+
+
+@pytest.mark.unit
+def test_a_gap_in_the_row_numbers_is_refused(m) -> None:
+    with pytest.raises(ValueError, match="row 4"):
+        m.tally(manual(4, ids=["1", "2", "3", "5"]))
+
+
+@pytest.mark.unit
+def test_a_duplicate_row_number_is_refused(m) -> None:
+    with pytest.raises(ValueError, match="row 2"):
+        m.tally(manual(3, ids=["1", "2", "2"]))
+
+
+@pytest.mark.unit
+def test_a_cell_that_is_neither_a_result_nor_not_run_is_refused(m) -> None:
+    text = manual(2).replace("| 2 | screen 2 | not run |", "| 2 | screen 2 | looked fine |")
+    with pytest.raises(ValueError, match="row 2.*looked fine"):
+        m.tally(text)
+
+
+@pytest.mark.unit
+def test_a_range_row_counts_every_row_it_covers(m) -> None:
+    text = manual(2, ids=["1-24", "25"])
+    assert m.tally(text)["rows"] == 25
+
+
+@pytest.mark.unit
+def test_a_range_row_with_a_result_counts_all_its_rows_as_run(m) -> None:
+    text = manual(2, voiceover=1, talkback=1, ids=["1-24", "25"])
+    t = m.tally(text)
+    assert (t["voiceover"], t["talkback"], t["status"]) == (
+        24,
+        24,
+        "not met: waiting on P6 (24 of 25 rows run)",
+    )
+
+
+@pytest.mark.unit
+def test_not_met_counts_rows_run_on_both_screen_readers(m) -> None:
+    t = m.tally(manual(38, voiceover=38, talkback=10))
+    assert t["status"] == "not met: waiting on P6 (10 of 38 rows run)"
+    assert t["met"] is False
+
+
+@pytest.mark.unit
+def test_met_needs_every_row_on_both_screen_readers(m) -> None:
+    t = m.tally(manual(38, voiceover=38, talkback=38))
+    assert t["status"] == "met (38 of 38 rows run)"
+    assert t["met"] is True
+
+
+@pytest.mark.unit
+def test_a_plan_without_the_dod_row_is_refused(m) -> None:
+    with pytest.raises(ValueError, match="S3-DoD-P6"):
+        m.dod_status("### 9.1\n\nno table\n")
+
+
+@pytest.mark.unit
+def test_the_dod_status_cell_is_read_without_emphasis(m) -> None:
+    plan = sprint_plan("**not met: waiting on P6** (0 of 38 rows run)")
+    assert m.dod_status(plan) == "not met: waiting on P6 (0 of 38 rows run)"
+
+
+# --- integration: the repository's own manual and sprint plan --------------------------------
+
+
+@pytest.mark.integration
+def test_the_repository_manual_and_sprint_plan_agree_on_s3_dod_p6() -> None:
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(MANUAL), "--dod", str(PLAN)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    # rc 0 = met, 1 = not met; 2 (malformed) and 3 (plan disagrees with the manual) are failures.
+    assert out.returncode in (0, 1), out.stdout + out.stderr
+    assert '"rows": 38' in out.stdout
