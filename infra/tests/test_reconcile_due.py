@@ -18,7 +18,8 @@ from reconcile_ledger import PLAN_0039, SCRIPT, SPRINT_03, ledger_section, plan,
 
 def _module():  # loaded from scripts/measure, not a package
     spec = importlib.util.spec_from_file_location("reconcile_due", SCRIPT)
-    assert spec is not None and spec.loader is not None, f"missing {SCRIPT}"
+    assert spec is not None, f"missing {SCRIPT}"
+    assert spec.loader is not None, f"missing {SCRIPT}"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -33,7 +34,7 @@ PLAN_12 = plan(
 # ---------------------------------------------------------------- unit: negative cases first
 @pytest.mark.unit
 def test_a_ledger_without_a_review_table_is_refused() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="no review table"):
         _module().due_rows("# nothing\n", [])
 
 
@@ -88,7 +89,9 @@ def test_a_row_that_names_the_ticket_pr_or_merge_commit_is_reconciled(mention: s
 @pytest.mark.unit
 def test_a_section_heading_that_names_the_merge_commit_reconciles_its_rows() -> None:
     m = _module()
-    ledger = ledger_section("Ticket X at `origin/main` `4f5b8f1`", [("PE-R9S9-05", "major", "Open")])
+    ledger = ledger_section(
+        "Ticket X at `origin/main` `4f5b8f1`", [("PE-R9S9-05", "major", "Open")]
+    )
     assert m.due_rows(ledger, m.ticket_index(PLAN_12, [])) == []
 
 
@@ -148,7 +151,8 @@ def test_cli_names_the_due_row_with_its_line_and_writes_json(tmp_path: Path) -> 
     assert "due: line 5: PE-R9S9-05 / QA-R9S9-03 (major)" in out.stdout
     assert "ticket PE-R9S9-07 (#12) merged as 4f5b8f1" in out.stdout
     data = json.loads(report.read_text(encoding="utf-8"))
-    assert data["open"] == 1 and data["due"] == 1
+    assert data["open"] == 1
+    assert data["due"] == 1
 
 
 @pytest.mark.integration
