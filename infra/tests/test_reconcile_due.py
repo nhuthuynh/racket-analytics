@@ -146,7 +146,7 @@ def test_cli_names_the_due_row_with_its_line_and_writes_json(tmp_path: Path) -> 
     )
     assert out.returncode == 1, out.stdout + out.stderr
     assert "due: line 5: PE-R9S9-05 / QA-R9S9-03 (major)" in out.stdout
-    assert "ticket PE-R9S9-07 (#12, merged as 4f5b8f1)" in out.stdout
+    assert "ticket PE-R9S9-07 (#12) merged as 4f5b8f1" in out.stdout
     data = json.loads(report.read_text(encoding="utf-8"))
     assert data["open"] == 1 and data["due"] == 1
 
