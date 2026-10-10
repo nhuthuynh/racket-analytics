@@ -376,6 +376,13 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}" "shellcheck-py==0.11.0.1"
       - run: uv sync --locked
+      # ci_e2e_stall_report.feature runs web/'s real Playwright (no browser download needed).
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable
+      - working-directory: web
+        run: pnpm install --frozen-lockfile
       # The runner image ships PostgreSQL 16 server binaries; dev-postgres.sh uses them.
       - run: uv run pytest -q -m "unit or integration"
 
@@ -416,12 +423,25 @@ jobs:
         run: python3 ../scripts/ci/check_first_route_js.py --next-dir .next --route /page --budget-kb 200
 
   e2e:
-    name: E2E (Playwright, Chromium + WebKit) with axe-core
+    # One leg per browser, each on its own runner and stack (CI-E2E-JOURNEYS-TIMEOUT): both
+    # browsers one after the other took 18-19 min of gated run plus ~9 min listed run, and a
+    # slower runner (main run 38016581726) ran past the job limit with no report.
+    name: E2E (Playwright, ${{ matrix.project }}) with axe-core
     runs-on: ubuntu-24.04
-    # 45: the gated step takes ~15 min and the listed red-until step runs failing tests to their
-    # own timeouts (ST-054, run 37867886176 was cancelled at 30 min).
+    # 45: the gated step stops itself at its --global-timeout (18 min) with its report, and the
+    # listed red-until step runs failing tests to their own timeouts (ST-054).
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, webkit]
     steps:
+      - name: Runner facts (CI-E2E-JOURNEYS-TIMEOUT; a slow run names its runner)
+        run: |
+          echo "cpus: $(nproc)"
+          grep -m1 "model name" /proc/cpuinfo
+          free -m
+          cat /proc/pressure/cpu /proc/pressure/io 2>/dev/null || true
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -467,14 +487,18 @@ jobs:
       - working-directory: web
         run: |
           pnpm install --frozen-lockfile
-          pnpm exec playwright install --with-deps chromium webkit
+          pnpm exec playwright install --with-deps "${{ matrix.project }}"
       - name: Playwright journeys; axe 0 serious/critical (NFR-027)
         # Gated: every spec except the red-first ones tagged @red-until-<story> (ADR 0046).
         working-directory: web
         env:
           # web-tls (ADR 0029): Secure `__Host-` cookies need https in WebKit.
           BASE_URL: https://localhost:3000
-        run: pnpm exec playwright test --grep-invert "@red-until-" --reporter=github,html
+        # --global-timeout: the run stops itself with its report and the running test named
+        # (list reporter) instead of being cancelled at the job limit (CI-E2E-JOURNEYS-TIMEOUT).
+        run: |
+          pnpm exec playwright test --project="${{ matrix.project }}" --grep-invert "@red-until-" \
+            --global-timeout=1080000 --reporter=github,list,html
       - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
         # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).
         # 2 workers: these tests mostly wait out their timeouts while red (ST-054); the gated
@@ -484,19 +508,20 @@ jobs:
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: ../reports/e2e-red-until.json
         run: |
-          pnpm exec playwright test --grep "@red-until-" --workers=2 --reporter=json \
+          pnpm exec playwright test --project="${{ matrix.project }}" --grep "@red-until-" \
+            --workers=2 --reporter=json \
             || echo "playwright rc=$? (red-until tests are expected to fail)"
       - name: Stale-tag check for the red-until E2E tests
         run: |
           python3 scripts/ci/e2e_red_until_report.py --json reports/e2e-red-until.json --specs web/e2e \
             --summary "$GITHUB_STEP_SUMMARY"
-      - name: Service logs on failure
-        if: failure()
+      - name: Service logs on failure or cancel
+        if: failure() || cancelled()
         run: $COMPOSE logs --no-color --tail=300
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: web/playwright-report/
           if-no-files-found: warn
 
