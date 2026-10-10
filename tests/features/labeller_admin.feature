@@ -12,6 +12,12 @@ Feature: Labeller role and team-held consent record
       Then the operator is told the input was refused
       And the match has no consent record
 
+    Scenario: Consent for a deleted match is refused and nothing is stored
+      Given Dana has deleted a received match
+      When the operator records consent for it as "CONSENT-TEAM-001"
+      Then the operator is told the input was refused
+      And the match has no consent record
+
     Scenario: The operator records the team's consent reference for a match
       Given Dana has a received match
       When the operator records consent for it as "CONSENT-TEAM-001"
@@ -23,6 +29,11 @@ Feature: Labeller role and team-held consent record
       When the operator grants Ivy the labeller role
       Then the operator is told the input was refused
       And Ivy holds no role
+
+    Scenario: Revoking the role of an unknown account is refused
+      Given an account id that belongs to no account
+      When the operator revokes the labeller role of that account
+      Then the operator is told the input was refused
 
     Scenario: The operator grants and revokes the labeller role
       Given Dana has a normal player account

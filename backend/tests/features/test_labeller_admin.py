@@ -61,6 +61,18 @@ def received_match(ctx: dict[str, Any]) -> None:
     ctx["match"] = _received(ctx, "dana")
 
 
+@given("Dana has deleted a received match")
+def deleted_match(ctx: dict[str, Any]) -> None:
+    ctx["match"] = _received(ctx, "dana")
+    response = st.delete_match(ctx["api"], "dana", ctx["match"])
+    assert response.status_code in st.statscontract.DELETE_OK, response.text
+
+
+@given("an account id that belongs to no account")
+def unknown_account(ctx: dict[str, Any]) -> None:
+    ctx["account"] = str(uuid.uuid4())
+
+
 @given("Dana has a received match with a consent record and a label session")
 def match_with_label_rows(ctx: dict[str, Any]) -> None:
     from sqlalchemy.orm import Session
@@ -103,6 +115,11 @@ def grant(ctx: dict[str, Any]) -> None:
 @when("the operator revokes Dana's labeller role")
 def revoke(ctx: dict[str, Any]) -> None:
     assert _admin("revoke-labeller", "--account", ctx["account"]) == 0
+
+
+@when("the operator revokes the labeller role of that account")
+def revoke_unknown(ctx: dict[str, Any]) -> None:
+    ctx["rc"] = _admin("revoke-labeller", "--account", ctx["account"])
 
 
 @when("Dana deletes the match and the clean-up runs")

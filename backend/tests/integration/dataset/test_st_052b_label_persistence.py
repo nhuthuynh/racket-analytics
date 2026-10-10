@@ -1,8 +1,10 @@
 """ST-052b (FR-150, NFR-078; api-sprint-03 §5.2, §5.5): labeller role, team-held consent
 record and label session persistence on real Postgres (migration 0017). Negative cases first.
 
-1. Unknown accounts are refused by ``grant-labeller`` (exit 1) and nothing is stored; a refused
-   consent (unknown match) stores nothing.
+1. Unknown accounts are refused by ``grant-labeller`` and ``revoke-labeller`` (exit 1) and
+   nothing is stored; a refused consent (unknown or deleted match) stores nothing, and the
+   consent holds the live match row ``FOR SHARE`` so a deletion waits for it (PE-052b-R1-01,
+   PE-052b-R1-02, SBE-R1-1).
 2. The role is removed with its account (FK cascade) and ``has_role`` ignores a deleted account.
 3. One command at a time per match: the label session row is created empty once, and a second
    transaction cannot take its lock while the first holds it.
@@ -50,6 +52,50 @@ def test_st_052b_unknown_ids_are_refused_and_nothing_is_stored(
     assert _admin("consent", "--match", str(uuid.uuid4()), "--record", "CONSENT-1") == 1
     assert _count(committed_db, "SELECT count(*) FROM account_roles") == 0
     assert _count(committed_db, "SELECT count(*) FROM label_consents") == 0
+
+
+def test_st_052b_revoke_on_an_unknown_account_is_refused(api: ApiDriver, committed_db: Any) -> None:
+    from racket.players import public as players
+
+    unknown = uuid.uuid4()
+    assert _admin("revoke-labeller", "--account", str(unknown)) == 1
+    with Session(bind=committed_db) as session:
+        assert players.revoke_role(session, unknown, "labeller") is False
+        session.rollback()
+    dana = st.me_id(api, "dana")
+    assert _admin("revoke-labeller", "--account", dana) == 0  # a live non-labeller: no-op, done
+
+
+def test_st_052b_consent_for_a_deleted_match_is_refused(api: ApiDriver, committed_db: Any) -> None:
+    match_id = _match(api, "dana", "ST-052b deleted")
+    assert st.delete_match(api, "dana", match_id).status_code in st.statscontract.DELETE_OK
+    assert _admin("consent", "--match", match_id, "--record", "CONSENT-1") == 1
+    assert _count(committed_db, "SELECT count(*) FROM label_consents") == 0
+
+
+def test_st_052b_the_consent_holds_the_live_match_until_it_commits(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    from racket.matches import public as matches
+
+    match_id = uuid.UUID(_match(api, "dana", "ST-052b share lock"))
+    with Session(bind=committed_db) as consent:
+        assert matches.lock_live_match(consent, match_id) is True
+        with committed_db.connect() as deleting:
+            deleting.execute(sa.text("SET lock_timeout = '200ms'"))
+            with pytest.raises(OperationalError):
+                deleting.execute(
+                    sa.text("UPDATE matches SET deleted_at = now() WHERE id = :m"), {"m": match_id}
+                )
+            deleting.rollback()
+        consent.rollback()
+    with committed_db.begin() as conn:
+        conn.execute(
+            sa.text("UPDATE matches SET deleted_at = now() WHERE id = :m"), {"m": match_id}
+        )
+    with Session(bind=committed_db) as session:
+        assert matches.lock_live_match(session, match_id) is False
+        assert matches.lock_live_match(session, uuid.uuid4()) is False
 
 
 def test_st_052b_the_role_goes_with_its_account(api: ApiDriver, committed_db: Any) -> None:
