@@ -21,6 +21,20 @@ Feature: The S3-DoD-P10 status is measured from the repository's visibility
 
   Rule: The status is "met" only when the repository is private or the PO confirmed public
 
+    Scenario Outline: A P10 row that negates, questions or declines public is not a confirmation
+      Given GitHub reports the repository as public
+      And the PO record answers P10 with "<decision>"
+      When the visibility is measured
+      Then the status is 'not met: waiting on P10 (GitHub reports "visibility": "public")'
+      Examples:
+        | decision                                                                |
+        | Asked again 2026-10-10: make private or keep public? Not yet answered.  |
+        | Not confirmed public; still open.                                       |
+        | PO declined to keep public; make it private                             |
+        | Not confirmed public yet; PO to decide                                  |
+        | Do not keep public: make it private                                     |
+        | Open: confirmed public is not decided                                   |
+
     Scenario: A public repository without a PO answer is not met, waiting on P10
       Given GitHub reports the repository as public
       And the PO record has no P10 answer

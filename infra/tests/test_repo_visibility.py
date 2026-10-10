@@ -76,6 +76,28 @@ def test_a_p10_row_that_does_not_confirm_public_is_not_a_confirmation(m, decisio
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "decision",
+    [
+        # Review round 1 (PE-71-01, SBE-71-01): the phrase appears, but negated, asked or declined.
+        "Asked again 2026-10-10: make private or keep public? Not yet answered.",
+        "Not confirmed public; still open.",
+        "PO declined to keep public; make it private",
+        "Not confirmed public yet; PO to decide",
+        "Do not keep public: make it private",
+        "Open: confirmed public is not decided",
+        "Keep public? PO to decide",
+        "Keep public unless the PO says otherwise; not confirmed",
+        "Confirmed public is pending",
+    ],
+)
+def test_a_p10_row_that_negates_or_questions_public_is_not_a_confirmation(
+    m, decision: str
+) -> None:
+    assert m.po_confirmed_public(po_record(decision)) is False
+
+
+@pytest.mark.unit
 def test_a_po_record_without_a_p10_row_is_not_a_confirmation(m) -> None:
     assert m.po_confirmed_public(po_record()) is False
 
