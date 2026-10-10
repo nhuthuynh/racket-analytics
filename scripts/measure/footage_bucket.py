@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Measure the private footage bucket (sprint-DoD row S3-DoD-P11; BLK-GOLD-01; PO P12 option b).
 
-    footage_bucket.py --po docs/requirements/po-input-2026-10-05.md [--dod docs/sprints/sprint-03.md]
+    footage_bucket.py --po docs/requirements/po-input-2026-10-05.md
+        [--dod docs/sprints/sprint-03.md]   # the plan's row must agree
         [--endpoint URL --bucket NAME]      # live probe; credentials from S3_ACCESS_KEY_ID/SECRET
         [--from-probe probe.json]           # recorded {"exists": bool, "anonymous_status": n}
 
@@ -33,7 +34,9 @@ REFUSED = (401, 403)
 def _rows(text: str):
     for line in text.splitlines():
         if line.lstrip().startswith("|"):
-            yield [" ".join(c.replace("**", "").split()) for c in line.strip().strip("|").split("|")]
+            yield [
+                " ".join(c.replace("**", "").split()) for c in line.strip().strip("|").split("|")
+            ]
 
 
 def po_provider(record: str) -> str | None:
@@ -69,7 +72,12 @@ def status_text(provider: str | None, state: str | None) -> str:
 def measure(provider: str | None, state: str | None) -> dict:
     """The S3-DoD-P11 result for the PO's provider and the probed bucket state (None: no probe)."""
     status = status_text(provider, state)
-    return {"provider": provider, "bucket": state, "met": status.startswith("met"), "status": status}
+    return {
+        "provider": provider,
+        "bucket": state,
+        "met": status.startswith("met"),
+        "status": status,
+    }
 
 
 def dod_status(plan: str) -> str:
@@ -87,9 +95,9 @@ def dod_verdict(status: str) -> str:
 
 def probe(endpoint: str, bucket: str) -> tuple[bool, int]:
     """Live probe: authenticated HEAD for existence, then an anonymous GET of the bucket."""
-    import boto3  # noqa: PLC0415 (only the live probe needs it)
-    from botocore.client import Config  # noqa: PLC0415
-    from botocore.exceptions import ClientError  # noqa: PLC0415
+    import boto3  # only the live probe needs boto3
+    from botocore.client import Config
+    from botocore.exceptions import ClientError
 
     s3 = boto3.client(
         "s3",

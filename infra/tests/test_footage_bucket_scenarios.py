@@ -35,8 +35,12 @@ def po_answer(ctx: dict, decision: str) -> None:
     ctx["po"] = po_record(decision)
 
 
-@given(parsers.re(r"the footage bucket (?P<state>exists|does not exist) and an anonymous read "
-                  r"gets HTTP (?P<status>\d+)"))
+@given(
+    parsers.re(
+        r"the footage bucket (?P<state>exists|does not exist) and an anonymous read "
+        r"gets HTTP (?P<status>\d+)"
+    )
+)
 def bucket(ctx: dict, state: str, status: str) -> None:
     ctx["probe"] = ctx["dir"] / "probe.json"
     ctx["probe"].write_text(probe(state == "exists", int(status)), encoding="utf-8")

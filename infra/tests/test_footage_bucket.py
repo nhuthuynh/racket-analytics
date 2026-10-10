@@ -144,8 +144,9 @@ def s3_env(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, str]]
         return
     env = {**os.environ, "RA_DEV_STATE": str(tmp_path_factory.mktemp("objstore"))}
     script = str(SCRIPTS_DIR / "dev-objectstore.sh")
-    res = subprocess.run(["bash", script, "start"], capture_output=True, text=True, env=env,
-                         timeout=180, check=False)
+    res = subprocess.run(
+        ["bash", script, "start"], capture_output=True, text=True, env=env, timeout=180, check=False
+    )
     assert res.returncode == 0, res.stderr
     try:
         yield dict(re.findall(r"^export (S3_[A-Z_]+)=(\S+)$", res.stdout, re.M))
@@ -155,8 +156,18 @@ def s3_env(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, str]]
 
 def _live(s3_env: dict[str, str], bucket: str) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, **s3_env}
-    cmd = [sys.executable, str(SCRIPT), "--po", str(PO), "--dod", str(PLAN),
-           "--endpoint", s3_env["S3_ENDPOINT_URL"], "--bucket", bucket]
+    cmd = [
+        sys.executable,
+        str(SCRIPT),
+        "--po",
+        str(PO),
+        "--dod",
+        str(PLAN),
+        "--endpoint",
+        s3_env["S3_ENDPOINT_URL"],
+        "--bucket",
+        bucket,
+    ]
     return subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=120)
 
 
