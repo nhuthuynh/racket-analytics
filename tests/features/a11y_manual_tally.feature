@@ -24,6 +24,11 @@ Feature: The S3-DoD-P6 status is counted from the screen-reader manual
       When the manual is tallied
       Then the tally is refused as malformed
 
+    Scenario: A "fail:" cell with only a count and no words heard is refused
+      Given a manual whose rows 1-24 say "fail: (3 of 24)" and rows 25 to 38 say "pass" on both screen readers
+      When the manual is tallied
+      Then the tally is refused as malformed
+
   Rule: The status is "met" only when every row has a result on both screen readers
 
     Scenario: No row run is not met, waiting on P6

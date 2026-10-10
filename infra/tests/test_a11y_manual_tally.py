@@ -145,6 +145,37 @@ def test_a_result_word_without_a_word_boundary_is_refused(m, cell: str) -> None:
         m.tally(text)
 
 
+# PE-R2-01: a "fail:" cell whose only "words" are the count heard nothing; it is malformed,
+# never a full range run.
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "cell", ["fail: (3 of 24)", "fail:(3 of 24)", "fail: (24 of 24)", "FAIL: ( 3 of 24 )"]
+)
+def test_a_fail_cell_with_only_a_count_and_no_words_heard_is_refused(m, cell: str) -> None:
+    with pytest.raises(ValueError, match="row 1-24"):
+        m.tally(_range_manual(cell, cell))
+
+
+@pytest.mark.unit
+def test_a_count_with_extra_spaces_is_still_read_as_the_count(m) -> None:
+    t = m.tally(_range_manual("fail: x ( 3 of 24 )", "pass (3  of 24)", rest="not run"))
+    assert (t["voiceover"], t["talkback"], t["both"]) == (3, 3, 0)
+    assert t["status"] == "not met: waiting on P6 (0 of 38 rows run)"
+
+
+@pytest.mark.integration
+def test_a_fail_cell_with_only_a_count_exits_2_as_malformed(tmp_path) -> None:
+    path = tmp_path / "m.md"
+    path.write_text(_range_manual("fail: (3 of 24)", "fail: (3 of 24)"))
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(path)], capture_output=True, text=True, timeout=60
+    )
+    assert out.returncode == 2, out.stdout + out.stderr
+    assert "row 1-24" in out.stderr
+
+
 @pytest.mark.unit
 def test_a_row_with_fewer_cells_than_the_header_is_refused(m) -> None:
     text = manual(2).replace("| 2 | screen 2 | not run | not run |", "| 2 | short |")
