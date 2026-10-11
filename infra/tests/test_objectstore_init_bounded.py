@@ -83,7 +83,8 @@ def test_the_retry_count_and_shell_limit_have_bounded_defaults() -> None:
     script = init_command()
     tries = re.search(r"\$\{OBJSTORE_INIT_TRIES:-(\d+)\}", script)
     limit = re.search(r"\$\{OBJSTORE_INIT_SHELL_TIMEOUT_S:-(\d+)\}", script)
-    assert tries and limit, "objectstore-init needs bounded retry and per-call defaults"
+    assert tries, "objectstore-init needs a bounded default retry count"
+    assert limit, "objectstore-init needs a bounded default per-call time limit"
     # Two shell calls per try plus a 1 s pause: the worst case stays far below the E2E job's
     # 45-minute timeout, so a stuck store fails `up --wait` with its own message.
     assert int(tries.group(1)) * (2 * int(limit.group(1)) + 1) <= 600
