@@ -103,8 +103,19 @@ services:
     environment:
       S3_BUCKET_MEDIA: ${S3_BUCKET_MEDIA:?set S3_BUCKET_MEDIA}
     entrypoint: ["/bin/sh", "-c"]
+    # CI-OBJSTORE-INIT-HANG (run 38096146829): a `weed shell` started before the master lists
+    # the filer never returns, and `up --wait` hung for 45 min. Each call is time-limited and
+    # retried; after the last try the one-shot fails and names the bucket (worst case ~7 min).
     command:
-      - echo "s3.bucket.create -name $$S3_BUCKET_MEDIA" | weed shell -master=objectstore:9333 2>&1 | grep -v -i "already exist" || true; echo "s3.bucket.list" | weed shell -master=objectstore:9333 | grep -q "$$S3_BUCKET_MEDIA"
+      - |
+        tries=$${OBJSTORE_INIT_TRIES:-20}; limit=$${OBJSTORE_INIT_SHELL_TIMEOUT_S:-10}; i=0
+        while [ "$$i" -lt "$$tries" ]; do
+          i=$$((i + 1))
+          echo "s3.bucket.create -name $$S3_BUCKET_MEDIA" | timeout "$$limit" weed shell -master=objectstore:9333 2>&1 | grep -v -i "already exist"
+          if echo "s3.bucket.list" | timeout "$$limit" weed shell -master=objectstore:9333 | grep -q "$$S3_BUCKET_MEDIA"; then exit 0; fi
+          echo "objectstore-init: try $$i/$$tries: bucket not listed yet"; sleep 1
+        done
+        echo "objectstore-init: bucket $$S3_BUCKET_MEDIA not created after $$tries tries" >&2; exit 1
     depends_on:
       objectstore:
         condition: service_healthy
