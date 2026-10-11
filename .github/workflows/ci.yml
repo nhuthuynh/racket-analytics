@@ -506,11 +506,12 @@ jobs:
           BASE_URL: https://localhost:3000
           # E2E-03-05 (ST-052): the labeller-admin CLI in this job's api container.
           E2E_ADMIN_CMD: docker compose -f ${{ github.workspace }}/infra/compose.yaml --env-file ${{ github.workspace }}/infra/env.example exec -T api python -m racket.dataset.admin
-        # --global-timeout: the run stops itself with its report and the running test named
-        # (list reporter) instead of being cancelled at the job limit (CI-E2E-JOURNEYS-TIMEOUT).
+        # --global-timeout: the run stops itself with its report instead of being cancelled at the
+        # job limit (CI-E2E-JOURNEYS-TIMEOUT). Playwright exits then without waiting for the
+        # running test's end, so interrupted-tests-reporter names it (CI-STALL-SCENARIO-RACE).
         run: |
           pnpm exec playwright test --project="${{ matrix.project }}" --grep-invert "@red-until-" \
-            --global-timeout=1080000 --reporter=github,list,html
+            --global-timeout=1080000 --reporter=github,./e2e/helpers/interrupted-tests-reporter.ts,list,html
       - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
         # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).
         # 2 workers: these tests mostly wait out their timeouts while red (ST-054); the gated
