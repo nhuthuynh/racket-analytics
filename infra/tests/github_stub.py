@@ -1,5 +1,5 @@
 """A local stand-in for the four GitHub REST endpoints `scripts/ci/merge_ready.py` reads
-(CI-PR-GATE). It speaks real HTTP on 127.0.0.1, paginates with `Link: rel="next"` like
+(CI-PR-GATE; labels: CI-POLICY-LIVE-LABELS). Real HTTP on 127.0.0.1, `Link: rel="next"` like
 GitHub, and records the requests, so the script is exercised over a real socket.
 """
 
@@ -131,6 +131,9 @@ class GitHubStub:
     requests: list[tuple[str, str | None]] = field(default_factory=list)
     url: str = ""
     raw_pr: bytes | None = None  # a non-JSON body for the PR endpoint
+    # CI-POLICY-LIVE-LABELS: the PR's current labels, as GET /issues/{n}/labels lists them.
+    labels: list[str] = field(default_factory=list)
+    labels_status: int = 200  # e.g. 500: the labels endpoint is down
 
 
 def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
@@ -155,6 +158,12 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
                 wruns = [r for r in stub.workflow_runs if r["head_sha"] == sha]
                 chunk, more = self._page(wruns, page)
                 return self._send({"total_count": len(wruns), "workflow_runs": chunk}, more, page)
+            if parts.path == f"{base}/issues/{PR_NUMBER}/labels":
+                if stub.labels_status != 200:
+                    return self._send({"message": "boom"}, status=stub.labels_status)
+                named = [{"id": i, "name": n} for i, n in enumerate(stub.labels)]
+                chunk, more = self._page(named, page)
+                return self._send(chunk, more, page)
             if parts.path == f"{base}/pulls/{PR_NUMBER}/reviews":
                 chunk, more = self._page(stub.reviews, page)
                 return self._send(chunk, more, page)

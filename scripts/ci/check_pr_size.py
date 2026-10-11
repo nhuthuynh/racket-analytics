@@ -2,6 +2,8 @@
 """PR size gate (EP/ENG-04, NFR-077): aim for ~100 changed lines; > 400 needs the EM's
 `size-waiver` label. Lockfiles, fixtures and gold data do not count.
 Usage: PR_LABELS='[...]' check_pr_size.py --base origin/main [--head HEAD]
+Labels: the PR's current labels from the GitHub API when GITHUB_TOKEN, GITHUB_REPOSITORY and
+PR_NUMBER are set, else PR_LABELS (the event payload) (CI-POLICY-LIVE-LABELS, pr_labels.py).
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ import os
 import subprocess
 import sys
 from fnmatch import fnmatch
+
+from pr_labels import live_labels
 
 SOFT_LIMIT = 100
 HARD_LIMIT = 400
@@ -24,10 +28,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--base", required=True)
     ap.add_argument("--head", default="HEAD")
     args = ap.parse_args(argv)
-    try:
-        labels = json.loads(os.environ.get("PR_LABELS", "[]") or "[]")
-    except ValueError:
-        labels = []
+    labels = live_labels(os.environ, "pr-size")
+    if labels is None:
+        try:
+            labels = json.loads(os.environ.get("PR_LABELS", "[]") or "[]")
+        except ValueError:
+            labels = []
     res = subprocess.run(
         ["git", "diff", "--numstat", f"{args.base}...{args.head}"],
         capture_output=True,
