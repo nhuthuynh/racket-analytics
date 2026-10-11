@@ -7,7 +7,7 @@
 // began and have not ended, and names them when the run ends with status `timedout`, before
 // Playwright exits. It is on the gated E2E step in ci.yml.
 import path from 'node:path';
-import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestResult } from '@playwright/test/reporter';
+import type { FullConfig, FullResult, Reporter, Suite, TestCase } from '@playwright/test/reporter';
 
 export const INTERRUPTED = 'Interrupted by the global timeout';
 
@@ -32,16 +32,16 @@ export default class InterruptedTestsReporter implements Reporter {
     this.write = options.write ?? ((text) => process.stdout.write(text));
   }
 
-  onBegin(config: FullConfig, _suite: Suite): void {
+  onBegin(config: FullConfig): void {
     this.rootDir = config.rootDir;
   }
 
-  onTestBegin(test: TestCase, _result: TestResult): void {
+  onTestBegin(test: TestCase): void {
     this.running.delete(test.id); // a retry is named once, in the order of its latest attempt
     this.running.set(test.id, test);
   }
 
-  onTestEnd(test: TestCase, _result: TestResult): void {
+  onTestEnd(test: TestCase): void {
     this.running.delete(test.id);
   }
 

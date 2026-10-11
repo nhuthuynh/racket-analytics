@@ -112,7 +112,7 @@ def names_stopped(result: Run) -> None:
     out = result.out
     expected = f"Timed out waiting {result.global_timeout}s for the test suite to run"
     assert expected in out, out
-    named = r"Interrupted by the global timeout: stall\.spec\.ts:\d+:\d+ › second test waits"
+    named = r"Interrupted by the global timeout: stall\.spec\.ts:\d+:\d+ \u203a second test waits"
     assert re.search(named, out), out
 
 

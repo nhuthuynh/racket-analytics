@@ -3,7 +3,7 @@
 // test it was running, so the `list` reporter's line for that test may never appear (main run
 // 38103354166). This reporter names every test that began and had not ended when the run ends
 // with status `timedout`.
-import type { FullConfig, FullResult, Suite, TestCase, TestResult } from '@playwright/test/reporter';
+import type { FullConfig, FullResult, Suite, TestCase } from '@playwright/test/reporter';
 import { describe, expect, it } from 'vitest';
 import InterruptedTestsReporter, { interruptedLine } from '../../e2e/helpers/interrupted-tests-reporter';
 
@@ -22,11 +22,10 @@ function testCase(id: string, title: string, file: string, line: number, describ
 function reporter(): { lines: string[]; r: InterruptedTestsReporter } {
   const lines: string[] = [];
   const r = new InterruptedTestsReporter({ write: (s: string) => lines.push(s) });
-  r.onBegin({ rootDir: ROOT } as FullConfig, suite('root', ''));
+  r.onBegin({ rootDir: ROOT } as FullConfig);
   return { lines, r };
 }
 
-const result = {} as TestResult;
 const end = (status: FullResult['status']) => ({ status }) as FullResult;
 
 const first = testCase('1', 'first test passes', `${ROOT}/stall.spec.ts`, 3);
@@ -37,7 +36,7 @@ describe('InterruptedTestsReporter', () => {
     'prints nothing when the run ends %s, even with a test still running',
     (status) => {
       const { lines, r } = reporter();
-      r.onTestBegin(second, result);
+      r.onTestBegin(second);
       r.onEnd(end(status));
       expect(lines).toEqual([]);
     },
@@ -45,17 +44,17 @@ describe('InterruptedTestsReporter', () => {
 
   it('does not name a test that began and ended before the global timeout', () => {
     const { lines, r } = reporter();
-    r.onTestBegin(first, result);
-    r.onTestEnd(first, result);
+    r.onTestBegin(first);
+    r.onTestEnd(first);
     r.onEnd(end('timedout'));
     expect(lines).toEqual([]);
   });
 
   it('names the test still running when the run reaches its global timeout', () => {
     const { lines, r } = reporter();
-    r.onTestBegin(first, result);
-    r.onTestEnd(first, result);
-    r.onTestBegin(second, result);
+    r.onTestBegin(first);
+    r.onTestEnd(first);
+    r.onTestBegin(second);
     r.onEnd(end('timedout'));
     expect(lines).toEqual(['Interrupted by the global timeout: stall.spec.ts:5:5 › second test waits\n']);
   });
@@ -63,8 +62,8 @@ describe('InterruptedTestsReporter', () => {
   it('names every running test, one per worker, in the order they began', () => {
     const { lines, r } = reporter();
     const nested = testCase('3', 'opens the sheet', `${ROOT}/sprint-03/stats.spec.ts`, 12, ['Stats', 'AN-04']);
-    r.onTestBegin(nested, result);
-    r.onTestBegin(second, result);
+    r.onTestBegin(nested);
+    r.onTestBegin(second);
     r.onEnd(end('timedout'));
     expect(lines).toEqual([
       'Interrupted by the global timeout: sprint-03/stats.spec.ts:12:5 › Stats › AN-04 › opens the sheet\n',
@@ -74,9 +73,9 @@ describe('InterruptedTestsReporter', () => {
 
   it('keeps a retried test named once, by its latest attempt', () => {
     const { lines, r } = reporter();
-    r.onTestBegin(second, result);
-    r.onTestEnd(second, result);
-    r.onTestBegin(second, result);
+    r.onTestBegin(second);
+    r.onTestEnd(second);
+    r.onTestBegin(second);
     r.onEnd(end('timedout'));
     expect(lines).toHaveLength(1);
   });

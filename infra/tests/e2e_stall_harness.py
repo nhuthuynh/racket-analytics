@@ -8,6 +8,7 @@ racing worker start-up on a loaded runner.
 
 from __future__ import annotations
 
+import contextlib
 import math
 import os
 import re
@@ -123,7 +124,7 @@ class StandIn:
         args += options
         with log.open("wb") as sink:
             launched = time.time()
-            proc = subprocess.Popen(  # noqa: S603  (fixed argv, no shell)
+            proc = subprocess.Popen(
                 args,
                 cwd=self.root,
                 env=self._env(),
@@ -144,16 +145,12 @@ class StandIn:
 
     @staticmethod
     def _kill(proc: subprocess.Popen[bytes], worker: int | None) -> None:
-        for pid in filter(None, [worker]):
-            for sig in (signal.SIGCONT, signal.SIGKILL):
-                try:
-                    os.kill(pid, sig)
-                except ProcessLookupError:
-                    pass
-        try:
+        with contextlib.suppress(ProcessLookupError):
+            if worker is not None:  # may have left the group's lifetime: wake it, then end it
+                os.kill(worker, signal.SIGCONT)
+                os.kill(worker, signal.SIGKILL)
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
         proc.wait(timeout=30)
 
     def measure_start_up(self, reporters: str) -> float:
