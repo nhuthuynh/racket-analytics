@@ -45,6 +45,12 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # Both steps read the PR's current labels from the API (pr_labels.py); the frozen PR_LABELS
+    # is only the fallback when the API fails (CI-POLICY-LIVE-LABELS, PR #71).
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,11 +62,15 @@ jobs:
       - name: Test and gold immutability (EP/ENG-28, NFR-078)
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/ci/check_test_immutability.py --base "origin/$BASE_REF" --head HEAD
       - name: PR size (EP/ENG-04)
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/ci/check_pr_size.py --base "origin/$BASE_REF" --head HEAD
 
@@ -496,11 +506,12 @@ jobs:
           BASE_URL: https://localhost:3000
           # E2E-03-05 (ST-052): the labeller-admin CLI in this job's api container.
           E2E_ADMIN_CMD: docker compose -f ${{ github.workspace }}/infra/compose.yaml --env-file ${{ github.workspace }}/infra/env.example exec -T api python -m racket.dataset.admin
-        # --global-timeout: the run stops itself with its report and the running test named
-        # (list reporter) instead of being cancelled at the job limit (CI-E2E-JOURNEYS-TIMEOUT).
+        # --global-timeout: the run stops itself with its report instead of being cancelled at the
+        # job limit (CI-E2E-JOURNEYS-TIMEOUT). Playwright exits then without waiting for the
+        # running test's end, so interrupted-tests-reporter names it (CI-STALL-SCENARIO-RACE).
         run: |
           pnpm exec playwright test --project="${{ matrix.project }}" --grep-invert "@red-until-" \
-            --global-timeout=1080000 --reporter=github,list,html
+            --global-timeout=1080000 --reporter=github,./e2e/helpers/interrupted-tests-reporter.ts,list,html
       - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
         # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).
         # 2 workers: these tests mostly wait out their timeouts while red (ST-054); the gated

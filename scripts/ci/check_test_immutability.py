@@ -7,6 +7,8 @@ senior-qa-engineer; label mechanism is judgment, see docs/process/ci-cd.md).
 Adding new files is always allowed: TDD adds tests, it never rewrites accepted ones.
 
 Usage: PR_LABELS='["a","b"]' check_test_immutability.py --base origin/main --head HEAD
+Labels: the PR's current labels from the GitHub API when GITHUB_TOKEN, GITHUB_REPOSITORY and
+PR_NUMBER are set, else PR_LABELS (the event payload) (CI-POLICY-LIVE-LABELS, pr_labels.py).
 Exit codes: 0 ok, 1 violation, 2 usage or git error (fails closed).
 """
 
@@ -17,6 +19,8 @@ import json
 import os
 import subprocess
 import sys
+
+from pr_labels import live_labels
 
 PROTECTED_PREFIXES = (
     "backend/tests/",
@@ -60,13 +64,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--head", default="HEAD")
     args = ap.parse_args(argv)
 
-    try:
-        labels = json.loads(os.environ.get("PR_LABELS", "[]") or "[]")
-        if not isinstance(labels, list):
-            raise ValueError("PR_LABELS must be a JSON array")
-    except ValueError as exc:
-        print(f"test-immutability: cannot read PR_LABELS ({exc}); failing closed")
-        return 2
+    labels = live_labels(os.environ, "test-immutability")
+    if labels is None:
+        try:
+            labels = json.loads(os.environ.get("PR_LABELS", "[]") or "[]")
+            if not isinstance(labels, list):
+                raise ValueError("PR_LABELS must be a JSON array")
+        except ValueError as exc:
+            print(f"test-immutability: cannot read PR_LABELS ({exc}); failing closed")
+            return 2
 
     diff = subprocess.run(
         ["git", "diff", "--name-status", "-M", f"{args.base}...{args.head}"],
