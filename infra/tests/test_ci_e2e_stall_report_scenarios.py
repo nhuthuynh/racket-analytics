@@ -1,21 +1,28 @@
 """Binds tests/features/ci_e2e_stall_report.feature (CI-E2E-JOURNEYS-TIMEOUT; NFR-074): the
 real Playwright of web/ (web/node_modules, installed by the infra-tests job) runs a stand-in
 spec with the gated E2E step's reporters, read from ci.yml, and a short global timeout. No
-browser is launched: the stand-in tests do not use a page."""
+browser is launched: the stand-in tests do not use a page.
+
+CI-STALL-SCENARIO-RACE: the global timeout is set past the measured start-up of the second test
+(e2e_stall_harness.global_timeout_s), and the interrupted test must be named by a line the run
+prints before it exits, not by the worker's answer to the runner's stop, which Playwright 1.56.1
+does not wait for once the global timeout has passed."""
 
 from __future__ import annotations
 
-import os
 import re
-import shlex
-import subprocess
-import time
 from pathlib import Path
-from typing import Any
 
 import pytest
-import yaml
 from conftest import REPO_ROOT
+from e2e_stall_harness import (
+    MAX_GLOBAL_TIMEOUT_S,
+    Run,
+    StandIn,
+    gated_reporters,
+    global_timeout_s,
+    resolve_reporters,
+)
 from pytest_bdd import given, parsers, scenarios, then, when
 
 pytestmark = pytest.mark.integration
@@ -24,28 +31,7 @@ scenarios("ci_e2e_stall_report.feature")
 CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 WEB = REPO_ROOT / "web"
 PLAYWRIGHT = WEB / "node_modules" / ".bin" / "playwright"
-GATED = '--grep-invert "@red-until-"'
-
-SPEC = """import { test } from '@playwright/test';
-
-test('first test passes', async () => {});
-
-test('second test waits', async () => {
-  test.setTimeout(0);
-  await new Promise((resolve) => setTimeout(resolve, %d));
-});
-"""
-CONFIG = """module.exports = { testDir: '.', workers: 1, retries: 0, timeout: 0 };
-"""
-
-
-def gated_reporters() -> str:
-    """The ``--reporter`` value of the E2E job's gated Playwright step."""
-    steps = yaml.safe_load(CI.read_text())["jobs"]["e2e"]["steps"]
-    run = next(s["run"] for s in steps if GATED in s.get("run", ""))
-    found = re.search(r"--reporter[= ](\S+)", run)
-    assert found is not None, run
-    return found.group(1)
+SECOND_TEST_WAIT_S = 120
 
 
 @pytest.fixture
@@ -55,15 +41,27 @@ def playwright() -> Path:
     return PLAYWRIGHT
 
 
+@pytest.fixture
+def reporters() -> str:
+    return resolve_reporters(gated_reporters(CI), WEB)
+
+
 @given(
-    parsers.parse(
-        "the gated Playwright step's reporters from the CI workflow, "
-        "with a global timeout of {seconds:d} seconds"
-    ),
-    target_fixture="options",
+    "the gated Playwright step's reporters from the CI workflow, with a global timeout of at "
+    "least 5 seconds set past the measured start-up of the second test",
+    target_fixture="global_timeout",
 )
-def options(seconds: int) -> list[str]:
-    return [f"--reporter={gated_reporters()}", f"--global-timeout={seconds * 1000}"]
+def global_timeout(tmp_path: Path, playwright: Path, reporters: str) -> int:
+    warm_up = StandIn(tmp_path / "warm-up", playwright, WEB, SECOND_TEST_WAIT_S)
+    start_up = warm_up.measure_start_up(reporters)
+    seconds = global_timeout_s(start_up)
+    assert seconds <= MAX_GLOBAL_TIMEOUT_S, f"runner too slow: start-up {start_up:.1f}s"
+    return seconds
+
+
+def _run(tmp_path: Path, playwright: Path, reporters: str, timeout: int, freeze: bool) -> Run:
+    stand_in = StandIn(tmp_path / "run", playwright, WEB, SECOND_TEST_WAIT_S)
+    return stand_in.run(reporters, timeout, freeze_worker=freeze)
 
 
 @when(
@@ -73,52 +71,57 @@ def options(seconds: int) -> list[str]:
     ),
     target_fixture="result",
 )
-def run(tmp_path: Path, playwright: Path, options: list[str], seconds: int) -> dict[str, Any]:
-    (tmp_path / "stall.spec.ts").write_text(SPEC % (seconds * 1000))
-    (tmp_path / "playwright.config.cjs").write_text(CONFIG)
-    report = tmp_path / "report"
-    env = {
-        **os.environ,
-        "CI": "true",  # as on the runner: the HTML report is never opened or served
-        "NODE_PATH": str(WEB / "node_modules"),  # '@playwright/test' from web/
-        "PLAYWRIGHT_HTML_OUTPUT_DIR": str(report),
-        "PLAYWRIGHT_HTML_OPEN": "never",
-        "FORCE_COLOR": "0",
-    }
-    env.pop("GITHUB_ACTIONS", None)
-    args = [str(playwright), "test", "-c", str(tmp_path / "playwright.config.cjs"), *options]
-    started = time.monotonic()
-    done = subprocess.run(
-        args, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=180, check=False
-    )
-    return {
-        "rc": done.returncode,
-        "out": done.stdout + done.stderr,
-        "elapsed": time.monotonic() - started,
-        "report": report,
-        "cmd": shlex.join(args),
-    }
+def run(tmp_path: Path, playwright: Path, reporters: str, global_timeout: int, seconds: int) -> Run:
+    assert seconds == SECOND_TEST_WAIT_S
+    return _run(tmp_path, playwright, reporters, global_timeout, freeze=False)
 
 
-@then(parsers.parse("the run fails within {seconds:d} seconds"))
-def fails_fast(result: dict[str, Any], seconds: int) -> None:
-    assert result["rc"] != 0, result["out"]
-    assert result["elapsed"] < seconds, (result["elapsed"], result["out"])
+@when(
+    parsers.parse(
+        "Playwright runs a spec whose first test passes and whose second test waits "
+        "for {seconds:d} seconds, with its worker frozen from the second test's start until "
+        "the run has ended"
+    ),
+    target_fixture="result",
+)
+def run_frozen(
+    tmp_path: Path, playwright: Path, reporters: str, global_timeout: int, seconds: int
+) -> Run:
+    assert seconds == SECOND_TEST_WAIT_S
+    result = _run(tmp_path, playwright, reporters, global_timeout, freeze=True)
+    assert result.frozen is not None, (result.cmd, result.out)
+    assert result.frozen < global_timeout, ("frozen too late", result.frozen, global_timeout)
+    return result
+
+
+@then("the second test had started before the global timeout")
+def second_started(result: Run) -> None:
+    assert result.second_started is not None, (result.cmd, result.out)
+    assert result.second_started < result.global_timeout, (result.second_started, result.out)
+
+
+@then(parsers.parse("the run fails within {seconds:d} seconds of its global timeout"))
+def fails_fast(result: Run, seconds: int) -> None:
+    assert result.rc != 0, result.out
+    assert result.elapsed < result.global_timeout + seconds, (result.elapsed, result.out)
+    assert result.elapsed < SECOND_TEST_WAIT_S, (result.elapsed, result.out)
 
 
 @then("the output names the second test as the one the timeout stopped")
-def names_stopped(result: dict[str, Any]) -> None:
-    out = result["out"]
-    assert "Timed out waiting 5s for the test suite to run" in out, out
-    assert re.search(r"\u2718\s+\d+ stall\.spec\.ts:\d+:\d+ \u203a second test waits", out), out
+def names_stopped(result: Run) -> None:
+    out = result.out
+    expected = f"Timed out waiting {result.global_timeout}s for the test suite to run"
+    assert expected in out, out
+    named = r"Interrupted by the global timeout: stall\.spec\.ts:\d+:\d+ › second test waits"
+    assert re.search(named, out), out
 
 
 @then("the output prints the first test with its duration")
-def prints_duration(result: dict[str, Any]) -> None:
-    assert re.search(r"first test passes \(\d+(\.\d+)?m?s\)", result["out"]), result["out"]
+def prints_duration(result: Run) -> None:
+    assert re.search(r"first test passes \(\d+(\.\d+)?m?s\)", result.out), result.out
 
 
 @then("the HTML report is written")
-def html_report(result: dict[str, Any]) -> None:
-    index = result["report"] / "index.html"
-    assert index.is_file(), (result["cmd"], result["out"])
+def html_report(result: Run) -> None:
+    index = result.report / "index.html"
+    assert index.is_file(), (result.cmd, result.out)
