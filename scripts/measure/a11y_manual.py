@@ -60,7 +60,7 @@ def _ran(cell: str, rid: str, width: int) -> int:
     if not m or (m["words"] and COUNT_IN_WORDS.search(m["words"])):
         raise ValueError(
             f"row {rid}: {cell!r} is not 'pass', 'fail: <words heard>' or 'not run'"
-            " (optionally followed by '(k of w)')"
+            " (optionally followed by '(k of w)'; a count is never part of the words heard)"
         )
     if m["k"] is None:
         return width if m["result"] else 0
