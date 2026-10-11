@@ -946,5 +946,35 @@
     "status": "none opened at close (list_pull_requests state=all 2026-10-08 -> #1 closed, #2 merged 2026-10-06, #3 closed; no s3/* branch). Retro 3 A1",
     "pr_description_note": "T-ST-043/044/045/053/052a PRs must state 'TDD order not shown: reconstruction only (QA-R1S3-09/10)'"
   },
-  "goal_met_note": "not met at close: VR3 10/12 at fb920bc; G03-09 (c) no CI at the head; G03-12 open 8 after the EM close reconciliation (sprint-report §1)"
+  "goal_met_note": "not met at close: VR3 10/12 at fb920bc; G03-09 (c) no CI at the head; G03-12 open 8 after the EM close reconciliation (sprint-report §1)",
+  "nightly": {
+    "run_date": "2026-10-11",
+    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/38127826371",
+    "commit": "21f6d371c914e51d7feec575eb10b2e38a6d182a",
+    "oracle": {
+      "status": "passed",
+      "sequences": 100000,
+      "disagreements": 0,
+      "seed": 20261011,
+      "seconds": 63.89,
+      "shortest": null,
+      "passed": true,
+      "job": "success"
+    },
+    "mutation": {
+      "target": "src/racket/sports/pickleball/rules",
+      "scope": "sports/pickleball/rules",
+      "killed": 386,
+      "timeout": 0,
+      "survived": 61,
+      "no_tests": 0,
+      "suspicious": 0,
+      "skipped": 0,
+      "total": 447,
+      "tool": "mutmut",
+      "status": "measured",
+      "score": 0.8635,
+      "job": "success"
+    }
+  }
 }
