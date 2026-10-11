@@ -7,6 +7,7 @@ fetch-depth-0 checkout of the merge ref rebuilt on the current `main`. `run_poli
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -15,6 +16,7 @@ from pathlib import Path
 
 import yaml
 from conftest import REPO_ROOT, SCRIPTS_DIR
+from github_stub import PR_NUMBER, REPO
 
 IMMUTABILITY_STEP = "Test and gold immutability (EP/ENG-28, NFR-078)"
 SIZE_STEP = "PR size (EP/ENG-04)"
@@ -98,15 +100,24 @@ class PullRequest:
         git(self.runner, "merge", "-q", "--no-ff", "--no-edit", self.head_sha)
         (self.runner / "scripts").symlink_to(SCRIPTS_DIR, target_is_directory=True)
 
-    def run_policy(self) -> dict[str, subprocess.CompletedProcess[str]]:
+    def run_policy(
+        self, payload_labels: list[str] | None = None, api: str = ""
+    ) -> dict[str, subprocess.CompletedProcess[str]]:
+        """`payload_labels`: the labels frozen in the triggering event. `api`: a GitHub API
+        (github_stub) serving the PR's current labels; without it the run has no token, like
+        a local run (CI-POLICY-LIVE-LABELS)."""
         event = {
-            "toJSON(github.event.pull_request.labels.*.name)": "[]",
+            "toJSON(github.event.pull_request.labels.*.name)": json.dumps(payload_labels or []),
+            "github.event.pull_request.number": str(PR_NUMBER),
+            "github.token": "stub-token" if api else "",
             "github.event.pull_request.base.sha": self.base_sha,
             "github.event.pull_request.head.sha": self.head_sha,
             "github.base_ref": "main",
             "github.sha": git(self.runner, "rev-parse", "HEAD"),
         }
         env = {k: v for k, v in os.environ.items() if not k.startswith("GITHUB_")} | GIT_ENV
+        if api:  # what the runner sets for every step
+            env |= {"GITHUB_API_URL": api, "GITHUB_REPOSITORY": REPO}
         results = {}
         for step in policy_steps():
             assert not EXPRESSION.search(step["run"]), "expressions belong in env, not in run"
