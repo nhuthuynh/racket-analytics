@@ -176,6 +176,125 @@ def test_a_fail_cell_with_only_a_count_exits_2_as_malformed(tmp_path) -> None:
     assert "row 1-24" in out.stderr
 
 
+# PE-R3-01 / SBE-R3-01 / SBE-FIX031b-R2-01 / PE-70-02: a count anywhere inside the words heard
+# (not only a lone count) is malformed; it must never read as a full range run.
+
+COUNT_IN_WORDS = [
+    "fail: (3 of 24) back button not read",
+    "fail: (3 of 24).",
+    "fail: x (3 of 24) y",
+    "fail: label not read (3 of 24).",
+    "fail: heard (1 of 24) then stop",
+    "fail: (1 of 24) nothing",
+]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("cell", COUNT_IN_WORDS)
+def test_a_count_inside_the_words_heard_is_refused(m, cell: str) -> None:
+    with pytest.raises(ValueError, match="row 1-24"):
+        m.tally(_range_manual(cell, cell))
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("cell", COUNT_IN_WORDS[:2])
+def test_a_count_inside_the_words_heard_exits_2_as_malformed(tmp_path, cell: str) -> None:
+    path = tmp_path / "m.md"
+    path.write_text(_range_manual(cell, cell))
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(path)], capture_output=True, text=True, timeout=60
+    )
+    assert out.returncode == 2, out.stdout + out.stderr
+    assert "row 1-24" in out.stderr
+
+
+@pytest.mark.unit
+def test_words_heard_that_merely_mention_of_are_still_words(m) -> None:
+    # Only a count-shaped "(k of w)" is refused; ordinary words with "of" stay words heard.
+    t = m.tally(_range_manual("fail: name of the button not read", "pass"))
+    assert (t["voiceover"], t["talkback"]) == (38, 38)
+
+
+# PE-70-01 / SBE-FIX031b-R2-02: a reversed range ("38-37") would have a negative width and
+# make its rows disappear, so two rows "not run" read as met.
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("rid", ["3-2", "38-37"])
+def test_a_reversed_range_row_is_refused(m, rid: str) -> None:
+    text = manual(3, voiceover=3, talkback=3, ids=["1", "2", rid])
+    with pytest.raises(ValueError, match=f"row {rid}"):
+        m.tally(text)
+
+
+@pytest.mark.integration
+def test_a_reversed_range_row_exits_2_as_malformed(tmp_path) -> None:
+    lines = [f"| {n} | screen {n} | pass | pass |" for n in range(1, 37)]
+    lines.append("| 38-37 | last two | not run | not run |")
+    path = tmp_path / "m.md"
+    path.write_text(HEAD + "\n".join(lines) + "\n" + TAIL)
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(path)], capture_output=True, text=True, timeout=60
+    )
+    assert out.returncode == 2, out.stdout + out.stderr
+    assert "row 38-37" in out.stderr
+
+
+# PE-70-03 / SBE-FIX031b-R2-03: a row id that cannot be read, or a section-3 table whose
+# header does not name both screen readers exactly, is malformed, not silently skipped.
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("rid", ["**3**", "3.", "38a", "row 3"])
+def test_a_row_id_that_cannot_be_read_is_refused(m, rid: str) -> None:
+    text = manual(3, ids=["1", "2", rid])
+    with pytest.raises(ValueError, match="cannot be read"):
+        m.tally(text)
+
+
+@pytest.mark.unit
+def test_a_table_header_without_both_screen_readers_is_refused(m) -> None:
+    variant = manual(2).replace(
+        "| # | Screen / state | VoiceOver iOS | TalkBack Android |",
+        "| # | Screen / state | VoiceOver iOS | TalkBack (Android) |",
+    )
+    with pytest.raises(ValueError, match="VoiceOver iOS and TalkBack Android"):
+        m.tally(variant)
+
+
+@pytest.mark.unit
+def test_a_second_table_with_a_header_variant_is_refused(m) -> None:
+    extra = (
+        "\n\n| # | Screen | Steps | Expected | VoiceOver | TalkBack Android |\n"
+        "|---|---|---|---|---|---|\n"
+        "| 3 | s | step | exp | not run | not run |\n"
+    )
+    text = manual(2, voiceover=2, talkback=2).replace(TAIL, extra + TAIL)
+    with pytest.raises(ValueError, match="VoiceOver iOS and TalkBack Android"):
+        m.tally(text)
+
+
+@pytest.mark.unit
+def test_an_expected_row_count_that_differs_is_refused(m) -> None:
+    with pytest.raises(ValueError, match="37 rows, expected 38"):
+        m.tally(manual(37, voiceover=37, talkback=37), expected_rows=38)
+    assert m.tally(manual(38), expected_rows=38)["rows"] == 38
+
+
+@pytest.mark.integration
+def test_rows_option_exits_2_when_the_manual_lost_a_row(tmp_path) -> None:
+    path = tmp_path / "m.md"
+    path.write_text(manual(37, voiceover=37, talkback=37))
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(path), "--rows", "38"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert out.returncode == 2, out.stdout + out.stderr
+    assert "expected 38" in out.stderr
+
+
 @pytest.mark.unit
 def test_a_row_with_fewer_cells_than_the_header_is_refused(m) -> None:
     text = manual(2).replace("| 2 | screen 2 | not run | not run |", "| 2 | short |")
@@ -232,5 +351,17 @@ def test_the_repository_manual_and_sprint_plan_agree_on_s3_dod_p6() -> None:
         timeout=60,
     )
     # rc 0 = met, 1 = not met; 2 (malformed) and 3 (plan disagrees with the manual) are failures.
+    assert out.returncode in (0, 1), out.stdout + out.stderr
+    assert '"rows": 38' in out.stdout
+
+
+@pytest.mark.integration
+def test_the_repository_manual_has_exactly_38_rows_with_the_rows_option() -> None:
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(MANUAL), "--dod", str(PLAN), "--rows", "38"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     assert out.returncode in (0, 1), out.stdout + out.stderr
     assert '"rows": 38' in out.stdout

@@ -72,6 +72,28 @@ def partial_range(ctx: dict, cell: str) -> None:
     _write(ctx, HEAD + "\n".join(rows) + "\n" + TAIL)
 
 
+@given(
+    parsers.parse(
+        'a manual whose rows 1 to 36 say "pass" and whose last row is "{rid}" with "{cell}"'
+    )
+)
+def reversed_range(ctx: dict, rid: str, cell: str) -> None:
+    rows = [f"| {n} | screen {n} | pass | pass |" for n in range(1, 37)]
+    rows.append(f"| {rid} | last rows | {cell} | {cell} |")
+    _write(ctx, HEAD + "\n".join(rows) + "\n" + TAIL)
+
+
+@given(parsers.parse('a manual with rows 1 to 37 and a last row numbered "{rid}"'))
+def unreadable_id(ctx: dict, rid: str) -> None:
+    ids = [str(n) for n in range(1, 38)] + [rid]
+    _write(ctx, manual(38, voiceover=38, talkback=38, ids=ids))
+
+
+@given("a manual of 37 rows with every result recorded on both screen readers")
+def thirty_seven(ctx: dict) -> None:
+    _write(ctx, manual(37, voiceover=37, talkback=37))
+
+
 @given(parsers.parse('a sprint plan whose S3-DoD-P6 row says "{status}"'))
 def plan(ctx: dict, status: str) -> None:
     ctx["plan"] = ctx["dir"] / "sprint-03.md"
@@ -87,6 +109,11 @@ def _run(*args: Path | str) -> subprocess.CompletedProcess[str]:
 @when("the manual is tallied")
 def tally(ctx: dict) -> None:
     ctx["out"] = _run(ctx["manual"])
+
+
+@when(parsers.parse("the manual is tallied expecting {rows:d} rows"))
+def tally_rows(ctx: dict, rows: int) -> None:
+    ctx["out"] = _run(ctx["manual"], "--rows", str(rows))
 
 
 @when("the manual is tallied against the sprint plan")

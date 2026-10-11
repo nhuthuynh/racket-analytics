@@ -29,6 +29,26 @@ Feature: The S3-DoD-P6 status is counted from the screen-reader manual
       When the manual is tallied
       Then the tally is refused as malformed
 
+    Scenario: A count inside the words heard is refused
+      Given a manual whose rows 1-24 say "fail: label not read (3 of 24)." and rows 25 to 38 say "pass" on both screen readers
+      When the manual is tallied
+      Then the tally is refused as malformed
+
+    Scenario: A reversed range row is refused
+      Given a manual whose rows 1 to 36 say "pass" and whose last row is "38-37" with "not run"
+      When the manual is tallied
+      Then the tally is refused as malformed
+
+    Scenario: A row id that cannot be read is refused
+      Given a manual with rows 1 to 37 and a last row numbered "**38**"
+      When the manual is tallied
+      Then the tally is refused as malformed
+
+    Scenario: A manual with fewer rows than expected is refused
+      Given a manual of 37 rows with every result recorded on both screen readers
+      When the manual is tallied expecting 38 rows
+      Then the tally is refused as malformed
+
   Rule: The status is "met" only when every row has a result on both screen readers
 
     Scenario: No row run is not met, waiting on P6
