@@ -1,7 +1,6 @@
-"""A local stand-in for the GitHub REST endpoints `scripts/ci/merge_ready.py` and the PR
-policy's label lookup read (CI-PR-GATE, CI-POLICY-LIVE-LABELS). It speaks real HTTP on
-127.0.0.1, paginates with `Link: rel="next"` like GitHub, and records the requests, so the
-scripts are exercised over a real socket.
+"""A local stand-in for the four GitHub REST endpoints `scripts/ci/merge_ready.py` reads
+(CI-PR-GATE; labels: CI-POLICY-LIVE-LABELS). Real HTTP on 127.0.0.1, `Link: rel="next"` like
+GitHub, and records the requests, so the script is exercised over a real socket.
 """
 
 from __future__ import annotations

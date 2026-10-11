@@ -1,18 +1,14 @@
 """CI-POLICY-LIVE-LABELS: `scripts/ci/pr_labels.py` gives the PR policy the PR's labels as they
 are when the check runs (GET /repos/{repo}/issues/{pr}/labels), not as the triggering event froze
 them. When the API cannot answer, the caller keeps the event payload, and the log says which
-source was used. Unit tests call the helper against github_stub over a real socket; the CLI tests
-run both policy scripts as ci.yml does. Negative cases first.
+source was used. Unit tests call the helper against github_stub over a real socket; the scripts
+run as ci.yml runs them in test_pr_policy_live_labels_scenarios.py. Negative cases first.
 """
 
 from __future__ import annotations
 
 import importlib.util
-import os
-import subprocess
-import sys
 from collections.abc import Iterator
-from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -94,74 +90,6 @@ def test_api_labels_win_over_a_stale_payload(
     assert {a for _, a in github.requests} == {"Bearer t0k"}
     out = capsys.readouterr().out
     assert "pr-size: labels from the GitHub API: triage, docs, size-waiver" in out
-
-
-def test_gh_token_is_accepted(github: GitHubStub) -> None:
-    env = env_for(github)
-    env["GH_TOKEN"] = env.pop("GITHUB_TOKEN")
-    assert load().live_labels(env, "x") == []
-
-
-# ------------------------------------------------------------------- both scripts (CLI)
-def run(script: str, cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    clean = {k: v for k, v in os.environ.items() if not k.startswith("GITHUB_")}
-    return subprocess.run(
-        [sys.executable, str(CI / script), "--base", "main"],
-        capture_output=True,
-        text=True,
-        cwd=cwd,
-        env=clean | env,
-        timeout=60,
-        check=False,
-    )
-
-
-def git(repo: Path, *args: str) -> None:
-    who = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
-    ident = {"user.name": "t", "user.email": "t@example.invalid"}
-    cfg = [a for k, v in ident.items() for a in ("-c", f"{k}={v}")]
-    subprocess.run(["git", *cfg, "-C", str(repo), *args], check=True, capture_output=True,
-                   env=os.environ | who)  # fmt: skip
-
-
-@pytest.fixture
-def repo(tmp_path: Path) -> Path:
-    git(tmp_path, "init", "-q", "-b", "main")
-    (tmp_path / "backend/tests").mkdir(parents=True)
-    (tmp_path / "backend/tests/test_a.py").write_text("x = 1\n")
-    git(tmp_path, "add", "-A")
-    git(tmp_path, "commit", "-q", "-m", "base")
-    git(tmp_path, "checkout", "-q", "-b", "pr")
-    (tmp_path / "backend/tests/test_a.py").write_text("x = 2\n")
-    (tmp_path / "big.py").write_text("".join(f"l{i}\n" for i in range(401)))
-    git(tmp_path, "add", "-A")
-    git(tmp_path, "commit", "-q", "-m", "pr")
-    return tmp_path
-
-
-def test_a_removed_label_fails_both_scripts_despite_the_payload(
-    repo: Path, github: GitHubStub
-) -> None:
-    payload = '["size-waiver", "qa-approved-test-change"]'
-    for script in ("check_pr_size.py", "check_test_immutability.py"):
-        res = run(script, repo, env_for(github, PR_LABELS=payload))
-        assert res.returncode == 1, res.stdout
-        assert "labels from the GitHub API" in res.stdout
-
-
-def test_labels_applied_after_the_push_pass_both_scripts(repo: Path, github: GitHubStub) -> None:
-    github.labels = ["size-waiver", "qa-approved-test-change"]
-    for script in ("check_pr_size.py", "check_test_immutability.py"):
-        res = run(script, repo, env_for(github, PR_LABELS="[]"))
-        assert res.returncode == 0, res.stdout
-
-
-def test_bad_payload_still_fails_closed_when_the_api_is_down(
-    repo: Path, github: GitHubStub
-) -> None:
-    github.labels_status = 503
-    res = run("check_test_immutability.py", repo, env_for(github, PR_LABELS="not json"))
-    assert res.returncode == 2, res.stdout
 
 
 # --------------------------------------------------------------------------- ci.yml wiring

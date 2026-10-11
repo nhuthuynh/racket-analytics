@@ -103,9 +103,7 @@ class PullRequest:
     def run_policy(
         self, payload_labels: list[str] | None = None, api: str = ""
     ) -> dict[str, subprocess.CompletedProcess[str]]:
-        """`payload_labels`: the labels frozen in the triggering event. `api`: a GitHub API
-        (github_stub) serving the PR's current labels; without it the run has no token, like
-        a local run (CI-POLICY-LIVE-LABELS)."""
+        """`payload_labels`: frozen in the event; `api`: github_stub with current labels."""
         event = {
             "toJSON(github.event.pull_request.labels.*.name)": json.dumps(payload_labels or []),
             "github.event.pull_request.number": str(PR_NUMBER),

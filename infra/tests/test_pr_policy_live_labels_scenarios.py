@@ -46,14 +46,9 @@ def pr_edits_unit_test(pr: PullRequest) -> None:
     pr.open_event(UNIT_TEST, "def test_a():\n    pass\n")
 
 
-@given(parsers.parse('the event froze the labels "{names}"'))
-def event_froze(frozen: list[str], names: str) -> None:
-    frozen[:] = names.split(",")
-
-
-@given("the event froze no labels")
-def event_froze_none(frozen: list[str]) -> None:
-    frozen.clear()
+@given(parsers.re(r'the event froze (no labels|the labels "(?P<names>[^"]+)")'))
+def event_froze(frozen: list[str], names: str | None) -> None:
+    frozen[:] = names.split(",") if names else []
 
 
 @given(parsers.parse('the pull request now carries the label "{name}"'))
@@ -84,9 +79,10 @@ def size_verdict(results: Results, verdict: str, n: int) -> None:
     assert f"pr-size: {n} changed lines" in out.stdout
 
 
-@then("the test immutability check passes")
-def immutability_passes(results: Results) -> None:
-    assert results[IMMUTABILITY_STEP].returncode == 0, results[IMMUTABILITY_STEP].stdout
+@then(parsers.parse("the test immutability check {verdict}"))
+def immutability_verdict(results: Results, verdict: str) -> None:
+    out = results[IMMUTABILITY_STEP]
+    assert out.returncode == {"passes": 0, "fails": 1}[verdict], out.stdout
 
 
 @then(parsers.parse("the labels were read from the {source}"))

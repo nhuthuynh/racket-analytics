@@ -6,7 +6,7 @@ before `size-waiver` was applied, or a re-run of it, never sees the label (PR #7
 It returns None when it cannot (no token, PR number or repo, or the API fails); the caller then
 uses the event payload, exactly as before. Either way it logs which source was used.
 
-Env: GITHUB_TOKEN or GH_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, GITHUB_API_URL (default GitHub).
+Env: GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, GITHUB_API_URL (default GitHub).
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def _fetch(url: str, token: str) -> list[str]:
 def live_labels(env: Mapping[str, str], who: str) -> list[str] | None:
     """The PR's current label names, or None to keep the event payload. `who` prefixes the log."""
     need = {
-        "GITHUB_TOKEN": env.get("GITHUB_TOKEN") or env.get("GH_TOKEN"),
+        "GITHUB_TOKEN": env.get("GITHUB_TOKEN"),
         "PR_NUMBER": env.get("PR_NUMBER"),
         "GITHUB_REPOSITORY": env.get("GITHUB_REPOSITORY"),
     }

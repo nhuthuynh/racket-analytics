@@ -1,8 +1,6 @@
 # Sprint 3, ticket CI-POLICY-LIVE-LABELS (sre-devops-engineer). Written before the fix.
-# Binding: infra/tests/test_pr_policy_live_labels_scenarios.py (the pr-policy steps of
-# .github/workflows/ci.yml on a real git checkout of the merge ref, labels from github_stub).
-# Incident: PR #71 (FIX-03-1c), CI runs 38094831495 and 38096137380: a run started by a push
-# made before the size-waiver was applied saw PR_LABELS: [] and stayed red after the label.
+# Binding: infra/tests/test_pr_policy_live_labels_scenarios.py (ci.yml pr-policy steps, real git).
+# Incident: PR #71, CI runs 38094831495 and 38096137380 (waiver applied after the push, still red).
 @M0 @nfr-077 @nfr-078 @ticket-CI-POLICY-LIVE-LABELS
 Feature: The PR policy judges the pull request's labels as they are when the check runs
 
@@ -17,6 +15,14 @@ Feature: The PR policy judges the pull request's labels as they are when the che
       And the pull request now carries no labels
       When the PR policy checks run again without a new push
       Then the PR size check fails and counts 401 changed lines
+      And the labels were read from the GitHub API
+
+    Scenario: A QA approval removed after the push no longer approves a test edit
+      Given the pull request edits an accepted unit test
+      And the event froze the labels "qa-approved-test-change"
+      And the pull request now carries no labels
+      When the PR policy checks run again without a new push
+      Then the test immutability check fails
       And the labels were read from the GitHub API
 
     Scenario: A waiver applied after the push is honoured without a new push

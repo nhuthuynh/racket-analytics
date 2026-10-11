@@ -45,9 +45,8 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    # Both steps read the PR's CURRENT labels from the API (scripts/ci/pr_labels.py), so a label
-    # applied after the push counts on the `labeled` run and on any re-run; PR_LABELS (frozen
-    # in the event) is only the fallback when the API fails (CI-POLICY-LIVE-LABELS, PR #71).
+    # Both steps read the PR's current labels from the API (pr_labels.py); the frozen PR_LABELS
+    # is only the fallback when the API fails (CI-POLICY-LIVE-LABELS, PR #71).
     permissions:
       contents: read
       pull-requests: read
