@@ -948,15 +948,15 @@
   },
   "goal_met_note": "not met at close: VR3 10/12 at fb920bc; G03-09 (c) no CI at the head; G03-12 open 8 after the EM close reconciliation (sprint-report §1)",
   "nightly": {
-    "run_date": "2026-10-13",
-    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/38378381841",
-    "commit": "d9caacb2690dcfd7a3deb6eddd73d26b80b1db18",
+    "run_date": "2026-10-14",
+    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/38532061742",
+    "commit": "8bfdd3013fa0bdf9168f44da703a38580fe17428",
     "oracle": {
       "status": "passed",
       "sequences": 100000,
       "disagreements": 0,
-      "seed": 20261013,
-      "seconds": 43.544,
+      "seed": 20261014,
+      "seconds": 63.18,
       "shortest": null,
       "passed": true,
       "job": "success"
