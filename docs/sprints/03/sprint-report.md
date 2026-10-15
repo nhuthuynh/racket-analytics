@@ -189,7 +189,7 @@ DoD-done here means the work is on `main` through merged ticket PRs that meet th
 | Red `main` incidents (CI FIRST, PO 2026-10-08) | 5, each fixed by its own ticket before feature work: domain budget (37882972340 → CI-DOMAIN-BUDGET #48); E2E (37905693381 → CI-E2E-MAIN-RED #49); `red_until` step hang (37961668800 → CI-REDUNTIL-HANG #51, CI-OBJSTORE-SLOW #52); E2E journeys 42 min (38016581726 → CI-E2E-JOURNEYS-TIMEOUT #57); infra stall-report scenario race (38103354166, after #71 → CI-STALL-SCENARIO-RACE #75). Not counted, as the run passed: the object-store throughput preflight stall seen in 38059526467 (→ CI-OBJSTORE-STALL #66) | the tickets' decisions files |
 | Merge gate (`merge_ready.py`, CI-PR-GATE #5) | On `main` from 2026-10-08 13:57Z. Bypassed once (the 20:12-20:14 batch: #24, #26, #27) | §2.2 |
 | Integration smoke at the close | Green on `main` `1842e96` (SMOKE-03, folded in); VERIFY-03-r3 ran the live stack again at `6c666b9` | `smoke.md` last section; scorecard §12 |
-| Test immutability (ADR 0014) | 29 merged PRs carried `qa-approved-test-change`, each with a QA-decided TCR row | `test-change-requests.md`; labels in §2 |
+| Test immutability (ADR 0014) | 29 merged PRs carried `qa-approved-test-change` (applied only by the QA decision step; rows in `test-change-requests.md` and the ticket files) | `test-change-requests.md`; labels in §2 |
 | PR size (≤ 400, ADR 0030) | 46 of 71 merged PRs over 400 changed lines, 45 with an EM `size-waiver`; #11 (472 by GitHub's count) passed `check_pr_size.py` (lockfile excluded) | §2 table; `SIZE-WAIVERS-03.md` |
 | Nightly on `main` | Green: oracle 100,000/0, mutation rules 0.8635 (2026-10-15, run 38700640873 at `420ca96`) | `status.json` `nightly` |
 
