@@ -41,7 +41,8 @@ def check(plan: str, dictionary: str) -> list[str]:
     plan_line = _line(plan, PLAN_MARKER, "sprint plan (Rulebook PDFs later)")
     rule = _line(dictionary, DICTIONARY_MARKER, "metric dictionary (rule 0.5, Rules dependence)")
     problems = [
-        f'sprint plan line {n} promises the notice on "every metric card" (DR-03 R3-3: once per stats page)'
+        f'sprint plan line {n} promises the notice on "every metric card" '
+        "(DR-03 R3-3: once per stats page)"
         for n, line in enumerate(plan.splitlines(), start=1)
         if PER_CARD.search(line)
     ]

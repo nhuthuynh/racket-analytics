@@ -60,7 +60,8 @@ def fails_naming(ctx: dict, text: str) -> None:
 
 @then(parsers.parse('the check is refused, naming "{text}"'))
 def refused_naming(ctx: dict, text: str) -> None:
-    assert ctx["refused"] is not None and text in ctx["refused"], ctx
+    assert ctx["refused"] is not None, ctx
+    assert text in ctx["refused"], ctx
 
 
 @then("the check passes")

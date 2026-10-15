@@ -1,4 +1,4 @@
-"""Shared helpers for the FIX-03-2c tests: load the checker and build small plan/dictionary texts."""
+"""Shared helpers for the FIX-03-2c tests: load the checker, build small plan/dictionary texts."""
 
 from __future__ import annotations
 
@@ -40,6 +40,7 @@ def dictionary(words: str) -> str:
     return (
         "## 0. Rules\n\n"
         "5. **Rules dependence:** while that is `PROVISIONAL-UNVERIFIED`, the stats page carries "
-        f'the same "unofficial scoring (rules not yet verified)" notice as the score sheet, {words}.\n'
+        'the same "unofficial scoring (rules not yet verified)" notice as the score sheet, '
+        f"{words}.\n"
         "6. **Versioning:** x\n"
     )
