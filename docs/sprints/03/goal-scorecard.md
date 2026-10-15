@@ -51,6 +51,8 @@
 
 **VERIFY-03-r1 (2026-10-10, head `1842e96` on `main`; §10): met 11 / 12.** Goal not met: G03-12 (6 open rows in the ledger; the latest reconciliation predates the ticket PRs on `main`). Its values are in §10.3 (the table above holds the VERIFY-03-r3 values). G03-09 (c) is now met: `drill-lint` and `ci-gate` succeeded on CI run 38083115506 at the head.
 
+**Verification on `main`, round 2 (VERIFY-03-r2, 2026-10-15, head `420ca96`; §11): met 11 / 12.** Goal not met: G03-12 (2 open rows: PD-R1S3-01 group, blocker; PE-PR24-01, major). Its values are in §11.3 (the table above holds the VERIFY-03-r3 values).
+
 **Verification on `main`, round 3 (VERIFY-03-r3, 2026-10-15, head `6c666b9`; §12): met 11 / 12.** Goal not met: G03-12 (2 open ledger rows, both waiting on a disposition, not on code). The table above holds the VERIFY-03-r3 values. Rounds 1 and 2 on `main` are §10 and §11 (folded in from PRs #69 and #76 by RETRO-03).
 
 **Release CI (sre-devops-engineer, 2026-10-08, PR #4; not a verifier result; decision-log row of this date):** CI metric on the PR head: the `drill-lint` job **succeeded** on runs 37715576115 (`2ba4dd1`) and 37718386760 (`f554edd`), which closes the "no CI run at the head" gap of G03-09 (c) for the job itself. `ci-gate` is **failure** on both runs: PR policy (PR size, no EM size waiver), Integration (600 s NFR-073 budget exceeded, exit 124) and E2E (WebKit PD-R3S2-02 only, at `f554edd`). At `7ef4c50` (run 37719909230) Integration passed (542 s), so `ci-gate` is red on PR policy (size) and the WebKit PD-R3S2-02 E2E test only. Per-job detail: `ci-status.md`. Final head result: `ci-status.md` last row. **CI metric (G03-09 c, `ci-gate` on the PR head): not met.**
@@ -739,6 +741,124 @@ The walk ran on 2026-10-10 from 21:53:15 UTC, after the E2E and timing runs.
 | 11 PO questions | Not a verifier step | n/a |
 
 **Verdict:** demo steps 1-9 ran end to end, in real time, on the live HTTPS stack built from `main`. Step 10 cannot be given as scripted: the scorecard is 11/12 and the defect ledger shows 6 open rows. At least 3 of those rows read as already fixed on `main`, and the EM must reconcile them (V03R1-01). The real remaining blocker is the business-analyst's empty R3-9 cell on DR-03 (PD-R1S3-01).
+
+## 11. Verification on `main`, round 2 (VERIFY-03-r2, 2026-10-15; senior-qa-engineer with sre-devops-engineer, independent verifiers)
+
+**Totals: 11 of 12 met** (G03-01 to G03-11). The Sprint 3 goal is **not met**, because G03-12 is still "no": the defect ledger has 2 open rows (one blocker, one major). Neither row can be closed by an engineer's code change. Both wait on another role's decision.
+
+Round 1 on `main` (VERIFY-03-r1, head `1842e96`, §10) is in open PR #69 and is not on `main`. This round numbers its section §11 so the two PRs do not collide.
+
+Everything the goal promises the player worked live over HTTPS on a fresh stack built from `main`, in real time:
+
+- the 7 stats per side equal the reference after every tag and after a correction;
+- "Show me" works, and the first rally's video answers Range with 206;
+- delete match, delete account and the purge leave 0 rows and 0 objects, and the purge is scheduled daily;
+- a labeller can Full Tag a consented match and export it, the export validates, and a player gets "not found".
+
+The Chromium suite passed with 0 flaky tests over 3 repeats. Timings, coverage, mutation scores and time budgets all met their targets. CI at the head was green, with WebKit, `drill-lint` and `ci-gate` all passing.
+
+### 11.1 Stack under test
+
+- **Head:** `420ca96` (`git rev-parse HEAD` → `420ca9649b9d8f276d5314f93c2133312e5c8daa`), the tip of `origin/main`. It is code-identical to `21f6d37` (PR #70); the later commits are the nightly `status.json` updates only.
+- **Worktree:** the verifier's own worktree `/home/user/wt/verify-03-r2` (branch `s03/verify-03-r2-scorecard`). It was clean at the start and at teardown, apart from this file and the decisions file.
+- **Before the start:** the verifier tore down two half-dead stacks left by its own earlier, interrupted attempts at this ticket (`racket-goal03r2` and `racket-goal03`, both exited 255 after a host restart). Their worktrees and unpushed local branches were also removed (decisions/VERIFY-03-r2.md row 1). After that, 0 `goal03` containers and 0 volumes remained.
+- **Preflight:**
+  - `bash scripts/disk-precheck.sh` → `ok, 15 GB free on / (floor 10 GB)`, rc=0.
+  - `scripts/dev-chrome.sh` → Chrome for Testing 141.0.7390.54.
+- **Clean state:**
+  - `RA_DEV_STATE=<worktree>/.local/goal03` was new, built from `infra/env.example` exactly as in §4.0 (ports 43000/48000/48025/41025/45432/48333/46686).
+  - The dev Postgres and dev object store were started fresh under that state directory.
+- **Start:** `flock .local/evidence-e2e.lock $DC up -d --build --wait` → rc=0 in 100 s. All 10 long-running services were healthy, `purge` included.
+  - `DC` carries the verifier-local `-f .local/goal03/build-ca.override.yaml` (the `extra_ca` build secret for migrate, api, worker, mailer, web and purge). VR3-S3-01 is still open: `grep -n extra_ca infra/compose.yaml` → nothing.
+  - The lock is the shared clone's `.local/evidence-e2e.lock`.
+  - The image was built from the head: `python -c "import racket.platform.purge, racket.dataset.admin"` in `api` → `mods ok`.
+- **Front door:**
+  - `http://localhost:43000/` → 400.
+  - `https://localhost:43000/` with `--cacert root.crt` → 200.
+  - `/api/healthz` → `{"status":"ok"}`.
+  - Alembic is at `0017`.
+  - `$DC config --services` lists `purge`.
+- **Order:** all the live-stack methods ran first: G03-01..03, G03-05, G03-06 (×1 and ×3), G03-07, then the demo walk. The backend suites (G03-04, 08, 09 a/b, 11) ran after them on the dev services and the goal03 Mailpit, so they could not load the browser timings.
+- **Teardown:**
+  - `flock … $DC down -v --rmi local --remove-orphans` → rc=0, leaving 0 `goal03` containers and 0 volumes.
+  - `dev-postgres.sh stop` and `dev-objectstore.sh stop` → rc 0 each.
+  - `pw-out`, `pw-out-repeat`, `pw-out-timing` and `backend/mutants` were deleted as soon as their reports had been read (VR3-S3-03).
+- **Disk** (`df -h /`): 16G free at the start (after the stale-stack teardown), 15G after `up --build`, 14G during the E2E runs, 11G at the low point after the mutation runs, and 13G after teardown. It never fell below the 10 GB floor.
+- **Reports:** under `<worktree>/reports/goal03/` (git-ignored). The driver logs are `up.log`, `live-stats.log`, `e2e-driver.log`, `e2e.log`, `e2e-repeat.log`, `e2e-timing.log`, `g11-driver.log` and `demo-walk.txt`.
+
+### 11.2 Preconditions (§3)
+
+| Rule | Status |
+|---|---|
+| 5 Dry-run first | **Still incomplete.** The G03-05 row in §6 is still empty (VR3-S3-02, deferred to C4-MIN). As in VR2, VR3 and VERIFY-03-r1, the method ran end to end as written and met its target, so the row counts as met |
+| 6 Reconciliation first | **Met.** The EM's FIX-03-1a reconciliation after the ticket merges is on `main` (`review-rounds.md` "Ticket FIX-03-1a" rows). `reconcile_due.py` at the head → rc=0, "2 open blocker/major rows, 0 due", so no merged ticket names an open row the ledger has not dispositioned |
+
+### 11.3 Summary
+
+| ID | Target (short) | Actual (VERIFY-03-r2) | Met | Owner to fix |
+|---|---|---|---|---|
+| G03-01 | 5/5 live journeys | 5/5, rc=0, no failing key | **yes** | — |
+| G03-02 | p95 ≤ 5 s / 5 s / 60 s | 27.0 ms (n 70) / 24.1 ms (n 5) / 26.1 ms (n 5) | **yes** | — |
+| G03-03 | 0 rows, links 404, schedule ≤ 24 h | 0 rows in 20 columns; 5/5 links 404; `purge` service with `PURGE_INTERVAL_S 86400`, first run ok | **yes** | — |
+| G03-04 | IT-03 100%; earlier 100% | IT-03 + BOLA 185/185; earlier 317/317; sandbox 10/10 | **yes** | — |
+| G03-05 | p95 ≤ 300, p99 ≤ 800, ≥ 99.5%, ≥ 47.5 RPS | 36.2 ms / 130.5 ms / 100% / 50.0 RPS, 0 unexpected | **yes** | — (sre-devops-engineer still owes the §6 dry-run row) |
+| G03-06 | 100% non-skipped, 0 flaky | 127/127 non-skipped, 6 named Sprint 1 skips, 0 flaky over ×3; WebKit green on CI | **yes** | — |
+| G03-07 | 2 s / 1.5 s / CLS 0, n ≥ 20 each | 253 ms / 934 ms / 0, n 20 each | **yes** | — |
+| G03-08 | golden, scenarios, conservation, review record | 37/37, 42/42, 1,000/0 and 1/1, manifest 0, (e) 7/7 | **yes** | — |
+| G03-09 | Full Tag IT and E2E; lint; CI at the head | IT-03-11 15/15, E2E-03-05 passed, lint 1 + 5; `drill-lint` and `ci-gate` success on run 38537147563 at `420ca96` | **yes** | — |
+| G03-10 | axe 0 and targets 0 with D/E/X/L and states; keyboard; 320/360 | axe 0/60; targets 0, every family and state present; keyboard and 320/360 passed | **yes** | — |
+| G03-11 | coverage, mutation, oracle, budgets | 97%; analytics 98.3%; rules 99.57/98.41%; web 93.03%; mutation 0.8635 / 0.8977; oracle 100,000/0; 6.9 s / 16.0 s / 493 s, 0 failed | **yes** | — |
+| G03-12 | 0 | 2 open rows (1 blocker, 1 major); `reconcile_due` 0 due; GitHub 0 | no | business-analyst (R3-9 cell) and product-manager (`sprint-03.md:35` R3-3 follow-up) for PD-R1S3-01; principal-engineer (verdict on PR #24's merged head `898883b`) for PE-PR24-01 |
+
+**Met: 11 / 12.**
+
+The two open rows, with what the verifier saw at `420ca96`. This is evidence, not a disposition. The verifier writes no ledger row (rule 3):
+
+| Ledger line | Ids | Severity | What the row waits on | What `main` shows at `420ca96` |
+|---|---|---|---|---|
+| 504 | PD-R1S3-01 / QA-R3S3-06 / PD-R1S3-01-PM / PD-R1S3-01-BA | blocker | the business-analyst's R3-9 cell on DR-03 and the product-manager's `sprint-03.md:35` follow-up of R3-3 | Still open: `flows-sprint-03.md:334` "R3-9 … **business-analyst: no cell**"; `grep '^\| R3-9 ' … \| grep -c 'business-analyst: \*\*'` → 0; `git log origin/main -- docs/design/flows-sprint-03.md` → last change `5357571` (DR-HELD-03), nothing since; `sed -n 35p docs/sprints/sprint-03.md` is unchanged |
+| 505 | PE-PR24-01 | major | the principal-engineer's verdict on PR #24's merged head `898883b` | Still open: `pull_request_read get_reviews 24` → the PE's only submitted verdict is "CHANGES REQUESTED" on `9583e71`; one PENDING (unsubmitted) review on `2c4794f`; `get_comments 24` → only the senior-qa-engineer's "Verdict: APPROVE" on `898883b` |
+
+**Not runnable in this sandbox:** none of the scorecard methods. G03-09 (c) and WebKit were read from GitHub Actions with `mcp__github__actions_list` (run 38537147563, a scheduled run at `420ca96`; all 17 jobs success or allowed-skip: `PR policy` skipped outside PRs, which `ci-gate` allows).
+
+**Human-only items (PO P12 option (b); sprint-03 §9.1).** These are not in the totals and not in G03-12. Each was measured with its FIX-03-1b/1c/1d script:
+
+| DoD row | Item | Status at VERIFY-03-r2 | Evidence |
+|---|---|---|---|
+| S3-DoD-P6 | Manual VoiceOver/TalkBack pass (`a11y-manual.md`, 38 rows; NFR-027 b) | **not met: waiting on P6** (0 of 38 rows run) | `python3 scripts/measure/a11y_manual.py --dod docs/sprints/sprint-03.md --rows 38 docs/sprints/03/a11y-manual.md` → rc=1, `"status": "not met: waiting on P6 (0 of 38 rows run)"` |
+| S3-DoD-P10 | Repository visibility, private or confirmed public (SEC-RV3-01) | **not met: waiting on P10** | `python3 scripts/measure/repo_visibility.py --repo nhuthuynh/racket-analytics --po docs/requirements/po-input-2026-10-05.md --dod docs/sprints/sprint-03.md` → rc=1, `"not met: waiting on P10 (GitHub reports \"visibility\": \"public\")"` |
+| S3-DoD-P11 | Private footage bucket with policy, retention and deletion (BLK-GOLD-01) | **not met: waiting on P11** | `python3 scripts/measure/footage_bucket.py --po docs/requirements/po-input-2026-10-05.md --dod docs/sprints/sprint-03.md` → rc=1, `"status": "not met: waiting on P11"` (the PO record has no `P11` provider row) |
+
+### 11.4 New findings from this round (Open rows go to `review-rounds.md` through the EM's reconciliation)
+
+| Id | Severity | Finding | Owner |
+|---|---|---|---|
+| V03R2-01 | minor | **The G03-08 (e) grep counts note rows.** §4's command `grep -nE '^\| 20[0-9]{2}-' … \| grep 'coach-reviewed' \| grep -vc 'planned'` now gives 8 for 7 shown entries. The eighth is the 2026-10-08 AN-06/AN-07 note row ("none (stay `coach-reviewed`)"). The row is still judged by hand, entry by entry (each of AN-01..AN-07 has its dated `draft` → `coach-reviewed` row). But a bare count can no longer show (e): a missing status row could be hidden by a note row. Proposal: match the transition (`→ \`coach-reviewed\``) and compare the ids with the live stats response | senior-qa-engineer with pickleball-domain-coach (method authors) |
+| V03R2-02 | minor | **VERIFY-03-r1 (PR #69) is still open, 5 days after it ran.** Its §10 and decisions file are not on `main`, and this PR changes the same 12 table rows, so the two PRs conflict. Proposal: the orchestrator closes #69 as superseded once this PR merges, or merges #69 first and this PR then rebases its row cells. The verifier does neither (separation of duties) | engineering-manager |
+| V03R2-03 | minor | **VR3-S3-01, VR3-S3-02 and V03R1-02 are still open** (deferred to C4-MIN): §4.0 still needs the verifier-local `extra_ca` override; the G03-05 dry-run row in §6 is still empty; and the G03-09 (c) method text still names `sprint-03`, not `main` | sre-devops-engineer (VR3-S3-01/02); senior-ml-cv-engineer with senior-qa-engineer (V03R1-02) |
+
+### 11.5 Sprint demo script (sprint-03 §12), run in real time on `racket-goal03`
+
+The walk ran on 2026-10-15 from 07:58:34 UTC, after the E2E and timing runs.
+
+- **API steps:** the verifier's scratch script (`demo_walk_r2.py`, built on the `scripts/measure` helpers). The log is `reports/goal03/demo-walk.txt`.
+- **Browser steps:** the E2E run of 11.3.
+
+| Step | What happened (elapsed time) | Result |
+|---|---|---|
+| 1 Sign in, tagged worked-example match | Sign-in ok (1.11 s), match created, `video_received` (1.40 s), game 201, 14 rallies tagged at 201 (1.98 s) | works |
+| 2 Stats: 7 cards, n, range, low sample, notice | 7 metrics AN-01..AN-07; label `unofficial scoring (rules not yet verified)`, rules `PROVISIONAL-UNVERIFIED`, definitions `0.1`. AN-01 A: k 4, n 7, 0.5714, `low_sample true` (57%, n = 7, as scripted). "How is this measured?": entry "Rallies won on serve", `coach-reviewed`, definition "Of the rallies your side served, the share your side won." The Wilson bounds per side are checked by G03-01 (`ci_low`/`ci_high`, ±0.001). In the browser, E2E-03-03 passed | works |
+| 3 "Show me" on "Rallies won on serve" | AN-01 A evidence: 200, 7 items, total 7. The first rally's media link 200, and its video answered Range with 206 (2.06 s). In the browser, E2E-03-01 and the crawl E2E-03-02 passed | works |
+| 4 Correct rally 3 | 200. AN-02 A changed from 0.3333 (k 2, n 6) to 0.4 (k 2, n 5), as scripted (33% → 40%), and the stats were current within 21 ms | works |
+| 5 360 px stacked cards | E2E-03-06 "stats and evidence at 320/360 px" passed, and so did the not-found page at 320/360. G03-07 CLS 0 | works |
+| 6 Delete match; purge log; empty inventory | DELETE 202 `{"deleted": true, "purge_due_by": "2026-10-22T07:58:37Z"}`. Match 404 and not listed (2.16 s). `exec -T purge python -m racket.platform.purge --once` rc 0, log `purge.pass matches 9, accounts 4, uploads 0, failed 0`. Inventory for the match: matches 0, rallies 0, snapshots 0, media 0 | works |
+| 7 Delete the account from a second session | The second session signed in (ok), DELETE /me → 202, and then the first session's `GET /me` → 401 (5.24 s). In the browser, E2E-03-04 passed | works |
+| 8 Labeller Full Tag, export, player not found | New account: 404 on `/label/matches/{id}` before the role. `racket.dataset.admin grant-labeller` rc 0, then 409 `no_consent`. `consent` rc 0, then Full Tag 200 (fps 60, 3,600 frames, players A1, A2, B1, B2). Rally label 201, hit label (frame 40, B1) 201, export 200, schema `full-tag-labels/v1`. `validate_labels(export)` → `()`, with the hit inside rally `r1`'s events. A player account got 404 on the label route and on the export. In the browser, E2E-03-05 (keys, hit, export, player refused) passed | works |
+| 9 Drill lint | Valid library: `ok, 0 problem(s)`, rc 0. Each of the 5 negative files gave rc 1 and named its drill and reason | works |
+| 10 Scorecard and test report | This section: 11/12. Golden 37/37; conservation 1,000/0; mutation 0.8635 / 0.8977; evidence crawl green; **open defects 2, not the scripted 0** | shown, goal not met |
+| 11 PO questions | Not a verifier step. Still open for the PO: P6, P10, P11 (table above) | n/a |
+
+**Verdict:** demo steps 1-9 ran end to end, in real time, on the live HTTPS stack built from `main`. Step 10 cannot be given as scripted: the scorecard is 11/12, and the ledger has 2 open rows. Both wait on decisions, not on code: the business-analyst's and product-manager's cells for PD-R1S3-01, and the principal-engineer's verdict on PR #24's merged head for PE-PR24-01.
 
 ## 12. Verification on `main`, round 3 (VERIFY-03-r3, 2026-10-15; senior-qa-engineer with sre-devops-engineer, independent verifiers)
 
