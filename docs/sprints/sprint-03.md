@@ -22,7 +22,7 @@
 | Flows for the stats dashboard (D-), evidence (E-), deletion (X-) and Full Tag (L-) with all states, HAX and WCAG checklists | **Not met:** only `flows-sprint-01.md` and `flows-sprint-02.md` exist | Task **PD-1** on D1-D2, then **DR-03** (design review) on D3 with FE, coach, BA, PM, security, each invoked with a brief (ADR 0037 rule 2). **No Sprint 3 UI story starts before DR-03 is held**, unless the PO records a waiver first |
 | Sprint 2 design reviews DR-01, DR-02 | **Not held** (6 of the 14 open Sprint 2 rows) | Decider tasks **DR-01**, **DR-02** on D1, each decider invoked with its brief (§3.3) |
 | Sprint 2 merged, CI green at the head | **Not met:** PR #2 red on PR policy (TCR rows 24-28 undecided, no size waiver) | C3-01 (QA) and C3-05 (SRE, orchestrator, PO labels) first |
-| OQ-01 rulebook (P7, need-by 2026-11-16) | **Not supplied** | Scoring stays `PROVISIONAL-UNVERIFIED`. AN-01, AN-02, AN-03, AN-05 and AN-06 read the provisional score sequence, so every metric card carries the same "unofficial scoring (rules not yet verified)" notice as the score sheet (metric-dictionary rule 0.5, FR-055) |
+| OQ-01 rulebook (P7, need-by 2026-11-16) | **Not supplied** | Scoring stays `PROVISIONAL-UNVERIFIED`. AN-01, AN-02, AN-03, AN-05 and AN-06 read the provisional score sequence, so every stats page carries the same "unofficial scoring (rules not yet verified)" notice as the score sheet, once before the first card (DR-03 R3-3; metric-dictionary rule 0.5, FR-055) |
 | OQ-13 spend (P8) | **Not answered** | SPIKE-04 (GPU provider) is **not** in this sprint (§0.5) |
 
 These are recorded as an Open row in `docs/sprints/03/blockers.md`. The stories in §3 are **Ready on condition** (§14.2): each condition has an owner and a day.
@@ -32,7 +32,7 @@ These are recorded as an Open row in `docs/sprints/03/blockers.md`. The stories 
 - **Accept all recommendations.** Nothing here departs from an accepted OQ recommendation. ADR 0006 deletion windows are the PO's interim defaults: hidden ≤ 1 min, purged ≤ 7 days, abandoned uploads freed ≤ 24 h.
 - **Jurisdictions US and AU (OQ-05).** No real-user beta in Sprint 3. Account and match deletion are written so that the NFR-070 legal review can check them against both (security threat notes SEC-1 name the AU APP 11.2 and US state-law questions as open, not as claims).
 - **https for the dev stack, no insecure-cookie flag (ADR 0029).** Every live method runs over https through `web-tls`. No story may add an insecure-cookie switch; account deletion signs out through the same `__Host-` cookie path.
-- **Rulebook PDFs later (OQ-01).** Presets stay `PROVISIONAL-UNVERIFIED`; rule-dependent scenarios keep `@needs-verification`; the score sheet and every metric card say "unofficial". Rule-dependent metric rows count toward no Must FR (QD-QG-P5).
+- **Rulebook PDFs later (OQ-01).** Presets stay `PROVISIONAL-UNVERIFIED`; rule-dependent scenarios keep `@needs-verification`; the score sheet and every stats page say "unofficial", once before the first card (DR-03 R3-3, product-manager option a, 2026-10-07; amended by FIX-03-2c). Rule-dependent metric rows count toward no Must FR (QD-QG-P5).
 - **Go port in S6 (PO 2026-10-06).** Nothing in Sprint 3 changes for it, except that every new behaviour is pinned by a language-independent test (Gherkin, HTTP-level IT, Playwright, live scorecard), which the port reuses (judgment).
 - **Repository is public (P10 open).** Nothing in this sprint may rely on the repository being private: no consented footage, no labels of real people and no secrets go into git (gold-capture protocol §2 step 6).
 
@@ -502,7 +502,7 @@ Baselines recorded but not yet gating: NFR-010 at 50 RPS on stats/evidence (gate
 
 Story and sprint levels as in `docs/process/definition-of-done.md`. Sprint 3 adds:
 
-- [ ] Every metric card in the demo shows n, the "unofficial scoring" notice and a working "Show me".
+- [ ] Every metric card in the demo shows n and a working "Show me". The stats page shows the "unofficial scoring" notice once, before the first card (DR-03 R3-3).
 - [ ] Only `coach-reviewed` metrics are shown; the review record lists each entry's change with evidence.
 - [ ] Rule-dependent rows are reported separately and counted toward no Must FR (QD-QG-P5).
 - [ ] The traceability matrix lists the feature files for FR-006, FR-007, FR-024, FR-100..FR-103, FR-109, FR-140, FR-150, FR-151.
