@@ -37,13 +37,17 @@ def _merge_ready() -> ModuleType:
 MR = _merge_ready()
 
 
+def merged_head(pr: dict[str, Any]) -> str | None:
+    return (pr.get("head") or {}).get("sha")
+
+
 def merged_reasons(
     pr: dict[str, Any], reviews: list[dict[str, Any]], roles: Sequence[str]
 ) -> list[str]:
     """Reasons the roles' verdicts do not meet the rule on the merged head; empty means met."""
     if not (pr.get("merged") or pr.get("merged_at")):
         return [f"PR #{pr.get('number')} is not merged (state {pr.get('state')})"]
-    head = (pr.get("head") or {}).get("sha")
+    head = merged_head(pr)
     latest = MR.verdicts(reviews)
     reasons = []
     for role in roles:
@@ -72,9 +76,8 @@ def main(argv: list[str] | None = None) -> int:
     reasons = merged_reasons(pr, reviews, args.role)
     for reason in reasons:
         print(f"- {reason}")
-    head = (pr.get("head") or {}).get("sha")
     status = "not met" if reasons else "met"
-    print(f"merged-verdict: {status} (PR #{args.pr} merged head {head})")
+    print(f"merged-verdict: {status} (PR #{args.pr} merged head {merged_head(pr)})")
     return 1 if reasons else 0
 
 
