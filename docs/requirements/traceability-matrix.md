@@ -485,3 +485,28 @@ Backend paths are relative to `backend/tests/`; feature files are under `tests/f
 | NFR-066 (a-d) Deletion windows | ST-050, ST-051, SRE-PURGE | Yes (hidden 22.2 ms p95; purge daily, 0 rows, 0 objects) | Legal adequacy (OQ-05, NFR-070) |
 | NFR-072 Mutation (rules; starter stats new) | — | Yes (0.8635; 0.9251) | — |
 | NFR-073 Fast tests, NFR-074 flaky rate | — | Yes (8.0 / 12.2 / 350.1 s; 0 flaky ×3) | — |
+
+## 15. Sprint 3 outcome per requirement at the sprint close (engineering-manager, 2026-10-15, ticket RETRO-03)
+
+"Live" means shown by the independent verifiers on a fresh HTTPS Compose stack built from `main` at `6c666b9` (VERIFY-03-r3, goal-scorecard §12). "On `main` by" names the merged ticket PRs (`docs/sprints/03/sprint-report.md` §2). §13 still lists the test files per story; the gaps it named at the first close are closed here where a PR closed them. The sprint goal is not met (G03-12 = 2), but each requirement below is on `main` with its tests.
+
+| Requirement | Story | On `main` by | Shown live (goal metric) | Open at close |
+|---|---|---|---|---|
+| FR-100 Starter stats AN-01..AN-07 per side | ST-044, ST-046, ST-048 | #26, #41, #42, #46 | Yes (G03-01 5/5 after every tag; G03-08 golden 37/37, scenarios 42/42) | Rules unverified (P7, OQ-01): "unofficial" notice once per page |
+| FR-101 n, Wilson range, "low sample" in text | ST-044, ST-048 | #26, #36, #46 | Yes (G03-01; E2E-03-03; demo step 2: AN-01 A 4/7 low sample) | ADR 0005 Proposed (PM-1) |
+| FR-102 Only coach-reviewed entries, "How is this measured?" | ST-043 | #24, #33 | Yes (G03-08 e: 7/7) | `verified` needs P9; PE-ST043-03/-04/-06 (minor) |
+| FR-103 "Show me" evidence | ST-047 | #44, #46 | Yes (G03-01 Range 206; E2E-03-02 crawl; G03-07 868 ms) | — |
+| FR-109 Attribution conservation | ST-045 | #29 | Yes (1,000 / 0 and 1/1, G03-08) | TDD order not shown (R3-IN-1, retro B5) |
+| FR-006 Delete a match | ST-050 | #45, #47, #56 | Yes (G03-02 c 24.0 ms; G03-03 0 rows, 5/5 links 404) | — (T-DL-3/T-DL-4 ITs on `main`, #63) |
+| FR-007 Delete my account | ST-051 | #53, #58 | Yes (G03-01: old session 401, `items []`; demo step 7) | T-AC-5 IT (SEC-S3-TM-07, C4-SEC) |
+| FR-024 Abandoned uploads expire | ST-038 | #55 | Integration (IT-03-09); purge pass live (G03-03) | — |
+| FR-140 Drill schema and lint | ST-053 | #40 | Yes (lint 1 + 5 named; CI `drill-lint` green at `6c666b9`) | — |
+| FR-150 Full Tag on consented matches | ST-052 | #14, #43, #60, #61 | Yes (IT-03-11 15/15; E2E-03-05; demo step 8) | P11 bucket before real footage |
+| FR-151 Gold-label export | ST-052, ST-049 | #61, #32 | Yes (export validates; manifest rc 0) | ADR 0035 Proposed |
+| NFR-004 Golden matches | ST-049 | #32, #36 | Yes (GS-AN-1 v2 37/37) | — |
+| NFR-010, NFR-011, NFR-039 | ST-046, ST-048, ST-054 | #42, #46, #37 | Yes (G03-05 28.1 ms; G03-07 253 ms; CLS 0) | NFR-010 Locust on stats/evidence not in CI (C4-SRE) |
+| NFR-027 (a) axe, NFR-028 targets, NFR-034 reflow | ST-048, ST-050..052 | #46, #56, #58, #61, #59 | Yes (G03-10: axe 0 over 60; targets 0; 320/360) | NFR-027 (b) manual pass: S3-DoD-P6 |
+| NFR-054 Least-privilege worker | ST-042 | #27 | Yes (IT-03-10/-10b) | EM-PR27-01: no senior verdict on #27 (major) |
+| NFR-066 (a-d) Deletion windows | ST-050, ST-051, SRE-PURGE | #45, #47, #53, #25, #54 | Yes (hidden 24.0 ms p95; purge daily, 0 rows, 0 objects) | Legal adequacy (OQ-05, NFR-070) |
+| NFR-072 Mutation | — | #39 | Yes (0.8635; 0.8977) | — |
+| NFR-073 Fast tests, NFR-074 flaky rate | — | #15, #48, #10 | Yes (6.2 / 14.7 / 478.0 s; 0 flaky ×3) | ADR 0049 Proposed |
