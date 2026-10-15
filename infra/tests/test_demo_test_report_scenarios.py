@@ -61,9 +61,22 @@ def run(ctx: dict) -> None:
     card_path = ctx["dir"] / "goal-scorecard.md"
     card_path.write_text(ctx["scorecard"], encoding="utf-8")
     ctx["proc"] = subprocess.run(
-        [sys.executable, str(SCRIPT), "--reports", str(ctx["reports"]), "--ledger", str(led),
-         "--scorecard", str(card_path), "--json", str(ctx["dir"] / "out" / "step10.json")],
-        capture_output=True, text=True, timeout=60, check=False,
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--reports",
+            str(ctx["reports"]),
+            "--ledger",
+            str(led),
+            "--scorecard",
+            str(card_path),
+            "--json",
+            str(ctx["dir"] / "out" / "step10.json"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
     )
 
 

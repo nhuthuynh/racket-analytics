@@ -32,7 +32,9 @@ def _load():
 
 
 def _report(tmp_path: Path, *, open_rows=(), met: int = 12, **kw) -> dict:
-    return _load().step10_report(report_dir(tmp_path / "r", **kw), ledger(*open_rows), scorecard(met))
+    return _load().step10_report(
+        report_dir(tmp_path / "r", **kw), ledger(*open_rows), scorecard(met)
+    )
 
 
 def _detail(result: dict, item: str) -> dict:
@@ -43,7 +45,10 @@ def test_an_open_major_alone_fails_open_defects(tmp_path: Path) -> None:
     result = _report(tmp_path, open_rows=[("PE-PR24-01", "major")])
     assert not result["ok"]
     assert _detail(result, "open defects") == {
-        "item": "open defects", "ok": False, "detail": "open defects: 1 (PE-PR24-01)"}
+        "item": "open defects",
+        "ok": False,
+        "detail": "open defects: 1 (PE-PR24-01)",
+    }
 
 
 def test_an_open_minor_is_not_a_defect_for_step_10(tmp_path: Path) -> None:
@@ -63,9 +68,13 @@ def test_a_scorecard_without_a_totals_line_is_refused(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("kw", "item"),
-    [({"rules": 0.84}, "mutation rules"), ({"stats": 0.79}, "mutation starter stats"),
-     ({"passing": 999}, "conservation property"), ({"failing": 1}, "conservation property"),
-     ({"crawl_failed": True}, "evidence crawl")],
+    [
+        ({"rules": 0.84}, "mutation rules"),
+        ({"stats": 0.79}, "mutation starter stats"),
+        ({"passing": 999}, "conservation property"),
+        ({"failing": 1}, "conservation property"),
+        ({"crawl_failed": True}, "evidence crawl"),
+    ],
 )
 def test_each_item_below_its_target_fails(tmp_path: Path, kw: dict, item: str) -> None:
     result = _report(tmp_path, **kw)
@@ -93,5 +102,11 @@ def test_every_item_passing_passes(tmp_path: Path) -> None:
     result = _report(tmp_path)
     assert result["ok"], result
     assert [i["item"] for i in result["items"]] == [
-        "scorecard", "golden matches", "conservation property", "mutation rules",
-        "mutation starter stats", "evidence crawl", "open defects"]
+        "scorecard",
+        "golden matches",
+        "conservation property",
+        "mutation rules",
+        "mutation starter stats",
+        "evidence crawl",
+        "open defects",
+    ]
