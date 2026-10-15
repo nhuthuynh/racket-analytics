@@ -1,14 +1,8 @@
 # FIX-03-2d (goal metric DEMO-03; sprint-03 §12 step 10; NFR-038, NFR-071, NFR-078; ADR 0014).
-# Binding: infra/tests/test_demo_test_report_scenarios.py (the script run as the verifier runs it,
-# on a report directory, a review-rounds ledger and a goal scorecard written to a temp dir).
-# Step 10 of the demo shows the scorecard and the test report with "open defects (0)". The
-# report is computed, never typed, so the demo is never reported as given while a blocker or
-# major finding is open or a report file is missing (fail closed).
+# Binding: infra/tests/test_demo_test_report_scenarios.py. Step 10 is computed, never typed, so
+# the demo is never reported as given while a defect is open or a report is missing.
 @ticket-FIX-03-2d
 Feature: The sprint demo's step 10 test report is computed and fails closed
-  As the engineering-manager running the sprint review demo
-  I want step 10's test report computed from the verifier's reports and the live ledger
-  So that "open defects (0)" and "12 of 12 met" are only shown when they are true
 
   Rule: Any open defect, short scorecard or missing report fails step 10
 

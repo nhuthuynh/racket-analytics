@@ -4,10 +4,8 @@
     demo_test_report.py --reports reports/goal03-verify-r2 \\
         --ledger docs/sprints/03/review-rounds.md --scorecard docs/sprints/03/goal-scorecard.md
 
-Prints one line per item (scorecard, golden matches, conservation property, mutation, evidence
-crawl, open defects). Exit 0 only when every item passes; 1 when any fails, a report file
-missing included; 2 when the ledger has no review table or the scorecard no Totals line
-(fail closed, ADR 0014).
+One line per item. Exit 0 only when every item passes; 1 when any fails (a missing report
+fails its item); 2 when the ledger or the scorecard is unreadable (fail closed, ADR 0014).
 """
 
 from __future__ import annotations
@@ -44,22 +42,20 @@ def _json(path: Path) -> dict[str, Any] | None:
 
 
 def _rate(reports: Path, item: str, name: str) -> dict[str, Any]:
-    rate = _json(reports / name)
-    if rate is None:
+    r = _json(reports / name)
+    if r is None:
         return _item(item, False, f"{item}: missing {name}")
-    ok = rate.get("ok") is True and rate.get("rate") == 1.0 and not rate.get("failed")
-    return _item(item, ok, f"{item}: {rate.get('passed')}/{rate.get('selected')} passed")
+    ok = r.get("ok") is True and r.get("rate") == 1.0 and not r.get("failed")
+    return _item(item, ok, f"{item}: {r.get('passed')}/{r.get('selected')} passed")
 
 
 def _conservation(reports: Path) -> dict[str, Any]:
     item = "conservation property"
     rate = _rate(reports, item, "conservation-rate.json")
-    try:
-        found = _PROPERTY.search((reports / "conservation-property.txt").read_text("utf-8"))
-    except OSError:
-        return _item(item, False, f"{item}: missing conservation-property.txt")
+    path = reports / "conservation-property.txt"
+    found = _PROPERTY.search(path.read_text("utf-8")) if path.is_file() else None
     if found is None:
-        return _item(item, False, f"{item}: no Hypothesis statistics")
+        return _item(item, False, f"{item}: no Hypothesis statistics in {path.name}")
     passing, failing = int(found[1]), int(found[2])
     ok = rate["ok"] and passing >= PROPERTY_MIN and failing == 0
     return _item(item, ok, f"{item}: {passing} passing, {failing} failing")
@@ -80,8 +76,7 @@ def _crawl(reports: Path) -> dict[str, Any]:
         rate = junit_rate([reports / "e2e.xml"], "E2E-03-02")
     except (OSError, ValueError) as exc:
         return _item(item, False, f"{item}: e2e.xml unreadable ({exc.__class__.__name__})")
-    detail = f"{item}: E2E-03-02 {rate['passed']}/{rate['selected']} passed"
-    return _item(item, rate["ok"], detail)
+    return _item(item, rate["ok"], f"{item}: E2E-03-02 {rate['passed']}/{rate['selected']} passed")
 
 
 def step10_report(reports: Path, ledger_text: str, scorecard_text: str) -> dict[str, Any]:
@@ -91,18 +86,14 @@ def step10_report(reports: Path, ledger_text: str, scorecard_text: str) -> dict[
         raise ValueError("scorecard has no Totals line")
     met, of = (int(n) for n in totals[-1])
     defects = open_defects(ledger_text)
-    ids = ", ".join(row["ids"][0] for row in defects)
+    named = f" ({', '.join(row['ids'][0] for row in defects)})" if defects else ""
     items = [
         _item("scorecard", met == of and of > 0, f"scorecard: {met} of {of} met"),
         _rate(reports, "golden matches", "golden-an-rate.json"),
         _conservation(reports),
         *(_mutation(reports, *target) for target in MUTATION_TARGETS),
         _crawl(reports),
-        _item(
-            "open defects",
-            not defects,
-            f"open defects: {len(defects)}" + (f" ({ids})" if defects else ""),
-        ),
+        _item("open defects", not defects, f"open defects: {len(defects)}{named}"),
     ]
     return {"ok": all(i["ok"] for i in items), "items": items}
 
