@@ -44,3 +44,9 @@ def test_plan_naming_stats_page_without_once_is_reported() -> None:
 
 def test_plan_with_the_decided_words_passes() -> None:
     assert load().check(plan(NEW_WORDS), ok_dictionary) == []
+
+
+def test_per_card_promise_elsewhere_in_the_plan_is_reported() -> None:
+    other = '| OQ-01 | Not supplied | so every metric card carries the same "unofficial scoring" notice |\n'
+    problems = load().check(other + plan(NEW_WORDS), ok_dictionary)
+    assert any("line 1" in p and "every metric card" in p for p in problems), problems

@@ -22,6 +22,7 @@ PLAN_MARKER = "**Rulebook PDFs later (OQ-01).**"
 DICTIONARY_MARKER = "**Rules dependence:**"
 ONCE = "once before the first card"
 DICTIONARY_ONCE = re.compile(r"once,? before the first card")
+PER_CARD = re.compile(r"every metric card[^.|]*unofficial", re.IGNORECASE)
 
 
 class MissingLine(ValueError):
@@ -39,9 +40,11 @@ def check(plan: str, dictionary: str) -> list[str]:
     """The ways the plan and the dictionary contradict DR-03 R3-3; empty when they agree."""
     plan_line = _line(plan, PLAN_MARKER, "sprint plan (Rulebook PDFs later)")
     rule = _line(dictionary, DICTIONARY_MARKER, "metric dictionary (rule 0.5, Rules dependence)")
-    problems = []
-    if "every metric card" in plan_line:
-        problems.append('sprint plan OQ-01 line still says "every metric card" (DR-03 R3-3: one notice per stats page)')
+    problems = [
+        f'sprint plan line {n} promises the notice on "every metric card" (DR-03 R3-3: once per stats page)'
+        for n, line in enumerate(plan.splitlines(), start=1)
+        if PER_CARD.search(line)
+    ]
     if "every stats page" not in plan_line:
         problems.append('sprint plan OQ-01 line does not say "every stats page"')
     if ONCE not in plan_line:
