@@ -22,6 +22,22 @@ export function deleteProblem(e: unknown, what: string): string {
   return `${what} was not deleted. Try again.${ref}`;
 }
 
+// The server's default title is "{Doubles|Singles} · {d Mon yyyy}" (flows D-2), its months always
+// three letters; Intl en-GB writes September as "Sept". A title that already ends with the date
+// played is shown alone, so the dialog never says the date twice (MVP-04). The date must be the
+// whole title or follow a space: "11 Oct 2026" ends with "1 Oct 2026" but names another day.
+const SERVER_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function matchSummary(title: string, iso: string): string {
+  const date = formatLocalDate(iso, 'UTC');
+  if (!date) return title;
+  const d = new Date(iso);
+  const serverDate = `${d.getUTCDate()} ${SERVER_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  const endsWithDate = (form: string) => title === form || title.endsWith(` ${form}`);
+  if (endsWithDate(date) || endsWithDate(serverDate)) return title;
+  return `${title} · ${date}`;
+}
+
 export function DeleteMatch({
   match,
   api = browserApi,
@@ -34,7 +50,7 @@ export function DeleteMatch({
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   const uploading = match.status === 'uploading' || getActiveUpload() !== null;
-  const date = formatLocalDate(match.played_on ?? match.created_at, 'UTC');
+  const summary = matchSummary(match.title, match.played_on ?? match.created_at);
 
   // When the dialog has gone (Cancel or Esc), focus returns to the button that opened it.
   const wasOpen = useRef(false);
@@ -84,7 +100,7 @@ export function DeleteMatch({
           onConfirm={confirm}
           onCancel={close}
         >
-          <p>{date ? `${match.title} · ${date}` : match.title}</p>
+          <p>{summary}</p>
           <ul className="consequences">
             <li>This deletes the video, tags, score sheet and stats of this match.</li>
             <li>It cannot be undone.</li>
