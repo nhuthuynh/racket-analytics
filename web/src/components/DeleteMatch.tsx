@@ -24,7 +24,8 @@ export function deleteProblem(e: unknown, what: string): string {
 
 // The server's default title is "{Doubles|Singles} · {d Mon yyyy}" (flows D-2), its months always
 // three letters; Intl en-GB writes September as "Sept". A title that already ends with the date
-// played is shown alone, so the dialog never says the date twice (MVP-04).
+// played is shown alone, so the dialog never says the date twice (MVP-04). The date must be the
+// whole title or follow a space: "11 Oct 2026" ends with "1 Oct 2026" but names another day.
 const SERVER_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function matchSummary(title: string, iso: string): string {
@@ -32,7 +33,8 @@ export function matchSummary(title: string, iso: string): string {
   if (!date) return title;
   const d = new Date(iso);
   const serverDate = `${d.getUTCDate()} ${SERVER_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-  if (title.endsWith(date) || title.endsWith(serverDate)) return title;
+  const endsWithDate = (form: string) => title === form || title.endsWith(` ${form}`);
+  if (endsWithDate(date) || endsWithDate(serverDate)) return title;
   return `${title} · ${date}`;
 }
 
