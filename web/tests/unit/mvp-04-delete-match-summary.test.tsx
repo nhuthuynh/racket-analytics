@@ -42,6 +42,20 @@ describe('MVP-04 matchSummary (unit)', () => {
     expect(matchSummary('Doubles · 4 Oct 2026', '2026-10-11')).toBe('Doubles · 4 Oct 2026 · 11 Oct 2026');
   });
 
+  // Review round 1 (PE-MVP04-R1-1, QA-MVP04-01): "11 Oct 2026" ends with "1 Oct 2026", so the
+  // check must stop at a whole day number, or the irreversible delete names the wrong day.
+  it('adds the date when the title names a day whose last digit is the day played', () => {
+    expect(matchSummary('Rematch of 11 Oct 2026', '2026-10-01')).toBe('Rematch of 11 Oct 2026 · 1 Oct 2026');
+    expect(matchSummary('Doubles · 21 Oct 2026', '2026-10-01')).toBe('Doubles · 21 Oct 2026 · 1 Oct 2026');
+    expect(matchSummary('Final 12 Sep 2026', '2026-09-02')).toBe('Final 12 Sep 2026 · 2 Sept 2026');
+    expect(matchSummary('Doubles · 15 Sep 2026', '2026-09-05')).toBe('Doubles · 15 Sep 2026 · 5 Sept 2026');
+    expect(matchSummary('Doubles · 25 Sept 2026', '2026-09-05')).toBe('Doubles · 25 Sept 2026 · 5 Sept 2026');
+  });
+
+  it('shows a title that is only the date played alone', () => {
+    expect(matchSummary('5 Sep 2026', '2026-09-05')).toBe('5 Sep 2026');
+  });
+
   it('shows the title alone when there is no valid date', () => {
     expect(matchSummary('Saturday doubles', 'not a date')).toBe('Saturday doubles');
   });
@@ -58,6 +72,11 @@ describe('MVP-04 X-01 dialog (component)', () => {
     const dialog = await openDialog({ ...match, title: 'Singles · 5 Sep 2026', format: 'singles', played_on: '2026-09-05' });
     expect(within(dialog).getByText('Singles · 5 Sep 2026', { selector: 'p' })).toBeVisible();
     expect(dialog).not.toHaveTextContent(/Sept? 2026.*Sept? 2026/);
+  });
+
+  it('keeps the date played when the title names a later day ending in the same digit', async () => {
+    const dialog = await openDialog({ ...match, title: 'Doubles · 15 Sep 2026', played_on: '2026-09-05' });
+    expect(within(dialog).getByText('Doubles · 15 Sep 2026 · 5 Sept 2026', { selector: 'p' })).toBeVisible();
   });
 
   it('keeps the date after a title of the player\'s own', async () => {

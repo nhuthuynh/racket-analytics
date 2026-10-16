@@ -17,3 +17,8 @@ Feature: The delete confirmation names the match once
       Given Ivy has a match titled "Saturday doubles" played on 3 Oct 2026
       When she starts deleting the match
       Then the confirmation names it "Saturday doubles · 3 Oct 2026"
+
+    Scenario: A title naming another day that ends in the same digits
+      Given Ivy has a match titled "Doubles · 15 Sep 2026" played on 5 Sep 2026
+      When she starts deleting the match
+      Then the confirmation names it "Doubles · 15 Sep 2026 · 5 Sept 2026"

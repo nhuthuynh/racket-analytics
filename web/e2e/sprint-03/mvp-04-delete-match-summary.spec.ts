@@ -39,4 +39,11 @@ test.describe('@M0 @story-ST-050 @ticket-MVP-04 The delete confirmation names th
     await expect(dialog.getByText('Saturday doubles · 3 Oct 2026', { exact: true })).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancel' }).click();
   });
+
+  test('MVP-04-E2E-03 a title naming a later day ending in the same digit keeps the date played', async ({ page }) => {
+    await signInByLink(page);
+    const dialog = await openDeleteDialog(page, { title: 'Doubles · 15 Sep 2026', played_on: '2026-09-05' });
+    await expect(dialog.getByText('Doubles · 15 Sep 2026 · 5 Sept 2026', { exact: true })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+  });
 });
