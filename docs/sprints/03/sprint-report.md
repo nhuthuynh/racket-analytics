@@ -175,6 +175,7 @@ DoD-done here means the work is on `main` through merged ticket PRs that meet th
 | ML | 3.0 | 3.0 | 3.0 | — |
 | **Total** | **43.0** | **39.5 (0.919)** | **36.5 (0.849)** | |
 
+- **ST-044 is a named exception** (PE-RETRO03-01, QA-RETRO03-01): PR #26 merged at `7974a9b`, one docs-only commit after both APPROVEs on `b3ec328`. It counts as DoD-done with PE-PR26-01 (minor) open in C4-MIN. ADR 0050 rule 2 (post-merge rc=1 → major row) applies to merges after the ADR is accepted; earlier merges keep the severity of their existing ledger rows.
 - First close (2026-10-08): 38.5 implemented, **0** DoD-done. The change is the ticket-PR delivery of 2026-10-08..15 (retro 3 A1).
 - Decider tasks: DR-01 and DR-02 **held** (DR-HELD-03 #65, 2026-10-10); DR-03 decided on every item, **not yet recorded held** (PD-R1S3-01). ADR 0043 accepted (#65). ADR 0005 is still Proposed (PM-1).
 - Stretch: ST-035, ST-034, ST-033, ST-036 not started; ST-025 still blocked on P3 clips.
@@ -261,9 +262,10 @@ DoD-done here means the work is on `main` through merged ticket PRs that meet th
 | C4-GATE | Merge only through `merge_ready.py` (no batch merges); post-merge `merged_verdict.py` on every PR in the status step (retro 3 B1) | orchestrator (merge step); engineering-manager checks | 0.5 unit |
 | C4-SEC | T-AC-5 (re-created account has no labeller role; SEC-S3-TM-07); the other ADR 0045 ITs are on `main` (#63) | senior-qa-engineer | 0.5 unit |
 | C4-SRE | ST-054 SRE half (Locust on stats/evidence in CI); SRE-MIN-3; VR3-S3-01 (`extra_ca` in `infra/compose.yaml`); VR3-S3-02 (G03-05 dry-run row) | sre-devops-engineer | 2 units |
-| C4-MIN | PE-PR26-01; PE-ST043-03/-04/-06/-07/-08; VM-R1-02, VM-R2-01, VM-R3-02; the verifier-id pattern in `measurelib._FINDING_ID`; the earlier minors of the first close (PE-R3S3-06/-07/-08, SEC-R3S3-04, SEC-S3-TM-03/-04/-09/-10, PD-R3S3-02, PD-FL3-02/-03, VR2-S3-03, VR3-S3-03, PE-S2-R3-08) as their latest ledger rows say | owners in `review-rounds.md` | about 3 units of review-loop reserve |
+| C4-MIN | PE-PR26-01; QA-RETRO03-03 (docstring of the reconcile_due ledger case); PE-ST043-03/-04/-06/-07/-08; VM-R1-02, VM-R2-01, VM-R3-02; the verifier-id pattern in `measurelib._FINDING_ID`; the earlier minors of the first close (PE-R3S3-06/-07/-08, SEC-R3S3-04, SEC-S3-TM-03/-04/-09/-10, PD-R3S3-02, PD-FL3-02/-03, VR2-S3-03, VR3-S3-03, PE-S2-R3-08) as their latest ledger rows say | owners in `review-rounds.md` | about 3 units of review-loop reserve |
 | C4-PROC | R3-IN-1 `Red:` check in CI (retro 3 A5, still not built); BA-1 DoR for Sprint 4; ADR 0005 PM-1 | engineering-manager with sre-devops-engineer; business-analyst; product-manager | 1 unit |
 | Human-gated | S3-DoD-P6, -P10, -P11; ST-025 (P3 clips); P7 rulebook | human PO with QA, SRE, ML | — |
+| PO 2026-10-15 | **Sprints 4-6 and the Go port are on hold while the MVP (run locally and usable) is finished: tickets MVP-01..MVP-04.** The C4 rows above wait until the MVP is done | product owner; engineering-manager | — |
 | Stretch not started | ST-035, ST-034, ST-033, ST-036 | BE, FE | as sized in sprint-02 §3 |
 
 ## 10. History of this report

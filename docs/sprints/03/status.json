@@ -1024,7 +1024,7 @@
     "rule": "ADR 0039: one PR per ticket into main, principal-engineer + senior-engineer verdict on the head SHA before merge; no sprint-wide PR",
     "merged": 71,
     "merged_range": "#5-#80 except #16, #18 (none), #68, #69, #76; #4 sprint PR closed",
-    "review_rule_met_on_merged_head": "68 of 71 (#24 fixed post-merge; #26 minor PE-PR26-01; #27 major EM-PR27-01)",
+    "review_rule_met_on_merged_head": "68 of 71 at merge time (#24 fixed post-merge, so 69 when re-measured later; #26 minor PE-PR26-01; #27 major EM-PR27-01)",
     "ci_gate_green_on_head": "71 of 71",
     "map": "docs/decisions/0039-sprint-3-tickets-ship-as-ticket-prs-with-principal-and-senior-review.md",
     "evidence": "docs/sprints/03/sprint-report.md section 2",
