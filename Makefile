@@ -34,6 +34,18 @@ ps: ## Show service status
 logs: ## Follow service logs
 	$(COMPOSE) logs -f --tail=100
 
+# ---------------------------------------------------------------- demo data (MVP-03)
+# The stack's own dev CA (web-tls, ADR 0029): only the public root certificate is copied out.
+DEMO_URL ?= https://localhost:3000
+DEMO_CA := .local/demo/root.crt
+
+.PHONY: demo
+demo: ## Seed a ready-to-explore demo match into the running dev stack (run `make up` first)
+	@mkdir -p $(dir $(DEMO_CA))
+	@$(COMPOSE) cp web-tls:/data/caddy/pki/authorities/local/root.crt $(DEMO_CA) >/dev/null 2>&1 \
+	  || { echo "make demo: the stack's web-tls service is not reachable; run 'make up' first" >&2; exit 1; }
+	python3 scripts/demo/seed_demo.py --base-url $(DEMO_URL) --cacert $(DEMO_CA) --env-file $(ENV_FILE)
+
 # ---------------------------------------------------------------- local services without Docker
 .PHONY: local-db local-s3 local-stop
 local-db: ## Start a throwaway Postgres 16; prints `export DATABASE_URL=...`
