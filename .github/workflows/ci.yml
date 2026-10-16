@@ -512,6 +512,20 @@ jobs:
         run: |
           pnpm exec playwright test --project="${{ matrix.project }}" --grep-invert "@red-until-" \
             --global-timeout=1080000 --reporter=github,./e2e/helpers/interrupted-tests-reporter.ts,list,html
+      - name: make demo seeds a match with stats on the running stack (MVP-03)
+        # After the gated journeys, so no spec sees the demo data. One project is enough: the
+        # demo is browser-independent (it drives the public API). Fails closed: with
+        # RA_DEMO_BASE_URL set, an unreachable stack is a failure, never a skip.
+        if: matrix.project == 'chromium'
+        working-directory: infra
+        env:
+          RA_DEMO_BASE_URL: https://localhost:3000
+          RA_DEMO_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
+          RA_DEMO_COMPOSE: ${{ env.COMPOSE }}
+        run: |
+          uv sync --locked
+          uv run --no-sync pytest -q -p no:cacheprovider -rA \
+            tests/test_demo_seed_scenarios.py tests/test_demo_seed_live.py
       - name: E2E tests waiting on a story (@red-until-<story>; listed, not gated)
         # Playwright's own rc is expected to be 1 here; the report decides (ADR 0046).
         # 2 workers: these tests mostly wait out their timeouts while red (ST-054); the gated
