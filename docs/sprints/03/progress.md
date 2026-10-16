@@ -74,3 +74,16 @@
 | Decisions | ADR 0046 accepted with an amendment; ADR 0047 (retro 3); G03-08 wording names GS-AN-1 v2; size breaches `d83ee1b`/`cd8856f`/`96044d9` recorded | decision-log 2026-10-08 rows; ADR 0046 Notes; ADR 0047 |
 | Retro | `docs/retros/2026-11-27-sprint-03.md`: 5 actions (A1 ticket PRs, A2 CI at the head, A3 chair outcomes, A4 security ITs, A5 ADR 0047 + `Red:` check) | retro §7 |
 | Carry-over | C4-PR, C4-CI, C4-DR, C4-SEC, C4-SRE, C4-MIN, human-gated rows, stretch | `sprint-report.md` §8 |
+
+## Sprint close: EM status step, 2026-10-15 (RETRO-03; `origin/main` `6c666b9`)
+
+| Item | Result | Evidence |
+|---|---|---|
+| Goal | **Not met: 11 of 12** live on `main` (VERIFY-03-r3). G03-12 = 2 after the RETRO-03 reconciliation | scorecard §12.3; `open_defects.py` → rc=1, open 2 |
+| Ticket PRs | 71 merged into `main` (2026-10-08..15), `ci-gate` green on each head; 68 of 71 meet the review rule on the merged head (#24 fixed after merge; #26 minor; #27 major) | `sprint-report.md` §2 |
+| Units | implemented 39.5 of 43 (0.919); **DoD-done 36.5 (0.849)** | `status.json` totals |
+| CI on `main` | green at the head (run 38714259188); 71 push runs since 2026-10-08: 53 success, 3 failure, 15 cancelled | `sprint-report.md` §4 |
+| Reconciliation | PE-PR24-01 Fixed; EM-PR27-01 new (major); verifier ids written as `VM-R*` aliases; `reconcile_due.py` → 0 due | `review-rounds.md` "Ticket RETRO-03" |
+| Evidence PRs | #68, #69, #76, #81 folded into RETRO-03 | `decisions/RETRO-03.md` |
+| Retro | `docs/retros/2026-11-27-sprint-03.md`: A1-A5 reviewed (2 done, 3 partly); M9-M13; actions B1-B5; ADR 0050 | retro §1, §7 |
+| Carry-over | C4-G12, C4-GATE, C4-SEC, C4-SRE, C4-MIN, C4-PROC, human-gated rows, stretch | `sprint-report.md` §9 |

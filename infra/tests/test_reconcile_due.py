@@ -267,8 +267,13 @@ def test_cli_report_only_still_refuses_a_missing_plan_file(tmp_path: Path) -> No
 def test_main_stays_green_after_a_fix_ticket_named_after_an_open_finding_merges(
     tmp_path: Path,
 ) -> None:
-    """PE-FIX031A-03 as reported: the real files plus a merged PE-PR24-01.md, base = HEAD."""
+    """PE-FIX031A-03 as reported: the real files plus a merged PE-PR24-01.md, base = HEAD.
+
+    The real ledger closed PE-PR24-01 at the sprint close (RETRO-03), so the open row this
+    case is about is appended explicitly (TCR row RETRO-03, 2026-10-15)."""
     shutil.copy(SPRINT_03 / "review-rounds.md", tmp_path / "rr.md")
+    with (tmp_path / "rr.md").open("a", encoding="utf-8") as ledger:
+        ledger.write("\n" + OPEN_PR24)
     shutil.copy(PLAN_0039, tmp_path / "0039.md")
     shutil.copytree(SPRINT_03 / "decisions", tmp_path / "decisions")
     commit_base(tmp_path)
