@@ -122,3 +122,51 @@ Three runs are planned: a **build-phase baseline** (this section, before the Spr
 ### Not covered by this run
 
 - WebKit (CI only). Container hardening on the live stack (no Compose build: disk under the floor). Locust on stats and evidence (no routes yet). The purge service and a live `--once` (ST-050).
+
+## Sprint-close smoke of `main` after the Sprint 3 merges, 2026-10-10 (sre-devops-engineer with senior-qa-engineer; SMOKE-03)
+
+- **Tree:** `origin/main` at `1842e96` (merge of PR #67, the last Sprint 3 merge at the time), in a fresh worktree (`git -C <repo> worktree add -b s03/smoke-03-sprint-close-smoke-of-main-1842e96 /home/user/wt/smoke-03 origin/main`). Dependencies from the lock files only: `uv sync --locked` (backend, infra), `pnpm install --frozen-lockfile` (web). CI on that SHA: run 38083115506, `success`.
+- **Disk and prune:** `df -h /` → `252G 29G 11G 74%` at the start (10.1 GiB by `df -Pk`, at the 10 GB run floor). Prune by `docs/ops/disk-and-prune.md` steps 1-3, with 0 containers running (`docker ps -q | wc -l` → 0): `docker builder prune -af` (3.631 GB reclaimed), `docker image prune -f` (0 B) → `252G 26G 14G 66%`. The stale app images of other rounds (`qa048r1-*`, `racket-fegr2-*`, `racket-qar1s301-*`, 3.5 GB reclaimable by `docker system df`) were **not** removed (not this round's). 12-13 GB free during the run; `252G 26G 13G 68%` at the end.
+- **Why no Compose image build:** 13.07 GiB free is under the 16 GB build floor of `scripts/ci/evidence.sh up` (`RA_UP_MIN_FREE_GB`); a fresh build takes about 6 GB and would have put the host under the 10 GB run floor. The floor was kept. The stack therefore used the topology of the earlier Sprint 3 smokes, but **from a clean state with Compose for every pulled service** (next bullet).
+- **Stack under test (project `racket-smoke03`, `<scratch>/stack.sh up|down`, env = `infra/env.example` with only the host ports and `DOCKERHUB_REGISTRY=mirror.gcr.io` changed):** Compose from `infra/compose.yaml`, no build: `up -d --wait postgres objectstore mailpit` (the committed objectstore command: two S3 identities, `tcp_rmem` sysctl), `run --rm objectstore-init`, `run --rm --no-deps db-roles` (after the migrate step below); fresh volumes. `python -m racket.platform.migrate` from the worktree (`alembic_version` → `0017`). App services as local processes with the Compose environment: `api` (uvicorn, `--proxy-headers`, `TRUSTED_PROXY_HOPS=1`, sign-in per-IP limits 1000 as in the CI E2E job), `worker` (`WORKER_STAGES=probe`, DB login `racket_worker`, the worker's own S3 key), `mailer` (`send_sign_in_link`, no S3 key), `purge` (`infra/docker/purge_schedule.py … racket.platform.purge --once`, `PURGE_INTERVAL_S=86400`), `web` (`pnpm build` + `next start`). Jaeger `2.10.0` and `caddy:2.10.2-alpine` from images on disk; caddy runs the **committed `infra/tls/Caddyfile`** with only its upstreams and ports rewritten by `sed`, read-only, `cap_drop ALL`. https://localhost:64300. Up in 89 s.
+
+### Verdict
+
+**Green. The Sprint 3 goal journey passes live over HTTPS on `main`:** stats after each tag and after a correction, evidence, other-account 404s, match deletion hidden in 21 ms, account deletion signs out the old session, and the purge leaves no row (G03-01..03 method, 1 run). **Every Playwright journey passed on Chromium (Chrome for Testing): 127 passed, 6 skipped, 0 failed, 0 flaky; no `@red-until-` tag is left in `web/e2e`.** Backend CI selection 3048 passed, 0 failed; web 672 passed; infra 936 passed. The only `red_until` rows left are the stretch / PO-blocked ones (ST-024, ST-025, ST-035), with no stale marker. **No new red.**
+
+### Suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Web types, lint | `pnpm exec tsc --noEmit`; `pnpm exec eslint --max-warnings=0 .` | rc 0; rc 0 |
+| Web unit | `pnpm exec vitest run` | **78 files, 672 passed** in 44 s (pre-review: 59 files, 477) |
+| Web build | `pnpm build` (stack step, `API_INTERNAL_URL=http://127.0.0.1:64800`) | rc 0 |
+| Infra | `cd infra && DOCKERHUB_REGISTRY=mirror.gcr.io uv run --no-sync pytest -q -p no:cacheprovider -rfE -m "unit or integration"` (the CI `infra-tests` selection) | **936 passed, 3 skipped** in 382 s. The 3 skips: `GITLEAKS_BIN` not set (`pytest -rs` on the gitleaks files → `test_gitleaks_ignore.py:104`, `test_workflows_ci_secret_scan.py:83`, `:92`); CI runs them |
+| Backend, CI integration-job selection, on the stack's Compose Postgres and object store | `env (DATABASE_URL, S3_*, MAILPIT_API_URL, APP_ENV=test) uv run --no-sync pytest -q -p no:cacheprovider -n auto -m "(unit or integration or scenario or regression) and not nightly and not red_until" --ignore=…worker_sandbox.py --ignore=…worker_sandbox_strict.py --ignore-glob='tests/integration/harness/test_ci_objstore_*.py'` | **3048 passed, 1 skipped, 0 failed** in 250 s (round-2 smoke: 2351 passed) |
+| Object store write floor (CI-OBJSTORE-SLOW) | `… pytest -q tests/integration/harness/test_ci_objstore_throughput.py` | 2 passed in 4.3 s |
+| Backend `red_until` rows (listed, not gated) | `… pytest -q -m "red_until and not nightly" -o timeout=30 --session-timeout=90 --junitxml=…`; `python3 ../scripts/ci/red_until_report.py --junit … --root . --expected-rows 21` | pytest 21 failed (expected); report rc 0, **"No stale markers."** ST-024 1, ST-025 2, ST-035 18. Every Sprint 3 story row (ST-038, 046, 047, 050, 051, 052; QA-FUZZ-3) is gone from the list (round-2 smoke: 106 failed, 50 errors) |
+| Drill lint (ST-053) | `cd backend && uv run --no-sync racket-drill-lint ../content/drills` | `ok, 0 problem(s), metric dictionary v0.1`, rc 0 |
+
+### Live checks (stack `racket-smoke03`, https://localhost:64300)
+
+| Check | Command | Result |
+|---|---|---|
+| Stack up | `bash <scratch>/stack.sh up` | rc 0 in 89 s; `created bucket racket-media`; `migrate: database is at head`; `db-roles: worker login racket_worker ready` |
+| TLS front door (ADR 0029) | `curl http://localhost:64300/`; `curl --cacert root.crt https://localhost:64300/` (root copied from the caddy data volume) | 400; 200 |
+| API health, direct and through TLS | `curl http://127.0.0.1:64800/healthz`; `curl --cacert root.crt https://localhost:64300/api/healthz` | 200 `{"status":"ok"}`; 200 |
+| ST-042 DB grants | `PGPASSWORD=… psql -U racket_worker -c 'select count(*) from sessions'` / `accounts` / `jobs` | permission denied; permission denied; `0` (allowed) |
+| ST-042 worker S3 identity (Compose objectstore config) | boto3 with `WORKER_S3_ACCESS_KEY_ID`: list `racket-media`, list buckets, put to another bucket, put/get in `racket-media` | AccessDenied; AccessDenied; AccessDenied; allowed; allowed (probe object removed with the app key) |
+| Probe stage under the narrowed grants | `grep -c probe.done` in the worker log after the runs | 76; 0 `permission denied` |
+| Purge scheduler (SRE-PURGE) | purge log at start | `purge.pass` (0/0/0, `failed` 0), `purge.run` `status ok`, `next_run_in_s 86400` |
+| C-13 and error lines | `grep -ciE 'permission denied\|Traceback\|"level": *"error"'` and `grep -ci 'failed to export'` over the api, worker, mailer, purge and web logs, after all runs | 0 and 0 in each |
+| Sprint 2 journey (G02-01 method, regression) | `python3 scripts/measure/live_tagging.py --api https://localhost:64300/api --origin https://localhost:64300 --mailpit http://127.0.0.1:64025 --cacert root.crt --file fixtures/clips/synthetic-60s/clip.mp4 --runs 1 --json …` | `runs_passed 1/1`, `ok true`; tag→sheet p50 17.0 / p95 19.0 ms (n 6, target ≤ 5,000); tag server p50 35.7 / p95 147.7 ms (n 8) |
+| **Sprint 3 goal journey (G03-01..03 method)** | `PGPASSWORD=… python3 scripts/measure/live_stats.py --api https://localhost:64300/api --origin https://localhost:64300 --mailpit http://127.0.0.1:64025 --cacert root.crt --file fixtures/clips/synthetic-60s/clip.mp4 --runs 1 --psql "psql -h 127.0.0.1 -p 64432 -U racket -d racket -At -F\|" --purge-cmd "bash <scratch>/stack.sh purge-once" --json …` | **rc 0, `runs_passed 1/1`, `ok true`.** setup ok (`video_received`); tag→stats p50 19.0 / p95 23.3 ms (n 14, target ≤ 5,000), 0 diffs; stats 0 diffs; evidence 0 problems; correction→stats 17.9 ms, 0 diffs; other account 404, 404; delete match 202, stats after 404, hidden in 20.6 ms (target ≤ 60,000); delete account 202, old session 401, no items after a new sign-in; purge ok. One run: this smoke is not the scorecard measurement (G03 runs and n are in `goal-scorecard.md`) |
+| Playwright, every spec, Chromium (Chrome for Testing 141.0.7390.54, ADR 0036; `scripts/dev-chrome.sh check`) | `PW_CHROMIUM_CHANNEL=chrome PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers BASE_URL=https://localhost:64300 MAILPIT_API_URL=http://127.0.0.1:64025 PW_PROJECTS=chromium E2E_ADMIN_CMD="bash <scratch>/stack.sh admin" bash scripts/ci/evidence.sh e2e <run> --project=chromium --grep-invert "@red-until-" --workers=1 --global-timeout=1800000 --reporter=list,json,junit` | **rc 0 in 11.1 min: 127 passed, 6 skipped, 0 failed, 0 flaky** (JSON `stats`: expected 127, skipped 6, unexpected 0, flaky 0). `grep -rn "@red-until-" web/e2e` → nothing, so the `--grep-invert` excluded nothing and this is every journey. The 6 skips are the Sprint 1 rows, each naming its API binding. Sprint 3: all 34 tests in `e2e/sprint-03/` passed, among them E2E-03-01 (journey v2), -02, -03, -04 (account deletion), -05 (Full Tag, through the labeller-admin CLI), -06 (5: keyboard, 320/360), -07, -08 (2), -09 (7 states), both timing tests and QA-R1S3-01 at 320/360 (round-2 smoke: 16 failed red-first) |
+| Self-cleaning (C-15) | `bash <scratch>/stack.sh down` | rc 0; `racket-smoke03_pgdata`, `_s3data` volumes and networks removed; 0 `racket-smoke03` containers, 0 volumes, 0 stack processes; `df -h /` 13 GB free |
+
+### Not covered by this run
+
+- **Container hardening of the app services and the worker sandbox IT-00-10** (no Compose image build: disk under the 16 GB build floor). Covered by `infra/tests/test_compose_*.py` (green above) and by the CI E2E job on Compose (run 38083115506).
+- **WebKit** (no WebKit build in `/opt/pw-browsers`; CI runs the WebKit leg).
+- Locust on stats and evidence (ST-054 SRE half; nightly/CI perf job).
+- Human-gated goal items (P6 screen-reader pass, P10, P11, P9): nothing for a smoke to run; their rows stay as decided by the PO (P12).

@@ -95,3 +95,87 @@ Significant decisions go to `docs/decisions/` as ADRs.
 | 2026-10-08 | sre-devops-engineer | **CI-POLICY-BASE: the `pr-policy` steps pass `--base "origin/$BASE_REF"` (`github.base_ref`) and `--head HEAD` (the merge ref), never `github.event.pull_request.base.sha`.** The scripts already diff `base...head` (merge base .. head), so the fix is the input, not the scripts. A helper module (`pr_change_set.py`) written in the green step was removed in the refactor: it duplicated `...` and pushed the PR over the 400-line limit. Scenario binding lives in `infra/tests` (pytest-bdd added to the infra dev group) because the backend has no PyYAML | CI run 37739461709, job 113186548205: docs-only PR #6 failed on `web/e2e/sprint-01/resumable-upload.spec.ts`, changed by PR #9 merged 11 s earlier. Red (commit `e821f8e`): `cd infra && uv run pytest -q tests/test_pr_policy_merge_base.py` → 8 failed, 1 passed (exact false positive reproduced); `tests/test_pr_policy_scenarios.py` → 4 failed. Green: see the PR | `HEAD` (the merge commit) judges what would land and reads no SHA from the event payload; its merge base with an even newer `origin/main` is still its first parent, so later moves cannot leak in. `HEAD^1..HEAD` was rejected: it assumes the checkout is a merge commit (a local run on a branch compares against the wrong parent). Gate not weakened: a PR test edit and a 401-line PR still fail with `main` moved; a missing base branch fails closed (rc 2) |
 | 2026-10-08 | sre-devops-engineer | **CI-PERF-GATES: (1) the Locust rate gate measures a steady-state window, not the runner start-up; (2) the NFR-073 integration suite runs in parallel (pytest-xdist, `-n auto`) behind an unbudgeted collect-only warm-up. Targets unchanged: 50 RPS, >= 95%, 600 s** | (1) PR #6 job 113186548469: 39.79 RPS whole-run (13.8 s start-up inside `-t 60s`) vs `main` 51.52; Locust 2.46.7 repro (12 s seed, 30 s run): whole run 30.47 RPS, steady samples 51 RPS. `perf_verdict.py --history perf_stats_history.csv --users 51`: window = first to last sample with all users running, >= 60 s required, `-t 90s`. (2) `--durations=0`, coverage, one process, `origin/sprint-03` `efd5316`, local Postgres 16 + SeaweedFS + Mailpit: `2646 passed, 19 skipped in 743.63s` (wall 749 s); test time 728 s, of which IT-02-10 274 s (169 tests) and IT-03-12 106 s (51 tests, new in Sprint 3) = 52%: real HTTP + row counts per Hypothesis example; setup 231 s, mostly the same fuzz files (app + committed DB per test). Same tree, `-n 4`: `2664 passed, 1 skipped in 203.90s` (wall 206 s) | Fix the measurement and the cause, not the targets. Window rather than a shorter run: a whole-run rate punishes seeding that is not product load, while availability and latency still include the warm-up (stricter). Parallel workers rather than a bigger budget or fewer fuzz examples: per-session databases (C-32) already isolate workers, and fuzz depth (QA-FUZZ, rule L11) is QA's to set. Alternatives rejected: raising 600 s (would need a PO NFR change + ADR), splitting coverage out (two full runs), cutting `max_examples` (weakens tests). `pytest-xdist` added to the backend dev group (QA-owned block; senior-qa-engineer FYI) and locked. TCR row of this date for the one existing assertion on `-t 60s` |
 | 2026-10-08 | engineering-manager | **Size waiver for PR #13 (CI-PERF-GATES) only; the `size-waiver` label may be applied.** `check_pr_size.py` counts about 860 changed lines against the 400-line limit. Production change is about 135 lines (`ci.yml` 26, `perf_verdict.py` 83, `run_with_budget.py` 26, `pyproject.toml` 1); the rest is the ticket's own tests and scenario (`infra/tests` 4 new files 516, `test_ci_perf_gates.py` 161, `ci_perf_gates.feature` 40) and two doc rows | CI run 37752170309 job 113227793515: `pr-size: 855 changed lines (target ~100, limit 400)`; `git diff --numstat origin/main...HEAD` at `abe34fa` (lockfile excluded) | The rule is for reviewability (ADR 0022). Over 80% is new tests written first under the PO's TDD rule, which review reads as specification, not as risky code. Splitting the perf window from the integration budget would give two PRs that each leave `ci-gate` red on `main` (both block every ticket PR), so neither could merge alone without the other's failure (judgment). Condition: applied only together with `qa-approved-test-change` at 0 pending TCR rows for this PR; not a precedent for other tickets |
+
+## Consolidation at the sprint close (engineering-manager, ticket RETRO-03, 2026-10-15)
+
+From 2026-10-08 every ticket recorded its small decisions in its own file under [`decisions/`](decisions/) (PO rule 2026-10-07: ticket PRs do not edit this shared log). This index consolidates them: **71 files, 517 dated rows.** The ticket files stay authoritative and are not copied here, so no row exists twice. Cross-ticket decisions of the close are rows below the index.
+
+| Ticket | PR | Rows | File |
+|---|---|---|---|
+| C3-01 | #19 | 2 | [`decisions/C3-01.md`](decisions/C3-01.md) |
+| C3-02 | #28 | 1 | [`decisions/C3-02.md`](decisions/C3-02.md) |
+| C3-03 | #22 | 6 | [`decisions/C3-03.md`](decisions/C3-03.md) |
+| C3-04 | #21 | 4 | [`decisions/C3-04.md`](decisions/C3-04.md) |
+| C3-10 | #30 | 12 | [`decisions/C3-10.md`](decisions/C3-10.md) |
+| CI-DOMAIN-BUDGET | #48 | 6 | [`decisions/CI-DOMAIN-BUDGET.md`](decisions/CI-DOMAIN-BUDGET.md) |
+| CI-E2E-JOURNEYS-TIMEOUT | #57 | 7 | [`decisions/CI-E2E-JOURNEYS-TIMEOUT.md`](decisions/CI-E2E-JOURNEYS-TIMEOUT.md) |
+| CI-E2E-MAIN-RED | #49 | 5 | [`decisions/CI-E2E-MAIN-RED.md`](decisions/CI-E2E-MAIN-RED.md) |
+| CI-FLAKE-RESUMABLE-2 | #10 | 5 | [`decisions/CI-FLAKE-RESUMABLE-2.md`](decisions/CI-FLAKE-RESUMABLE-2.md) |
+| CI-INTEG-BUDGET | #15 | 3 | [`decisions/CI-INTEG-BUDGET.md`](decisions/CI-INTEG-BUDGET.md) |
+| CI-IT0213-HANG | #17 | 4 | [`decisions/CI-IT0213-HANG.md`](decisions/CI-IT0213-HANG.md) |
+| CI-MERGE-READY-CANCELLED | #50 | 3 | [`decisions/CI-MERGE-READY-CANCELLED.md`](decisions/CI-MERGE-READY-CANCELLED.md) |
+| CI-OBJSTORE-SLOW | #52 | 7 | [`decisions/CI-OBJSTORE-SLOW.md`](decisions/CI-OBJSTORE-SLOW.md) |
+| CI-OBJSTORE-STALL | #66 | 5 | [`decisions/CI-OBJSTORE-STALL.md`](decisions/CI-OBJSTORE-STALL.md) |
+| CI-POLICY-LIVE-LABELS | #74 | 1 | [`decisions/CI-POLICY-LIVE-LABELS.md`](decisions/CI-POLICY-LIVE-LABELS.md) |
+| CI-PR-GATE | #5 | 4 | [`decisions/CI-PR-GATE.md`](decisions/CI-PR-GATE.md) |
+| CI-REDUNTIL-HANG | #51 | 3 | [`decisions/CI-REDUNTIL-HANG.md`](decisions/CI-REDUNTIL-HANG.md) |
+| CI-STALL-SCENARIO-RACE | #75 | 0 | [`decisions/CI-STALL-SCENARIO-RACE.md`](decisions/CI-STALL-SCENARIO-RACE.md) |
+| CI-WEBKIT-PD-R3S2-02 | #8 | 4 | [`decisions/CI-WEBKIT-PD-R3S2-02.md`](decisions/CI-WEBKIT-PD-R3S2-02.md) |
+| COACH-1 | #33 | 9 | [`decisions/COACH-1.md`](decisions/COACH-1.md) |
+| DOCS-03 | #64 | 7 | [`decisions/DOCS-03.md`](decisions/DOCS-03.md) |
+| DR-02-FE | #31 | 7 | [`decisions/DR-02-FE.md`](decisions/DR-02-FE.md) |
+| DR-HELD-03 | #65 | 6 | [`decisions/DR-HELD-03.md`](decisions/DR-HELD-03.md) |
+| FIX-03-1a | #72 | 10 | [`decisions/FIX-03-1a.md`](decisions/FIX-03-1a.md) |
+| FIX-03-1b | #70 | 11 | [`decisions/FIX-03-1b.md`](decisions/FIX-03-1b.md) |
+| FIX-03-1c | #71 | 10 | [`decisions/FIX-03-1c.md`](decisions/FIX-03-1c.md) |
+| FIX-03-1d | #73 | 10 | [`decisions/FIX-03-1d.md`](decisions/FIX-03-1d.md) |
+| FIX-03-2a | #79 | 6 | [`decisions/FIX-03-2a.md`](decisions/FIX-03-2a.md) |
+| FIX-03-2b | #77 | 5 | [`decisions/FIX-03-2b.md`](decisions/FIX-03-2b.md) |
+| FIX-03-2c | #78 | 2 | [`decisions/FIX-03-2c.md`](decisions/FIX-03-2c.md) |
+| FIX-03-2d | #80 | 6 | [`decisions/FIX-03-2d.md`](decisions/FIX-03-2d.md) |
+| G03-FE-404 | #59 | 4 | [`decisions/G03-FE-404.md`](decisions/G03-FE-404.md) |
+| GS-AN-1-V2 | #36 | 8 | [`decisions/GS-AN-1-V2.md`](decisions/GS-AN-1-V2.md) |
+| HARNESS-03 | #20 | 5 | [`decisions/HARNESS-03.md`](decisions/HARNESS-03.md) |
+| PE-DESIGN-3 | #38 | 11 | [`decisions/PE-DESIGN-3.md`](decisions/PE-DESIGN-3.md) |
+| PE-R3S3-03-ITS | #63 | 10 | [`decisions/PE-R3S3-03-ITS.md`](decisions/PE-R3S3-03-ITS.md) |
+| PE-R3S3-04 | #67 | 8 | [`decisions/PE-R3S3-04.md`](decisions/PE-R3S3-04.md) |
+| QA-ACC-3 | #34 | 12 | [`decisions/QA-ACC-3.md`](decisions/QA-ACC-3.md) |
+| QA-FUZZ-3 | #35 | 11 | [`decisions/QA-FUZZ-3.md`](decisions/QA-FUZZ-3.md) |
+| QA-R1S3-01 | #23 | 3 | [`decisions/QA-R1S3-01.md`](decisions/QA-R1S3-01.md) |
+| RETRO-03 | this PR | 8 | [`decisions/RETRO-03.md`](decisions/RETRO-03.md) |
+| SIZE-WAIVERS-03 | #6 | 23 | [`decisions/SIZE-WAIVERS-03.md`](decisions/SIZE-WAIVERS-03.md) |
+| SMOKE-03 | #68 (folded, RETRO-03) | 3 | [`decisions/SMOKE-03.md`](decisions/SMOKE-03.md) |
+| SRE-PURGE-a | #25 | 8 | [`decisions/SRE-PURGE-a.md`](decisions/SRE-PURGE-a.md) |
+| SRE-PURGE-b | #54 | 6 | [`decisions/SRE-PURGE-b.md`](decisions/SRE-PURGE-b.md) |
+| ST-038 | #55 | 13 | [`decisions/ST-038.md`](decisions/ST-038.md) |
+| ST-042 | #27 | 8 | [`decisions/ST-042.md`](decisions/ST-042.md) |
+| ST-043 | #24 | 4 | [`decisions/ST-043.md`](decisions/ST-043.md) |
+| ST-044 | #26 | 9 | [`decisions/ST-044.md`](decisions/ST-044.md) |
+| ST-045 | #29 | 7 | [`decisions/ST-045.md`](decisions/ST-045.md) |
+| ST-046a | #41 | 8 | [`decisions/ST-046a.md`](decisions/ST-046a.md) |
+| ST-046b | #42 | 7 | [`decisions/ST-046b.md`](decisions/ST-046b.md) |
+| ST-047-API | #44 | 5 | [`decisions/ST-047-API.md`](decisions/ST-047-API.md) |
+| ST-048 | #46 | 22 | [`decisions/ST-048.md`](decisions/ST-048.md) |
+| ST-049 | #32 | 11 | [`decisions/ST-049.md`](decisions/ST-049.md) |
+| ST-050 | #56 | 8 | [`decisions/ST-050.md`](decisions/ST-050.md) |
+| ST-050a | #45 | 10 | [`decisions/ST-050a.md`](decisions/ST-050a.md) |
+| ST-050b | #47 | 9 | [`decisions/ST-050b.md`](decisions/ST-050b.md) |
+| ST-051 | #58 | 7 | [`decisions/ST-051.md`](decisions/ST-051.md) |
+| ST-051-API | #53 | 9 | [`decisions/ST-051-API.md`](decisions/ST-051-API.md) |
+| ST-052 | #14 | 11 | [`decisions/ST-052.md`](decisions/ST-052.md) |
+| ST-052a | #43 | 8 | [`decisions/ST-052a.md`](decisions/ST-052a.md) |
+| ST-052b | #60 | 12 | [`decisions/ST-052b.md`](decisions/ST-052b.md) |
+| ST-052c | #61 | 11 | [`decisions/ST-052c.md`](decisions/ST-052c.md) |
+| ST-053 | #40 | 12 | [`decisions/ST-053.md`](decisions/ST-053.md) |
+| ST-054 | #37 | 9 | [`decisions/ST-054.md`](decisions/ST-054.md) |
+| VERIFY-03-r1 | #69 (folded, RETRO-03) | 5 | [`decisions/VERIFY-03-r1.md`](decisions/VERIFY-03-r1.md) |
+| VERIFY-03-r2 | #76 (folded, RETRO-03) | 8 | [`decisions/VERIFY-03-r2.md`](decisions/VERIFY-03-r2.md) |
+| VERIFY-03-r3 | #81 (folded, RETRO-03) | 8 | [`decisions/VERIFY-03-r3.md`](decisions/VERIFY-03-r3.md) |
+| VR1-S3-01 | #39 | 2 | [`decisions/VR1-S3-01.md`](decisions/VR1-S3-01.md) |
+| VR2-S3-01 | #62 | 3 | [`decisions/VR2-S3-01.md`](decisions/VR2-S3-01.md) |
+
+| Date | Who | Decision | Evidence | Reasoning |
+|---|---|---|---|---|
+| 2026-10-15 | engineering-manager (RETRO-03) | **Sprint 3 closes not met: 11 of 12 on `main` at `6c666b9`, G03-12 = 2** (PD-R1S3-01 group waiting on the chair; EM-PR27-01 new). DoD-done 36.5 of 43 units | `open_defects.py` → rc=1, open 2; goal-scorecard §12.3; `sprint-report.md` §1, §3 | PO standing rule: the goal counts only when every row is "yes" |
+| 2026-10-15 | engineering-manager (RETRO-03) | **ADR 0050 accepted; retro 3 actions B1-B5** replace A1-A5 (2 done, 3 partly; the partly ones are carried inside B2, B5 and C4-SEC) | `docs/retros/2026-11-27-sprint-03.md` §1, §7 | Each action has one owner, a date and a measurable check |
+| 2026-10-15 | engineering-manager (RETRO-03) | **Evidence PRs #68, #69, #76, #81 folded into RETRO-03 and closed with a pointer** | `decisions/RETRO-03.md` row 3 | VM-R2-02, VM-R3-01 |

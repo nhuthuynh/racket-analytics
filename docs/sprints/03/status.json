@@ -6,11 +6,11 @@
     "planned_start": "2026-11-16",
     "planned_review": "2026-11-27",
     "work_started": "2026-10-06",
-    "status_written": "2026-10-08 (sprint close, engineering-manager, at c1fba6a; VR3 measured fb920bc)",
-    "closed": "2026-10-08"
+    "status_written": "2026-10-15 (sprint close, engineering-manager, RETRO-03, at origin/main 6c666b9; VERIFY-03-r3 measured 6c666b9)",
+    "closed": "2026-10-15 (first close 2026-10-08)"
   },
   "owner": "engineering-manager",
-  "branch": "sprint-03",
+  "branch": "main (ticket PRs, ADR 0039); sprint-03 kept for history",
   "based_on": "sprint-02@ce91984",
   "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2, L 4. implemented_units and dod_done_units tracked separately. Status: not_started | in_progress | implemented | done | partial | blocked. Decider tasks (ADR 0037 rule 2) carry dates, not units.",
   "capacity": {
@@ -35,78 +35,88 @@
   "goal_metrics": {
     "G03-01": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "5/5 live journeys, rc=0, no failing step"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "5/5 live journeys, rc=0, no failing step key"
     },
     "G03-02": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "tag->stats p95 34.3 ms (n 70); correction 24.0 ms (n 5); delete hidden 22.2 ms (n 5)"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "tag->stats p95 32.7 ms (n 70); correction 23.0 ms (n 5); delete hidden 24.0 ms (n 5)"
     },
     "G03-03": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "0 rows in 20 columns; 5/5 links 404; purge service PURGE_INTERVAL_S 86400"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "0 rows in 20 columns; 5/5 links 404; purge service PURGE_INTERVAL_S 86400, first run ok"
     },
     "G03-04": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "IT-03 + BOLA 183/183; earlier 317/317; sandbox 10/10"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "IT-03 + BOLA 185/185; earlier 317/317; sandbox 10/10"
     },
     "G03-05": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "p95 32.5 ms, p99 114.9 ms, 100%, 0 unexpected, 50.0 RPS"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "p95 28.1 ms, p99 59.6 ms, 100% of 3000, 0 unexpected, 50.01 RPS"
     },
     "G03-06": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "114 passed, 0 failed, 6 named skips; x3 342 passed, 0 flaky"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "127/127 non-skipped, 6 named skips, 0 flaky x3; WebKit green on CI"
     },
     "G03-07": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "231 ms / 837 ms / CLS 0, n 20 each"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "252.6 ms / 868.1 ms / CLS 0, n 20 each"
     },
     "G03-08": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "GS-AN-1 v2 31/31; scenarios 15/15; conservation 1000/0; manifest rc 0; 7/7 coach-reviewed"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "golden 37/37; scenarios 42/42; conservation 1000/0; manifest rc 0; 7/7 coach-reviewed"
     },
     "G03-09": {
-      "met": false,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "IT-03-11 15/15, E2E-03-05 passed, lint 1+5 correct; no CI run at the head (origin 723bb7f; last run 37643676432 at 09f1f67 failed)"
+      "met": true,
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "IT-03-11 15/15, E2E-03-05 1/1, lint 1+5; drill-lint and ci-gate success on run 38714259188 at 6c666b9"
     },
     "G03-10": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "55 axe checks 0 serious/critical; 0 small targets; every family and state; keyboard and 320/360 passed"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "axe 0 over 60 attachments; targets 0; every family and state; keyboard and 320/360 passed"
     },
     "G03-11": {
       "met": true,
-      "verified": "VR3 fb920bc (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "changed lines 94%; analytics 98.1%; rules 99.57/98.41%; web 91.64%; mutation 0.8635/0.9251; oracle 100000/0; 8.0/12.2/350.1 s"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "97%; 98.34%; 99.57/98.41%; 93.03%; mutation 0.8635/0.8977; oracle 100000/0; 6.2/14.7/478.0 s"
     },
     "G03-12": {
       "met": false,
-      "verified": "VR3 counted 3; EM close recount 8 (review-rounds Sprint close)",
-      "actual": "verifier 3; EM close recount 8 after reconciling review round 3; GitHub bug issues 0"
+      "verified": "VERIFY-03-r3 6c666b9 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "verifier 2 (PE-PR24-01, PD-R1S3-01 group); after RETRO-03 reconciliation 2 (PD-R1S3-01 group, EM-PR27-01)"
+    },
+    "DEMO-03": {
+      "met": false,
+      "verified": "VERIFY-03-r3 6c666b9",
+      "actual": "steps 1-9 live in real time; step 10 demo_test_report.py rc=1 (11 of 12; open defects 2)"
     }
   },
   "open_defects": {
-    "count": 8,
+    "count": 2,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md",
-    "at": "sprint close, 2026-10-08, c1fba6a + EM close rows (rc=1)",
+    "at": "2026-10-15, origin/main 6c666b9 + RETRO-03 rows (rc=1)",
     "ids": [
-      "PE-R1S3-01 / QA-R1S3-04 / QA-R3S3-02 / SEC-R3S3-03 (blocker)",
-      "PD-R1S3-01 family (blocker)",
-      "PD-R1-06 / DR-01 / DR-02 family (blocker)",
-      "PE-R3S3-01 / QA-R3S3-04 (major)",
-      "PE-R3S3-05 / QA-R3S3-03 (major)",
-      "PE-R3S3-03 / SEC-R3S3-02 / QA-R3S3-05 (major)",
-      "PE-R3S3-04 (major)",
-      "PD-R3S3-01 (major)"
+      "PD-R1S3-01 / QA-R3S3-06 (blocker): chair's DR-03 Held flip",
+      "EM-PR27-01 (major): no senior verdict on PR #27"
+    ],
+    "closed_since_first_close": [
+      "PE-R1S3-01 family",
+      "PD-R1-06 family",
+      "PE-R3S3-01",
+      "PE-R3S3-05",
+      "PE-R3S3-03",
+      "PE-R3S3-04",
+      "PD-R3S3-01",
+      "VM-R1-01 (V03R1-01)",
+      "PE-PR24-01"
     ],
     "deferred": {
       "QA-R1S3-09, QA-R1S3-10": "accepted TDD-order breach -> retro 3 A5 (R3-IN-1)",
@@ -114,27 +124,28 @@
       "SEC-RV3-01": "S3-DoD-P10",
       "BLK-GOLD-01": "S3-DoD-P11",
       "minors and nits": "Sprint 4 carry-over C4-MIN (sprint-report §8)"
-    },
-    "note": "goal rounds 1-3 counted 3 because review round 3 (fdeeb53) had no rows; reconciled at close (retro 3 M1)"
+    }
   },
   "decider_tasks": [
     {
       "id": "DR-01",
       "due": "D1",
-      "status": "cells_done_outcome_not_recorded",
+      "status": "held",
       "evidence": [
-        "1433a92"
+        "1433a92",
+        "DR-HELD-03 #65"
       ],
-      "note": "every decider cell written; chair has not recorded held (PD-R1S3-01, PD-R1-06)"
+      "note": "held 2026-10-10 (DR-HELD-03)"
     },
     {
       "id": "DR-02",
       "due": "D1",
-      "status": "cells_done_outcome_not_recorded",
+      "status": "held",
       "evidence": [
-        "1433a92"
+        "1433a92",
+        "DR-HELD-03 #65"
       ],
-      "note": "every decider cell written; chair has not recorded held (PD-R1S3-01, PD-R1-06)"
+      "note": "held 2026-10-10 (DR-HELD-03)"
     },
     {
       "id": "DR-02-FE",
@@ -240,11 +251,11 @@
     {
       "id": "DR-03",
       "due": "D3",
-      "status": "cells_done_outcome_not_recorded",
+      "status": "decided_not_recorded_held",
       "evidence": [
         "1433a92"
       ],
-      "note": "every decider cell written; chair has not recorded held (PD-R1S3-01, PD-R1-06)"
+      "note": "every cell written (BA R3-9 2026-10-15, FIX-03-2a #79); chair's Held flip open (PD-R1S3-01)"
     },
     {
       "id": "SEC-1",
@@ -267,8 +278,7 @@
     "P8",
     "P9",
     "P10",
-    "P11",
-    "P13"
+    "P11"
   ],
   "stories": [
     {
@@ -279,16 +289,18 @@
         "QA": 0.5
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 0.5,
-      "dod_done_units": 0,
+      "dod_done_units": 0.5,
       "depends_on": [],
       "open": [],
       "evidence": [
         "1c1535d"
       ],
       "note": "QA decisions on TCR rows 24-28 recorded",
-      "ticket_pr": null
+      "ticket_prs": [
+        19
+      ]
     },
     {
       "id": "C3-02",
@@ -296,7 +308,7 @@
       "title": "PE-S2-R3-02: contract amendment not_last_in_game (docs task PE-4)",
       "units": {},
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
@@ -305,7 +317,9 @@
         "bd770f8"
       ],
       "note": "contract amendment; landed after C3-03 (retro 3 A3 slip)",
-      "ticket_pr": null
+      "ticket_prs": [
+        28
+      ]
     },
     {
       "id": "C3-03",
@@ -315,9 +329,9 @@
         "FE": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
+      "dod_done_units": 1,
       "depends_on": [
         "C3-02"
       ],
@@ -328,7 +342,9 @@
         "c5f7049"
       ],
       "note": "pending principal-designer and QA re-check",
-      "ticket_pr": null
+      "ticket_prs": [
+        22
+      ]
     },
     {
       "id": "C3-04",
@@ -338,16 +354,18 @@
         "SRE": 0.5
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 0.5,
-      "dod_done_units": 0,
+      "dod_done_units": 0.5,
       "depends_on": [],
       "open": [],
       "evidence": [
         "c0fb6ad"
       ],
       "note": "QA re-check closed QA-RV3-04 (fb69a7d)",
-      "ticket_pr": null
+      "ticket_prs": [
+        21
+      ]
     },
     {
       "id": "C3-05",
@@ -357,9 +375,9 @@
         "SRE": 0.5
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 0.5,
-      "dod_done_units": 0,
+      "dod_done_units": 0.5,
       "depends_on": [
         "C3-01"
       ],
@@ -368,7 +386,9 @@
         "ece0f30"
       ],
       "note": "QA re-check closed PE-S2-R3-03 (fb69a7d)",
-      "ticket_pr": null
+      "ticket_prs": [
+        2
+      ]
     },
     {
       "id": "C3-06",
@@ -388,8 +408,10 @@
       "evidence": [
         "610e853"
       ],
-      "note": "S3-DoD-P6: not met, waiting on P6 (0 of 38 rows run)",
-      "ticket_pr": null
+      "note": "#70 FIX-03-1b built the measurement; the pass itself waits on P6",
+      "ticket_prs": [
+        70
+      ]
     },
     {
       "id": "C3-07",
@@ -405,8 +427,10 @@
       ],
       "open": [],
       "evidence": [],
-      "note": "S3-DoD-P10: not met, waiting on P10",
-      "ticket_pr": null
+      "note": "#71 FIX-03-1c measures it; waits on P10",
+      "ticket_prs": [
+        71
+      ]
     },
     {
       "id": "C3-08",
@@ -424,8 +448,10 @@
       ],
       "open": [],
       "evidence": [],
-      "note": "S3-DoD-P11: not met, waiting on P11",
-      "ticket_pr": null
+      "note": "#73 FIX-03-1d measures it; waits on P11",
+      "ticket_prs": [
+        73
+      ]
     },
     {
       "id": "C3-09",
@@ -433,7 +459,7 @@
       "title": "DR family: decider tasks DR-01, DR-02",
       "units": {},
       "committed": true,
-      "status": "in_progress",
+      "status": "done",
       "implemented_units": 0,
       "dod_done_units": 0,
       "depends_on": [],
@@ -443,8 +469,10 @@
         "1265966",
         "1433a92"
       ],
-      "note": "all decider cells written; chair outcome not recorded",
-      "ticket_pr": null
+      "note": "DR-01 and DR-02 held (DR-HELD-03 #65)",
+      "ticket_prs": [
+        65
+      ]
     },
     {
       "id": "ST-043",
@@ -454,9 +482,9 @@
         "BE": 0.5
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 0.5,
-      "dod_done_units": 0,
+      "dod_done_units": 0.5,
       "depends_on": [
         "COACH-1",
         "PE-2"
@@ -466,8 +494,10 @@
         "bd7593c",
         "921ed53"
       ],
-      "note": "AN-01..07 shipped coach-reviewed, pinned to the record",
-      "ticket_pr": null
+      "note": "PR #24 PE APPROVE on the merged head given post-merge (FIX-03-2b); PE-PR24-01 fixed",
+      "ticket_prs": [
+        24
+      ]
     },
     {
       "id": "ST-044",
@@ -477,9 +507,9 @@
         "BE": 2
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
+      "dod_done_units": 2,
       "depends_on": [],
       "open": [],
       "evidence": [
@@ -487,7 +517,10 @@
         "fee4fa3",
         "38b5da4"
       ],
-      "ticket_pr": null
+      "ticket_prs": [
+        26
+      ],
+      "note": "PE-PR26-01 (minor): docs-only commit after both APPROVE"
     },
     {
       "id": "ST-045",
@@ -497,9 +530,9 @@
         "BE": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
+      "dod_done_units": 1,
       "depends_on": [
         "ST-044"
       ],
@@ -507,7 +540,9 @@
       "evidence": [
         "a678a01"
       ],
-      "ticket_pr": null
+      "ticket_prs": [
+        29
+      ]
     },
     {
       "id": "ST-046",
@@ -517,9 +552,9 @@
         "BE": 2
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
+      "dod_done_units": 2,
       "depends_on": [
         "ST-044",
         "PE-1",
@@ -531,7 +566,10 @@
         "c038dee"
       ],
       "note": "ST-046a/b; built on sprint-03, not s3/* (ADR 0039 rule 6 breach)",
-      "ticket_pr": null
+      "ticket_prs": [
+        41,
+        42
+      ]
     },
     {
       "id": "ST-047",
@@ -542,9 +580,9 @@
         "FE": 2
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 3,
-      "dod_done_units": 0,
+      "dod_done_units": 3,
       "depends_on": [
         "ST-046",
         "DR-03"
@@ -555,7 +593,10 @@
         "d83ee1b"
       ],
       "note": "API + UI; d83ee1b 2,125 lines, split before its PR (decision-log 2026-10-08)",
-      "ticket_pr": null
+      "ticket_prs": [
+        44,
+        46
+      ]
     },
     {
       "id": "ST-048",
@@ -565,9 +606,9 @@
         "FE": 4
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 4,
-      "dod_done_units": 0,
+      "dod_done_units": 4,
       "depends_on": [
         "ST-046",
         "DR-03"
@@ -579,7 +620,10 @@
         "81091cb"
       ],
       "note": "built before DR-03 held, no PO waiver (retro 3 M3)",
-      "ticket_pr": null
+      "ticket_prs": [
+        46,
+        59
+      ]
     },
     {
       "id": "ST-049",
@@ -589,9 +633,9 @@
         "QA": 2
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
+      "dod_done_units": 2,
       "depends_on": [
         "COACH-1"
       ],
@@ -602,7 +646,10 @@
         "7a6ffe5"
       ],
       "note": "GS-AN-1 v2, hand count gated",
-      "ticket_pr": null
+      "ticket_prs": [
+        32,
+        36
+      ]
     },
     {
       "id": "ST-050",
@@ -613,9 +660,9 @@
         "FE": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 3,
-      "dod_done_units": 0,
+      "dod_done_units": 3,
       "depends_on": [
         "PE-3",
         "SEC-1",
@@ -630,7 +677,11 @@
         "96044d9"
       ],
       "note": "ADR 0045 security ITs still missing (PE-R3S3-03)",
-      "ticket_pr": null
+      "ticket_prs": [
+        45,
+        47,
+        56
+      ]
     },
     {
       "id": "ST-051",
@@ -641,9 +692,9 @@
         "FE": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 3,
-      "dod_done_units": 0,
+      "dod_done_units": 3,
       "depends_on": [
         "ST-050",
         "PM-1"
@@ -654,7 +705,10 @@
         "45bf6e6",
         "1040cfb"
       ],
-      "ticket_pr": null
+      "ticket_prs": [
+        53,
+        58
+      ]
     },
     {
       "id": "ST-038",
@@ -664,9 +718,9 @@
         "BE": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
+      "dod_done_units": 1,
       "depends_on": [
         "ST-050"
       ],
@@ -674,7 +728,9 @@
       "evidence": [
         "a3bc305"
       ],
-      "ticket_pr": null
+      "ticket_prs": [
+        55
+      ]
     },
     {
       "id": "ST-042",
@@ -695,8 +751,10 @@
         "a1bf473",
         "e54b754"
       ],
-      "note": "column grants 0013 (SEC-R1S3-01)",
-      "ticket_pr": null
+      "note": "DoD blocked by EM-PR27-01 (PR #27 merged without a senior verdict)",
+      "ticket_prs": [
+        27
+      ]
     },
     {
       "id": "ST-052",
@@ -707,9 +765,9 @@
         "FE": 2
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 4,
-      "dod_done_units": 0,
+      "dod_done_units": 4,
       "depends_on": [
         "PE-1",
         "DR-03"
@@ -722,7 +780,12 @@
         "cd8856f"
       ],
       "note": "cd8856f 1,367 lines, split before its PR",
-      "ticket_pr": null
+      "ticket_prs": [
+        43,
+        60,
+        61,
+        14
+      ]
     },
     {
       "id": "ST-053",
@@ -732,9 +795,9 @@
         "ML": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
+      "dod_done_units": 1,
       "depends_on": [],
       "open": [],
       "evidence": [
@@ -747,7 +810,9 @@
         "f493c02"
       ],
       "note": "CI job has no run at the head",
-      "ticket_pr": null
+      "ticket_prs": [
+        40
+      ]
     },
     {
       "id": "ST-054",
@@ -760,7 +825,7 @@
       "committed": true,
       "status": "partial",
       "implemented_units": 2,
-      "dod_done_units": 0,
+      "dod_done_units": 2,
       "depends_on": [
         "ST-048",
         "ST-047"
@@ -771,8 +836,10 @@
         "c7a6443",
         "661f6c9"
       ],
-      "note": "QA half implemented (journey v2, crawl, timing green); SRE Locust on stats/evidence in CI not done",
-      "ticket_pr": null
+      "note": "QA half done (#37); SRE half (Locust on stats/evidence in CI) not done",
+      "ticket_prs": [
+        37
+      ]
     },
     {
       "id": "QA-ACC-3",
@@ -782,9 +849,9 @@
         "QA": 2
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
+      "dod_done_units": 2,
       "depends_on": [
         "PE-1",
         "PD-1"
@@ -805,7 +872,9 @@
         "99a711f"
       ],
       "note": "tests written red first; they turn green with the stories",
-      "ticket_pr": null
+      "ticket_prs": [
+        34
+      ]
     },
     {
       "id": "QA-FUZZ-3",
@@ -815,15 +884,17 @@
         "QA": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
+      "dod_done_units": 1,
       "depends_on": [],
       "open": [],
       "evidence": [
         "152c57c"
       ],
-      "ticket_pr": null
+      "ticket_prs": [
+        35
+      ]
     },
     {
       "id": "QA-DRY-3",
@@ -833,9 +904,9 @@
         "QA": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
+      "dod_done_units": 1,
       "depends_on": [],
       "open": [],
       "evidence": [
@@ -843,8 +914,10 @@
         "9562871",
         "f621c51"
       ],
-      "note": "G03-05 dry-run row is the SRE gap (VR3-S3-02)",
-      "ticket_pr": null
+      "note": "dry-run rows on main via DOCS-03 #64; G03-05 row still missing (VR3-S3-02)",
+      "ticket_prs": [
+        64
+      ]
     },
     {
       "id": "QA-MIN-3",
@@ -854,15 +927,17 @@
         "QA": 0.5
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 0.5,
-      "dod_done_units": 0,
+      "dod_done_units": 0.5,
       "depends_on": [],
       "open": [],
       "evidence": [
         "e5324cc"
       ],
-      "ticket_pr": null
+      "ticket_prs": [
+        30
+      ]
     },
     {
       "id": "SRE-PURGE",
@@ -872,9 +947,9 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "implemented",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
+      "dod_done_units": 1,
       "depends_on": [
         "ST-050"
       ],
@@ -884,7 +959,10 @@
         "cad2451"
       ],
       "note": "scheduled purge live, first run ok",
-      "ticket_pr": null
+      "ticket_prs": [
+        25,
+        54
+      ]
     },
     {
       "id": "SRE-SMOKE-3",
@@ -894,8 +972,8 @@
         "SRE": 1
       },
       "committed": true,
-      "status": "partial",
-      "implemented_units": 0,
+      "status": "implemented",
+      "implemented_units": 1,
       "dod_done_units": 0,
       "depends_on": [],
       "open": [],
@@ -904,8 +982,10 @@
         "01811d1",
         "fdeeb53"
       ],
-      "note": "no close-head smoke section",
-      "ticket_pr": null
+      "note": "close smoke SMOKE-03 (#68) folded into RETRO-03; DoD-done 1.0 when RETRO-03 merges",
+      "ticket_prs": [
+        68
+      ]
     },
     {
       "id": "SRE-MIN-3",
@@ -921,32 +1001,41 @@
       "depends_on": [],
       "open": [],
       "evidence": [],
-      "ticket_pr": null
+      "ticket_prs": []
     }
   ],
   "totals": {
     "planned_units": 43.0,
-    "implemented_units": 38.5,
-    "dod_done_units": 0,
-    "implemented_ratio": 0.895,
+    "implemented_units": 39.5,
+    "dod_done_units": 36.5,
+    "implemented_ratio": 0.919,
     "by_lane": {
-      "BE": "12.5/12.5",
-      "FE": "11.0/11.0",
-      "QA": "9.0/9.5",
-      "SRE": "3.0/7.0",
-      "ML": "3.0/3.0"
+      "BE": "impl 12.5/12.5, done 11.5",
+      "FE": "impl 11.0/11.0, done 11.0",
+      "QA": "impl 9.0/9.5, done 9.0",
+      "SRE": "impl 4.0/7.0, done 2.0",
+      "ML": "impl 3.0/3.0, done 3.0"
     },
-    "dod_note": "0: no Sprint 3 ticket PR exists (ADR 0039); Sprint 1+2 reached main via PR #2 on 2026-10-06"
+    "dod_note": "DoD-done = on main through merged ticket PRs meeting the review rule (ADR 0039) with ci-gate green; ST-042 out (EM-PR27-01); SRE-SMOKE-3 counts on RETRO-03 merge",
+    "dod_done_ratio": 0.849
   },
   "goal_met": false,
   "ticket_prs": {
     "rule": "ADR 0039: one PR per ticket into main, principal-engineer + senior-engineer verdict on the head SHA before merge; no sprint-wide PR",
-    "opened": [],
+    "merged": 71,
+    "merged_range": "#5-#80 except #16, #18 (none), #68, #69, #76; #4 sprint PR closed",
+    "review_rule_met_on_merged_head": "68 of 71 at merge time (#24 fixed post-merge, so 69 when re-measured later; #26 minor PE-PR26-01; #27 major EM-PR27-01)",
+    "ci_gate_green_on_head": "71 of 71",
     "map": "docs/decisions/0039-sprint-3-tickets-ship-as-ticket-prs-with-principal-and-senior-review.md",
-    "status": "none opened at close (list_pull_requests state=all 2026-10-08 -> #1 closed, #2 merged 2026-10-06, #3 closed; no s3/* branch). Retro 3 A1",
-    "pr_description_note": "T-ST-043/044/045/053/052a PRs must state 'TDD order not shown: reconstruction only (QA-R1S3-09/10)'"
+    "evidence": "docs/sprints/03/sprint-report.md section 2",
+    "folded_into_RETRO-03": [
+      68,
+      69,
+      76,
+      81
+    ]
   },
-  "goal_met_note": "not met at close: VR3 10/12 at fb920bc; G03-09 (c) no CI at the head; G03-12 open 8 after the EM close reconciliation (sprint-report §1)",
+  "goal_met_note": "not met at close 2026-10-15: VERIFY-03-r3 11/12 at 6c666b9; G03-12 open 2 (PD-R1S3-01 group: chair's Held flip; EM-PR27-01: senior verdict on PR #27) (sprint-report section 1)",
   "nightly": {
     "run_date": "2026-10-16",
     "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/38867597862",
@@ -976,5 +1065,16 @@
       "score": 0.8635,
       "job": "success"
     }
+  },
+  "retro": {
+    "file": "docs/retros/2026-11-27-sprint-03.md",
+    "actions": [
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "B5"
+    ],
+    "adr": "0050"
   }
 }
