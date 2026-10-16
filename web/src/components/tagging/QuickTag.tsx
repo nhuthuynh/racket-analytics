@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
 import type { Match, ParticipantSlot } from '@/lib/api/types';
+import { RallyClock } from '@/lib/tagging/clock';
 import { initialTagging, taggingReducer, type Pending } from '@/lib/tagging/reducer';
 import { currentCall } from '@/lib/tagging/score';
 import { gameStatus, sideNames, tagLine, winnerWord } from '@/lib/tagging/view';
@@ -57,7 +58,7 @@ export function QuickTag({
   api?: QuickTagApi;
   /** A playable URL for the match video, or null when none can be had. */
   videoSrc: string | null;
-  /** Test seam: the current time in ms. Default: the video's time, else this page's clock. */
+  /** Test seam: the current time in ms. Default: the video's time when it plays, else the page's clock (MVP-02). */
   clock?: () => number;
 }) {
   const names = useMemo(() => sideNames(match), [match]);
@@ -143,12 +144,17 @@ export function QuickTag({
     opened.current = performance.now();
   }, []);
 
+  const rallyClock = useRef<RallyClock | null>(null);
+  rallyClock.current ??= new RallyClock(() => performance.now() - opened.current);
+  // MVP-02: a video with metadata that cannot play (a media error, the "cannot play" notice)
+  // stays at 0, so its time would refuse every rally after the first: use the page clock.
+  const lastEndMs = state.sheet.rows[state.sheet.rows.length - 1]?.end_ms ?? null;
   const now = useCallback((): number => {
     if (clock) return clock();
     const v = video.current;
-    if (v && v.readyState > 0) return Math.floor(v.currentTime * 1000);
-    return Math.floor(performance.now() - opened.current);
-  }, [clock]);
+    const plays = !!v && v.readyState > 0 && !v.error && videoProblem === null;
+    return rallyClock.current!.read(v ? { plays, videoMs: v.currentTime * 1000 } : null, lastEndMs);
+  }, [clock, lastEndMs, videoProblem]);
 
   const refresh = useCallback(() => api.getScoreSheet(match.id), [api, match.id]);
 
