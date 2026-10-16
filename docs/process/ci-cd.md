@@ -11,6 +11,7 @@
 ```bash
 make up            # = cp infra/env.example infra/.env (once), then
                    #   docker compose -f infra/compose.yaml up -d --build --wait
+make demo          # seed a ready-to-explore "Demo match" (12 tagged rallies, stats) for Ivy; dev only (MVP-03)
 make up-deps       # backing services only: postgres, objectstore (+init), mailpit, tracing
 make down          # stop and delete volumes
 ```
