@@ -76,9 +76,9 @@ describe('MVP-02 rally clock', () => {
       let lastEnd: number | null = 597_000; // rallies tagged from the video up to 597 s
       for (let n = 0; n < 50; n += 1) {
         page += 2_000;
-        const start = clock.read(stuck, lastEnd, duration);
+        const start: number | null = clock.read(stuck, lastEnd, duration);
         page += 4_000;
-        const end = clock.read(stuck, lastEnd, duration);
+        const end: number | null = clock.read(stuck, lastEnd, duration);
         expect(start).not.toBeNull();
         expect(end).not.toBeNull();
         expect(end!).toBeLessThanOrEqual(duration);

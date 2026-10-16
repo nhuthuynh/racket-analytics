@@ -7,6 +7,10 @@ import type { FieldErrorCode } from '@/lib/api/types';
 
 export const RULES_UNAVAILABLE_MESSAGE = 'Scoring for this match format is not available yet.';
 
+/** MVP-02 (PE-MVP02-R1-01): the page clock has no time left before the end of the video. */
+export const NO_TIME_LEFT_MESSAGE =
+  'The rally times have reached the end of the video, so no more rallies can be tagged without it.';
+
 function fieldCode(e: ApiError, ...codes: FieldErrorCode[]): FieldErrorCode | null {
   return e.fields.find((f) => codes.includes(f.code))?.code ?? null;
 }

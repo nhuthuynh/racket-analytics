@@ -16,7 +16,7 @@ import { initialTagging, taggingReducer, type Pending } from '@/lib/tagging/redu
 import { currentCall } from '@/lib/tagging/score';
 import { gameStatus, sideNames, tagLine, winnerWord } from '@/lib/tagging/view';
 import { ENDING_LABELS, ENDINGS, otherSide, type Ending, type ScoreSheet, type Side } from '@/lib/tagging/types';
-import { commandProblem, gameStartProblem, tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
+import { NO_TIME_LEFT_MESSAGE, commandProblem, gameStartProblem, tagFailureMessage as failureMessage } from '@/lib/tagging/messages';
 import { classifyVideoFailure, type VideoFailure } from '@/lib/media/playback';
 import {
   actionForKey,
@@ -147,14 +147,23 @@ export function QuickTag({
   const rallyClock = useRef<RallyClock | null>(null);
   rallyClock.current ??= new RallyClock(() => performance.now() - opened.current);
   // MVP-02: a video with metadata that cannot play (a media error, the "cannot play" notice)
-  // stays at 0, so its time would refuse every rally after the first: use the page clock.
+  // stays at 0, so its time would refuse every rally after the first: use the page clock,
+  // bounded by the video's duration (PE-MVP02-R1-01). Null: no time left before the end.
   const lastEndMs = state.sheet.rows[state.sheet.rows.length - 1]?.end_ms ?? null;
-  const now = useCallback((): number => {
+  const durationMs = match.media?.duration_ms ?? null;
+  const now = useCallback((): number | null => {
     if (clock) return clock();
     const v = video.current;
     const plays = !!v && v.readyState > 0 && !v.error && videoProblem === null;
-    return rallyClock.current!.read(v ? { plays, videoMs: v.currentTime * 1000 } : null, lastEndMs);
-  }, [clock, lastEndMs, videoProblem]);
+    return rallyClock.current!.read(v ? { plays, videoMs: v.currentTime * 1000 } : null, lastEndMs, durationMs);
+  }, [clock, durationMs, lastEndMs, videoProblem]);
+  const mark = useCallback(
+    (type: 'mark_start' | 'mark_end') => {
+      const ms = now();
+      dispatch(ms === null ? { type: 'failed', message: NO_TIME_LEFT_MESSAGE } : { type, ms });
+    },
+    [now],
+  );
 
   const refresh = useCallback(() => api.getScoreSheet(match.id), [api, match.id]);
 
@@ -236,8 +245,7 @@ export function QuickTag({
       default:
     }
     if (!tagging) return;
-    if (action === 'mark_start') dispatch({ type: 'mark_start', ms: now() });
-    else if (action === 'mark_end') dispatch({ type: 'mark_end', ms: now() });
+    if (action === 'mark_start' || action === 'mark_end') mark(action);
     else if (action === 'clear') dispatch({ type: 'clear' });
     else if (action === 'winner_mine') dispatch({ type: 'choose_winner', side: names.mySide });
     else if (action === 'winner_other') dispatch({ type: 'choose_winner', side: otherSide(names.mySide) });
@@ -362,10 +370,10 @@ export function QuickTag({
       ) : (
         <div className="quick-tag__bar" role="group" aria-label="Tag the rally">
           <div className="quick-tag__row">
-            <button type="button" className="button button--secondary tag-button" aria-pressed={d.start_ms !== undefined} onClick={() => dispatch({ type: 'mark_start', ms: now() })}>
+            <button type="button" className="button button--secondary tag-button" aria-pressed={d.start_ms !== undefined} onClick={() => mark('mark_start')}>
               Rally start
             </button>
-            <button type="button" className="button button--secondary tag-button" aria-pressed={d.end_ms !== undefined} onClick={() => dispatch({ type: 'mark_end', ms: now() })}>
+            <button type="button" className="button button--secondary tag-button" aria-pressed={d.end_ms !== undefined} onClick={() => mark('mark_end')}>
               Rally end
             </button>
           </div>

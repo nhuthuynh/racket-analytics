@@ -25,6 +25,24 @@ Feature: Tagging without a playable video
       Then the score sheet shows 3 rallies
       And each rally starts after the one before it ends
 
+  Rule: Rallies tagged without the video stay inside the video (PE-MVP02-R1-01)
+
+    Scenario: Near the end of the video no rally is refused as ending after the video
+      Given Ivy's browser cannot play her 10-minute match video
+      And she tagged a rally from the video that ends at 9 min 57 s
+      When she tags 3 more rallies without the video
+      Then all 3 rallies are saved
+      And none of them ends after the end of the video
+
+    Scenario: No time is left in the video
+      Given Ivy's browser cannot play her 10-minute match video
+      And she tagged a rally from the video that ends at the end of the video
+      When she marks the start of another rally
+      Then she is told "The rally times have reached the end of the video, so no more rallies can be tagged without it."
+      And no rally is sent
+
+  Rule: A video that plays is unchanged
+
     Scenario: A video that plays still gives the rally times
       Given Ivy's browser plays her match video
       When she marks a rally from 12 s to 16.5 s of the video
