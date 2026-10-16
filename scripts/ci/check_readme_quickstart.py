@@ -28,7 +28,8 @@ def quick_start_section(readme: str) -> str:
         start = lines.index(SECTION)
     except ValueError:
         return ""
-    end = next((i for i in range(start + 1, len(lines)) if re.match(r"#{1,2} ", lines[i])), len(lines))
+    after = range(start + 1, len(lines))
+    end = next((i for i in after if re.match(r"#{1,2} ", lines[i])), len(lines))
     return "\n".join(lines[start:end]) + "\n"
 
 
@@ -70,7 +71,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--readme", type=Path)
     a = ap.parse_args(argv)
     readme = (a.readme or a.repo / "README.md").read_text()
-    found = problems(readme, (a.repo / "Makefile").read_text(), (a.repo / "infra/compose.yaml").read_text())
+    makefile = (a.repo / "Makefile").read_text()
+    found = problems(readme, makefile, (a.repo / "infra/compose.yaml").read_text())
     for p in found:
         print(f"readme-quickstart: {p}")
     if not found:
