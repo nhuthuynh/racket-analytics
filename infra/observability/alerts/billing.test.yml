@@ -1,0 +1,188 @@
+# promtool unit tests for billing.yml (ST-073, NFR-022; IT-04-10). Each alert fires at its
+# threshold and not 1% below it (negative case first). Budget 1000 USD; spend sampled at t=1m.
+# Run (image pinned by digest in infra/tests/billing_alert_fixtures.py, PROMTOOL_IMAGE; see
+# docs/ops/billing-alerts.md): promtool test rules billing.test.yml
+rule_files:
+- billing.yml
+evaluation_interval: 1m
+tests:
+- name: 'BillingLlmProviderBudget50: 49% of the budget -> no alert'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="llm_provider"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+    values: 490x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingLlmProviderBudget50
+    exp_alerts: []
+- name: 'BillingLlmProviderBudget50: 50% of the budget -> fires'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="llm_provider"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+    values: 500x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingLlmProviderBudget50
+    exp_alerts:
+    - exp_labels:
+        provider: llm_provider
+        threshold_percent: '50'
+        severity: info
+        receiver: billing-owner
+      exp_annotations:
+        summary: LLM provider spend reached 50% of the monthly budget
+        runbook: docs/ops/billing-alerts.md
+- name: 'BillingLlmProviderBudget80: 79% of the budget -> no alert'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="llm_provider"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+    values: 790x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingLlmProviderBudget80
+    exp_alerts: []
+- name: 'BillingLlmProviderBudget80: 80% of the budget -> fires'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="llm_provider"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+    values: 800x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingLlmProviderBudget80
+    exp_alerts:
+    - exp_labels:
+        provider: llm_provider
+        threshold_percent: '80'
+        severity: warning
+        receiver: billing-owner
+      exp_annotations:
+        summary: LLM provider spend reached 80% of the monthly budget
+        runbook: docs/ops/billing-alerts.md
+- name: 'BillingLlmProviderBudget100: 99% of the budget -> no alert'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="llm_provider"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+    values: 990x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingLlmProviderBudget100
+    exp_alerts: []
+- name: 'BillingLlmProviderBudget100: 100% of the budget -> fires'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="llm_provider"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+    values: 1000x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingLlmProviderBudget100
+    exp_alerts:
+    - exp_labels:
+        provider: llm_provider
+        threshold_percent: '100'
+        severity: critical
+        receiver: billing-owner
+      exp_annotations:
+        summary: LLM provider spend reached 100% of the monthly budget
+        runbook: docs/ops/billing-alerts.md
+- name: 'BillingObjectStoreBudget50: 49% of the budget -> no alert'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="object_store"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="object_store"}
+    values: 490x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingObjectStoreBudget50
+    exp_alerts: []
+- name: 'BillingObjectStoreBudget50: 50% of the budget -> fires'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="object_store"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="object_store"}
+    values: 500x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingObjectStoreBudget50
+    exp_alerts:
+    - exp_labels:
+        provider: object_store
+        threshold_percent: '50'
+        severity: info
+        receiver: billing-owner
+      exp_annotations:
+        summary: Object store spend reached 50% of the monthly budget
+        runbook: docs/ops/billing-alerts.md
+- name: 'BillingObjectStoreBudget80: 79% of the budget -> no alert'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="object_store"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="object_store"}
+    values: 790x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingObjectStoreBudget80
+    exp_alerts: []
+- name: 'BillingObjectStoreBudget80: 80% of the budget -> fires'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="object_store"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="object_store"}
+    values: 800x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingObjectStoreBudget80
+    exp_alerts:
+    - exp_labels:
+        provider: object_store
+        threshold_percent: '80'
+        severity: warning
+        receiver: billing-owner
+      exp_annotations:
+        summary: Object store spend reached 80% of the monthly budget
+        runbook: docs/ops/billing-alerts.md
+- name: 'BillingObjectStoreBudget100: 99% of the budget -> no alert'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="object_store"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="object_store"}
+    values: 990x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingObjectStoreBudget100
+    exp_alerts: []
+- name: 'BillingObjectStoreBudget100: 100% of the budget -> fires'
+  interval: 1m
+  input_series:
+  - series: racket_billing_monthly_budget_usd{provider="object_store"}
+    values: 1000x5
+  - series: racket_billing_spend_month_to_date_usd{provider="object_store"}
+    values: 1000x5
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BillingObjectStoreBudget100
+    exp_alerts:
+    - exp_labels:
+        provider: object_store
+        threshold_percent: '100'
+        severity: critical
+        receiver: billing-owner
+      exp_annotations:
+        summary: Object store spend reached 100% of the monthly budget
+        runbook: docs/ops/billing-alerts.md
