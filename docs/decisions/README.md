@@ -106,7 +106,7 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0002 | [MVP scope: walking skeleton and release slicing](0002-mvp-scope-walking-skeleton-release-slicing.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
 | 0003 | [Weakness ranking by rallies lost](0003-weakness-ranking-by-rallies-lost.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
 | 0004 | [Measurable definitions for the M2 and M3 accuracy targets](0004-accuracy-target-definitions-m2-m3.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
-| 0005 | [Low-sample and efficacy-claim rules](0005-low-sample-and-efficacy-claim-rules.md) | Proposed | 2026-10-03 |
+| 0005 | [Low-sample and efficacy-claim rules](0005-low-sample-and-efficacy-claim-rules.md) | Accepted (product-manager, PM-4; values unchanged) | 2026-10-03 |
 | 0006 | [Retention and deletion defaults](0006-retention-and-deletion-defaults.md) | Accepted as interim (PO 2026-10-05) | 2026-10-03 |
 | 0007 | [Delivery sequencing in vertical slices](0007-delivery-sequencing-vertical-slices.md) | Accepted (PO 2026-10-05) | 2026-10-03 |
 | 0008 | [Stack confirmation for Sprint 0](0008-stack-confirmation-for-sprint-0.md) | Accepted (Sprint 0) | 2026-10-03 |
