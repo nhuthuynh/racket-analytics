@@ -203,6 +203,24 @@ def _metric(weakness_id: str, serve: int, receive: int) -> tuple[str, str]:
     return ("AN-01", "AN-01") if serve_half else ("AN-02", "AN-02")
 
 
+def _weakness(entry: CatalogueEntry, position: int, counts: Counter[str], games: int) -> Weakness:
+    serve, receive = counts["serve"], counts["receive"]
+    metric_id, plan_target = _metric(entry.id, serve, receive)
+    return Weakness(
+        id=entry.id,
+        name=entry.name,
+        rank=position,
+        metric_id=metric_id,
+        plan_target=plan_target,
+        catalogue_order=entry.order,
+        lost=serve + receive,
+        lost_on_serve=serve,
+        lost_on_receive=receive,
+        conceded=counts["conceded"],
+        games=games,
+    )
+
+
 def rank(
     losses: Iterable[RallyLoss],
     games: int,
@@ -220,25 +238,15 @@ def rank(
         counts = tally.setdefault(loss.category, Counter())
         counts[loss.phase] += 1
         counts["conceded"] += loss.conceded_point
+
+    def lost(entry: CatalogueEntry) -> int:
+        return tally[entry.id]["serve"] + tally[entry.id]["receive"]
+
     entries = sorted(
-        (_BY_ID[c] for c in tally if c in _BY_ID),
-        key=lambda e: (-(tally[e.id]["serve"] + tally[e.id]["receive"]), e.order, e.id),
+        (_BY_ID[c] for c in tally if c in _BY_ID), key=lambda e: (-lost(e), e.order, e.id)
     )
     weaknesses = tuple(
-        Weakness(
-            id=e.id,
-            name=e.name,
-            rank=position,
-            metric_id=_metric(e.id, tally[e.id]["serve"], tally[e.id]["receive"])[0],
-            plan_target=_metric(e.id, tally[e.id]["serve"], tally[e.id]["receive"])[1],
-            catalogue_order=e.order,
-            lost=tally[e.id]["serve"] + tally[e.id]["receive"],
-            lost_on_serve=tally[e.id]["serve"],
-            lost_on_receive=tally[e.id]["receive"],
-            conceded=tally[e.id]["conceded"],
-            games=games,
-        )
-        for position, e in enumerate(entries, start=1)
+        _weakness(e, position, tally[e.id], games) for position, e in enumerate(entries, start=1)
     )
     unattributed = tally.get(UNATTRIBUTED, Counter())
     return WeaknessRanking(
