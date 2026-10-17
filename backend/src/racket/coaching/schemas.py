@@ -80,8 +80,11 @@ def _code(name: str, value: Any, body: Mapping[str, Any]) -> str | None:
             return None
         if not _is_int(value):
             return "invalid"
-        sessions = body.get("sessions_per_week")
-        floor = MIN_SESSION * (sessions if isinstance(sessions, int) else 1)
+        # The floor counts sessions_per_week only when it is valid; else one session, so an
+        # invalid sessions_per_week gets its own code and none here (QA-ST061b-R2-01).
+        sessions: Any = body.get("sessions_per_week")
+        valid = _is_int(sessions) and _code("sessions_per_week", sessions, body) is None
+        floor = MIN_SESSION * (int(sessions) if valid else 1)
         return None if floor <= value <= MAX_WEEKLY else "out_of_range"
     if name == "equipment":
         if not isinstance(value, list) or not all(isinstance(x, str) for x in value):

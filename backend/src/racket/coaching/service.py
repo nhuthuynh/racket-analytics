@@ -10,6 +10,11 @@ deleted match is never cited. The plan is stale when the purge marked it so or, 
 with the plan) is no longer live; a stale plan, or one the live data no longer cites, is
 regenerated with its stored preferences (``regenerated: "source_match_deleted"``) or, with no
 tagged match left or no plan that fits, deleted (404 ``no_plan``), as coaching-plan §8 says.
+The one ``regenerated`` value the contract defines is also used when every source is live but
+the live numbers no longer cite the saved plan (e.g. after a scorebook correction): decision
+row "regenerated label" in docs/sprints/04/decisions/ST-061b.md (QA-ST061b-R2-03).
+A lost save race (``IntegrityError``) is retried once from the start, then 409
+``plan_conflict`` (api-sprint-04 §3.4).
 
 Transactions: ``citations_for`` runs the stats read repair, which commits, so it runs first; then
 the account row is held ``FOR SHARE`` (SEC-S3-TM-05: a ``DELETE /me`` commits before or after,
@@ -29,7 +34,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TypeVar
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -58,6 +63,8 @@ from racket.players import public as players
 log = logging.getLogger(__name__)
 LIBRARY_ENV = "RACKET_DRILL_LIBRARY"  # the content/drills directory; found from here if unset
 SOURCE_MATCH_DELETED = "source_match_deleted"
+SAVE_ATTEMPTS = 2  # the first try and one internal retry (api-sprint-04 §3.4)
+_T = TypeVar("_T")
 
 
 class NoPlan(NotFound):
@@ -119,53 +126,66 @@ class PlanService:
     def generate(self, owner_id: uuid.UUID, prefs: Preferences) -> PlanView:
         """POST /me/plan: the new plan replaces the owner's plan; nothing written on a refusal."""
         started = time.monotonic()
-        try:
-            facts = citation_acl.citations_for(self.session, owner_id)
-            ranking = self._ranking(owner_id)
-            view = self._build(owner_id, prefs, ranking, facts)
-            self.session.commit()
-        except IntegrityError:  # a concurrent generate saved first (one plan per owner)
-            self.session.rollback()
-            raise PlanChanged("plan saved concurrently") from None
-        except BaseException:
-            self.session.rollback()
-            raise
+        view = self._retrying(lambda: self._generate(owner_id, prefs))
         self._generated(view, started)
         return view
 
     def current(self, owner_id: uuid.UUID) -> PlanView:
         """GET /me/plan: the saved plan, re-cited; regenerated or gone when its data went."""
         started = time.monotonic()
-        try:
-            facts = citation_acl.citations_for(self.session, owner_id)
-            ranking = self._ranking(owner_id)
-            stored = self.plans.get(owner_id)
-            if stored is None:
-                raise NoPlan("no plan")
-            if ranking.reason == NO_TAGGED_MATCH:
-                self._drop(owner_id)
-            live = citation_acl.live_matches(self.session, stored.source_match_ids)
-            if not stored.stale and not deleted_sources(stored.source_match_ids, live):
-                try:
-                    cited = CitedPlan(stored.plan, facts.citations, facts.rallies)
-                except MissingCitation:
-                    pass
-                else:
-                    self.session.rollback()  # read only: end the share locks
-                    return PlanView(stored, ranking, cited, self.library.names)
-            try:
-                view = self._build(owner_id, stored.plan.preferences, ranking, facts)
-            except NoPlanFits:
-                self._drop(owner_id)
-            self.session.commit()
-        except IntegrityError:
-            self.session.rollback()
-            raise PlanChanged("plan saved concurrently") from None
-        except BaseException:
-            self.session.rollback()
-            raise
+        view, regenerated = self._retrying(lambda: self._current(owner_id))
+        if not regenerated:
+            return view
         self._generated(view, started)
         return replace(view, regenerated=SOURCE_MATCH_DELETED)
+
+    def _retrying(self, attempt: Callable[[], _T]) -> _T:
+        """api-sprint-04 §3.4, coaching-plan §5: a lost race (a concurrent save of the owner's
+        one plan, ``IntegrityError``) is retried once from the start, then 409
+        ``plan_conflict``. Any other failure rolls back and propagates."""
+        for tries in range(1, SAVE_ATTEMPTS + 1):
+            try:
+                return attempt()
+            except IntegrityError:
+                self.session.rollback()
+                if tries == SAVE_ATTEMPTS:
+                    raise PlanChanged("plan saved concurrently") from None
+            except BaseException:
+                self.session.rollback()
+                raise
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    def _generate(self, owner_id: uuid.UUID, prefs: Preferences) -> PlanView:
+        facts = citation_acl.citations_for(self.session, owner_id)
+        ranking = self._ranking(owner_id)
+        view = self._build(owner_id, prefs, ranking, facts)
+        self.session.commit()
+        return view
+
+    def _current(self, owner_id: uuid.UUID) -> tuple[PlanView, bool]:
+        """The saved plan and False, or the regenerated plan and True (committed)."""
+        facts = citation_acl.citations_for(self.session, owner_id)
+        ranking = self._ranking(owner_id)
+        stored = self.plans.get(owner_id)
+        if stored is None:
+            raise NoPlan("no plan")
+        if ranking.reason == NO_TAGGED_MATCH:
+            self._drop(owner_id)
+        live = citation_acl.live_matches(self.session, stored.source_match_ids)
+        if not stored.stale and not deleted_sources(stored.source_match_ids, live):
+            try:
+                cited = CitedPlan(stored.plan, facts.citations, facts.rallies)
+            except MissingCitation:
+                pass
+            else:
+                self.session.rollback()  # read only: end the share locks
+                return PlanView(stored, ranking, cited, self.library.names), False
+        try:
+            view = self._build(owner_id, stored.plan.preferences, ranking, facts)
+        except NoPlanFits:
+            self._drop(owner_id)
+        self.session.commit()
+        return view, True
 
     def _ranking(self, owner_id: uuid.UUID) -> WeaknessRanking:
         if not players.lock_live_account(self.session, owner_id):

@@ -166,7 +166,9 @@ def citable(library: Iterable[Drill], citations: Mapping[str, Citation]) -> list
 
 def source_matches(citations: Mapping[str, Citation]) -> frozenset[str]:
     """coaching-plan §8: the plan's source matches, every match a citation has evidence from
-    (each fed the pooled numbers, cited rally or not)."""
+    (each fed the pooled numbers, cited rally or not). A tagged match that adds no evidence
+    to any metric is not a source, so deleting it does not make the plan stale (deliberate:
+    the plan's numbers do not depend on it; QA-ST061b-R2-04)."""
     return frozenset(e.match_id for c in citations.values() for e in c.evidence)
 
 
