@@ -5,9 +5,11 @@ coaching-plan §3-§8; api-sprint-04 §2).
 ACL), assembles the rules-only plan over the reviewed drill library (ST-056), cites every
 assignment and saves it as the owner's one plan (ST-061a repository), all or nothing.
 ``PlanService.current`` reads the saved plan and re-cites it from the live read models, so a
-deleted match is never cited; a plan the live data no longer supports is regenerated with its
-stored preferences (``regenerated: "source_match_deleted"``) or, with no tagged match left,
-deleted (404 ``no_plan``), as coaching-plan §8 says.
+deleted match is never cited. The plan is stale when the purge marked it so or, from the
+``DELETE /matches/{id}`` on, when one of its source matches (``plan_source_matches``, written
+with the plan) is no longer live; a stale plan, or one the live data no longer cites, is
+regenerated with its stored preferences (``regenerated: "source_match_deleted"``) or, with no
+tagged match left or no plan that fits, deleted (404 ``no_plan``), as coaching-plan §8 says.
 
 Transactions: ``citations_for`` runs the stats read repair, which commits, so it runs first; then
 the account row is held ``FOR SHARE`` (SEC-S3-TM-05: a ``DELETE /me`` commits before or after,
@@ -43,6 +45,8 @@ from racket.coaching.plan.domain import (
     Preferences,
     assemble,
     citable,
+    deleted_sources,
+    source_matches,
 )
 from racket.coaching.plan.repository import PlanRepository
 from racket.coaching.schemas import PlanView
@@ -140,7 +144,8 @@ class PlanService:
                 raise NoPlan("no plan")
             if ranking.reason == NO_TAGGED_MATCH:
                 self._drop(owner_id)
-            if not stored.stale:
+            live = citation_acl.live_matches(self.session, stored.source_match_ids)
+            if not stored.stale and not deleted_sources(stored.source_match_ids, live):
                 try:
                     cited = CitedPlan(stored.plan, facts.citations, facts.rallies)
                 except MissingCitation:
@@ -188,7 +193,8 @@ class PlanService:
         if isinstance(plan, Infeasible):
             raise NoPlanFits(plan.reason)
         cited = CitedPlan(plan, facts.citations, facts.rallies)
-        self.plans.save(owner_id, plan)
+        sources = {uuid.UUID(m) for m in source_matches(facts.citations)}
+        self.plans.save(owner_id, plan, sources)
         stored = self.plans.get(owner_id)
         if stored is None:  # pragma: no cover - the row was written in this transaction
             raise PlanChanged("plan vanished after save")

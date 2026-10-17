@@ -11,6 +11,8 @@ from racket.coaching.plan.domain.citation import (
     MissingCitation,
     RallyRef,
     citable,
+    deleted_sources,
+    source_matches,
 )
 from racket.coaching.plan.domain.model import (
     NO_DRILL_FITS,
@@ -47,6 +49,8 @@ __all__ = [
     "Unfitted",
     "assemble",
     "citable",
+    "deleted_sources",
+    "source_matches",
     "violations",
     "warm_up_minutes",
 ]

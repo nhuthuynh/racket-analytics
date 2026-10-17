@@ -125,6 +125,7 @@ class ContextPorts:
         rows += dataset.purge_match(session, match_id)
         rows += analysis_jobs.purge_match(session, match_id)
         rows += video_ingest.purge_match(session, match_id)
+        rows += coaching.purge_match(session, match_id)  # ST-061b: plan rows naming the match
         return rows + matches.purge_match(session, match_id)  # root last; FKs cascade
 
     def orphan_snapshot_ids(self, session: Any) -> list[uuid.UUID]:

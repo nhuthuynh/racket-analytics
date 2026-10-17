@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypeVar
 
 from racket.coaching.plan.domain.model import (
     Drill,
@@ -22,6 +23,7 @@ from racket.coaching.plan.domain.model import (
     TrainingPlan,
 )
 
+_Id = TypeVar("_Id", str, uuid.UUID)
 EVIDENCE_MAX = 10  # FR-103 "up to 10"
 _NOUNS = {"AN-01": "serves", "AN-02": "serves received", "AN-05": "serves", "AN-07": "rallies"}
 _SHARES = {"AN-07:fault": "faults", "AN-07:forced-error": "forced errors"}
@@ -160,6 +162,17 @@ def _targets(d: Drill) -> list[str]:
 def citable(library: Iterable[Drill], citations: Mapping[str, Citation]) -> list[Drill]:
     """QD-PL-04: a drill with no citable metric is not eligible."""
     return [d for d in library if any(t in citations for t in _targets(d))]
+
+
+def source_matches(citations: Mapping[str, Citation]) -> frozenset[str]:
+    """coaching-plan §8: the plan's source matches, every match a citation has evidence from
+    (each fed the pooled numbers, cited rally or not)."""
+    return frozenset(e.match_id for c in citations.values() for e in c.evidence)
+
+
+def deleted_sources(sources: Iterable[_Id], live: Iterable[_Id]) -> frozenset[_Id]:
+    """coaching-plan §8: the source matches that are no longer live; any makes the plan stale."""
+    return frozenset(sources) - frozenset(live)
 
 
 class CitedPlan:
