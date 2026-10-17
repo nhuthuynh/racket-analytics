@@ -1,7 +1,8 @@
 # Sprint 4 ST-056 (FR-121; QD-PL-01..03): the rules-only TrainingPlan assembly, pure domain (no API,
 # no database). Steps: backend/tests/features/test_training_plan.py. The steps build a small
 # coach-reviewed test library (the reviewed starter drills arrive with ST-058a..c); IT-04-02a runs
-# the same assembly over the real content/drills library.
+# the same assembly over the real content/drills library. ST-061a adds the last rule: the plan
+# saved through the repository on the real database (migration 0018) and read back by its owner.
 @M5 @story-ST-056 @coaching
 Feature: Rules-only training plan assembly
   From the top 3 weaknesses, the player's preferences and the reviewed drill library, a
@@ -71,3 +72,19 @@ Feature: Rules-only training plan assembly
       Given a solo player with a wall and no ball machine, 30 minutes per session, 3 sessions a week
       When the plan is assembled 3 times, each time from the library in a different order
       Then the 3 plans are identical and have the same content digest
+
+  Rule: A saved plan belongs to its owner and reads back identical (ST-061a; FR-121; NFR-051)
+
+    @story-ST-061a
+    Scenario: Another player's saved plan is not visible
+      Given a solo player with a wall and no ball machine, 30 minutes per session, 3 sessions a week
+      And the plan is assembled and saved for "ivy"
+      When "carlos" reads his saved plan
+      Then "carlos" has no saved plan
+
+    @story-ST-061a
+    Scenario: A saved plan reads back identical
+      Given a player with 4 players, every setup, 60 minutes per session, 3 sessions a week and 150 minutes a week
+      And the plan is assembled and saved for "ivy"
+      When "ivy" reads her saved plan
+      Then the plan read back is identical to the one saved, with the same content digest and version
