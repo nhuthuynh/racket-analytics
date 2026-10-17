@@ -73,6 +73,15 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/ci/check_pr_size.py --base "origin/$BASE_REF" --head HEAD
+      # Every PR commit that adds or changes backend/src or web/src code needs a `Red:` body line
+      # or an earlier test-only commit in the PR; merge commits are not judged (C4-RED, R3-IN-1).
+      # No label waives it; it logs the PR's live labels like the other pr-policy steps.
+      - name: Red first (R3-IN-1, C4-RED)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/ci/check_red_first.py --base "origin/$BASE_REF" --head HEAD
 
   workflow-lint:
     name: Workflow lint (actionlint)
