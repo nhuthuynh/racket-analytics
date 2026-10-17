@@ -66,6 +66,16 @@ Feature: The privacy and quota harness measures G04-09 and G04-10 honestly
       When the steps "flags-off" run
       Then the step fails, naming "flag route answered 200"
 
+    Scenario: A feature switched on in /config/public with the flags off is found
+      Given a flags-off stack that lists the "retention" feature as on
+      When the steps "flags-off" run
+      Then the step fails, naming "feature on: retention"
+
+    Scenario: age_confirmed_at served by GET /me with the flags off is found
+      Given a flags-off stack whose GET /me carries age_confirmed_at
+      When the steps "flags-off" run
+      Then the step fails, naming "age_confirmed_at served with the flag off"
+
     Scenario: A match that cannot be created with the flags off is found, not skipped
       Given a flags-off stack that refuses new matches
       When the steps "flags-off" run

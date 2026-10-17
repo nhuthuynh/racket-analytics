@@ -59,7 +59,8 @@ class Stack:
         self.labels.write_text("")
         self.label_always, self.match_id = False, str(uuid.uuid4())
         self.flags_on, self.still_served = True, set()
-        self.refuse_matches = self.over_500 = False
+        self.refuse_matches = self.over_500 = self.me_leaks = False
+        self.features_on: set[str] = set()
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -99,7 +100,7 @@ class Stack:
             return 404, {"code": "not_found"}
         if route == "GET /config/public":
             names = ("age_gate", "retention", "training_consent", "quotas")
-            return 200, {"features": dict.fromkeys(names, self.flags_on)}
+            return 200, {"features": {n: self.flags_on or n in self.features_on for n in names}}
         if route == "POST /auth/links":
             self.mail.deliver(uuid.uuid4().hex + uuid.uuid4().hex[:11])
             return (202,)
@@ -115,7 +116,8 @@ class Stack:
             self.sessions.discard(cookie)
             return 403, {"code": "under_age", "message": "You must be 18 or over."}
         if route == "GET /me":
-            return (200, {"id": cookie}) if cookie in self.sessions else (401, {})
+            me = {"id": cookie, **({"age_confirmed_at": "2026-10-17"} if self.me_leaks else {})}
+            return (200, me) if cookie in self.sessions else (401, {})
         if route == "POST /matches":
             if self.refuse_matches:
                 return 503, {"code": "unavailable"}
@@ -260,6 +262,18 @@ def flags_off(stack: Stack, world: dict[str, Any]) -> None:
 def flags_off_serving(stack: Stack, world: dict[str, Any], path: str) -> None:
     flags_off(stack, world)
     stack.still_served = {f"GET {path}"}
+
+
+@given(parsers.parse('a flags-off stack that lists the "{name}" feature as on'))
+def flags_off_feature_on(stack: Stack, world: dict[str, Any], name: str) -> None:
+    flags_off(stack, world)
+    stack.features_on = {name}
+
+
+@given("a flags-off stack whose GET /me carries age_confirmed_at")
+def flags_off_me_leaks(stack: Stack, world: dict[str, Any]) -> None:
+    flags_off(stack, world)
+    stack.me_leaks = True
 
 
 @given("a flags-off stack that refuses new matches")

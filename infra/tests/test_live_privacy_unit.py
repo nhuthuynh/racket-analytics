@@ -67,6 +67,14 @@ def test_quota_refusal_before_bytes_passes() -> None:
     assert lp.quota_problems(201, {}, "/u/1", (None, None), flags_on=False) == []
 
 
+def test_flags_off_open_session_cap_is_todays_behaviour_not_a_failure() -> None:
+    # api-sprint-01 §6.3 check 5: a 4th open upload session is 429 upload_quota_exceeded
+    sessions = {"code": "upload_quota_exceeded"}
+    assert lp.quota_problems(429, sessions, None, (None, None), flags_on=False) == []
+    found = lp.quota_problems(429, {"code": "rate_limited"}, None, (None, None), flags_on=False)
+    assert any("status 429" in p for p in found), found
+
+
 @pytest.mark.parametrize(
     ("limit", "used", "max_bytes", "sizes"),
     [(0, 0, 10, []), (10, 10, 4, []), (10, 0, 4, [4, 4, 2]), (21_474_836_480, 0, 10**10,
