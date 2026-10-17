@@ -7,8 +7,9 @@ same restore check (C-04). The readers add the two dashboard reads of the seeded
 to their rotation: GET stats and GET evidence (AN-01, side A), the G03-05 routes. Routes come
 only from the harness contracts (``tagcontract.py``, ``statscontract.py``).
 
-* ``DashboardReadUser`` x (users - 1), one request per second each, phase-jittered: GET score
-  sheet, GET correction history, GET match, GET stats, GET evidence, in rotation;
+* ``DashboardReadUser`` x (users - 1), one request per second each on a fixed phase
+  (``pacing.phased_pacing``, open loop): GET score sheet, GET correction history, GET match,
+  GET stats, GET evidence, in rotation;
 * ``CorrectionUser`` x 1 (from Sprint 2): correction + undo with ``If-Match``.
 
 At test start, after the Sprint 2 seeding, the stats and the evidence of the match must answer
@@ -27,20 +28,20 @@ Not collected by pytest (the file name does not start with ``test_``).
 
 from __future__ import annotations
 
-import random
 import sys
 import time
-from itertools import cycle
+from itertools import count, cycle
 from pathlib import Path
 from typing import Any
 
-from locust import constant_throughput, events, task
+from locust import events, task
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Importing the Sprint 2 file registers its seeding (test_start) and restore (quitting)
 # listeners; only CorrectionUser is taken into this namespace, so Locust runs no Sprint 2
 # reader beside the dashboard readers.
 from locustfile_sprint02 import STATE, CorrectionUser, _Base, _client, k
+from pacing import phased_pacing, reader_phase
 
 MEASURE = Path(__file__).resolve().parents[3] / "scripts" / "measure"
 sys.path.insert(0, str(MEASURE))
@@ -48,6 +49,8 @@ import statscontract as sk  # noqa: E402
 
 EVIDENCE = {"metric_id": "AN-01", "side": "A"}  # as G03-05 (stats_latency.py)
 READY_TIMEOUT_S = 30.0
+_readers = count()
+_anchor: list[float] = []
 
 __all__ = ["CorrectionUser", "DashboardReadUser"]
 
@@ -92,13 +95,16 @@ def dashboard_ready(environment: Any, **_: Any) -> None:
 
 
 class DashboardReadUser(_Base):
-    wait_time = constant_throughput(1)
+    wait_time = phased_pacing(1.0)
 
     def on_start(self) -> None:
         super().on_start()
         if not STATE.get("seeded"):
             return  # stopped by _Base.on_start; the run is already marked failed
-        time.sleep(random.random())  # noqa: S311 - load-shape jitter (Sprint 2, 2026-10-06)
+        if not _anchor:
+            _anchor.append(time.monotonic() + 1.0)
+        self.due = _anchor[0] + reader_phase(next(_readers))
+        time.sleep(max(0.0, self.due - time.monotonic()))  # gevent-patched: cooperative
         m = STATE["match_id"]
         self.reads = cycle(
             [
