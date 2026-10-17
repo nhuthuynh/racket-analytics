@@ -99,6 +99,24 @@ def test_a_number_outside_its_range_is_out_of_range(field: str, value: int) -> N
     assert refused(VALID | {field: value}) == [(field, "out_of_range")]
 
 
+@pytest.mark.parametrize(
+    ("sessions", "weekly", "want"),
+    [
+        (8, 100, [("sessions_per_week", "out_of_range")]),  # not 8 x 15 = 120 > 100
+        ("3", 30, [("sessions_per_week", "invalid")]),
+        (True, 30, [("sessions_per_week", "invalid")]),
+        (0, 10, [("sessions_per_week", "out_of_range"), ("weekly_minutes", "out_of_range")]),
+    ],
+    ids=["too-many", "string", "bool", "zero-and-below-one-session"],
+)
+def test_the_weekly_floor_uses_sessions_per_week_only_when_it_is_valid(
+    sessions: Any, weekly: int, want: list[tuple[str, str]]
+) -> None:
+    """QA-ST061b-R1-02/R2-01: an invalid ``sessions_per_week`` gets its own code and the
+    ``weekly_minutes`` floor falls back to one session (15), so no spurious code is added."""
+    assert refused(VALID | {"sessions_per_week": sessions, "weekly_minutes": weekly}) == want
+
+
 def test_unknown_and_duplicate_equipment_and_an_unknown_level_are_named() -> None:
     assert refused(VALID | {"equipment": ["trampoline"]}) == [("equipment", "unknown_value")]
     assert refused(VALID | {"equipment": ["wall", "wall"]}) == [("equipment", "duplicate")]

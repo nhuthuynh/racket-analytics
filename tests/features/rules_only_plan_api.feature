@@ -30,6 +30,23 @@ Feature: Rules-only plan from the API
       Then the answer is 409 "no_plan_fits" with the reason "No plan fits these settings. Try more time or equipment."
       And "ivy" has no plan to read
 
+  Rule: A lost race to save the plan is retried once, then refused
+
+    Scenario: A save that loses the race twice is refused and the saved plan is kept
+      Given "ivy" has tagged the worked example
+      And "ivy" has a plan as a solo player with a wall, 30 minutes per session, 3 sessions a week
+      And the next 2 saves of a plan lose a race
+      When "ivy" asks for a plan as a solo player with a wall, 30 minutes per session, 3 sessions a week
+      Then the answer is 409 "plan_conflict" with the reason "Your plan changed. Reload it."
+      And "ivy" still reads the plan saved before
+
+    Scenario: A save that loses the race once is retried and the plan is saved
+      Given "ivy" has tagged the worked example
+      And the next 1 saves of a plan lose a race
+      When "ivy" asks for a plan as a solo player with a wall, 30 minutes per session, 3 sessions a week
+      Then the answer is 201 with the plan
+      And "ivy" reads the same plan back
+
   Rule: A tagged match gives a cited, honest plan
 
     @needs-verification

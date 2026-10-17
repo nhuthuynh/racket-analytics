@@ -121,6 +121,67 @@ def test_it_04_02_no_plan_fits_is_409_and_writes_nothing(api: ApiDriver, committ
     assert _plans(committed_db) == 0
 
 
+def _losing_saves(monkeypatch: pytest.MonkeyPatch, losses: int) -> list[int]:
+    """The next ``losses`` plan saves lose a race (QA-ST061b-R2-02, PE-ST061b-05): each runs a
+    real statement that violates a constraint, so Postgres raises ``IntegrityError`` and aborts
+    the transaction, as a concurrent save of the owner's one plan does. Returns the call log."""
+    from racket.coaching.plan.repository import PlanRepository
+
+    real_save, calls = PlanRepository.save, []
+
+    def save(self: Any, *args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        if len(calls) <= losses:
+            self.session.execute(sa.text("INSERT INTO training_plans (id) VALUES (NULL)"))
+        return real_save(self, *args, **kwargs)
+
+    monkeypatch.setattr(PlanRepository, "save", save)
+    return calls
+
+
+def test_it_04_02_a_save_that_loses_the_race_twice_is_409_plan_conflict_and_keeps_the_plan(
+    api: ApiDriver, committed_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """api-sprint-04 §3.4, coaching-plan §5: after one internal retry a lost race is 409
+    ``plan_conflict``; nothing is written and the saved plan is kept."""
+    st.tagged_example(api, "ivy", "IT-04-02 race")
+    old = _created(api, "ivy")
+    calls = _losing_saves(monkeypatch, losses=2)
+    response = _post(api, "ivy", SOLO_WALL | {"minutes_per_session": 45})
+    assert st.refusal(response) == (409, "plan_conflict", [])
+    assert response.json()["error"]["message"] == "Your plan changed. Reload it."
+    assert len(calls) == 2  # the first try and one retry
+    assert _plans(committed_db) == 1
+    assert api.request("ivy", "GET", PLAN).json() == old
+
+
+def test_it_04_02_a_save_that_loses_the_race_once_is_retried_and_201(
+    api: ApiDriver, committed_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    st.tagged_example(api, "ivy", "IT-04-02 race once")
+    calls = _losing_saves(monkeypatch, losses=1)
+    plan = _created(api, "ivy")
+    assert len(calls) == 2
+    assert _plans(committed_db) == 1
+    assert api.request("ivy", "GET", PLAN).json() == plan
+
+
+def test_it_04_02_a_regeneration_on_read_that_loses_the_race_twice_is_409_plan_conflict(
+    api: ApiDriver, committed_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    st.tagged_example(api, "ivy", "IT-04-02 race on read")
+    old = _created(api, "ivy")
+    with committed_db.begin() as conn:
+        conn.execute(sa.text("UPDATE training_plans SET stale = true"))
+    calls = _losing_saves(monkeypatch, losses=2)
+    response = api.request("ivy", "GET", PLAN)
+    assert st.refusal(response) == (409, "plan_conflict", [])
+    assert len(calls) == 2
+    with committed_db.connect() as conn:
+        kept = conn.execute(sa.text("SELECT id::text, stale FROM training_plans")).all()
+    assert [tuple(row) for row in kept] == [(old["id"], True)]  # rolled back, still stale
+
+
 def test_it_04_02_the_31st_generation_in_an_hour_is_429_and_writes_nothing(
     api: ApiDriver, committed_db: Any
 ) -> None:

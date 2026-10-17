@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 import pytest
+import sqlalchemy as sa
 from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.support import stats as st
@@ -71,9 +72,34 @@ def tagged_examples(api: ApiDriver, ctx: dict[str, Any], user: str, count: int) 
         "3 sessions a week"
     )
 )
-def has_plan(api: ApiDriver, user: str) -> None:
+def has_plan(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
     response = api.request(user, "POST", PLAN, json=SOLO_WALL)
     assert response.status_code == 201, response.text
+    ctx["saved"] = response.json()
+
+
+@given(parsers.parse("the next {losses:d} saves of a plan lose a race"))
+def saves_lose_a_race(monkeypatch: pytest.MonkeyPatch, losses: int) -> None:
+    """A concurrent save of the owner's one plan, as the database reports it: a statement that
+    violates a constraint raises ``IntegrityError`` and aborts the transaction."""
+    from racket.coaching.plan.repository import PlanRepository
+
+    real_save, calls = PlanRepository.save, []
+
+    def save(self: Any, *args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        if len(calls) <= losses:
+            self.session.execute(sa.text("INSERT INTO training_plans (id) VALUES (NULL)"))
+        return real_save(self, *args, **kwargs)
+
+    monkeypatch.setattr(PlanRepository, "save", save)
+
+
+@then(parsers.parse('"{user}" still reads the plan saved before'))
+def still_saved(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
+    response = api.request(user, "GET", PLAN)
+    assert response.status_code == 200, response.text
+    assert response.json() == ctx["saved"]
 
 
 @when(
