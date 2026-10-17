@@ -16,7 +16,13 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from racket.analytics.public import facts_of_sheet
 from racket.coaching.weakness import acl
-from racket.coaching.weakness.domain import RallyFact, Weakness, attribute, rank
+from racket.coaching.weakness.domain import (
+    RallyFact,
+    Weakness,
+    WeaknessRanking,
+    attribute,
+    rank,
+)
 from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game
 
 scenarios("weakness_ranking.feature")
@@ -56,7 +62,9 @@ def lost_on_serve(ctx: dict[str, Any], count: int, ending: str) -> None:
     ctx["games"] = 1
 
 
-@given(parsers.parse('over the same game Ivy lost {count:d} rallies on receive to a "{kind}" fault'))
+@given(
+    parsers.parse('over the same game Ivy lost {count:d} rallies on receive to a "{kind}" fault')
+)
 def lost_on_receive(ctx: dict[str, Any], count: int, kind: str) -> None:
     start = len(ctx["facts"])
     ctx["facts"] += [_fact(start + i + 1, "B", "B", "fault", kind) for i in range(count)]
@@ -76,8 +84,9 @@ def ranked(ctx: dict[str, Any]) -> None:
 
 
 def _weakness(ctx: dict[str, Any], name: str) -> Weakness:
-    found = [w for w in ctx["ranking"].weaknesses if w.name == name]
-    assert found, f"{name} is not ranked: {[w.name for w in ctx['ranking'].weaknesses]}"
+    ranking: WeaknessRanking = ctx["ranking"]
+    found = [w for w in ranking.weaknesses if w.name == name]
+    assert found, f"{name} is not ranked: {[w.name for w in ranking.weaknesses]}"
     return found[0]
 
 

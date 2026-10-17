@@ -9,6 +9,7 @@ ranking and tie-break (§4), primary metric and plan target (§5), the worked ex
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from fractions import Fraction
 
 import pytest
@@ -23,7 +24,6 @@ from racket.coaching.weakness.domain import (
     UNATTRIBUTED,
     UNIT,
     RallyFact,
-    RallyLoss,
     WeaknessConservationBroken,
     attribute,
     check_conservation,
@@ -52,7 +52,7 @@ def fact(
     *,
     game: int = 1,
     player: str | None = None,
-    point_to: str | None | bool = True,
+    point_to: str | bool | None = True,
 ) -> RallyFact:
     """A counted rally; by default the point follows side-out (only the server scores)."""
     if point_to is True:
@@ -79,7 +79,8 @@ def test_zero_games_give_an_empty_ranking_with_a_reason_not_an_error() -> None:
     assert ranking.weaknesses == ()
     assert ranking.reason == NO_TAGGED_MATCH == "no_tagged_match"
     assert (ranking.games, ranking.rallies, ranking.unattributed) == (0, 0, 0)
-    assert ranking.unit == UNIT and ranking.provisional is True
+    assert ranking.unit == UNIT
+    assert ranking.provisional is True
 
 
 def test_lost_rallies_without_games_are_refused() -> None:
@@ -110,7 +111,7 @@ def test_a_lost_rally_counted_twice_breaks_conservation() -> None:
 def test_a_rally_moved_to_the_other_phase_breaks_conservation() -> None:
     facts = [fact(1, "A", "B", "unforced_error")]
     (loss,) = attribute(MATCH, "A", facts)
-    moved = RallyLoss(**{**loss.__dict__, "phase": "receive"})
+    moved = replace(loss, phase="receive")
     with pytest.raises(WeaknessConservationBroken, match="serve"):
         check_conservation(MATCH, "A", facts, (moved,))
 

@@ -34,8 +34,7 @@ def _ranking(engine: Any, api: ApiDriver, user: str) -> WeaknessRanking:
 
 def _no_me_match(api: ApiDriver, user: str, title: str) -> str:
     client = api.as_user(user)
-    body = sb.doubles_body(title)
-    body["participants"] = [{**p, "is_me": False} for p in body["participants"]]
+    body = {k: v for k, v in sb.doubles_body(title).items() if k != "participants"}  # Sprint 0
     response = api.run(client.post("/matches", json=body))
     assert response.status_code == 201, response.text
     match_id = str(response.json()["id"])
