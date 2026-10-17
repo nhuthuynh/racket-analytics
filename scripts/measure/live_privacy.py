@@ -83,9 +83,12 @@ def quota_problems(
     status: int, body: Any, location: str | None, stored: Stored, *, flags_on: bool
 ) -> list[str]:
     body = body if isinstance(body, dict) else {}
-    if not flags_on:
+    if not flags_on:  # only an accepted upload session counts (ADR 0014: no vacuous pass)
         refused = body.get("code") == "storage_quota_exceeded" or "quota" in body
-        return ["refused by the quota with the flag off"] if refused else []
+        problems = ["refused by the quota with the flag off"] if refused else []
+        if status != 201 or not location:
+            problems.append(f"status {status}, Location {location!r} with the flag off")
+        return problems
     if status != 429 or location:
         return [f"status {status}, Location {location!r}"]
     problems = [] if body.get("code") == "storage_quota_exceeded" else [f"code {body.get('code')}"]
@@ -116,12 +119,26 @@ def alert_problems(rc: int, out: str, rules: int) -> list[str]:
     return problems
 
 
+def verdict(out: dict[str, Any]) -> bool:
+    """True only when at least one step ran and every step reports ok True."""
+    steps = [st for run in out.get("runs", []) for st in run.values()]
+    steps += list(out.get("quotas", {}).values())
+    return bool(steps) and all(st.get("ok") is True for st in steps)
+
+
 def _step(problems: list[str], **facts: Any) -> dict[str, Any]:
     return {"ok": not problems, "problems": problems, **facts}
 
 
 def _client(args: argparse.Namespace) -> Client:
     return Client(args.api, args.origin, ssl_context(args.cacert, args.insecure_loopback))
+
+
+def _match(c: Client) -> str:
+    match_id = new_match(c)
+    if not match_id:
+        raise RuntimeError("match creation failed")
+    return match_id
 
 
 def _account(args: argparse.Namespace) -> Client:
@@ -240,10 +257,10 @@ def quota_step(args: argparse.Namespace) -> dict[str, Any]:
         limit, used = storage.get("limit_bytes") or args.quota_bytes, storage.get("used_bytes", 0)
         max_bytes = c.request("GET", "/upload-policy").json()["max_bytes"]
         for n in fill_sizes(limit, used, max_bytes):
-            st, _ = create_upload(c, new_match(c) or "", n, "fill.mp4")
+            st, _ = create_upload(c, _match(c), n, "fill.mp4")
             if st != 201:
                 return _step([f"fill upload of {n} bytes: status {st}"])
-        before, over = _stored(args), new_match(c) or ""
+        before, over = _stored(args), _match(c)
         r = c.request("POST", f"/matches/{over}/uploads", headers={
             "Tus-Resumable": "1.0.0", "Upload-Length": str(1 << 20)})  # fmt: skip
         stored = (before, _stored(args))
@@ -252,6 +269,23 @@ def quota_step(args: argparse.Namespace) -> dict[str, Any]:
         return _step(problems, status=r.status, stored_bytes=stored)
     except (RuntimeError, OSError, ValueError, KeyError) as exc:
         return _step([str(exc)])
+
+
+def alerts_step(args: argparse.Namespace) -> dict[str, Any]:
+    try:
+        rc, text = command(args.alert_test_cmd)
+        rules = len(re.findall(r"^\s*- alert:", Path(args.alert_rules).read_text(), re.M))
+        return _step(alert_problems(rc, text, rules), rules=rules)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return _step([str(exc)])
+
+
+def quota_steps(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
+    """G04-10, once per invocation: burst and quota; flags on adds the alert-rule test."""
+    steps = {"burst": burst_step(args), "quota": quota_step(args)}
+    if args.flags == "on":
+        steps["alerts"] = alerts_step(args)
+    return steps
 
 
 def flags_off_step(args: argparse.Namespace) -> dict[str, Any]:
@@ -263,10 +297,14 @@ def flags_off_step(args: argparse.Namespace) -> dict[str, Any]:
         codes = [c.request(m, p).status for m, p in FLAG_ROUTES]
         codes.append(c.request("POST", "/me/age-confirmation", json_body={"is_adult": True}).status)
         problems += [f"flag route answered {x}" for x in codes if x != 404]
-        match = c.request("GET", f"/matches/{new_match(c)}").json() or {}
-        for key, body in (("age_confirmed_at", c.request("GET", "/me").json() or {}),
-                          ("review_video_delete_at", match)):  # fmt: skip
-            problems += [f"{key} served with the flag off"] if key in body else []
+        for key, path in (("age_confirmed_at", "/me"),
+                          ("review_video_delete_at", f"/matches/{_match(c)}")):  # fmt: skip
+            r = c.request("GET", path)
+            body = r.json() if r.status == 200 else None
+            if not isinstance(body, dict):
+                problems.append(f"GET {path} status {r.status}")
+            elif key in body:
+                problems.append(f"{key} served with the flag off")
         return _step(problems, codes=codes)
     except (RuntimeError, OSError, ValueError) as exc:
         return _step([str(exc)])
@@ -325,15 +363,8 @@ def main(argv: list[str] | None = None) -> int:
         "runs": [one_run(args, data) for _ in range(args.runs)],
     }
     if args.quotas:
-        out["quotas"] = {"burst": burst_step(args), "quota": quota_step(args)}
-        if args.flags == "on":
-            rc, text = command(args.alert_test_cmd)
-            rules = len(re.findall(r"^\s*- alert:", Path(args.alert_rules).read_text(), re.M))
-            out["quotas"]["alerts"] = _step(alert_problems(rc, text, rules), rules=rules)
-    steps = [st for run in out["runs"] for st in run.values()] + list(
-        out.get("quotas", {}).values()
-    )
-    out["ok"] = all(st["ok"] for st in steps) and bool(steps)
+        out["quotas"] = quota_steps(args)
+    out["ok"] = verdict(out)
     text = json.dumps(out, indent=2, default=str)
     print(text)
     if args.json:
