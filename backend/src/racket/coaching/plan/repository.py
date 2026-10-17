@@ -106,11 +106,23 @@ class PlanRows:
 
 
 @dataclass(frozen=True, slots=True)
+class StoredSession:
+    """A saved session's identity and done state, in the plan's (week, index) order; its
+    assignment ids in position order (ST-061b: the API names sessions and assignments by id)."""
+
+    id: uuid.UUID
+    done_at: datetime | None
+    assignment_ids: tuple[uuid.UUID, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class StoredPlan:
     id: uuid.UUID
     owner_id: uuid.UUID
     stale: bool
     plan: TrainingPlan
+    created_at: datetime | None = None
+    sessions: tuple[StoredSession, ...] = ()
 
 
 def _preferences(p: Preferences) -> Row:
@@ -226,6 +238,20 @@ def from_rows(rows: PlanRows, library: Mapping[str, Drill]) -> TrainingPlan:
     )
 
 
+def _identities(rows: PlanRows) -> tuple[StoredSession, ...]:
+    by_session: dict[uuid.UUID, list[Row]] = {s["id"]: [] for s in rows.sessions}
+    for a in rows.assignments:
+        by_session[a["session_id"]].append(a)
+    return tuple(
+        StoredSession(
+            s["id"],
+            s["done_at"],
+            tuple(a["id"] for a in sorted(by_session[s["id"]], key=lambda a: a["position"])),
+        )
+        for s in sorted(rows.sessions, key=lambda s: (s["week"], s["session_index"]))
+    )
+
+
 def delete_owned(session: DbSession, owner_id: uuid.UUID) -> int:
     """Every plan row of ``owner_id`` (children cascade from their plan); rows deleted."""
     rows = 0
@@ -280,7 +306,10 @@ class PlanRepository:
             [dict(s._mapping) for s in sessions],
             [dict(a._mapping) for a in assignments],
         )
-        return StoredPlan(root.id, root.owner_id, root.stale, from_rows(rows, self.library))
+        plan = from_rows(rows, self.library)
+        return StoredPlan(
+            root.id, root.owner_id, root.stale, plan, root.created_at, _identities(rows)
+        )
 
     def delete_owned(self, owner_id: uuid.UUID) -> int:
         return delete_owned(self.session, owner_id)

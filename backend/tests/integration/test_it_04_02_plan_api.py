@@ -58,9 +58,13 @@ def _created(api: ApiDriver, user: str, body: Any = None) -> dict[str, Any]:
 def _evidence(api: ApiDriver, match_id: str) -> dict[str, set[str]]:
     found: dict[str, set[str]] = {}
     for metric in st.METRICS:
-        response = st.evidence(api, "ivy", match_id, metric, "A", limit=99)
-        assert response.status_code == 200, response.text
-        found[metric] = {item["rally_id"] for item in response.json()["items"]}
+        url = f"/matches/{match_id}/stats/{metric}/evidence?side=A&limit=10"
+        found[metric], cursor = set(), ""
+        while cursor is not None:
+            response = api.request("ivy", "GET", url + (f"&cursor={cursor}" if cursor else ""))
+            assert response.status_code == 200, response.text
+            found[metric] |= {item["rally_id"] for item in response.json()["items"]}
+            cursor = response.json()["next_cursor"]
     return found
 
 

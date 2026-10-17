@@ -71,6 +71,16 @@ CODE_MESSAGES.update(
     }
 )
 
+# Sprint 4 plan codes (api-sprint-04 §9), fixed messages.
+CODE_MESSAGES.update(
+    {
+        "no_plan": "You have no plan yet.",
+        "no_tagged_match": "Tag at least one match to get a plan.",
+        "no_plan_fits": "No plan fits these settings. Try more time or equipment.",
+        "plan_conflict": "Your plan changed. Reload it.",
+    }
+)
+
 
 class AppError(Exception):
     """An expected failure with a known status. ``str(exc)`` is for logs only, never sent."""
