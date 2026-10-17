@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Open review-rounds rows that a merged ticket names, with no ledger row for it (FIX-03-1a).
+"""Open review-rounds rows that a merged ticket names or whose evidence it changed (FIX-03-1a).
 
     reconcile_due.py docs/sprints/03/review-rounds.md \
         --plan docs/decisions/0039-*.md --decisions docs/sprints/03/decisions \
@@ -15,22 +15,31 @@ head names no merged ticket (PE-FIX031A-01). Without ``--base`` every file count
 reconciled once its latest row, or that row's section heading, names the ticket, its PR
 (``#n``) or its merge commit.
 
+With ``--base`` a row is also due when a ticket PR merged into the base (a GitHub merge commit
+"Merge pull request #n from ...", ticket = the ``[TICKET]`` of its title) changes a file that
+the row's Evidence cell cites, and the merge came after the row's latest line was last written
+(``git blame``; a row not yet committed is newer than every merge) (C4-RECON, VM-R3-02: FIX-03-2c
+changed the file an open row cited, and the check said "0 due"). The ledger file itself is never
+evidence: writing it is the reconciliation.
+
 Exit 0 when nothing is due, 1 when a row is due (the engineering-manager writes the row), 2 on
-a usage error (no review table, unreadable plan or decisions dir, a base git cannot read; fail
-closed, ADR 0014). ``--report-only`` prints the due rows but exits 0 for them (usage errors still
-exit 2): CI runs it that way on the live ledger, because on a push to main the base is main
-itself and a just-merged fix ticket's row stays due until the EM writes it; that is EM work, not
-a red main (PE-FIX031A-03). The EM status step runs the check without it.
-Limit: a finding closed by work that names no id (for example a CI run on main) is not seen.
+a usage error (no review table, unreadable plan or decisions dir, a base or ledger git cannot
+read; fail closed, ADR 0014). ``--report-only`` prints the due rows but exits 0 for them (usage
+errors still exit 2): CI runs it that way on the live ledger, because on a push to main the base
+is main itself and a just-merged fix ticket's row stays due until the EM writes it; that is EM
+work, not a red main (PE-FIX031A-03). The EM status step runs the check without it.
+Limit: a finding closed by work that names no id and changes no cited file is not seen.
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import re
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +49,13 @@ from measurelib import _cells, open_defects
 _SHA = re.compile(r"`?([0-9a-f]{7,40})`?")
 _PR = re.compile(r"#(\d+)\b")
 _COMMIT_ROW = re.compile(r"^\|\s*\d+\s*\|\s*`[0-9a-f]{7,40}`\s*\|")
+_TOKEN = re.compile(r"[A-Za-z0-9_.*/-]+")
+_FILE = re.compile(
+    r"[\w*-]+(?:\.[\w*-]+)*\.(?:md|py|json|ya?ml|feature|toml|sql|tsx?|js|sh|txt|csv|lock)"
+)
+_GITHUB_MERGE = re.compile(r"Merge pull request #(\d+) from [^/\s]+/(\S+)")
+_TITLE_TICKET = re.compile(r"\s*\[([^\]]+)\]")
+_NO_COMMIT = re.compile(r"0{40}")
 
 
 def _merged_prs(plan_text: str) -> dict[str, dict[str, str]]:
@@ -139,6 +155,156 @@ def due_rows(ledger_text: str, tickets: list[dict[str, Any]]) -> list[dict[str, 
     return due
 
 
+def evidence_paths(cell: str) -> list[str]:
+    """The file paths (``a/b.md``, ``0039-*.md``, ``sprint-03.md``) an Evidence cell cites."""
+    paths = []
+    for token in _TOKEN.findall(cell):
+        token = token.strip(".-/")
+        if not re.search(r"[A-Za-z]", token) or "//" in token:
+            continue
+        if "/" in token or _FILE.fullmatch(token):
+            paths.append(token)
+    return list(dict.fromkeys(paths))
+
+
+def cited_changes(changed: list[str], cited: list[str]) -> list[str]:
+    """The changed repo paths that a cited path names (whole path, path suffix, or glob)."""
+    return [
+        f
+        for f in changed
+        if any(fnmatch.fnmatchcase(f, p) or fnmatch.fnmatchcase(f, "*/" + p) for p in cited)
+    ]
+
+
+def parse_merges(log: str) -> list[dict[str, Any]]:
+    """GitHub ticket PR merges from ``git log`` in the ``_merge_log`` format; others are skipped."""
+    merges = []
+    for record in log.split("\x1e"):
+        head, _, names = record.partition("\x1d")
+        parts = head.split("\x1f", 2)
+        if len(parts) != 3:
+            continue
+        sha, subject, body = parts
+        merge = _GITHUB_MERGE.match(subject.strip())
+        if not merge:
+            continue
+        title = _TITLE_TICKET.match(body)
+        merges.append(
+            {
+                "ticket": title.group(1).strip() if title else merge.group(2),
+                "pr": f"#{merge.group(1)}",
+                "merged_as": sha.strip(),
+                "changed": [n.strip() for n in names.splitlines() if n.strip()],
+            }
+        )
+    return merges
+
+
+def _evidence_cell(lines: list[str], number: int) -> str:
+    """The Evidence cell of the table row at 1-based line ``number`` ("" when none)."""
+    top = number - 1
+    while top > 0 and lines[top - 1].lstrip().startswith("|"):
+        top -= 1
+    header = [h.lower() for h in _cells(lines[top])]
+    col = next((i for i, h in enumerate(header) if "evidence" in h), None)
+    cells = _cells(lines[number - 1])
+    return cells[col] if col is not None and col < len(cells) else ""
+
+
+def evidence_due(
+    ledger_text: str,
+    rows: list[dict[str, Any]],
+    merges_after: Callable[[int], list[dict[str, Any]]],
+    ledger_path: str,
+) -> list[dict[str, Any]]:
+    """Open rows whose cited evidence a merge after their latest line changed (VM-R3-02).
+
+    ``merges_after(line)`` gives the ticket PR merges later than that ledger line's last write.
+    A merge the row or its heading names (ticket, ``#n`` or sha) is already reconciled.
+    """
+    lines = ledger_text.splitlines()
+    due = []
+    for row in rows:
+        cited = evidence_paths(_evidence_cell(lines, row["line"]))
+        if not cited:
+            continue
+        context = " | ".join(_cells(lines[row["line"] - 1])[1:])
+        heading = next(
+            (lines[i] for i in range(row["line"] - 1, -1, -1) if lines[i].startswith("#")), ""
+        )
+        hits = []
+        for merge in merges_after(row["line"]):
+            changed = cited_changes([f for f in merge["changed"] if f != ledger_path], cited)
+            if changed and not _mentions(context, merge) and not _mentions(heading, merge):
+                hits.append({**merge, "changed": changed})
+        if hits:
+            due.append({**row, "evidence": hits})
+    return due
+
+
+def _git(repo: Path, *args: str) -> str:
+    argv = ["git", "-C", str(repo), "-c", "core.quotePath=false", *args]
+    out = subprocess.run(  # noqa: S603 - fixed argv, no shell; refs are checked by the caller
+        argv,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if out.returncode != 0:
+        raise ValueError(f"git {args[0]} in {repo}: {out.stderr.strip()}")
+    return out.stdout
+
+
+class MergeHistory:
+    """The ticket PR merges on ``base`` later than each ledger line (git blame of the file)."""
+
+    def __init__(self, ledger: Path, base: str) -> None:
+        if base.startswith("-"):
+            raise ValueError(f"not a git ref: {base}")
+        self.dir = ledger.resolve().parent
+        top = Path(_git(self.dir, "rev-parse", "--show-toplevel").strip()).resolve()
+        self.path = ledger.resolve().relative_to(top).as_posix()
+        self.name = ledger.name
+        self.base = f"{base}^{{commit}}"
+        _git(self.dir, "rev-parse", "--verify", "--quiet", self.base)
+
+    def last_written(self, line: int) -> str | None:
+        """The commit that last wrote ``line``; None when the line is not committed yet."""
+        out = _git(self.dir, "blame", "--porcelain", "-L", f"{line},{line}", "--", self.name)
+        sha = out.split(" ", 1)[0]
+        return None if _NO_COMMIT.fullmatch(sha) else sha
+
+    def merges_after(self, line: int) -> list[dict[str, Any]]:
+        since = self.last_written(line)
+        if since is None:
+            return []
+        log = _git(
+            self.dir,
+            "log",
+            "--first-parent",
+            "--merges",
+            "--diff-merges=first-parent",
+            "--name-only",
+            "--format=%x1e%H%x1f%s%x1f%b%x1d",
+            self.base,
+            f"^{since}",
+            "--",
+        )
+        return parse_merges(log)
+
+
+def _merge_rows(
+    named: list[dict[str, Any]], evidence: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """One entry per due row, with the naming tickets and the evidence-changing merges."""
+    rows: dict[int, dict[str, Any]] = {}
+    for row in named:
+        rows[row["line"]] = {**row, "evidence": []}
+    for row in evidence:
+        rows.setdefault(row["line"], {**row, "tickets": []})["evidence"] = row["evidence"]
+    return [rows[k] for k in sorted(rows)]
+
+
 def decision_stems(decisions: Path, base: str | None) -> list[str]:
     """Stems of the ``*.md`` ticket decisions files; with ``base``, only those on that ref."""
     if not decisions.is_dir():
@@ -180,20 +346,32 @@ def main(argv: list[str] | None = None) -> int:
         text = args.ledger.read_text(encoding="utf-8")
         plan_text = args.plan.read_text(encoding="utf-8") if args.plan else ""
         stems = decision_stems(args.decisions, args.base) if args.decisions else []
-        open_count = len(open_defects(text))
+        open_rows = open_defects(text)
         due = due_rows(text, ticket_index(plan_text, stems))
+        if args.base is not None:
+            history = MergeHistory(args.ledger, args.base)
+            changed = evidence_due(text, open_rows, history.merges_after, history.path)
+            due = _merge_rows(due, changed)
     except (OSError, ValueError) as exc:
         print(f"reconcile-due: {exc}", file=sys.stderr)
         return 2
     for row in due:
-        named = "; ".join(
-            f"ticket {t['ticket']}"
-            + (f" ({t['pr']})" if t["pr"] else "")
-            + (f" merged as {t['merged_as']}" if t["merged_as"] else "")
-            for t in row["tickets"]
-        )
         ids = " / ".join(row["ids"])
-        print(f"due: line {row['line']}: {ids} ({row['severity']}) named by {named}")
+        if row.get("tickets"):
+            named = "; ".join(
+                f"ticket {t['ticket']}"
+                + (f" ({t['pr']})" if t["pr"] else "")
+                + (f" merged as {t['merged_as']}" if t["merged_as"] else "")
+                for t in row["tickets"]
+            )
+            print(f"due: line {row['line']}: {ids} ({row['severity']}) named by {named}")
+        for m in row.get("evidence", []):
+            print(
+                f"due: line {row['line']}: {ids} ({row['severity']}) evidence changed by ticket"
+                f" {m['ticket']} ({m['pr']}) merged as {m['merged_as'][:7]}"
+                f" ({', '.join(m['changed'])})"
+            )
+    open_count = len(open_rows)
     print(f"reconcile-due: {open_count} open blocker/major rows, {len(due)} due")
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
