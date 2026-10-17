@@ -1,0 +1,10 @@
+{
+ "description": "four, 20 min x 4/week, full_court, half_court, wall, advanced; low sample (19 tags in 1 match(es)), 'pressure' losses, player on side A (doubles) Refusal: a 20-minute session caps a drill at 8 minutes; none is that short.",
+ "dimensions": {"ball_machine": false, "level": "advanced", "minutes_per_session": 20, "players": "four", "sample": "low", "wall": true},
+ "expect": "no_plan_fits",
+ "id": "pe-31",
+ "preferences": {"equipment": ["full_court", "half_court", "wall"], "level": "advanced", "minutes_per_session": 20, "players_available": 4, "sessions_per_week": 4},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "B", "tags": [{"ending": "winner", "responsible_player": "A2", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "replay"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "fault", "fault_kind": "nvz", "responsible_player": "B2", "winning_side": "A"}, {"ending": "forced_error", "winning_side": "B"}, {"ending": "winner", "winning_side": "A"}, {"ending": "fault", "fault_kind": "serve", "responsible_player": "B1", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "serve", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "forced_error", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "replay"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "winner", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "A1", "winning_side": "B"}]}], "side": "A"}
+ ]
+}
