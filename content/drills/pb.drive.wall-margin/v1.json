@@ -34,5 +34,5 @@
   "regressions": [],
   "safety_notes": "",
   "coach_rationale": "(judgment) Repeatable pace and a margin above the net cut unforced errors (AN-04); counting them per 50 shots makes the error rate visible with no partner or court. Unverified coaching content until a human coach reviews the library (P15).",
-  "review_status": "draft"
+  "review_status": "coach-reviewed"
 }
