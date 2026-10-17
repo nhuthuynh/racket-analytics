@@ -1,10 +1,5 @@
-# drills-coverage-gap (ST-059; FR-141; QD-DR-05)
+# drills-coverage-gap (ST-059; IT-04-13; FR-141)
 
-A schema-valid drill library for IT-04-13 and `tests/features/drill_coverage.feature`. It has 21
-counted reviewed drills (3 warm-ups) and covers every cell of drill-review-checklist §3 except
-one: **no counted drill targets AN-05 for beginners with 2 or fewer players**, so
-`racket-drill-coverage` fails with exactly `AN-05 × beginner: players ≤ 2: 0`.
-
-Three AN-05 beginner pairs drills are present and must not count: `fx.an05.draft` (draft),
-`fx.an05.retired` (has `deprecated_by`) and `fx.an05.superseded@1` (its latest version, v2, is
-for 4 players). Fixture only: not a coaching drill, no lock.
+Schema-valid fixture library (21 counted drills, 3 warm-ups, no lock) whose only coverage gap is
+`AN-05 × beginner: players ≤ 2: 0`. `fx.an05.draft`, `fx.an05.retired` (deprecated) and
+`fx.an05.superseded@1` (v2 is for 4 players) are AN-05 beginner pairs drills that must not count.

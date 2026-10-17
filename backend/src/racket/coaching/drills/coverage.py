@@ -1,25 +1,12 @@
-"""``racket-drill-coverage``: the drill coverage matrix check, a CLI and a CI step (ST-059;
-FR-141; QD-DR-05; drill-review-checklist §3).
+"""``racket-drill-coverage <dir>``: the drill coverage matrix check (ST-059; FR-141; QD-DR-05).
 
-Usage::
-
-    racket-drill-coverage content/drills
-
-**Counted drills:** the latest version of each drill, ``coach-reviewed`` or ``verified``, with
-no ``deprecated_by``. A warm-up counts in the library total but in no cell. A drill counts in
-each cell of a plan target it hits (weakness-catalogue §5: AN-07 only through its
-``share:fault`` / ``share:forced-error`` skill) times each level from ``level_min`` to
-``level_max``.
-
-**Each of the 18 cells** (6 targets x 3 levels) needs at least 2 drills, at least 1 with
-``players`` <= 2 and at least 1 whose ``needs`` excludes ``ball_machine``. The library needs at
-least 20 reviewed drills, of them at least 3 warm-ups. An AN-07 drill without a share skill is
-named. The check prints the matrix, then one ``FAIL`` line per gap, e.g.
-``FAIL AN-05 x beginner: players <= 2: 0`` (printed with the signs U+00D7 and U+2264, as
-the checklist writes it). Exit codes: 0 pass, 1 gaps or a file that is not a
-schema-valid drill, 2 a path that is not a directory.
-
-``check_coverage`` is pure (drills arrive as the plan's ``Drill`` values); ``main`` reads files.
+Implements drill-review-checklist §3. Counted drills: the latest version of each drill,
+``coach-reviewed`` or ``verified``, no ``deprecated_by``; a warm-up counts in the library but in
+no cell. A drill counts in each plan target it hits (AN-07 only through a share skill) x each
+level in ``level_min..level_max``. Each of the 18 cells needs >= 2 drills, >= 1 for <= 2
+players and >= 1 without ``ball_machine``; the library needs >= 20 drills, >= 3 of them
+warm-ups. Prints the matrix, then ``FAIL <gap>`` per gap. Exit 0 pass, 1 gaps or a file that is
+not a schema-valid drill (fail closed), 2 not a directory. ``check_coverage`` is pure.
 """
 
 from __future__ import annotations
@@ -35,13 +22,10 @@ from racket.coaching.drills.schema_check import drill_schema, errors
 from racket.coaching.plan.domain.model import LEVELS, Drill
 
 TARGETS = ("AN-01", "AN-02", "AN-04", "AN-05", "AN-07:fault", "AN-07:forced-error")
-MIN_DRILLS = 2  # per cell
-MAX_SMALL_GROUP = 2  # players
-MIN_LIBRARY = 20  # FR-141
-MIN_WARM_UPS = 3  # ST-058a; drill-review-checklist §3
+SHARE_TARGETS = frozenset(TARGETS[4:])
+MIN_DRILLS, SMALL_GROUP, MIN_LIBRARY, MIN_WARM_UPS = 2, 2, 20, 3
 BALL_MACHINE = "ball_machine"
-SHARE_TARGETS = frozenset({"AN-07:fault", "AN-07:forced-error"})
-TIMES, AT_MOST = "\u00d7", "\u2264"  # drill-review-checklist §3 output
+TIMES, AT_MOST = "\u00d7", "\u2264"  # the checklist's signs
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,25 +35,26 @@ class Cell:
     target: str
     level: str
     drills: int
-    small_group: int  # players <= 2
+    small_group: int  # players <= SMALL_GROUP
     no_ball_machine: int
 
     def gaps(self) -> list[str]:
         name = f"{self.target} {TIMES} {self.level}"
-        found = []
-        if self.drills < MIN_DRILLS:
-            found.append(f"{name}: drills: {self.drills}")
-        if self.small_group < 1:
-            found.append(f"{name}: players {AT_MOST} {MAX_SMALL_GROUP}: 0")
-        if self.no_ball_machine < 1:
-            found.append(f"{name}: no {BALL_MACHINE}: 0")
-        return found
+        return [
+            f"{name}: {need}: {n}"
+            for need, n, short in (
+                ("drills", self.drills, self.drills < MIN_DRILLS),
+                (f"players {AT_MOST} {SMALL_GROUP}", self.small_group, self.small_group < 1),
+                (f"no {BALL_MACHINE}", self.no_ball_machine, self.no_ball_machine < 1),
+            )
+            if short
+        ]
 
 
 @dataclass(frozen=True, slots=True)
 class CoverageReport:
     cells: tuple[Cell, ...]
-    counted: int  # reviewed, latest, not deprecated (warm-ups included)
+    counted: int  # warm-ups included
     warm_ups: int
     gaps: tuple[str, ...]
 
@@ -78,42 +63,33 @@ class CoverageReport:
         return not self.gaps
 
 
-def _latest(drills: Iterable[Drill]) -> list[Drill]:
-    latest: dict[str, Drill] = {}
-    for drill in drills:
-        if drill.id not in latest or drill.version > latest[drill.id].version:
-            latest[drill.id] = drill
-    return [latest[i] for i in sorted(latest)]
-
-
 def check_coverage(drills: Iterable[Drill]) -> CoverageReport:
-    """The coverage matrix of a library (every version of every drill)."""
-    counted = [d for d in _latest(drills) if d.is_reviewed and not d.deprecated]
+    """The coverage matrix of a library, given every version of every drill."""
+    latest: dict[str, Drill] = {}
+    for d in drills:
+        if d.id not in latest or d.version > latest[d.id].version:
+            latest[d.id] = d
+    counted = [d for _, d in sorted(latest.items()) if d.is_reviewed and not d.deprecated]
     in_cells = [d for d in counted if not d.is_warm_up]
     gaps = [
         f"{d.ref}: AN-07 without share skill"
         for d in in_cells
-        if "AN-07" in d.target_metrics
-        and not {"AN-07:fault", "AN-07:forced-error"} & d.plan_targets
+        if "AN-07" in d.target_metrics and not SHARE_TARGETS & d.plan_targets
     ]
     cells = []
     for target in TARGETS:
-        for level in LEVELS:
+        for i, level in enumerate(LEVELS):
             hit = [
                 d
                 for d in in_cells
                 if target in d.plan_targets
-                and LEVELS.index(d.level_min) <= LEVELS.index(level) <= LEVELS.index(d.level_max)
+                and LEVELS.index(d.level_min) <= i <= LEVELS.index(d.level_max)
             ]
-            cell = Cell(
-                target,
-                level,
-                drills=len(hit),
-                small_group=sum(d.players <= MAX_SMALL_GROUP for d in hit),
-                no_ball_machine=sum(BALL_MACHINE not in d.needs for d in hit),
+            small = sum(d.players <= SMALL_GROUP for d in hit)
+            cells.append(
+                Cell(target, level, len(hit), small, sum(BALL_MACHINE not in d.needs for d in hit))
             )
-            cells.append(cell)
-            gaps += cell.gaps()
+            gaps += cells[-1].gaps()
     warm_ups = len(counted) - len(in_cells)
     if len(counted) < MIN_LIBRARY:
         gaps.append(f"library: {len(counted)} < {MIN_LIBRARY} reviewed drills")
@@ -123,55 +99,43 @@ def check_coverage(drills: Iterable[Drill]) -> CoverageReport:
 
 
 def render(report: CoverageReport) -> list[str]:
-    """The matrix: a header, then one row per cell in target x level order."""
-    small = f"players{AT_MOST}{MAX_SMALL_GROUP}"
-    lines = [f"{'target':<20}{'level':<14}{'drills':>7}{small:>11}{'no_ball_machine':>17}"]
-    for c in report.cells:
-        lines.append(
-            f"{c.target:<20}{c.level:<14}{c.drills:>7}{c.small_group:>11}{c.no_ball_machine:>17}"
-        )
-    return lines
+    """A header, then one row per cell in target x level order."""
+    head = ("target", "level", "drills", f"players{AT_MOST}{SMALL_GROUP}", "no_ball_machine")
+    rows: list[tuple[object, ...]] = [head]
+    rows += [(c.target, c.level, c.drills, c.small_group, c.no_ball_machine) for c in report.cells]
+    return [f"{t:<20}{lv:<14}{n:>7}{s:>11}{b:>17}" for t, lv, n, s, b in rows]
 
 
 def load_library(root: Path) -> tuple[list[Drill], list[str]]:
-    """Every ``*.json`` drill file under ``root`` as a ``Drill``; unreadable or schema-invalid
-    files are returned as problem lines instead (fail closed)."""
+    """Every drill file under ``root``; unreadable or schema-invalid files become problems."""
     drills: list[Drill] = []
     broken: list[str] = []
     for path in sorted(p for p in root.rglob("*.json") if p.name != "schema.json"):
-        name = path.relative_to(root).as_posix()
         try:
             doc = json.loads(path.read_text(encoding="utf-8"))
+            bad = "; ".join(errors(doc, drill_schema()))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            broken.append(f"{name}: invalid drill: {exc}")
-            continue
-        if bad := list(errors(doc, drill_schema())):
-            broken.append(f"{name}: invalid drill: {'; '.join(bad)}")
-            continue
-        drills.append(Drill.from_document(doc))
+            bad = str(exc)
+        if bad:
+            broken.append(f"{path.relative_to(root).as_posix()}: invalid drill: {bad}")
+        else:
+            drills.append(Drill.from_document(doc))
     return drills, broken
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="racket-drill-coverage",
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
+    parser = argparse.ArgumentParser(prog="racket-drill-coverage", description=__doc__)
     parser.add_argument("library", type=Path, help="a drill library directory")
-    args = parser.parse_args(argv)
-    root: Path = args.library
+    root: Path = parser.parse_args(argv).library
     if not root.is_dir():
         print(f"ERROR {root}: no such directory", file=sys.stderr)
         return 2
     drills, broken = load_library(root)
     report = check_coverage(drills)
-    for line in render(report):
-        print(line)
-    print(f"library: {report.counted} reviewed drill(s), {report.warm_ups} warm-up(s)")
     problems = [*broken, *report.gaps]
-    for problem in problems:
-        print(f"FAIL {problem}")
+    print("\n".join(render(report)))
+    print(f"library: {report.counted} reviewed drill(s), {report.warm_ups} warm-up(s)")
+    print("".join(f"FAIL {p}\n" for p in problems), end="")
     print(f"{root}: {'FAILED' if problems else 'ok'}, {len(problems)} problem(s)")
     return 1 if problems else 0
 

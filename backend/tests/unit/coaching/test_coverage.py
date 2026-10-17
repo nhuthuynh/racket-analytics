@@ -1,11 +1,8 @@
 """Drill coverage matrix (ST-059; FR-141; QD-DR-05; drill-review-checklist §3). Pure: drills
 arrive as plan ``Drill`` values.
 
-Negative cases first: an empty library names all 18 cells and the library size; a cell with
-only 4-player drills, only ball-machine drills or one drill; draft, deprecated and superseded
-versions do not count; AN-07 counts only through its share skill and is named without one; a
-warm-up counts in the library but in no cell; fewer than 20 reviewed drills or 3 warm-ups
-fail. Then a full library passes and renders the matrix in target x level order.
+Negative cases first (empty library, each cell rule, the counting rules, library floors);
+then a full library passes and renders the matrix in target x level order.
 """
 
 from __future__ import annotations
@@ -77,24 +74,21 @@ def test_a_cell_with_only_ball_machine_drills_is_named() -> None:
     assert gaps(lib) == [f"AN-05 × {lv}: no ball_machine: 0" for lv in LEVELS]
 
 
-def test_a_cell_with_one_drill_is_named_with_its_count() -> None:
-    lib = [d for d in full_library() if d["id"] != "pb.test.an05-b"] + [drill("pb.test.extra")]
-    assert gaps(lib) == [f"AN-05 × {lv}: drills: 1" for lv in LEVELS]
+ONE_AN05 = [f"AN-05 × {lv}: drills: 1" for lv in LEVELS]
 
 
 @pytest.mark.parametrize(
-    "over",
-    [{"review_status": "draft"}, {"deprecated_by": "pb.test.filler-00@1"}],
-    ids=["draft", "deprecated"],
+    "change",
+    [
+        lambda lib: [d for d in lib if d["id"] != "pb.test.an05-b"],
+        lambda lib: edit(lib, "pb.test.an05-b", review_status="draft"),
+        lambda lib: edit(lib, "pb.test.an05-b", deprecated_by="pb.test.filler-00@1"),
+        lambda lib: [*lib, drill("pb.test.an05-b", 2)],  # superseded: only the latest counts
+    ],
+    ids=["removed", "draft", "deprecated", "superseded"],
 )
-def test_draft_and_deprecated_drills_do_not_count(over: dict[str, Any]) -> None:
-    lib = [*edit(full_library(), "pb.test.an05-b", **over), drill("pb.test.extra")]
-    assert gaps(lib) == [f"AN-05 × {lv}: drills: 1" for lv in LEVELS]
-
-
-def test_only_the_latest_version_counts() -> None:
-    lib = [*full_library(), drill("pb.test.an05-b", 2)]
-    assert gaps(lib) == [f"AN-05 × {lv}: drills: 1" for lv in LEVELS]
+def test_a_cell_left_with_one_counted_drill_is_named(change: Any) -> None:
+    assert gaps([*change(full_library()), drill("pb.test.extra")]) == ONE_AN05
 
 
 def test_an_an07_drill_counts_only_in_its_share_cell() -> None:
@@ -121,7 +115,7 @@ def test_a_drill_counts_only_in_its_level_range() -> None:
 def test_a_warm_up_counts_in_the_library_but_in_no_cell() -> None:
     lib = edit(full_library(), "pb.test.warm", target_metrics=["AN-05"])
     lib = [d for d in lib if d["id"] != "pb.test.an05-b"] + [drill("pb.test.extra")]
-    assert gaps(lib) == [f"AN-05 × {lv}: drills: 1" for lv in LEVELS]
+    assert gaps(lib) == ONE_AN05
     report = check_coverage(Drill.from_document(d) for d in full_library())
     assert (report.counted, report.warm_ups) == (20, 3)
 
@@ -137,17 +131,11 @@ def test_fewer_than_3_warm_ups_fails() -> None:
 
 
 # --------------------------------------------------------------- the full library passes
-def test_a_full_library_has_no_gap() -> None:
+def test_a_full_library_has_no_gap_and_renders_one_row_per_cell() -> None:
     report = check_coverage(Drill.from_document(d) for d in full_library())
     assert report.ok
-    assert report.gaps == ()
-    assert [(c.target, c.level) for c in report.cells] == [
-        (t, lv) for t in TARGETS for lv in LEVELS
-    ]
-
-
-def test_render_prints_a_header_and_one_row_per_cell() -> None:
-    lines = render(check_coverage(Drill.from_document(d) for d in full_library()))
+    assert [(c.target, c.level) for c in report.cells] == [(t, v) for t in TARGETS for v in LEVELS]
+    lines = render(report)
     assert lines[0].split() == ["target", "level", "drills", "players≤2", "no_ball_machine"]
     assert len(lines) == 19
     assert lines[1].split() == ["AN-01", "beginner", "15", "15", "15"]

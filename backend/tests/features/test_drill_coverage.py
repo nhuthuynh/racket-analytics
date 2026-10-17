@@ -1,8 +1,5 @@
-"""CLI binding of tests/features/drill_coverage.feature (ST-059; FR-141; QD-DR-05). The negative
-scenario runs ``racket-drill-coverage`` on IT-04-13's gap fixture
-(``backend/tests/fixtures/drills-coverage-gap/``), the positive one on ``content/drills``.
-Written red first (ST-059 test commit), before ``coverage.py`` existed.
-"""
+"""CLI binding of tests/features/drill_coverage.feature (ST-059; FR-141): ``racket-drill-coverage``
+on IT-04-13's gap fixture (negative) and on ``content/drills``. Written red first."""
 
 from __future__ import annotations
 
@@ -15,7 +12,7 @@ from tests.integration.test_it_04_13_drill_coverage_cli import (
     GAP,
     GAP_CELL,
     LIBRARY,
-    MATRIX_ROWS,
+    matrix_rows,
     run,
 )
 
@@ -52,5 +49,5 @@ def fails_naming_cell(ctx: dict[str, Any]) -> None:
 @then("it passes and prints the matrix")
 def passes_with_matrix(ctx: dict[str, Any]) -> None:
     assert ctx["rc"] == 0, ctx["out"]
-    assert MATRIX_ROWS(ctx["out"]) == 18, ctx["out"]
+    assert matrix_rows(ctx["out"]) == 18, ctx["out"]
     assert "FAIL" not in ctx["out"]
