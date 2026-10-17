@@ -69,9 +69,7 @@ def _evidence(api: ApiDriver, match_id: str) -> dict[str, set[str]]:
 
 
 def _ids(plan: dict[str, Any]) -> list[str]:
-    return [plan["id"]] + [
-        x["id"] for s in plan["sessions"] for x in [s, *s["assignments"]]
-    ]
+    return [plan["id"]] + [x["id"] for s in plan["sessions"] for x in [s, *s["assignments"]]]
 
 
 # ------------------------------------------------------------------ refusals (negative first)
@@ -116,9 +114,7 @@ def test_it_04_02_bad_preferences_are_422_with_field_codes_and_write_nothing(
     assert _plans(committed_db) == 0
 
 
-def test_it_04_02_no_plan_fits_is_409_and_writes_nothing(
-    api: ApiDriver, committed_db: Any
-) -> None:
+def test_it_04_02_no_plan_fits_is_409_and_writes_nothing(api: ApiDriver, committed_db: Any) -> None:
     st.tagged_example(api, "ivy", "IT-04-02 nothing fits")
     response = _post(api, "ivy", NOTHING_FITS)
     assert st.refusal(response) == (409, "no_plan_fits", [])
@@ -186,7 +182,8 @@ def test_it_04_02_get_reads_the_saved_plan_with_stable_ids(
         assert response.status_code == 200, response.text
         assert response.json() == plan
     ids = _ids(plan)
-    assert len(set(ids)) == len(ids) and all(uuid.UUID(i).version == 4 for i in ids)
+    assert len(set(ids)) == len(ids)
+    assert all(uuid.UUID(i).version == 4 for i in ids)
 
 
 def test_it_04_02_a_new_post_replaces_the_plan_and_the_same_input_gives_the_same_content(
@@ -197,7 +194,8 @@ def test_it_04_02_a_new_post_replaces_the_plan_and_the_same_input_gives_the_same
     assert again["content_digest"] == first["content_digest"]
     assert set(_ids(again)).isdisjoint(_ids(first))
     other = _created(api, "ivy", SOLO_WALL | {"minutes_per_session": 45, "sessions_per_week": 2})
-    assert len(other["sessions"]) == 4 and other["content_digest"] != first["content_digest"]
+    assert len(other["sessions"]) == 4
+    assert other["content_digest"] != first["content_digest"]
     assert api.request("ivy", "GET", PLAN).json() == other
     assert _plans(committed_db) == 1
 
@@ -235,10 +233,28 @@ def test_it_04_02_a_plan_whose_only_match_is_deleted_is_no_plan(
     assert _plans(committed_db) == 0
 
 
-# ------------------------------------------------------------------ NFR-019 and OpenAPI
-def test_it_04_02_nfr_019_generation_p95_is_at_most_5_s(
+def test_it_04_02_a_stale_plan_is_regenerated_on_read_with_its_preferences(
     api: ApiDriver, committed_db: Any
 ) -> None:
+    """coaching-plan §8: a plan marked stale (a cited match was purged) is rebuilt on read."""
+    st.tagged_example(api, "ivy", "IT-04-02 stale")
+    old = _created(api, "ivy", SOLO_WALL | {"minutes_per_session": 45})
+    with committed_db.begin() as conn:
+        conn.execute(sa.text("UPDATE training_plans SET stale = true"))
+    response = api.request("ivy", "GET", PLAN)
+    assert response.status_code == 200, response.text
+    new = response.json()
+    assert new["regenerated"] == "source_match_deleted"
+    assert new["preferences"] == old["preferences"]
+    assert new["content_digest"] == old["content_digest"]
+    assert set(_ids(new)).isdisjoint(_ids(old))
+    again = api.request("ivy", "GET", PLAN).json()
+    assert again == new | {"regenerated": None}
+    assert _plans(committed_db) == 1
+
+
+# ------------------------------------------------------------------ NFR-019 and OpenAPI
+def test_it_04_02_nfr_019_generation_p95_is_at_most_5_s(api: ApiDriver, committed_db: Any) -> None:
     for n in range(3):
         st.tagged_example(api, "ivy", f"IT-04-02 NFR-019 {n}")
     took = []

@@ -138,9 +138,7 @@ def created(ctx: dict[str, Any]) -> None:
 
 
 @then(
-    parsers.parse(
-        'the weaknesses are ranked in "{unit}" with the side-out split marked unverified'
-    )
+    parsers.parse('the weaknesses are ranked in "{unit}" with the side-out split marked unverified')
 )
 def ranked(ctx: dict[str, Any], unit: str) -> None:
     ranking = _plan(ctx)["ranking"]
@@ -176,9 +174,12 @@ def sessions(ctx: dict[str, Any]) -> None:
 def cited(ctx: dict[str, Any]) -> None:
     for a in _assignments(ctx):
         c = a["citation"]
-        assert c["metric_id"] and c["value"] is not None and c["n"] >= 1, a
+        assert c["metric_id"], a
+        assert c["value"] is not None, a
+        assert c["n"] >= 1, a
         assert 1 <= len(c["rally_ids"]) <= 10, a
-        assert c["side"] == "A" and [e["side"] for e in c["evidence"]] == ["A"], a
+        assert c["side"] == "A", a
+        assert [e["side"] for e in c["evidence"]] == ["A"], a
         assert a["why"], a
 
 

@@ -35,10 +35,16 @@ _INTEGERS = {
     "sessions_per_week": (1, MAX_SESSIONS),
     "players_available": (1, 4),
 }
-FIELDS = (*_INTEGERS, "weekly_minutes", "equipment", "level")
-REQUIRED = ("minutes_per_session", "sessions_per_week", "players_available", "equipment", "level")
-_ORDER = ("minutes_per_session", "sessions_per_week", "weekly_minutes", "players_available")
-_ORDER += ("equipment", "level")  # api-sprint-04 §2.1 table order
+# api-sprint-04 §2.1 table order; every field but weekly_minutes is required
+FIELDS = (
+    "minutes_per_session",
+    "sessions_per_week",
+    "weekly_minutes",
+    "players_available",
+    "equipment",
+    "level",
+)
+OPTIONAL = frozenset({"weekly_minutes"})
 
 
 class PreferencesIn(BaseModel):
@@ -75,7 +81,7 @@ def _code(name: str, value: Any, body: Mapping[str, Any]) -> str | None:
         if not _is_int(value):
             return "invalid"
         sessions = body.get("sessions_per_week")
-        floor = sessions * MIN_SESSION if _is_int(sessions) else MIN_SESSION
+        floor = MIN_SESSION * (sessions if isinstance(sessions, int) else 1)
         return None if floor <= value <= MAX_WEEKLY else "out_of_range"
     if name == "equipment":
         if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
@@ -92,9 +98,9 @@ def parse_preferences(body: Any) -> Preferences:
     if not isinstance(body, dict):
         raise ValidationFailed("plan preferences", [FieldError(None, "invalid")])
     found = [FieldError(None, "unknown_field")] if set(body) - set(FIELDS) else []
-    for name in _ORDER:
+    for name in FIELDS:
         if name not in body:
-            code = "required" if name in REQUIRED else None
+            code = None if name in OPTIONAL else "required"
         else:
             code = _code(name, body[name], body)
         if code is not None:

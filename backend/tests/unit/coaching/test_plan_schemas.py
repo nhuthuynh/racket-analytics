@@ -184,7 +184,7 @@ def test_the_body_has_the_contract_keys_and_honesty_flags() -> None:
         "unofficial", "label", "drills_verified", "preferences", "ranking", "limited_data",
         "unfitted", "sessions",
     }  # fmt: skip
-    assert body["id"] == str(view.stored.id) and body["version"] == 1
+    assert (body["id"], body["version"]) == (str(view.stored.id), 1)
     assert body["created_at"] == "2026-10-17T09:00:00Z"
     assert body["content_digest"] == view.cited.content_digest()
     assert (body["library_version"], body["regenerated"]) == ("lib-1", None)
@@ -227,7 +227,7 @@ def test_sessions_carry_their_ids_drills_minutes_and_citations() -> None:
         assert (s["minutes_budget"], s["done"], s["done_at"]) == (30, False, None)
         assert [a["id"] for a in s["assignments"]] == [str(i) for i in stored.assignment_ids]
         for a, x in zip(s["assignments"], domain.assignments, strict=True):
-            assert a["position"] == x.position and a["minutes"] == x.minutes
+            assert (a["position"], a["minutes"]) == (x.position, x.minutes)
             assert a["drill"] == {
                 "id": x.drill.id, "version": x.drill.version, "name": f"Name of {x.drill.id}",
                 "players": x.drill.players, "needs": sorted(x.drill.needs),
@@ -237,10 +237,10 @@ def test_sessions_carry_their_ids_drills_minutes_and_citations() -> None:
             c = a["citation"]
             assert set(c) == {"metric_id", "metric_version", "side", "value", "n", "k",
                               "low_sample", "rally_ids", "evidence"}  # fmt: skip
-            assert c["side"] == "A" and c["evidence"] == [
-                {"match_id": "m1", "side": "A", "n": len(c["rally_ids"])}
-            ]
-            assert all(r.startswith("m1-r") for r in c["rally_ids"]) and a["why"]
+            assert c["side"] == "A"
+            assert c["evidence"] == [{"match_id": "m1", "side": "A", "n": len(c["rally_ids"])}]
+            assert all(r.startswith("m1-r") for r in c["rally_ids"])
+            assert a["why"]
 
 
 def test_values_are_rounded_proportions_4_places_per_game_2() -> None:
@@ -250,6 +250,6 @@ def test_values_are_rounded_proportions_4_places_per_game_2() -> None:
         for s in body["sessions"]
         for a in s["assignments"]
     }
-    assert cited["AN-04"]["value"] == 2.0 and cited["AN-04"]["n"] == 1
+    assert (cited["AN-04"]["value"], cited["AN-04"]["n"]) == (2.0, 1)
     if "AN-05" in cited:
         assert cited["AN-05"]["value"] == round(2 / 7, 4)

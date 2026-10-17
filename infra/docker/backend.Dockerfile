@@ -28,6 +28,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 FROM base AS api
 ENV API_APP=racket.platform.app:app
+# The reviewed drill library the plan API assembles from (ST-061b; racket.coaching.service).
+COPY content/drills /app/content/drills
+ENV RACKET_DRILL_LIBRARY=/app/content/drills
 # Scheduler for the purge/expiry job (SRE-PURGE, ADR 0038); the compose `purge` service runs it.
 COPY infra/docker/purge_schedule.py /opt/racket/purge_schedule.py
 USER app

@@ -59,7 +59,8 @@ def test_it_04_03_the_plan_id_rows_name_the_contract_routes_and_kinds() -> None:
         ("POST", "/me/plan/sessions/{session_id}/done"),
     ]
     assert {plan_resource(t) for _, t in PLAN_ID_ROUTES_04} == {"plan_session", "plan_assignment"}
-    assert set(SERVED_04) <= set(MATRIX) and SERVED_04 <= set(PLAN_ID_ROUTES_04)
+    assert set(SERVED_04) <= set(MATRIX)
+    assert set(SERVED_04) <= set(PLAN_ID_ROUTES_04)
     assert not (set(PLAN_ID_ROUTES_04) - SERVED_04) & set(MATRIX)  # unserved rows stay out
 
 
