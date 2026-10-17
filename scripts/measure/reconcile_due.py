@@ -309,7 +309,28 @@ class MergeHistory:
             f"^{since}",
             "--",
         )
-        return parse_merges(log)
+        own = self.merged_in(since)
+        return [m for m in parse_merges(log) if m["merged_as"] != own]
+
+    def merged_in(self, commit: str) -> str | None:
+        """The first-parent merge on the base that brought ``commit`` in (the row's own PR).
+
+        None when ``commit`` is on the base's first-parent line itself or not on the base.
+        """
+        path = _git(
+            self.dir, "rev-list", "--first-parent", "--ancestry-path", f"{commit}..{self.base}"
+        ).split()
+        if not path:
+            return None
+        first = path[-1]  # the oldest first-parent descendant of the row's commit
+        return None if self.is_ancestor(commit, f"{first}^1") else first
+
+    def is_ancestor(self, commit: str, of: str) -> bool:
+        argv = ["git", "-C", str(self.dir), "merge-base", "--is-ancestor", commit, of]
+        out = subprocess.run(argv, capture_output=True, text=True, timeout=60)  # noqa: S603
+        if out.returncode not in (0, 1):
+            raise ValueError(f"git merge-base in {self.dir}: {out.stderr.strip()}")
+        return out.returncode == 0
 
 
 def _merge_rows(
