@@ -14,8 +14,9 @@ examples (G04-03 a). --load: GET /me/plan open loop at --rps for --duration (G04
         --mailpit http://127.0.0.1:48025 --runs 5 --determinism 3 --json live-plan.json
 
 Exit 0 only when every step of every run passed and every target was met; 1 on any failed step;
-2 when it refuses to start (disk floor; stack, fixture or drill library unreadable). Routes and
-fields: docs/architecture/api-sprint-04.md (PE-4); a contract change changes this file.
+2 when it refuses to start (--determinism below 2; disk floor; stack, fixture or drill library
+unreadable). Routes and fields: docs/architecture/api-sprint-04.md (PE-4); a contract change
+changes this file.
 """
 
 from __future__ import annotations
@@ -239,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--drills", type=Path, default=REPO / "content" / "drills")
     p.add_argument("--runs", type=int, default=1)
     p.add_argument("--generations", type=int, default=4)
-    p.add_argument("--determinism", type=int, default=0)
+    p.add_argument("--determinism", type=int, default=3)
     p.add_argument("--load", action="store_true")
     p.add_argument("--rps", type=float, default=50.0)
     p.add_argument("--duration", type=float, default=60.0)
@@ -254,6 +255,13 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     args.origin = args.base_url.rstrip("/")
     args.api = args.origin + "/api"
+    if args.determinism < 2:
+        # One or zero bodies can never differ, so the step would pass blind (ADR 0014).
+        print(
+            f"live_plan: --determinism {args.determinism} cannot see a change, need >= 2",
+            file=sys.stderr,
+        )
+        return 2
 
     free_gb = shutil.disk_usage("/").free // 1024**3
     if free_gb < args.min_free_gb:
@@ -281,6 +289,7 @@ def main(argv: list[str] | None = None) -> int:
         summary = {
             "runs": args.runs,
             "runs_passed": passed,
+            "determinism_k": args.determinism,
             "generate": t.timing_summary(
                 out["generate_ms"],
                 max_p95_ms=args.max_generate_p95_ms,

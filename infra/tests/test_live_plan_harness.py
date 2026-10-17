@@ -182,6 +182,7 @@ def world(tmp_path, tls):
     w = {"tmp": tmp_path, "tls": tls, "mailpit": mailpit, "base": "https://localhost:1"}
     w["args"] = ["--cacert", tls[1], "--mailpit", mailpit.url, "--drills", str(drills)]
     w["args"] += ["--file", str(tmp_path / "clip.mp4"), "--json", str(tmp_path / "out.json")]
+    w["args"] += ["--min-free-gb", "0"]  # the host's disk is not under test; the floor row sets it
     yield w
     mailpit.close()
     if "stub" in w:
