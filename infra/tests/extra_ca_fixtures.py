@@ -111,7 +111,11 @@ class Probe:
 
 
 def probe_build(tmp: Path, env: Path) -> Probe:
-    """Build the probe as the `migrate` service of infra/compose.yaml (its secrets unchanged)."""
+    """Build the probe as the `migrate` service of infra/compose.yaml (its secrets unchanged).
+
+    ``--no-cache``: BuildKit does not key its cache on secret contents, so a cached step from
+    an earlier probe build would report that build's secret.
+    """
     tag = f"racket-extra-ca-probe:{uuid.uuid4().hex[:12]}"
     override = tmp / "probe.override.yaml"
     override.write_text(
@@ -145,7 +149,7 @@ def probe_build(tmp: Path, env: Path) -> Probe:
     ]
     try:
         res = subprocess.run(
-            [*base, "build", "migrate"],
+            [*base, "build", "--no-cache", "migrate"],
             capture_output=True,
             text=True,
             env=docker_env(),
