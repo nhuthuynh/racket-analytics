@@ -1,0 +1,14 @@
+# PLAN-04 decisions
+
+Per-ticket decision file (PO rule 2026-10-07). Ticket: Sprint 4 plan and goal scorecard (`docs/sprints/sprint-04.md`, `docs/sprints/04/goal-scorecard.md`, ADR 0051, roadmap renumbering, PO CI-first record).
+
+| Date | Who | Decision | Evidence | Why |
+|---|---|---|---|---|
+| 2026-10-17 | engineering-manager | **No CI-fix ticket first: `main` is green.** | `actions_list list_workflow_runs branch=main`: run 39015002522 (schedule, `c170ef0`) → success; push run 38894723692 (`d8b0a34`) → success; `list_pull_requests state=open` → `[]` | CI FIRST (PO 2026-10-08) requires a `ci_fix` ticket only when `main` or a PR pipeline is red |
+| 2026-10-17 | engineering-manager | **C4-G12 closes PD-R1S3-01 (with QA-R3S3-06) and EM-PR27-01, not PE-PR24-01.** The PO brief names PE-PR24-01; the ledger shows it Fixed by FIX-03-2b | `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md` → rc 1, `open 2`: `['PD-R1S3-01','QA-R3S3-06']`, `['EM-PR27-01']` | The ledger is the source of the G03-12 count (ADR 0037); the brief's id is a stale copy of the VERIFY-03-r3 cell |
+| 2026-10-17 | engineering-manager with principal-engineer | **Slicing: 41 tickets, each ≤ 400 counted changed lines at planning (B4).** BE spine split at the domain/persistence/API seams (ST-055/056/057, ST-061a/b, ST-062); drills in three serial content PRs; privacy split BE/FE | sprint-04 §2, §3 | Retro 3 M11: slicing after the build forced 45 waivers |
+| 2026-10-17 | principal-engineer | **Serial chains to avoid shared-file conflicts:** migrations 0018 → 0019 → 0020 → 0021 (ST-061a → ST-068a → ST-069 → ST-070); `content/drills/library.lock` (ST-058a → b → c); settings in one scaffold ticket (ST-067) | `ls backend/src/racket/migrations/versions` → last `0017_labeller_role_and_labels.py` | Alembic multiple heads and lock-file conflicts would turn PR CI red (CI first) |
+| 2026-10-17 | engineering-manager | **Privacy and quota tickets depend on the spine's API (ST-061b) or last UI ticket (ST-063c)** | sprint-04 §3.4 | PO order: a runnable prototype lands first |
+| 2026-10-17 | senior-qa-engineer | **Flag-on E2E runs in a `flags-on` Playwright project (nightly and verifier); per-PR coverage of flag-on behaviour is IT + Vitest** (default; PE-4 may change it) | sprint-04 §3.7 PE-4, ST-065 | Turning the flags on in the per-PR E2E stack would change every existing journey (age step) |
+| 2026-10-17 | engineering-manager | **PO CI-first rule recorded as relayed, not as verbatim** | `grep -n "CI first\|CI FIRST" docs/requirements/po-input-2026-10-05.md` → nothing before this PR | ADR 0047 rule 5: agents never write PO decisions; the original message is not in the repository |
+| 2026-10-17 | engineering-manager | **Disk at planning 9.5 GB free (below the 10 GB floor); this docs-only ticket starts no service** | `df -h /` → `/dev/vda 252G 29G 9.5G 76% /` | Blocker row 2; P5 prune by the orchestrator |
