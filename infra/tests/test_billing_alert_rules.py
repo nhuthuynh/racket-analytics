@@ -45,7 +45,7 @@ RECEIVER = "billing-owner"
 # Absorbs the float rounding of spend / budget (PE-073-01): any cent-exact spend at t * budget
 # must fire. 1e-9 is far above that error (~3 ulp, < 1e-15) and far below one cent of any budget
 # under 10 million USD (0.01 / 1e7 = 1e-9), so one cent below a threshold still does not fire.
-RATIO_TOLERANCE = 1e-9
+RATIO_TOLERANCE = "1e-9"  # as written in billing.yml
 COMPARISON = re.compile(r">= (?P<t>[\d.]+)(?: - (?P<eps>[\d.e-]+))?$")
 
 
@@ -158,7 +158,7 @@ def test_each_rule_compares_spend_with_its_share_of_the_budget(
     expr = " ".join(rule["expr"].split())
     assert f'{SPEND_METRIC}{{provider="{provider}"}}' in expr
     assert f'{BUDGET_METRIC}{{provider="{provider}"}}' in expr
-    assert expr.endswith(f">= {threshold / 100:g} - {RATIO_TOLERANCE:g}"), expr
+    assert expr.endswith(f">= {threshold / 100:g} - {RATIO_TOLERANCE}"), expr
     assert rule.get("for", "0s") in ("0s", "0m")
     assert rule["labels"] == {
         "threshold_percent": str(threshold),

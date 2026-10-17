@@ -34,8 +34,14 @@ Inputs, both gauges labelled `provider`:
 - `racket_billing_spend_month_to_date_usd`: month-to-date spend in USD from the provider's
   billing export. **Not produced yet**; until an exporter exists the rules evaluate to nothing.
 
-The expression is the ratio `spend / on(provider) budget >= t`, so the threshold is exact for
-any budget amount (no float rounding from `t * budget`).
+The expression is the ratio with a small tolerance, `spend / on(provider) budget >= t - 1e-9`
+(t = 0.5, 0.8, 1). The bare ratio `>= t` is **not** exact for every budget: in IEEE 754 float64
+`2.4 / 3` is `0.7999999999999999`, so a 3 USD (or 7, 12, 333 USD ...) budget at exactly 80% would
+not fire; 1999 of the whole-dollar budgets 1..5000 miss at 80% that way. The tolerance 1e-9 is
+far above that rounding error (< 1e-15) and below one cent for any budget under 10 million USD,
+so a cent-exact spend at a threshold fires and a spend one cent below it does not. Pinned by
+`billing.test.yml` (budgets 3 and 333) and the unit sweep in
+`infra/tests/test_billing_alert_rules.py`.
 
 ## Settings (env, `infra/env.example`)
 

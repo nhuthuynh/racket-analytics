@@ -7,7 +7,10 @@
 #   racket_billing_monthly_budget_usd{provider}      - from env, rendered by ../billing_budgets.py
 #   racket_billing_spend_month_to_date_usd{provider} - month-to-date spend, from the provider's
 #                                                      billing export (exporter not built yet)
-# The ratio form (spend / budget >= t) keeps the threshold exact for any budget amount.
+# Ratio form with a tolerance: spend / budget >= t - 1e-9. The bare ratio is NOT exact for every
+# budget: 2.4 / 3 == 0.7999999999999999 in float64, so `>= 0.8` misses 80% of a 3 USD budget
+# (PE-073-01). 1e-9 absorbs that rounding (< 1e-15) and is under one cent for any budget below
+# 10 million USD, so one cent below a threshold still does not fire.
 # Tested by billing.test.yml with `promtool test rules` (IT-04-10).
 groups:
   - name: billing
@@ -16,7 +19,7 @@ groups:
       - alert: BillingLlmProviderBudget50
         expr: >-
           racket_billing_spend_month_to_date_usd{provider="llm_provider"}
-          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 0.5
+          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 0.5 - 1e-9
         labels:
           threshold_percent: "50"
           severity: info
@@ -27,7 +30,7 @@ groups:
       - alert: BillingLlmProviderBudget80
         expr: >-
           racket_billing_spend_month_to_date_usd{provider="llm_provider"}
-          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 0.8
+          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 0.8 - 1e-9
         labels:
           threshold_percent: "80"
           severity: warning
@@ -38,7 +41,7 @@ groups:
       - alert: BillingLlmProviderBudget100
         expr: >-
           racket_billing_spend_month_to_date_usd{provider="llm_provider"}
-          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 1
+          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 1 - 1e-9
         labels:
           threshold_percent: "100"
           severity: critical
@@ -49,7 +52,7 @@ groups:
       - alert: BillingObjectStoreBudget50
         expr: >-
           racket_billing_spend_month_to_date_usd{provider="object_store"}
-          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 0.5
+          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 0.5 - 1e-9
         labels:
           threshold_percent: "50"
           severity: info
@@ -60,7 +63,7 @@ groups:
       - alert: BillingObjectStoreBudget80
         expr: >-
           racket_billing_spend_month_to_date_usd{provider="object_store"}
-          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 0.8
+          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 0.8 - 1e-9
         labels:
           threshold_percent: "80"
           severity: warning
@@ -71,7 +74,7 @@ groups:
       - alert: BillingObjectStoreBudget100
         expr: >-
           racket_billing_spend_month_to_date_usd{provider="object_store"}
-          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 1
+          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 1 - 1e-9
         labels:
           threshold_percent: "100"
           severity: critical
