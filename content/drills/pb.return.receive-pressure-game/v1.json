@@ -1,0 +1,41 @@
+{
+  "id": "pb.return.receive-pressure-game",
+  "version": 1,
+  "name": "Receiving game under pressure",
+  "summary": "Competitive game where one player only receives against varied serves and third shots; points count only on receive, and own unforced errors are tallied.",
+  "skills": [
+    "AN-02",
+    "AN-04",
+    "return"
+  ],
+  "target_metrics": [
+    "AN-02",
+    "AN-04"
+  ],
+  "level_min": "advanced",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 2,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Server varies the serve (deep, short, to the body) and plays any third shot, including speed-ups; serve as your rules allow, the serve rules are UNVERIFIED in this app",
+    "Receiver plays every rally live and competitively, from the return to the end",
+    "Game of 11 rallies, then swap roles",
+    "Tally rallies won on receive and the receiver's own unforced errors (an error on a ball the receiver had time and position to play safely)"
+  ],
+  "success_criterion": "In a game of 11 receiving rallies: win at least 6 and make at most 2 unforced errors",
+  "progressions": [],
+  "regressions": [
+    "pb.return.return-and-move-in"
+  ],
+  "safety_notes": "Live, competitive rallies with speed-ups and lobs: wear eye protection, turn and run back for a lob, never backpedal. Stop if dizzy or in pain.",
+  "coach_rationale": "(judgment) Receiving against varied serves and attacks under score pressure trains winning receiving rallies (AN-02) while counting the cheap errors that pressure produces (AN-04). Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

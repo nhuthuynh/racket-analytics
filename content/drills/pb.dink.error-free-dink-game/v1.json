@@ -1,0 +1,40 @@
+{
+  "id": "pb.dink.error-free-dink-game",
+  "version": 1,
+  "name": "Error-count dink game",
+  "summary": "Live cross-court dink game to 11 where speed-ups are allowed on high balls; each player counts the rallies they lose with their own unforced errors.",
+  "skills": [
+    "AN-04",
+    "dink",
+    "speed-up"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "intermediate",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Both players at the non-volley-zone line, cross-court, playing into one half of the court",
+    "Live dink rally; a speed-up is allowed only on a ball above net height",
+    "Game to 11 rallies; each player tallies rallies lost to their own unforced errors",
+    "Play 2 games"
+  ],
+  "success_criterion": "In a game to 11, lose at most 2 rallies to your own unforced errors",
+  "progressions": [],
+  "regressions": [
+    "pb.dink.safe-target-dinks"
+  ],
+  "safety_notes": "Speed-ups at close range: wear eye protection and aim speed-ups low, never at the face. Stop if in pain.",
+  "coach_rationale": "(judgment) Live dinking with a speed-up threat is where patient players lose fewest rallies to their own mistakes; scoring only own unforced errors trains exactly what AN-04 counts. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
