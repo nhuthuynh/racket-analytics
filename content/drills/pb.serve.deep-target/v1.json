@@ -1,0 +1,43 @@
+{
+  "id": "pb.serve.deep-target",
+  "version": 1,
+  "name": "Deep serve to a target zone",
+  "summary": "Serve past a cone line in the back third of the service box to push the receiver back.",
+  "skills": [
+    "AN-05",
+    "AN-01",
+    "serve"
+  ],
+  "target_metrics": [
+    "AN-05",
+    "AN-01"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "cones"
+  ],
+  "setup": [
+    "Cones in a line about 1.5 m inside the receiver's baseline, across the diagonal service box",
+    "Sets of 10 serves, alternating right and left boxes",
+    "Count: in and past the cones; in but short; faults"
+  ],
+  "success_criterion": "In a set of 10 serves: at least 7 land past the cone line and at most 1 is a fault",
+  "progressions": [
+    "pb.serve.pressure-ladder"
+  ],
+  "regressions": [
+    "pb.serve.consistency-ladder"
+  ],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) A deep serve keeps the receiver back and gives the serving side more time on the third shot, which supports winning rallies on serve (AN-01); keeping faults at 1 in 10 protects AN-05. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
