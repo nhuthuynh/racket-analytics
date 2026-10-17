@@ -76,12 +76,12 @@ def test_a_cited_rally_must_come_from_the_cited_evidence() -> None:
 def test_a_warm_up_with_no_citable_metric_is_refused() -> None:
     plan = _plan([warm_up("pb.test.serve-warm-up", targets=("AN-01",)), drill("pb.test.dinks")])
     citations = {k: v for k, v in all_citations().items() if k != "AN-01"}
-    with pytest.raises(MissingCitation, match="pb.test.serve-warm-up"):
+    with pytest.raises(MissingCitation, match=r"pb\.test\.serve-warm-up"):
         CitedPlan(plan, citations, rallies=13)
 
 
 def test_a_plan_whose_top_weakness_has_no_citation_is_refused() -> None:
-    top = (PlanWeakness("opponent_winners", "AN-02", 1), *[w for w in TOP_3][:2])
+    top = (PlanWeakness("opponent_winners", "AN-02", 1), *TOP_3[:2])
     ranks = tuple(PlanWeakness(w.id, w.target, i) for i, w in enumerate(top, start=1))
     citations = {k: v for k, v in all_citations().items() if k != "AN-02"}
     with pytest.raises(MissingCitation, match="opponent_winners"):
@@ -105,7 +105,8 @@ def test_every_assignment_cites_metric_value_n_and_rallies() -> None:
     for session in cited.sessions:
         for x in session:
             c = x.citation
-            assert c.n >= 1 and c.value is not None
+            assert c.n >= 1
+            assert c.value is not None
             assert c.metric_id in x.assignment.drill.target_metrics
             assert 1 <= len(c.rally_ids) <= 10
 

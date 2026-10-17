@@ -59,9 +59,7 @@ def top_weaknesses(ctx: dict[str, Any], a: str, ta: str, b: str, tb: str, c: str
     ]
 
 
-@given(
-    "a solo player with a wall and no ball machine, 30 minutes per session, 3 sessions a week"
-)
+@given("a solo player with a wall and no ball machine, 30 minutes per session, 3 sessions a week")
 def solo_player(ctx: dict[str, Any]) -> None:
     ctx["prefs"] = Preferences(30, 3, 1, frozenset({"wall"}), "intermediate")
 
@@ -137,7 +135,9 @@ def every_cited(ctx: dict[str, Any]) -> None:
         for x in session:
             c = x.citation
             assert c.metric_id in x.assignment.drill.target_metrics
-            assert c.n >= 1 and c.value is not None and 1 <= len(c.rally_ids) <= 10
+            assert c.n >= 1
+            assert c.value is not None
+            assert 1 <= len(c.rally_ids) <= 10
 
 
 @then(parsers.parse('the drill for "{name}" says why "{text}"'))
@@ -160,13 +160,15 @@ def see_all(ctx: dict[str, Any], name: str, shown: int, n: int, m: int) -> None:
 @then(parsers.parse("the plan carries limited data from {rallies:d} rallies"))
 def limited(ctx: dict[str, Any], rallies: int) -> None:
     limited_data = _cited(ctx).limited_data
-    assert limited_data is not None and limited_data.rallies == rallies
+    assert limited_data is not None
+    assert limited_data.rallies == rallies
 
 
 @then(parsers.parse('the plan says "{text}"'))
 def limited_text(ctx: dict[str, Any], text: str) -> None:
     limited_data = _cited(ctx).limited_data
-    assert limited_data is not None and limited_data.text == text
+    assert limited_data is not None
+    assert limited_data.text == text
 
 
 @then("the plan carries no limited-data notice")

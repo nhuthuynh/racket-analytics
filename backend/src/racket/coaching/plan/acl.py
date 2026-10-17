@@ -32,9 +32,11 @@ def citations_for(session: Session, owner_id: uuid.UUID) -> CitationFacts:
     the global lock order, deletion-and-purge.md §3.1)."""
     scoped: list[tuple[str, str, analytics.MatchMetrics]] = []
     for match_id, side in sorted(matches.player_sides(session, owner_id), key=lambda m: m[0]):
-        found = None if side is None else analytics.metric_facts(session, match_id, side)
+        if side is None:
+            continue  # no is_me participant: skipped, as the ranking does
+        found = analytics.metric_facts(session, match_id, side)
         if found is not None and found.rallies:
-            scoped.append((str(match_id), side, found))  # type: ignore[arg-type]
+            scoped.append((str(match_id), side, found))
     citations = {}
     for target in PLAN_TARGETS:
         metric = target.split(":")[0]
