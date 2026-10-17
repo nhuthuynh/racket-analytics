@@ -16,26 +16,62 @@
 
 | ID | Kind | Where | Text | Marker |
 |---|---|---|---|---|
+| W-A01 | age-question | A-01 heading | `Are you {age_minimum} or over?` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A02 | age-question | A-01 hint | `You need to be {age_minimum} or over to have an account. We only ask once and we do not store your birth date.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A03 | age-question | A-01 choice | `Yes, I am {age_minimum} or over` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A04 | age-question | A-01 choice | `No, I am under {age_minimum}` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A05 | age-question | A-01 error, nothing chosen | `Choose yes or no` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A06 | under-18-reason | A-01 under-18 heading | `You can't have an account yet` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A07 | under-18-reason | A-01 under-18 why | `You need to be {age_minimum} or over to use this app. We did not make an account for you.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A08 | under-18-reason | A-01 under-18 what to do | `You are welcome back when you turn {age_minimum}. If you chose the wrong answer, sign in again to answer again.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A09 | footage-notice | upload page and first-run screen | `Don't upload matches with anyone under {age_minimum}. Film only people who agree to be filmed.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 
 ## 3. FR-008 How long videos are kept (R-01, match page)
 
 | ID | Kind | Where | Text | Marker |
 |---|---|---|---|---|
+| W-R01 | retention | R-01 heading | `How long we keep your videos` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R02 | retention | R-01 intro | `You choose how long we keep the video you watch and tag. Your score sheet, stats and plan stay until you delete the match.` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R03 | retention | R-01 system rule | `We delete the file you uploaded {original_days} days after it is ready. The copy you watch is kept for the time you choose here.` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R04 | retention | R-01 choice, one per setting value | `{retention_days} days` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R05 | retention | R-01 default tag on the default choice | `(default)` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R06 | retention | R-01 choice | `Until I delete it` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R07 | retention | R-01 date list, per match | `Video will be deleted on {date}` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R08 | retention | R-01 date list, kept | `Video kept until you delete it` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R09 | retention | match page, video gone | `This video was deleted on {date}, as you chose. Your score sheet and stats are still here.` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R10 | retention | R-01 saved | `Saved. The new deletion dates are shown below.` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
+| W-R11 | retention | R-01 save failed | `We couldn't save your choice. Your old setting still applies. Try again.` | interim, pending legal review (OQ-07 accepted; NFR-070, P16) |
 
 ## 4. FR-009 Training use (R-01)
 
 | ID | Kind | Where | Text | Marker |
 |---|---|---|---|---|
+| W-C01 | consent | R-01 heading | `Help improve the app` | interim, pending legal review (OQ-06 accepted; NFR-070, P16) |
+| W-C02 | consent | R-01 switch label | `Use my matches to improve the app` | interim, pending legal review (OQ-06 accepted; NFR-070, P16) |
+| W-C03 | consent | R-01 explanation | `If you turn this on, we may use your matches and tags to train and test our video tools. It stays off unless you turn it on.` | interim, pending legal review (OQ-06 accepted; NFR-070, P16) |
+| W-C04 | consent | R-01 turning off | `You can turn it off at any time. Then your matches go into no new training sets. Older training sets are not changed, and they are replaced at their next planned update.` | interim, pending legal review (OQ-06 accepted; NFR-070, P16) |
+| W-C05 | consent | R-01 saved, on | `Turned on. You can turn it off here at any time.` | interim, pending legal review (OQ-06 accepted; NFR-070, P16) |
+| W-C06 | consent | R-01 saved, off | `Turned off. Your matches will not be in any new training set.` | interim, pending legal review (OQ-06 accepted; NFR-070, P16) |
+| W-C07 | consent | R-01 save failed | `We couldn't save your choice. Your old setting still applies. Try again.` | interim, pending legal review (OQ-06 accepted; NFR-070, P16) |
 
 ## 5. FR-160 Over-limit and storage (Q-01)
 
 | ID | Kind | Where | Text | Marker |
 |---|---|---|---|---|
+| W-Q01 | over-limit | match setup, too many matches | `You have started {match_limit} matches in the last hour. You can start a new match at {time}.` | interim, pending the OQ-13 budget review (10 per hour accepted; P8) |
+| W-Q02 | over-limit | match setup, no time in the reply | `You have started a lot of matches in the last hour. You can start a new match within the hour.` | interim, pending the OQ-13 budget review (10 per hour accepted; P8) |
+| W-Q03 | quota | upload page, video too big for space left | `This video won't fit in your storage. You have used {used_gb} of {limit_gb} GB.` | interim, pending the OQ-13 quota size (20 GB is (judgment); P8) |
+| W-Q04 | quota | upload page, what to do | `Delete a match you no longer need, then try again.` | interim, pending the OQ-13 quota size (20 GB is (judgment); P8) |
+| W-Q05 | quota | upload page, usage line | `Storage: {used_gb} of {limit_gb} GB used` | interim, pending the OQ-13 quota size (20 GB is (judgment); P8) |
 
 ## 6. Weakness unit (FR-120) and human-coach notice (FR-141) (P-01)
 
 | ID | Kind | Where | Text | Marker |
 |---|---|---|---|---|
+| W-P01 | weakness-unit | P-01 weakness unit label | `Rallies lost per game` | interim, pending the side-out rule check (OQ-08 accepted; OQ-01, P7) |
+| W-P02 | weakness-unit | P-01 split under each weakness | `On your serve: {serve_count} per game. On their serve: {receive_count} per game.` | interim, pending the side-out rule check (OQ-08 accepted; OQ-01, P7) |
+| W-P03 | weakness-unit | P-01 notice, once before the first card | `Unofficial scoring (rules not yet verified). The split between your serve and theirs may change when the rules are checked.` | interim, pending the side-out rule check (OQ-08 accepted; OQ-01, P7) |
+| W-H01 | human-coach-notice | P-01 notice, under the unofficial notice | `A human coach has not checked these drills yet. Use them as a starting point and stop any drill that hurts.` | interim, pending a human coach's drill review (P15) |
 
 ## 7. The check
 
