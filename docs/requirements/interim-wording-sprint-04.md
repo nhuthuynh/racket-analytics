@@ -7,23 +7,23 @@
 
 ## 1. Rules for every string
 
-1. **Marker.** Every row's marker starts with `interim, pending` and names the open item it waits on: the NFR-070 legal review (US + AU, **P16**) for FR-003, FR-008 and FR-009; the OQ-13 budget and quota size (**P8**) for FR-160; the side-out rule check (OQ-01, **P7**) for the weakness split; a human coach (**P15**) for the drill notice. When an item closes, its owner removes `interim` from the row (scorecard S4-DoD-P16, S4-DoD-P8).
+1. **Marker.** Every row's marker starts with `interim, pending` and names the open item it waits on: the NFR-070 legal review (US + AU, **P16**) for FR-003, FR-008, FR-009 and FR-160, written `interim, pending legal review (... NFR-070, P16)`; the FR-160 rows also name the OQ-13 budget (**P8**), and the storage-quota rows say `size pending P8`, in addition to P16, never instead of it; the side-out rule check (OQ-01, **P7**) for the weakness split; a human coach (**P15**) for the drill notice. `interim` comes off a row only when every item its marker names is closed (scorecard S4-DoD-P16, S4-DoD-P8); closing P8 alone leaves the FR-160 rows interim. The check (§7) requires these tokens per kind.
 2. **Values come from config, never from the text.** `{age_minimum}` (18), `{retention_days}` (30, 90, 365), `{original_days}` (30), `{match_limit}` (10), `{limit_gb}` (20, (judgment) until P8) and every date, time and count are placeholders filled from `Settings` (ST-067) or the API response. A string with a digit outside a placeholder fails the check, so a changed setting cannot leave stale words (as flows-sprint-01 D-5 did for the upload caps).
 3. **Plain language** (judgment; see §8 on the requirement id). With placeholders replaced by a short word, each string must: (a) keep every sentence at 20 words or fewer; (b) score Flesch-Kincaid grade 8.0 or lower when it has 8 words or more; (c) use none of the banned terms in the check (`retention`, `quota`, `consent`, `minor`, `processing`, `label set`, `dataset`, `rate limit`, `revoke`, `opt in`, and similar). Shorter alternatives: "keep", "storage", "agree", "under {age_minimum}", "training sets", "turn off".
-4. **Honest scope** (HAX G1, G2 [DPA/DESIGN-11]). No string promises legal compliance, names a law, or claims more than the API does (for example ST-068a stores no birth date, so no string asks for one).
+4. **Honest scope** (HAX G1, G2 [DPA/DESIGN-11]). No string promises legal compliance, names a law, or claims more than the API does (for example ST-068a stores no birth date, so no string asks for one; and because `false` deletes the pending sign-in state, a later sign-in asks again, so no age-path string says "we only ask once" or invites a second try at the question; the check bans `again` and `only ask once` on the age-question and under-18-reason kinds).
 
 ## 2. FR-003 Age question, under-18 reason and footage notice (A-01, upload page)
 
 | ID | Kind | Where | Text | Marker |
 |---|---|---|---|---|
 | W-A01 | age-question | A-01 heading | `Are you {age_minimum} or over?` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
-| W-A02 | age-question | A-01 hint | `You need to be {age_minimum} or over to have an account. We only ask once and we do not store your birth date.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A02 | age-question | A-01 hint | `You need to be {age_minimum} or over to have an account. We do not store your birth date.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 | W-A03 | age-question | A-01 choice | `Yes, I am {age_minimum} or over` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 | W-A04 | age-question | A-01 choice | `No, I am under {age_minimum}` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 | W-A05 | age-question | A-01 error, nothing chosen | `Choose yes or no` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 | W-A06 | under-18-reason | A-01 under-18 heading | `You can't have an account yet` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 | W-A07 | under-18-reason | A-01 under-18 why | `You need to be {age_minimum} or over to use this app. We did not make an account for you.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
-| W-A08 | under-18-reason | A-01 under-18 what to do | `You are welcome back when you turn {age_minimum}. If you chose the wrong answer, sign in again to answer again.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
+| W-A08 | under-18-reason | A-01 under-18 what to do | `You are welcome to come back when you turn {age_minimum}.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 | W-A09 | footage-notice | upload page and first-run screen | `Don't upload matches with anyone under {age_minimum}. Film only people who agree to be filmed.` | interim, pending legal review (OQ-05 accepted; NFR-070, P16) |
 
 ## 3. FR-008 How long videos are kept (R-01, match page)
@@ -58,11 +58,11 @@
 
 | ID | Kind | Where | Text | Marker |
 |---|---|---|---|---|
-| W-Q01 | over-limit | match setup, too many matches | `You have started {match_limit} matches in the last hour. You can start a new match at {time}.` | interim, pending the OQ-13 budget review (10 per hour accepted; P8) |
-| W-Q02 | over-limit | match setup, no time in the reply | `You have started a lot of matches in the last hour. You can start a new match within the hour.` | interim, pending the OQ-13 budget review (10 per hour accepted; P8) |
-| W-Q03 | quota | upload page, video too big for space left | `This video won't fit in your storage. You have used {used_gb} of {limit_gb} GB.` | interim, pending the OQ-13 quota size (20 GB is (judgment); P8) |
-| W-Q04 | quota | upload page, what to do | `Delete a match you no longer need, then try again.` | interim, pending the OQ-13 quota size (20 GB is (judgment); P8) |
-| W-Q05 | quota | upload page, usage line | `Storage: {used_gb} of {limit_gb} GB used` | interim, pending the OQ-13 quota size (20 GB is (judgment); P8) |
+| W-Q01 | over-limit | match setup, too many matches | `You have started {match_limit} matches in the last hour. You can start a new match at {time}.` | interim, pending legal review (OQ-13 accepted; NFR-070, P16); limit pending the OQ-13 budget review (10 per hour accepted; P8) |
+| W-Q02 | over-limit | match setup, no time in the reply | `You have started a lot of matches in the last hour. You can start a new match within the hour.` | interim, pending legal review (OQ-13 accepted; NFR-070, P16); limit pending the OQ-13 budget review (10 per hour accepted; P8) |
+| W-Q03 | quota | upload page, video too big for space left | `This video won't fit in your storage. You have used {used_gb} of {limit_gb} GB.` | interim, pending legal review (OQ-13 accepted; NFR-070, P16); size pending P8 (20 GB is (judgment)) |
+| W-Q04 | quota | upload page, what to do | `Delete a match you no longer need, then try again.` | interim, pending legal review (OQ-13 accepted; NFR-070, P16); size pending P8 (20 GB is (judgment)) |
+| W-Q05 | quota | upload page, usage line | `Storage: {used_gb} of {limit_gb} GB used` | interim, pending legal review (OQ-13 accepted; NFR-070, P16); size pending P8 (20 GB is (judgment)) |
 
 ## 6. Weakness unit (FR-120) and human-coach notice (FR-141) (P-01)
 
