@@ -77,7 +77,13 @@ def test_rows_of_another_plan_are_refused() -> None:
         from_rows(replace(rows, sessions=[stray, *rows.sessions[1:]]), _library())
 
 
-@pytest.mark.parametrize("prefs", [solo_wall(), solo_wall(20, 2), GROUP], ids=str)
+# Fixed ids: str(Preferences) embeds a frozenset whose order follows PYTHONHASHSEED,
+# so xdist workers would collect different ids and abort the run.
+@pytest.mark.parametrize(
+    "prefs",
+    [solo_wall(), solo_wall(20, 2), GROUP],
+    ids=["solo-wall-30min-3x", "solo-wall-20min-2x", "group-of-4-60min-3x"],
+)
 def test_rows_map_back_to_an_identical_plan(prefs: Preferences) -> None:
     plan = _plan(prefs)
     back = from_rows(to_rows(plan, plan_id=PLAN_ID, owner_id=OWNER, new_id=_ids()), _library())

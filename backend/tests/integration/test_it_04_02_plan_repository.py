@@ -158,7 +158,13 @@ def test_it_04_02c_a_save_on_an_old_version_is_refused(db_session: Session) -> N
 
 
 # ---------------------------------------------------------------- 2: round trip
-@pytest.mark.parametrize("prefs", [solo_wall(), solo_wall(20, 2), GROUP], ids=str)
+# Fixed ids: str(Preferences) embeds a frozenset whose order follows PYTHONHASHSEED,
+# so xdist workers would collect different ids and abort the run.
+@pytest.mark.parametrize(
+    "prefs",
+    [solo_wall(), solo_wall(20, 2), GROUP],
+    ids=["solo-wall-30min-3x", "solo-wall-20min-2x", "group-of-4-60min-3x"],
+)
 def test_it_04_02c_a_saved_plan_reads_back_identical(
     db_session: Session, prefs: Preferences
 ) -> None:
