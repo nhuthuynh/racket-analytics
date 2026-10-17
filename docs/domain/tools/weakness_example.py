@@ -9,6 +9,10 @@ the coach's own hand-count replay (hand_count_gs_an1.py, PROVISIONAL-UNVERIFIED 
 Run:   python3 docs/domain/tools/weakness_example.py            # print the rows
        python3 docs/domain/tools/weakness_example.py --check    # rc 1 unless every row is in
                                                                  # weakness-catalogue.md verbatim
+                                                                 # and every primary target
+                                                                 # (AN-07 split by share) is a
+                                                                 # coverage target of
+                                                                 # drill-review-checklist.md §3
 """
 
 from __future__ import annotations
@@ -22,6 +26,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hand_count_gs_an1 as hc  # sibling coach tool, not the product
 
 CATALOGUE = hc.REPO / "docs" / "domain" / "weakness-catalogue.md"
+CHECKLIST = hc.REPO / "docs" / "domain" / "drill-review-checklist.md"
+# Primary-metric label (§5, §7) -> plan target a drill must match (checklist §3 targets).
+# AN-07 is split by share (PE-R1-COACH4-01): the drill declares the share in `skills`.
+TARGET = {
+    "AN-01": "AN-01",
+    "AN-02": "AN-02",
+    "AN-04": "AN-04",
+    "AN-05": "AN-05",
+    "AN-07 fault": "AN-07:fault",
+    "AN-07 FE": "AN-07:forced-error",
+}
+LEVELS = 3  # beginner, intermediate, advanced
 # Catalogue order = tie-break order (§4).
 ORDER = (
     "unforced_errors",
@@ -137,6 +153,23 @@ def rows() -> list[str]:
     return out
 
 
+def backticked(line: str) -> list[str]:
+    return line.split("`")[1::2]
+
+
+def target_problems() -> list[str]:
+    """Every primary target of §5 must be a coverage target of checklist §3 (no share lost)."""
+    text = CHECKLIST.read_text() if CHECKLIST.exists() else ""
+    line = next((ln for ln in text.splitlines() if ln.startswith("- **Targets:**")), "")
+    listed = backticked(line)
+    out = [f"target {t} has no coverage cell" for t in TARGET.values() if t not in listed]
+    out += [f"coverage target {t} is no primary target" for t in listed if t not in TARGET.values()]
+    cells = f"**{LEVELS * len(TARGET)} cells**"
+    if cells not in text:
+        out.append(f"checklist §3 does not state {cells}")
+    return out
+
+
 def main() -> int:
     expected = rows()
     if "--check" not in sys.argv:
@@ -147,7 +180,14 @@ def main() -> int:
     for r in missing:
         print(f"MISSING in {CATALOGUE.relative_to(hc.REPO)}: {r}")
     print(f"weakness-examples: {len(expected) - len(missing)} of {len(expected)} rows match")
-    return 1 if missing else 0
+    ranking_cells = [c for r in expected for c in r.split("|")[4].strip().split("<br>")]
+    labels = {c.rsplit("; ", 1)[1].rstrip(")") for c in ranking_cells}
+    unknown = sorted(lb for lb in labels if lb not in TARGET)
+    problems = [f"primary label {lb} has no plan target" for lb in unknown] + target_problems()
+    for p in problems:
+        print(f"TARGET {CHECKLIST.relative_to(hc.REPO)}: {p}")
+    print(f"weakness-targets: {len(problems)} problem(s)")
+    return 1 if missing or problems else 0
 
 
 if __name__ == "__main__":
