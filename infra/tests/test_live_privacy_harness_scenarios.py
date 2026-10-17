@@ -52,10 +52,10 @@ class Stack:
             def log_message(self, *_: Any) -> None:
                 return
 
-            def _reply(self, status: int, body: Any = None, **headers: str) -> None:
+            def _reply(self, status: int, body: Any = None, headers: Any = None) -> None:
                 data = json.dumps(body).encode() if body is not None else b""
                 self.send_response(status)
-                for k, v in headers.items():
+                for k, v in (headers or {}).items():
                     self.send_header(k.replace("_", "-"), v)
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
@@ -68,7 +68,7 @@ class Stack:
                 length = int(self.headers.get("Upload-Length") or 0)
                 self._reply(*outer.answer(self.command, self.path, body, cookie, length))
 
-            do_GET = do_POST = do_PUT = _route  # noqa: N815
+            do_GET = do_POST = do_PUT = _route
 
         self.mail = mail
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -76,7 +76,8 @@ class Stack:
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
 
     def _account_row(self) -> None:
-        lp.psql(self.psql, f"INSERT INTO accounts VALUES ('{uuid.uuid4()}')")  # noqa: S608
+        if self.psql:  # only the age scenarios have a database
+            lp.psql(self.psql, f"INSERT INTO accounts VALUES ('{uuid.uuid4()}')")  # noqa: S608
 
     def answer(self, method: str, path: str, body: Any, cookie: str, length: int) -> tuple:
         route = f"{method} {re.sub(r'/[0-9a-f-]{36}', '/{id}', path)}"

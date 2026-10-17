@@ -75,7 +75,7 @@ def test_fill_sizes_reach_the_limit_exactly(limit, used, max_bytes, sizes) -> No
 
 @pytest.mark.parametrize("bad", [(10, 0, 0), (-1, 0, 4)])
 def test_fill_sizes_refuse_a_size_that_cannot_fill(bad) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="cannot fill"):
         lp.fill_sizes(*bad)
 
 
