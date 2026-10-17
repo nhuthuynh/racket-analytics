@@ -16,11 +16,12 @@ reconciled once its latest row, or that row's section heading, names the ticket,
 (``#n``) or its merge commit.
 
 With ``--base`` a row is also due when a ticket PR merged into the base (a GitHub merge commit
-"Merge pull request #n from ...", ticket = the ``[TICKET]`` of its title) changes a file that
-the row's Evidence cell cites, and the merge came after the row's latest line was last written
-(``git blame``; a row not yet committed is newer than every merge) (C4-RECON, VM-R3-02: FIX-03-2c
-changed the file an open row cited, and the check said "0 due"). The ledger file itself is never
-evidence: writing it is the reconciliation.
+"Merge pull request #n from ...", ticket = the ``[TICKET]`` of its title) after the row's latest
+line was last written (``git blame``; a row not yet committed is newer than every merge; the
+merge of the PR that wrote the row is not later than it) changes a file that the row's Evidence
+cell cites, or names one of the row's ids in its PR title (C4-RECON, VM-R3-02: FIX-03-2b named
+PE-PR24-01 and FIX-03-2c changed `sprint-03.md`, which an open row cited, and the check said
+"0 due"). The ledger file itself is never evidence: writing it is the reconciliation.
 
 Exit 0 when nothing is due, 1 when a row is due (the engineering-manager writes the row), 2 on
 a usage error (no review table, unreadable plan or decisions dir, a base or ledger git cannot
@@ -134,16 +135,19 @@ def _mentions(text: str, ticket: dict[str, Any]) -> bool:
     return any(re.search(edge.format(w), text) for w in words)
 
 
+def _row_context(lines: list[str], number: int) -> tuple[str, str]:
+    """The row's text without its finding-id cell, and the heading of its section."""
+    context = " | ".join(_cells(lines[number - 1])[1:])  # never the finding-id cell itself
+    heading = next((lines[i] for i in range(number - 1, -1, -1) if lines[i].startswith("#")), "")
+    return context, heading
+
+
 def due_rows(ledger_text: str, tickets: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Open blocker/major rows named by a ticket that neither the row nor its heading names."""
     lines = ledger_text.splitlines()
     due = []
     for row in open_defects(ledger_text):
-        latest = lines[row["line"] - 1]
-        context = " | ".join(_cells(latest)[1:])  # never the finding-id cell itself
-        heading = next(
-            (lines[i] for i in range(row["line"] - 1, -1, -1) if lines[i].startswith("#")), ""
-        )
+        context, heading = _row_context(lines, row["line"])
         named = [
             t
             for t in tickets
@@ -185,7 +189,8 @@ def cited_changes(changed: list[str], cited: list[str]) -> list[str]:
 
 
 def parse_merges(log: str) -> list[dict[str, Any]]:
-    """GitHub ticket PR merges from ``git log`` in the ``_merge_log`` format; others are skipped."""
+    """GitHub ticket PR merges from ``MergeHistory.merges_after``'s ``git log``; other merges
+    (no "Merge pull request #n from ...") are not ticket PRs and are skipped."""
     merges = []
     for record in log.split("\x1e"):
         head, _, names = record.partition("\x1d")
@@ -243,10 +248,7 @@ def evidence_due(
     due = []
     for row in rows:
         cited = evidence_paths(_evidence_cell(lines, row["line"]))
-        context = " | ".join(_cells(lines[row["line"] - 1])[1:])
-        heading = next(
-            (lines[i] for i in range(row["line"] - 1, -1, -1) if lines[i].startswith("#")), ""
-        )
+        context, heading = _row_context(lines, row["line"])
         hits = []
         for merge in merges_after(row["line"]):
             changed = cited_changes([f for f in merge["changed"] if f != ledger_path], cited)
