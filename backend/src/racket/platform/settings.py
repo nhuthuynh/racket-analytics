@@ -52,6 +52,30 @@ def _redact_url(url: str) -> str:
     return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
 
 
+def _retention_days(raw: str) -> int | None:
+    if raw == RETENTION_NONE:
+        return None
+    days = int(raw) if raw.isascii() and raw.isdigit() else 0
+    if days < 1:
+        raise ConfigurationError(
+            f"RETENTION_CHOICES_DAYS takes whole days of at least 1 or '{RETENTION_NONE}'"
+        )
+    return days
+
+
+def _retention_policy(
+    raw_choices: str, raw_default: str
+) -> tuple[tuple[int | None, ...], int | None]:
+    """The retention choices offered (OQ-07) and the default, which must be one of them."""
+    tokens = [token.strip() for token in raw_choices.split(",")]
+    choices = tuple(_retention_days(token) for token in tokens)
+    if len(set(choices)) != len(choices):
+        raise ConfigurationError("RETENTION_CHOICES_DAYS must not repeat a choice")
+    if raw_default not in tokens:
+        raise ConfigurationError("RETENTION_DEFAULT_DAYS must be one of RETENTION_CHOICES_DAYS")
+    return choices, choices[tokens.index(raw_default)]
+
+
 @dataclass(frozen=True)
 class Settings:
     app_env: str
@@ -154,19 +178,6 @@ class Settings:
                 return False
             raise ConfigurationError(f"{name} must be 'true' or 'false'")
 
-        def retention_days(name: str, raw: str) -> int | None:
-            if raw == RETENTION_NONE:
-                return None
-            try:
-                days = int(raw)
-            except ValueError:
-                days = 0
-            if days < 1:
-                raise ConfigurationError(
-                    f"{name} takes whole days of at least 1 or '{RETENTION_NONE}'"
-                )
-            return days
-
         app_env = required("APP_ENV")
         # The unsafe combination is reported first, whatever else is missing.
         dev_identity = boolean("DEV_IDENTITY_ENABLED", default=app_env == "test")
@@ -211,19 +222,10 @@ class Settings:
             raise ConfigurationError(
                 f"COACHING_WEAKNESS_UNIT must be one of {', '.join(WEAKNESS_UNITS)}"
             )
-        raw_choices = env.get("RETENTION_CHOICES_DAYS") or "30,90,365,none"
-        choices = tuple(
-            retention_days("RETENTION_CHOICES_DAYS", x.strip()) for x in raw_choices.split(",")
+        choices, retention_default = _retention_policy(
+            env.get("RETENTION_CHOICES_DAYS") or "30,90,365,none",
+            env.get("RETENTION_DEFAULT_DAYS") or "90",
         )
-        if len(set(choices)) != len(choices):
-            raise ConfigurationError("RETENTION_CHOICES_DAYS must not repeat a choice")
-        raw_default = env.get("RETENTION_DEFAULT_DAYS") or "90"
-        try:
-            retention_default = retention_days("RETENTION_DEFAULT_DAYS", raw_default)
-        except ConfigurationError:
-            retention_default = 0  # reported below with the choices
-        if retention_default not in choices:
-            raise ConfigurationError("RETENTION_DEFAULT_DAYS must be one of RETENTION_CHOICES_DAYS")
 
         return cls(
             app_env=app_env,
