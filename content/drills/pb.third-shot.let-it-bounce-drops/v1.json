@@ -29,7 +29,7 @@
   "setup": [
     "Server at the baseline, partner as receiver; serve as your rules allow (the fault rules are UNVERIFIED in this app)",
     "Receiver returns cooperatively, deep and soft, and stays back; the server lets the return bounce before hitting it (volleying the return counts as an own fault, `two_bounce`)",
-    "Server plays a soft third-shot drop aiming to land in the non-volley zone; the receiver catches the ball, so there is no live rally",
+    "Server plays a soft third-shot drop aiming to land in the non-volley zone; the receiver catches the ball, so the rally is not played out",
     "Rounds of 10 serves; swap roles after each round; count serve faults, two-bounce faults and drops that land in the zone"
   ],
   "success_criterion": "In each round of 10, at least 6 drops land in the non-volley zone with at most 1 own fault (serve or two-bounce)",
