@@ -1,10 +1,6 @@
-"""Shared helpers for C4-CA (VR3-S3-01): the optional ``extra_ca`` build secret.
-
-``rendered_secret_ids`` reads the secret ids each built service would hand BuildKit from a
-rendered ``docker compose config``. ``probe_build`` builds the small probe image
-(``fixtures/extra_ca/probe.Dockerfile``) through the real ``infra/compose.yaml`` secret wiring
-and returns what the build saw plus every layer's (decompressed) bytes.
-"""
+"""C4-CA (VR3-S3-01) helpers: ``rendered_secret_ids`` (per built service, from ``docker compose
+config``) and ``probe_build`` (``fixtures/extra_ca/probe.Dockerfile`` through the real compose
+secret wiring: what the build saw plus every layer's decompressed bytes)."""
 
 from __future__ import annotations
 

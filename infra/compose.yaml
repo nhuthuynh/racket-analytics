@@ -162,6 +162,7 @@ services:
       # to the source name, which no Dockerfile mounts, so the default build runs unchanged.
       # The Dockerfiles read it only inside RUN --mount=...,required=false: never in a layer.
       secrets: [{source: extra_ca_file, target: "${EXTRA_CA_FILE:+extra_ca}"}]
+      additional_contexts: {extra_ca_read: "/dev/${EXTRA_CA_FILE:+..}"}
       target: api
     command: ["python", "-m", "racket.platform.migrate"]
     environment:
@@ -217,6 +218,7 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
       args: *backend-build-args
       secrets: [{source: extra_ca_file, target: "${EXTRA_CA_FILE:+extra_ca}"}]
+      additional_contexts: {extra_ca_read: "/dev/${EXTRA_CA_FILE:+..}"}
       target: api
     environment:
       <<: [*app-env, *sign-in-env, *media-store-access]
@@ -266,6 +268,7 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
       args: *backend-build-args
       secrets: [{source: extra_ca_file, target: "${EXTRA_CA_FILE:+extra_ca}"}]
+      additional_contexts: {extra_ca_read: "/dev/${EXTRA_CA_FILE:+..}"}
       target: worker
     environment:
       <<: *app-env
@@ -323,6 +326,7 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
       args: *backend-build-args
       secrets: [{source: extra_ca_file, target: "${EXTRA_CA_FILE:+extra_ca}"}]
+      additional_contexts: {extra_ca_read: "/dev/${EXTRA_CA_FILE:+..}"}
       target: api
     command: ["python", "-m", "racket.worker"]
     environment:
@@ -362,6 +366,7 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
       args: *backend-build-args
       secrets: [{source: extra_ca_file, target: "${EXTRA_CA_FILE:+extra_ca}"}]
+      additional_contexts: {extra_ca_read: "/dev/${EXTRA_CA_FILE:+..}"}
       target: api
     command: ["python", "/opt/racket/purge_schedule.py", "python", "-m", "racket.platform.purge", "--once"]
     environment:
@@ -398,6 +403,7 @@ services:
         NODE_IMAGE: ${DOCKERHUB_REGISTRY:-docker.io}/library/node:22-slim
         BUILDKIT_SYNTAX: ${DOCKERHUB_REGISTRY:-docker.io}/docker/dockerfile:1.7
       secrets: [{source: extra_ca_file, target: "${EXTRA_CA_FILE:+extra_ca}"}]
+      additional_contexts: {extra_ca_read: "/dev/${EXTRA_CA_FILE:+..}"}
     environment:
       APP_ENV: ${APP_ENV:?set APP_ENV}
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:?set PUBLIC_API_BASE_URL}

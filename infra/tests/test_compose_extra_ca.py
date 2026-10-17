@@ -1,10 +1,7 @@
-"""IT-04-14 and unit tests for C4-CA (VR3-S3-01): the optional ``extra_ca`` build secret.
-
-Behind a TLS-intercepting proxy, ``EXTRA_CA_FILE=/path/ca.crt make up`` hands the proxy's CA to
-every built service as the BuildKit secret ``extra_ca``; the Dockerfiles use it only inside
-``RUN --mount=type=secret,id=extra_ca,required=false``, so it never lands in a layer. Unset (the
-default), the build secret id is ``extra_ca_file``, which no Dockerfile mounts: the default build
-runs exactly the steps it ran before. Negative cases first.
+"""IT-04-14 and unit tests for C4-CA (VR3-S3-01). ``EXTRA_CA_FILE=/path/ca.crt make up`` hands
+every built service the BuildKit secret ``extra_ca``, used only in ``RUN --mount=...,
+required=false`` so never in a layer. Unset (default), the id is ``extra_ca_file``, which no
+Dockerfile mounts: the default build runs the steps it ran before. Negative cases first.
 """
 
 from __future__ import annotations
@@ -32,6 +29,7 @@ from test_compose_registry import built
 needs_docker = pytest.mark.skipif(shutil.which("docker") is None, reason="docker CLI missing")
 SOURCE = "extra_ca_file"
 TARGET = "${EXTRA_CA_FILE:+extra_ca}"
+GRANT, GRANT_DIR = "extra_ca_read", "/dev/${EXTRA_CA_FILE:+..}"  # /dev/ unset, else /dev/.. = /
 DOCKERFILES = sorted((REPO_ROOT / "infra" / "docker").glob("*.Dockerfile"))
 
 
@@ -67,6 +65,7 @@ def test_no_dockerfile_requires_extra_ca_or_copies_it_into_a_layer(dockerfile: P
     text = dockerfile.read_text()
     mounts = re.findall(r"--mount=type=secret,id=extra_ca\S*", text)
     assert mounts, "the Dockerfile never mounts extra_ca"
+    assert GRANT not in text, "the fs.read grant context must never reach a build stage"
     assert all(m == "--mount=type=secret,id=extra_ca,required=false" for m in mounts), mounts
     for line in text.splitlines():
         if "/run/secrets/extra_ca" in line:
@@ -74,6 +73,13 @@ def test_no_dockerfile_requires_extra_ca_or_copies_it_into_a_layer(dockerfile: P
 
 
 # ---------------------------------------------------------------- unit: positive cases
+@pytest.mark.unit
+def test_every_build_service_grants_bake_fs_read_for_the_secret_file() -> None:
+    """buildx >= 0.38 bake refuses a secret file outside its cwd without fs.read; Compose grants
+    fs.read only for build contexts, so an unused named context covers the secret's path."""
+    assert all(b.get("additional_contexts", {}).get(GRANT) == GRANT_DIR for b in built().values())
+
+
 @pytest.mark.unit
 def test_the_secret_reads_extra_ca_file_and_defaults_to_an_empty_unmounted_source() -> None:
     top = yaml.safe_load(COMPOSE.read_text())["secrets"]
