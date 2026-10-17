@@ -77,6 +77,8 @@ markers = [
     "golden_an: golden matches GS-AN-1 (ST-049): product stats equal the coach's hand count exactly (NFR-004, G03-08 a)",
     "analytics: starter stats, uncertainty and the metric dictionary (Gherkin @analytics; G03-08 b, d)",
     "conservation: FR-109 attribution conservation, incl. the >= 1,000-match property (Gherkin @conservation; G03-08 c)",
+    "coaching: weakness ranking and training plan (Gherkin @coaching; G04-03 b)",
+    "weakness_golden: weakness ranking equals the coach's worked examples, catalogue §7 (G04-03 a)",
     "needs_verification: depends on a pickleball rule not yet verified by the domain coach (DOM G1); reported separately",
     "milestone(name=...): spec milestone tag from Gherkin, e.g. @M0",
     "story(id=...): story tag from Gherkin, e.g. @story-ST-008",
