@@ -137,6 +137,8 @@ def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
         marker = pytest.mark.conservation
     elif tag == "golden_an":
         marker = pytest.mark.golden_an
+    elif tag == "coaching":
+        marker = pytest.mark.coaching
     elif m := _STORY.fullmatch(tag):
         marker = pytest.mark.story(id=m.group(1))
     elif m := _NFR.fullmatch(tag):
