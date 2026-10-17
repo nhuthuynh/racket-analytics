@@ -1,13 +1,7 @@
-# Sprint 4, ticket C4-RED (sre-devops-engineer). Written before scripts/ci/check_red_first.py.
-# Binding: infra/tests/test_red_first_check_scenarios.py (real git, the `Red first` step of the
-# pr-policy job in .github/workflows/ci.yml run verbatim on the PR merge ref).
-# Source: retro 3 B5 (A5), R3-IN-1; QA-R1S3-09/-10 (TDD order not shown in Sprint 3).
+# Sprint 4, C4-RED (sre-devops-engineer; retro 3 B5, R3-IN-1). Written before the check. Binding:
+# infra/tests/test_red_first_check_scenarios.py (real git, ci.yml pr-policy steps, merge ref).
 @M0 @nfr-077 @ticket-C4-RED
 Feature: A code commit in a pull request shows its red step first
-
-  A "code commit" adds or changes production code under backend/src or web/src. Its red step is
-  either a "Red:" line in its own commit body or an earlier "test-only commit" in the same pull
-  request (tests changed, no production code). Merge commits are not judged.
 
   Background:
     Given a pull request opened against main
@@ -20,7 +14,7 @@ Feature: A code commit in a pull request shows its red step first
       Then the red-first check fails
       And it names the commit "feat: add a rule" and the path "backend/src/racket/rule.py"
 
-    Scenario: A web code commit with no red step fails even when a later commit adds tests
+    Scenario: A web code commit fails even when a later commit adds its tests
       Given the pull request has a commit "feat: add a screen" changing "web/src/app/screen.tsx"
       And the pull request has a test-only commit "test: screen spec" changing "web/tests/unit/screen.test.tsx"
       When the PR policy checks run on the merge ref
@@ -42,12 +36,12 @@ Feature: A code commit in a pull request shows its red step first
 
   Rule: Pull requests without production code pass
 
-    Scenario: A docs-only PR passes
-      Given the pull request has a commit "docs: notes" changing "docs/notes.md"
+    Scenario Outline: A <kind> PR passes
+      Given the pull request has a commit "<subject>" changing "<path>"
       When the PR policy checks run on the merge ref
       Then the red-first check passes
 
-    Scenario: A test-only PR passes
-      Given the pull request has a test-only commit "test: red rule" changing "backend/tests/unit/test_rule.py"
-      When the PR policy checks run on the merge ref
-      Then the red-first check passes
+      Examples:
+        | kind      | subject        | path                            |
+        | docs-only | docs: notes    | docs/notes.md                   |
+        | test-only | test: red rule | backend/tests/unit/test_rule.py |
