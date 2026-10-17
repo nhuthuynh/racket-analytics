@@ -16,3 +16,9 @@ The two Sprint 3 rows still open stay in the Sprint 3 ledger (they close there, 
 |---|---|---|---|---|
 | PE-PLAN04-01 | major | Fixed (engineering-manager, 2026-10-17): OQ-05..OQ-08 recorded as PO-accepted (ADR 0023) in `po-input-2026-10-05.md`, ADR 0051, sprint-04, scorecard, blockers and roadmap; P16 is now the NFR-070 legal review; S4-DoD-P7 added for the side-out rule check; `decisions/PLAN-04.md` row | engineering-manager | — |
 | QA-PLAN04-01 | major | Fixed (engineering-manager, 2026-10-17): scorecard §4 G04-03, G04-06, G04-07/08 and G04-11 rewritten to the scripts' real flags; each new form run at `c8ca483` (`decisions/PLAN-04.md` row) | engineering-manager | — |
+
+## PLAN-04 (PR #87), review round 2
+
+| Finding | Severity | Disposition | Owner (Sprint 4) | Waits on |
+|---|---|---|---|---|
+| QA-PLAN04-05 | major | Fixed (engineering-manager, 2026-10-17): scorecard §4 common setup is `GOAL=$PWD/reports/goal04`; `../$GOAL` dropped in G04-03 and G04-04; the `cd web` / `cd backend` sequence re-run at the fix (`decisions/PLAN-04.md` row) | engineering-manager | — |
