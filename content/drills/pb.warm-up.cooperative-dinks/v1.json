@@ -32,5 +32,5 @@
   "regressions": [],
   "safety_notes": "Cooperative pace, no speed-ups. Stop if in pain.",
   "coach_rationale": "(judgment) The common on-court warm-up; soft, cooperative contact sets touch and the ready position before live balls. Unverified coaching content until a human coach reviews the library (P15).",
-  "review_status": "draft"
+  "review_status": "coach-reviewed"
 }
