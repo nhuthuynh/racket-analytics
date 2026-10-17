@@ -39,13 +39,9 @@ export function SignInForm({
   const [attempt, setAttempt] = useState(0);
   const [sending, setSending] = useState(false);
   const [offline, setOffline] = useState(false);
-  // False in the server HTML: until React has attached onSubmit, a tap would be a native GET
-  // submit (/?email=..., the address in the URL) and typing would be lost (CI-SIGNIN-HYDRATION).
-  const [hydrated, setHydrated] = useState(false);
   const busy = useRef(false);
 
   useEffect(() => {
-    setHydrated(true);
     const update = () => setOffline(typeof navigator !== 'undefined' && navigator.onLine === false);
     update();
     window.addEventListener('online', update);
@@ -137,10 +133,9 @@ export function SignInForm({
             onChange={(e) => setEmail(e.target.value)}
             aria-describedby={fieldError ? 'email-hint email-error' : 'email-hint'}
             aria-invalid={fieldError ? true : undefined}
-            disabled={!hydrated}
           />
         </div>
-        <button type="submit" className="button" aria-busy={sending} disabled={!hydrated}>
+        <button type="submit" className="button" aria-busy={sending}>
           {sending ? 'Sending…' : copy.button}
         </button>
       </form>
