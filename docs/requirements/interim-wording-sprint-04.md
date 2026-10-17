@@ -89,6 +89,14 @@ REQUIRED = {"age-question", "under-18-reason", "footage-notice", "retention", "c
 BANNED = ["retention", "quota", "consent", "minor", "processing", "processed", "label set", "dataset",
           "rate limit", "revoke", "opt in", "opt-in", "purge", "lawful", "jurisdiction", "biometric",
           "pursuant", "hereby", "analytics", "algorithm", "normalised", "invalid"]
+LEGAL = ["interim, pending legal review", "NFR-070", "P16"]
+MARKER_TOKENS = {k: LEGAL for k in ("age-question", "under-18-reason", "footage-notice",
+                                    "retention", "consent", "over-limit")}
+MARKER_TOKENS["quota"] = LEGAL + ["size pending P8"]
+MARKER_TOKENS["weakness-unit"] = ["P7"]
+MARKER_TOKENS["human-coach-notice"] = ["P15"]
+AGE_PATH_BANNED = ["again", "only ask once", "try another", "change your answer"]
+KIND_BANNED = {"age-question": AGE_PATH_BANNED, "under-18-reason": AGE_PATH_BANNED}
 def syllables(word):
     w = re.sub(r"[^a-z]", "", word.lower())
     if not w:
@@ -120,6 +128,10 @@ for line in open(sys.argv[1], encoding="utf-8"):
         rows.append(kind)
         if not re.match(r"interim, pending .*\b(OQ-\d\d|P\d+)\b", marker):
             failures.append(f"{rid}: marker must start 'interim, pending' and name OQ-nn or P-n")
+        failures += [f"{rid}: marker lacks '{t}'" for t in MARKER_TOKENS.get(kind, [])
+                     if not re.search(r"(?<![\w-])" + re.escape(t) + r"(?![\w-])", marker)]
+        failures += [f"{rid}: '{b}' not allowed for {kind}" for b in KIND_BANNED.get(kind, [])
+                     if re.search(r"\b" + re.escape(b) + r"\b", text.lower())]
         failures += [f"{rid}: {p}" for p in problems(text)]
 missing = REQUIRED - set(rows)
 if missing:
