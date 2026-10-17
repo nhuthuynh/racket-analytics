@@ -40,6 +40,33 @@ Feature: Billing alerts at 50/80/100% of the monthly budget (NFR-022)
         | object_store | 80        |
         | object_store | 100       |
 
+  Rule: the threshold holds for any budget amount, not only round ones (PE-073-01,
+        SBE-ST073-R1-01): 2.4 / 3 is 0.7999999999999999 in binary floating point
+
+    Scenario Outline: A budget that is not a round number, 1% below a threshold -> no alert
+      Given the monthly budget for "<provider>" is <budget> USD
+      When the month-to-date spend for "<provider>" is <below>% of the budget
+      Then the <threshold>% alert for "<provider>" does not fire
+
+      Examples:
+        | provider     | budget | threshold | below |
+        | llm_provider | 3      | 80        | 79    |
+        | object_store | 333    | 80        | 79    |
+
+    Scenario Outline: A budget that is not a round number, at a threshold -> its alert fires
+      Given the monthly budget for "<provider>" is <budget> USD
+      When the month-to-date spend for "<provider>" is <threshold>% of the budget
+      Then the <threshold>% alert for "<provider>" fires
+
+      Examples:
+        | provider     | budget | threshold |
+        | llm_provider | 3      | 80        |
+        | llm_provider | 7      | 80        |
+        | object_store | 12     | 80        |
+        | object_store | 333    | 80        |
+        | object_store | 333    | 50        |
+        | llm_provider | 333    | 100       |
+
   Rule: budgets are env settings; a missing or invalid one fails closed and names only the variable
 
     Scenario: A missing budget setting -> no budget metric, error names the variable

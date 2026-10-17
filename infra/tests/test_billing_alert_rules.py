@@ -42,6 +42,11 @@ SETTINGS = (
 )
 SEVERITY = {50: "info", 80: "warning", 100: "critical"}
 RECEIVER = "billing-owner"
+# Absorbs the float rounding of spend / budget (PE-073-01): any cent-exact spend at t * budget
+# must fire. 1e-9 is far above that error (~3 ulp, < 1e-15) and far below one cent of any budget
+# under 10 million USD (0.01 / 1e7 = 1e-9), so one cent below a threshold still does not fire.
+RATIO_TOLERANCE = 1e-9
+COMPARISON = re.compile(r">= (?P<t>[\d.]+)(?: - (?P<eps>[\d.e-]+))?$")
 
 
 def _budgets_module():
@@ -153,7 +158,7 @@ def test_each_rule_compares_spend_with_its_share_of_the_budget(
     expr = " ".join(rule["expr"].split())
     assert f'{SPEND_METRIC}{{provider="{provider}"}}' in expr
     assert f'{BUDGET_METRIC}{{provider="{provider}"}}' in expr
-    assert expr.endswith(f">= {threshold / 100:g}"), expr
+    assert expr.endswith(f">= {threshold / 100:g} - {RATIO_TOLERANCE:g}"), expr
     assert rule.get("for", "0s") in ("0s", "0m")
     assert rule["labels"] == {
         "threshold_percent": str(threshold),
@@ -162,6 +167,58 @@ def test_each_rule_compares_spend_with_its_share_of_the_budget(
     }
     assert set(rule["annotations"]) == {"summary", "runbook"}
     assert rule["annotations"]["runbook"] == "docs/ops/billing-alerts.md"
+
+
+def _fires(rule: dict, spend: float, budget: float) -> bool:
+    """The rule's comparison under IEEE 754 binary64, the arithmetic PromQL (Go float64) uses."""
+    match = COMPARISON.search(" ".join(rule["expr"].split()))
+    assert match, rule["expr"]
+    return spend / budget >= float(match["t"]) - float(match["eps"] or 0)
+
+
+def _usd(cents: int) -> float:
+    """A cent-exact amount as Prometheus parses it from text, e.g. 26640 -> float('266.4')."""
+    return float(f"{cents // 100}.{cents % 100:02d}")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("threshold", THRESHOLDS)
+def test_one_cent_below_a_threshold_does_not_fire_for_budgets_up_to_a_million(
+    provider: str, threshold: int
+) -> None:
+    rule = rule_by_alert(alert_name(provider, threshold))
+    for budget_usd in (1, 3, 7, 12, 333, 1000, 250_000, 999_999):
+        spend_cents = budget_usd * threshold - 1
+        assert not _fires(rule, _usd(spend_cents), float(budget_usd)), (budget_usd, spend_cents)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("threshold", THRESHOLDS)
+def test_a_cent_exact_spend_at_a_threshold_fires_for_any_whole_dollar_budget(
+    provider: str, threshold: int
+) -> None:
+    """PE-073-01 / SBE-ST073-R1-01: 2.4 / 3 == 0.7999999999999999, so `>= 0.8` alone misses."""
+    rule = rule_by_alert(alert_name(provider, threshold))
+    missed = [
+        budget_usd
+        for budget_usd in range(1, 5001)
+        if not _fires(rule, _usd(budget_usd * threshold), float(budget_usd))
+    ]
+    assert missed == [], f"{len(missed)} budgets miss, e.g. {missed[:5]}"
+
+
+@pytest.mark.unit
+def test_committed_rule_test_has_a_budget_that_is_not_a_round_number() -> None:
+    doc = yaml.safe_load(RULE_TEST.read_text(encoding="utf-8"))
+    budgets = {
+        float(values.split("x")[0])
+        for case in doc["tests"]
+        for series, values in ((s["series"], s["values"]) for s in case["input_series"])
+        if series.startswith(BUDGET_METRIC)
+    }
+    assert {3.0, 333.0} <= budgets, budgets
 
 
 @pytest.mark.unit
