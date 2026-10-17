@@ -25,6 +25,10 @@ from racket.coaching.weakness.domain import (
 )
 from tests.unit.analytics.sheets import WORKED_EXAMPLE, one_game
 
+# The feature's @coaching tag as a marker for G04-03 (b) `-m "coaching and scenario"`; set here,
+# so the shared Gherkin tag map (tests/conftest.py) stays unchanged.
+pytestmark = [pytest.mark.coaching]
+
 scenarios("weakness_ranking.feature")
 
 MATCH = uuid.UUID(int=55)
