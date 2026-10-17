@@ -253,6 +253,135 @@ def test_it_04_02_a_stale_plan_is_regenerated_on_read_with_its_preferences(
     assert _plans(committed_db) == 1
 
 
+def _cited_matches(plan: dict[str, Any]) -> set[str]:
+    return {
+        e["match_id"]
+        for s in plan["sessions"]
+        for a in s["assignments"]
+        for e in a["citation"]["evidence"]
+    }
+
+
+def _rows_naming(engine: Any, match_id: str) -> dict[str, int]:
+    with engine.connect() as conn:
+        return {
+            t: int(
+                conn.execute(
+                    sa.text(f"SELECT count(*) FROM {t} WHERE match_id = :m"), {"m": match_id}
+                ).scalar_one()
+            )
+            for t in ("plan_source_matches", "plan_citation_rallies")
+        }
+
+
+def test_it_04_02_deleting_one_of_two_source_matches_regenerates_the_plan_on_read(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    """PE-ST061b-01 (coaching-plan §8): from the DELETE on, the plan whose sources include the
+    match is stale; GET rebuilds it from the match left, not the old drills and numbers."""
+    kept = st.tagged_example(api, "ivy", "IT-04-02 kept")
+    gone = st.tagged_example(api, "ivy", "IT-04-02 gone")
+    old = _created(api, "ivy")
+    assert _cited_matches(old) == {kept, gone}
+    assert old["limited_data"] == {"rallies": 26}
+    assert st.delete_match(api, "ivy", gone).status_code == 202
+    response = api.request("ivy", "GET", PLAN)
+    assert response.status_code == 200, response.text
+    new = response.json()
+    assert new["regenerated"] == "source_match_deleted"
+    assert new["id"] != old["id"]
+    assert new["preferences"] == old["preferences"]
+    assert _cited_matches(new) == {kept}
+    assert new["limited_data"] == {"rallies": 13}
+    assert api.request("ivy", "GET", PLAN).json() == new | {"regenerated": None}
+    assert _plans(committed_db) == 1
+
+
+def test_it_04_02_the_purge_of_a_source_match_marks_the_plan_stale_and_keeps_no_row_of_it(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    """T4-PL-9 / SEC-S4-TM-03 (coaching-plan §8): one purge pass after the DELETE leaves no plan
+    row naming the match, even if the plan is never read, and the plan is stale until read."""
+    kept = st.tagged_example(api, "ivy", "IT-04-02 purge kept")
+    gone = st.tagged_example(api, "ivy", "IT-04-02 purge gone")
+    _created(api, "ivy")
+    assert _rows_naming(committed_db, gone)["plan_source_matches"] == 1
+    assert _rows_naming(committed_db, kept)["plan_source_matches"] == 1
+    assert st.delete_match(api, "ivy", gone).status_code == 202
+    st.run_purge_once()
+    assert _rows_naming(committed_db, gone) == {
+        "plan_source_matches": 0,
+        "plan_citation_rallies": 0,
+    }
+    left = {k: n for k, n in st.rows_holding(committed_db, [gone]).items() if n}
+    assert left == {}, f"rows still name the purged match: {left}"
+    with committed_db.connect() as conn:
+        assert conn.execute(sa.text("SELECT stale FROM training_plans")).scalar_one() is True
+    new = api.request("ivy", "GET", PLAN).json()
+    assert new["regenerated"] == "source_match_deleted"
+    assert _cited_matches(new) == {kept}
+    assert _rows_naming(committed_db, kept)["plan_source_matches"] == 1
+
+
+def test_it_04_02_a_plan_that_no_longer_fits_after_a_deletion_is_deleted_on_read(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    """QA-ST061b-R1-01 (coaching-plan §8): the stale plan cannot be rebuilt from the match left
+    (it gives no plan that fits), so GET deletes it and answers 404 ``no_plan``."""
+    gone = st.tagged_example(api, "ivy", "IT-04-02 refit gone")
+    st.tag_games(api, "ivy", st.timed(st.no_score_script(20)), "IT-04-02 refit kept")
+    _created(api, "ivy")
+    assert st.delete_match(api, "ivy", gone).status_code == 202
+    assert st.refusal(api.request("ivy", "GET", PLAN))[:2] == (404, "no_plan")
+    assert _plans(committed_db) == 0
+    assert st.refusal(_post(api, "ivy"))[:2] == (409, "no_plan_fits")  # the same data on POST
+
+
+def test_it_04_02_a_plan_the_live_data_no_longer_cites_is_regenerated_on_read(
+    api: ApiDriver, committed_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QA-ST061b-R1-01 (coaching-plan §8, decision row 7): every source match is still live,
+    but the live numbers no longer cite one of the saved plan's targets (as when a scorebook
+    correction removes the last rally of a weakness), so ``CitedPlan`` refuses the saved plan
+    and GET rebuilds it. Fault injection: on the GET the ranking and citation ACLs drop that
+    weakness and its target; the real ACLs run underneath. The dropped target is not AN-04,
+    which every warm-up trains."""
+    from dataclasses import replace
+
+    from racket.coaching.plan import acl as citations
+    from racket.coaching.weakness import acl as ranking
+
+    st.tagged_example(api, "ivy", "IT-04-02 uncited")
+    old = _created(api, "ivy")
+    cited = {a["citation"]["metric_id"] for s in old["sessions"] for a in s["assignments"]}
+    dropped = min(cited - {"AN-04"})
+    real_citations, real_ranking = citations.citations_for, ranking.ranking_for
+
+    def without_citation(session: Any, owner_id: uuid.UUID) -> Any:
+        facts = real_citations(session, owner_id)
+        kept = {t: c for t, c in facts.citations.items() if c.metric_id != dropped}
+        return citations.CitationFacts(kept, facts.rallies)
+
+    def without_weakness(session: Any, owner_id: uuid.UUID) -> Any:
+        found = real_ranking(session, owner_id)
+        kept = [w for w in found.weaknesses if w.plan_target.split(":")[0] != dropped]
+        ranked = tuple(replace(w, rank=rank) for rank, w in enumerate(kept, 1))
+        return replace(found, weaknesses=ranked)
+
+    monkeypatch.setattr(citations, "citations_for", without_citation)
+    monkeypatch.setattr(ranking, "ranking_for", without_weakness)
+    response = api.request("ivy", "GET", PLAN)
+    assert response.status_code == 200, response.text
+    new = response.json()
+    assert new["regenerated"] == "source_match_deleted"
+    assert new["id"] != old["id"]
+    assert new["preferences"] == old["preferences"]
+    assert dropped not in {
+        a["citation"]["metric_id"] for s in new["sessions"] for a in s["assignments"]
+    }
+    assert _plans(committed_db) == 1
+
+
 # ------------------------------------------------------------------ NFR-019 and OpenAPI
 def test_it_04_02_nfr_019_generation_p95_is_at_most_5_s(api: ApiDriver, committed_db: Any) -> None:
     for n in range(3):

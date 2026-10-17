@@ -48,3 +48,14 @@ Feature: Rules-only plan from the API
       Given "ivy" has tagged the worked example
       And "ivy" has a plan as a solo player with a wall, 30 minutes per session, 3 sessions a week
       Then "carlos" has no plan to read
+
+  Rule: A deleted match is never the basis of a plan
+
+    Scenario: Deleting one of two cited matches rebuilds the plan from the match left
+      Given "ivy" has tagged the worked example in 2 matches
+      And "ivy" has a plan as a solo player with a wall, 30 minutes per session, 3 sessions a week
+      When "ivy" deletes one of the 2 matches
+      And "ivy" reads the plan
+      Then the plan is regenerated because a source match was deleted
+      And no drill cites the deleted match
+      And the plan read says it is based on limited data from 13 rallies

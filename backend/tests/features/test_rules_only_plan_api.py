@@ -60,6 +60,11 @@ def tagged_example(api: ApiDriver, user: str) -> None:
     st.tagged_example(api, user, "ST-061b worked example")
 
 
+@given(parsers.parse('"{user}" has tagged the worked example in {count:d} matches'))
+def tagged_examples(api: ApiDriver, ctx: dict[str, Any], user: str, count: int) -> None:
+    ctx["matches"] = [st.tagged_example(api, user, f"ST-061b match {i}") for i in range(count)]
+
+
 @given(
     parsers.parse(
         '"{user}" has a plan as a solo player with a wall, 30 minutes per session, '
@@ -107,6 +112,43 @@ def ask_out_of_range(
 def ask_nothing_fits(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
     body = SOLO_WALL | {"equipment": [], "level": "advanced"}
     ctx["response"] = api.request(user, "POST", PLAN, json=body)
+
+
+@when(parsers.parse('"{user}" deletes one of the {count:d} matches'))
+def delete_one(api: ApiDriver, ctx: dict[str, Any], user: str, count: int) -> None:
+    assert len(ctx["matches"]) == count
+    ctx["deleted"] = ctx["matches"][-1]
+    assert st.delete_match(api, user, ctx["deleted"]).status_code == 202
+
+
+@when(parsers.parse('"{user}" reads the plan'))
+def read_plan(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
+    ctx["read"] = api.request(user, "GET", PLAN)
+
+
+def _read(ctx: dict[str, Any]) -> dict[str, Any]:
+    response = ctx["read"]
+    assert isinstance(response, httpx.Response)
+    assert response.status_code == 200, response.text
+    body: dict[str, Any] = response.json()
+    return body
+
+
+@then("the plan is regenerated because a source match was deleted")
+def regenerated(ctx: dict[str, Any]) -> None:
+    assert _read(ctx)["regenerated"] == "source_match_deleted"
+
+
+@then("no drill cites the deleted match")
+def not_cited(ctx: dict[str, Any]) -> None:
+    for s in _read(ctx)["sessions"]:
+        for a in s["assignments"]:
+            assert [e["match_id"] for e in a["citation"]["evidence"]] == ctx["matches"][:1], a
+
+
+@then(parsers.parse("the plan read says it is based on limited data from {rallies:d} rallies"))
+def read_limited(ctx: dict[str, Any], rallies: int) -> None:
+    assert _read(ctx)["limited_data"] == {"rallies": rallies}
 
 
 @then(parsers.parse('the answer is {status:d} "{code}" with the reason "{reason}"'))
