@@ -39,6 +39,7 @@ from live_tagging import Session, _fetch, upload_video
 from livehttp import Client, sign_in, ssl_context
 
 BURST, PER_HOUR, BILLING_RULES = 50, 10, 6
+Stored = tuple[int | None, int | None]  # object-store bytes before and after a refusal
 FLAG_ROUTES = (("GET", "/me/retention"), ("GET", "/me/training-consent"), ("GET", "/me/quota"))
 PLAN_BODY = {"minutes_per_session": 60, "sessions_per_week": 2, "players_available": 4,
              "equipment": ["full_court"], "level": "intermediate"}  # fmt: skip
@@ -79,7 +80,7 @@ def burst_problems(replies: list[tuple[int, Any]], *, flags_on: bool) -> list[st
 
 
 def quota_problems(
-    status: int, body: Any, location: str | None, stored: tuple, *, flags_on: bool
+    status: int, body: Any, location: str | None, stored: Stored, *, flags_on: bool
 ) -> list[str]:
     body = body if isinstance(body, dict) else {}
     if not flags_on:
@@ -119,8 +120,12 @@ def _step(problems: list[str], **facts: Any) -> dict[str, Any]:
     return {"ok": not problems, "problems": problems, **facts}
 
 
+def _client(args: argparse.Namespace) -> Client:
+    return Client(args.api, args.origin, ssl_context(args.cacert, args.insecure_loopback))
+
+
 def _account(args: argparse.Namespace) -> Client:
-    c = Client(args.api, args.origin, ssl_context(args.cacert, args.insecure_loopback))
+    c = _client(args)
     if not sign_in(c, args.mailpit)["ok"]:
         raise RuntimeError("sign-in failed")
     if args.flags == "on":
@@ -133,7 +138,7 @@ def _account(args: argparse.Namespace) -> Client:
 def age_step(args: argparse.Namespace) -> tuple[dict[str, Any], Client | None]:
     try:
         before = first_int(psql(args.psql, "SELECT count(*) FROM accounts"))
-        minor = Client(args.api, args.origin, ssl_context(args.cacert, args.insecure_loopback))
+        minor = _client(args)
         signed = sign_in(minor, args.mailpit)["ok"]
         r = minor.request("POST", "/me/age-confirmation", json_body={"is_adult": False})
         body, after_me = r.json() or {}, minor.request("GET", "/me").status
