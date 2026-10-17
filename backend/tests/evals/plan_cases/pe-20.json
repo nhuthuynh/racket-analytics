@@ -1,7 +1,7 @@
 {
- "description": "pairs, 30 min x 5/week, half_court, ball_machine, advanced; high sample (259 tags in 3 match(es)), 'unforced' losses, player on side A (doubles)",
+ "description": "pairs, 30 min x 5/week, half_court, ball_machine, advanced; high sample (259 tags in 3 match(es)), 'unforced' losses, player on side A (doubles) Refusal: every reviewed advanced half-court drill lasts at least 15 minutes, over the 12-minute cap of a 30-minute session.",
  "dimensions": {"ball_machine": true, "level": "advanced", "minutes_per_session": 30, "players": "pairs", "sample": "high", "wall": false},
- "expect": "plan",
+ "expect": "no_plan_fits",
  "id": "pe-20",
  "preferences": {"equipment": ["ball_machine", "half_court"], "level": "advanced", "minutes_per_session": 30, "players_available": 2, "sessions_per_week": 5},
  "matches": [

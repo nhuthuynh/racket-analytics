@@ -12,7 +12,10 @@ itself has no randomness.
 ``expect`` is the case author's oracle, written from the drill library's rules and not from a
 run: a session cap under 10 minutes (40% of under 25 minutes) fits no weakness drill (every one
 lasts at least 10), a solo player has no reviewed weakness drill above intermediate, and a solo
-player without a wall or a full court has no reviewed weakness drill at all.
+player without a wall or a full court has no reviewed weakness drill at all, and every reviewed
+advanced drill that needs only a half court lasts at least 15 minutes (cap 15 needs a 38-minute
+session). The last rule was missed at first and found by the first green run (pe-20; decisions
+file ST-060).
 """
 
 from __future__ import annotations
@@ -236,7 +239,21 @@ SPECS = [
     Spec("pe-17", 2, 25, 4, ("half_court",), "beginner", "high", "unforced", side="B"),
     Spec("pe-18", 2, 50, 3, (*FULL, "wall", "ball_machine"), "beginner", "high", "winners-against"),
     Spec("pe-19", 2, 75, 2, FULL, "intermediate", "low", "pressure", side="B"),
-    Spec("pe-20", 2, 30, 5, ("half_court", "ball_machine"), "advanced", "high", "unforced"),
+    Spec(
+        "pe-20",
+        2,
+        30,
+        5,
+        ("half_court", "ball_machine"),
+        "advanced",
+        "high",
+        "unforced",
+        expect="no_plan_fits",
+        notes=[
+            "Refusal: every reviewed advanced half-court drill lasts at least 15 minutes, "
+            "over the 12-minute cap of a 30-minute session."
+        ],
+    ),
     Spec(
         "pe-21",
         2,
