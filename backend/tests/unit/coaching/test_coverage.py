@@ -13,8 +13,8 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from racket.coaching.drills.coverage import TARGETS, check_coverage, render
 
+from racket.coaching.drills.coverage import TARGETS, check_coverage, render
 from racket.coaching.plan.domain.model import LEVELS, Drill
 from tests.unit.coaching.drill_helpers import a_drill
 
