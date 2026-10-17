@@ -21,6 +21,8 @@ import json
 from typing import Any
 
 import pytest
+
+from racket.coaching.drills.lint import lint_path
 from racket.coaching.plan.domain import (
     Drill,
     Infeasible,
@@ -29,8 +31,6 @@ from racket.coaching.plan.domain import (
     TrainingPlan,
     assemble,
 )
-
-from racket.coaching.drills.lint import lint_path
 from racket.sports.pickleball.metrics import load_dictionary
 from tests.support.paths import REPO
 from tests.unit.coaching.plan_helpers import plan_problems, warm_up

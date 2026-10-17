@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
+
 from racket.coaching.plan.domain import (
     NO_DRILL_FITS,
     Infeasible,
@@ -19,7 +20,6 @@ from racket.coaching.plan.domain import (
     TrainingPlan,
     assemble,
 )
-
 from tests.unit.coaching.plan_helpers import plan_problems, plan_targets, reviewed_test_library
 
 scenarios("training_plan.feature")
