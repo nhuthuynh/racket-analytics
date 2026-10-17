@@ -263,3 +263,5 @@ One row per decider; the decider replaces "pending" with its cells for the items
 | product-manager | R4-2, R4-4, R4-5, R4-6, R4-7 | 2026-10-17 | 2026-10-18 | pending |
 | security-privacy-engineer | R4-4, R4-5, R4-6 | 2026-10-17 | 2026-10-18 | pending |
 | business-analyst | R4-1, R4-3, R4-5, R4-6, R4-7, R4-8 | 2026-10-17 | 2026-10-18 | pending |
+
+**Hold status, 2026-10-17 (chair).** All five deciders are agent roles (`.claude/agents/<role>.md` exists for each), none is human-only, so no "not met: waiting on P-n" row applies. The chair's step could not reach them: `ListAgents` on 2026-10-17 → "No reachable agents". Under ADR 0037 rule 2 the chair does not write their cells, so they stay "pending" and DR-04 is **not yet held**. Next step: the orchestrator invokes each decider role with §14.1-§14.2 as its brief; each commits its own cell ("accept/reject (YYYY-MM-DD): reason") on this branch or on a follow-up PR. The check `check_flows.py --review DR-04 --decider <role>` (ticket PD-4b) turns green per role when its cell is written.
