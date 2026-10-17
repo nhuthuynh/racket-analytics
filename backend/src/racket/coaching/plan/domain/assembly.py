@@ -86,32 +86,34 @@ def assemble(
     cap = prefs.drill_cap
     eligible = sorted((d for d in library if d.fits(prefs)), key=lambda d: (d.id, d.version))
     warm_ups = [d for d in eligible if d.is_warm_up and warm_up_minutes(d, cap) is not None]
-    pools = {
-        w.id: [
-            d
-            for d in eligible
-            if not d.is_warm_up and w.target in d.plan_targets and d.duration_min <= cap
-        ]
-        for w in top
-    }
-    fitted = [w.id for w in top if pools[w.id]]
+    pools = {w.id: _pool(w, eligible, cap) for w in top}
+    fitted = {w: pool for w, pool in pools.items() if pool}
     if not warm_ups or not fitted:
         return Infeasible("no_plan_fits")
-    picker = _RoundRobin(fitted)
+    picker = _RoundRobin(list(fitted))
     uses = dict.fromkeys(fitted, 0)
     sessions = []
     for s in range(WEEKS * prefs.sessions_per_week):
         week, index = divmod(s, prefs.sessions_per_week)
-        warm = warm_ups[s % len(warm_ups)]
-        assignments = _fill(warm, prefs, picker, {w: pools[w] for w in fitted}, uses)
+        assignments = _fill(warm_ups[s % len(warm_ups)], prefs, picker, fitted, uses)
         sessions.append(Session(week + 1, index + 1, prefs.minutes_budget, assignments))
     return TrainingPlan(
         preferences=prefs,
         weaknesses=tuple(top),
-        unfitted=tuple(Unfitted(w.id) for w in top if not pools[w.id]),
+        unfitted=tuple(Unfitted(w) for w, pool in pools.items() if not pool),
         sessions=tuple(sessions),
         library_version=library_version,
     )
+
+
+def _pool(w: PlanWeakness, eligible: Sequence[Drill], cap: int) -> list[Drill]:
+    """The drills that can fill a slot of ``w``: not a warm-up, hit its plan target, and their
+    minimum fits under the 40% cap (so they fit after any warm-up: budget - cap >= cap)."""
+    return [
+        d
+        for d in eligible
+        if not d.is_warm_up and w.target in d.plan_targets and d.duration_min <= cap
+    ]
 
 
 def _fill(
