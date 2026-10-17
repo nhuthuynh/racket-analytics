@@ -37,5 +37,5 @@
   "regressions": [],
   "safety_notes": "Fed drives come at the body: wear eye protection, feed at medium pace only and stop the set if a ball hits the face. Stop if in pain.",
   "coach_rationale": "(judgment) An error under pressure (a `forced_error`, AN-07 forced-error share) is most often a hard ball the player cannot control; a cooperative, medium-pace drive feed lets a beginner learn the soft block before live speed-ups. Unverified coaching content until a human coach reviews the library (P15).",
-  "review_status": "draft"
+  "review_status": "coach-reviewed"
 }
