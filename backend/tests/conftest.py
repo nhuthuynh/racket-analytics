@@ -116,6 +116,19 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
                 item.add_marker(getattr(pytest.mark, name))
 
 
+# ----------------------------------------------------------------- Sprint 4 coaching markers
+# Registered here, not in pyproject.toml: the coaching tickets may change only backend/tests/
+# (sprint-04 §3.7 dirs; ST-056 decisions). Scorecard G04-03: `-m "coaching and scenario"`,
+# `-m plan_property`.
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers", "coaching: weakness ranking and training plan (Gherkin @coaching; G04-03 b)"
+    )
+    config.addinivalue_line(
+        "markers", "plan_property: the >= 1,000-input training plan property (G04-03 c)"
+    )
+
+
 # ----------------------------------------------------------------- Gherkin tags -> markers
 _STORY = re.compile(r"story-(ST-\d{3}|SPIKE-\d{2})")
 _NFR = re.compile(r"nfr-(\d{3}[a-z]?)")
@@ -137,6 +150,8 @@ def pytest_bdd_apply_tag(tag: str, function: Any) -> bool:
         marker = pytest.mark.conservation
     elif tag == "golden_an":
         marker = pytest.mark.golden_an
+    elif tag == "coaching":
+        marker = pytest.mark.coaching
     elif m := _STORY.fullmatch(tag):
         marker = pytest.mark.story(id=m.group(1))
     elif m := _NFR.fullmatch(tag):
