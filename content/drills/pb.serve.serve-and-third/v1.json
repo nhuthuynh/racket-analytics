@@ -1,0 +1,44 @@
+{
+  "id": "pb.serve.serve-and-third",
+  "version": 1,
+  "name": "Serve, third shot, play it out",
+  "summary": "Serve deep, partner returns deep, server plays a third-shot drop or drive and the rally is played out live; score only the serving side's rallies.",
+  "skills": [
+    "AN-01",
+    "AN-05",
+    "serve",
+    "third-shot"
+  ],
+  "target_metrics": [
+    "AN-01",
+    "AN-05"
+  ],
+  "level_min": "intermediate",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 2,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Server at the baseline, partner as receiver; the server serves every rally",
+    "Receiver returns deep and moves to the non-volley-zone line; the server chooses a drop or a drive on the third shot, then follows it in",
+    "Play the rally out live; after 10 rallies swap roles",
+    "Keep score as rallies won on serve and serve faults out of 10"
+  ],
+  "success_criterion": "Win at least 5 of 10 rallies on serve with at most 1 serve fault",
+  "progressions": [
+    "pb.serve.pressure-ladder"
+  ],
+  "regressions": [
+    "pb.serve.deep-target"
+  ],
+  "safety_notes": "Live rallies can include lobs: turn and run back for a lob, never backpedal. Stop if dizzy or in pain.",
+  "coach_rationale": "(judgment) AN-01 counts rallies won on serve, so the drill practises the whole serving pattern (deep serve, third shot, move in) under live play and scores exactly that. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}

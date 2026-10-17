@@ -1,0 +1,36 @@
+{
+  "id": "pb.warm-up.wall-rally",
+  "version": 1,
+  "name": "Soft wall rally",
+  "summary": "Solo against a wall: soft forehand and backhand hits at dink pace, then gentle volleys, counting a streak.",
+  "skills": [
+    "warm-up",
+    "dink",
+    "volley"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "beginner",
+  "level_max": "advanced",
+  "duration_min": 5,
+  "duration_max": 10,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Stand about 2-3 m from a flat wall; optional tape line about 1 m high as a net",
+    "Minutes 1-3: soft forehands with one bounce; minutes 4-6: soft backhands; last minutes: gentle volleys without a bounce"
+  ],
+  "success_criterion": "One streak of 30 consecutive controlled hits without the ball bouncing twice",
+  "progressions": [],
+  "regressions": [],
+  "safety_notes": "Keep the ball soft and below head height. Stop if in pain.",
+  "coach_rationale": "(judgment) A soft, repetitive contact against a wall grooves paddle-face control at low intensity; counting a streak gives a numeric warm-up target. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}

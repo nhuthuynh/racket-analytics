@@ -1,0 +1,33 @@
+{
+  "id": "pb.warm-up.shadow-footwork",
+  "version": 1,
+  "name": "Shadow footwork and swings",
+  "summary": "Solo, no wall and no ball: easy split steps, side shuffles and shadow dinks, drops and drives to raise the heart rate before play.",
+  "skills": [
+    "warm-up",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "beginner",
+  "level_max": "advanced",
+  "duration_min": 5,
+  "duration_max": 8,
+  "players": 1,
+  "needs": [],
+  "equipment": [
+    "paddle"
+  ],
+  "setup": [
+    "Any flat, clear space of about 3 m by 3 m",
+    "Round = 60 s: 10 split steps, then side shuffles 2 m left and right, then 10 slow shadow dinks, 10 shadow drops and 10 shadow drives",
+    "Rest 30 s between rounds; walking pace, not a sprint"
+  ],
+  "success_criterion": "Complete 4 rounds of 60 s with every shadow swing finishing with the paddle in front of the body",
+  "progressions": [],
+  "regressions": [],
+  "safety_notes": "Easy pace only: no sprints, no jumps, no backpedalling. Stop if dizzy or in pain.",
+  "coach_rationale": "(judgment) Raising body temperature and rehearsing the ready position before hitting lowers early-session errors; needs nothing, so every solo player without a wall gets a warm-up (checklist §2.2). Targets AN-04 only because the schema needs one metric; warm-ups never fill a weakness slot. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}
