@@ -59,6 +59,57 @@ Feature: The privacy and quota harness measures G04-09 and G04-10 honestly
       When the burst step runs and the quota step runs
       Then both steps pass
 
+  Rule: With the flags off nothing the flags add is served and no limit applies (G04-09 a, G04-10 c)
+
+    Scenario: A privacy route still served with the flags off is found
+      Given a flags-off stack that still serves "/me/quota"
+      When the steps "flags-off" run
+      Then the step fails, naming "flag route answered 200"
+
+    Scenario: A match that cannot be created with the flags off is found, not skipped
+      Given a flags-off stack that refuses new matches
+      When the steps "flags-off" run
+      Then the step fails, naming "match creation failed"
+
+    Scenario: An over-quota upload that errors with the flags off is found
+      Given a flags-off stack that answers the over-quota upload with 500
+      When the steps "quota" run
+      Then the step fails, naming "status 500"
+
+    Scenario: Flags off with every limit lifted passes
+      Given a flags-off stack
+      When the steps "flags-off burst quota" run
+      Then every step passes
+
+  Rule: The verdict is every step at once (exit 0 only when all pass, else 1)
+
+    Scenario: One failing flags-off step makes the harness exit 1
+      Given a flags-off stack that still serves "/me/quota"
+      When the harness runs against the stack with "--flags off --runs 1 --quotas"
+      Then it exits 1 with "flags_off" failing
+
+    Scenario: A clean flags-off stack makes the harness exit 0
+      Given a flags-off stack
+      When the harness runs against the stack with "--flags off --runs 2 --quotas"
+      Then it exits 0 with every step passing
+
+    Scenario: A flags-on run whose match cannot be prepared exits 1
+      Given a stack that refuses under-18 answers without writing a row
+      When the harness runs against the stack with "--flags on --runs 1"
+      Then it exits 1 with "prepare" failing
+
+    Scenario: A wrong count of billing alert rules fails the quota steps
+      Given a stack that accepts 10 matches an hour and refuses uploads past the quota
+      And an alert rules file with 5 rules
+      When the quota steps run with the alert test
+      Then the "alerts" step fails, naming "5 billing alert rules, want 6"
+
+    Scenario: Exact limits and a passing alert test pass the quota steps
+      Given a stack that accepts 10 matches an hour and refuses uploads past the quota
+      And an alert rules file with 6 rules
+      When the quota steps run with the alert test
+      Then every quota step passes
+
   Rule: Without its instruments the harness refuses to judge (exit 2)
 
     Scenario Outline: A missing instrument refuses to start

@@ -52,6 +52,9 @@ REFUSED = {"code": "storage_quota_exceeded", "quota": {"used_bytes": 10, "limit_
         (429, REFUSED, None, (0, 7), True, "stored bytes changed: 0 -> 7"),
         (429, REFUSED, None, (None, 0), True, "stored bytes unreadable"),
         (429, REFUSED, None, (0, 0), False, "refused by the quota with the flag off"),
+        (500, {"code": "internal"}, None, (None, None), False, "status 500"),
+        (404, None, None, (None, None), False, "status 404"),
+        (201, {}, None, (None, None), False, "Location None"),
     ],
 )
 def test_quota_problems_name_every_departure(status, body, location, stored, flags_on, named):
@@ -96,3 +99,26 @@ def test_alert_problems_name_every_departure(rc, out, rules, named) -> None:
 
 def test_alert_rule_test_success_with_six_rules_passes() -> None:
     assert lp.alert_problems(0, "Unit Testing: billing.test.yml\n  SUCCESS\n", 6) == []
+
+
+FAIL, PASS = {"ok": False, "problems": ["x"]}, {"ok": True, "problems": []}
+
+
+@pytest.mark.parametrize(
+    "out",
+    [
+        {"runs": []},
+        {"runs": [{}]},
+        {"runs": [{"age": PASS, "consent": FAIL}]},
+        {"runs": [{"flags_off": PASS}, {"flags_off": FAIL}]},
+        {"runs": [{"flags_off": PASS}], "quotas": {"burst": PASS, "alerts": FAIL}},
+        {"runs": [{"flags_off": PASS}], "quotas": {"burst": PASS, "quota": {"problems": []}}},
+    ],
+)
+def test_verdict_fails_when_any_step_fails_or_nothing_ran(out) -> None:
+    assert lp.verdict(out) is False
+
+
+def test_verdict_passes_only_when_every_step_passes() -> None:
+    out = {"runs": [{"flags_off": PASS}], "quotas": {"burst": PASS, "quota": PASS, "alerts": PASS}}
+    assert lp.verdict(out) is True
