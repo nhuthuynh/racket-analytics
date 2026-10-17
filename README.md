@@ -33,6 +33,10 @@ The first `make up` builds the images, which takes several minutes on a cold mac
 
 - Docker Hub `toomanyrequests` (pull rate limit): use a mirror,
   `DOCKERHUB_REGISTRY=mirror.gcr.io make up` (or set it in `infra/.env`).
+- Image build fails with `CERTIFICATE_VERIFY_FAILED` or `SELF_SIGNED_CERT_IN_CHAIN` behind a
+  TLS-intercepting proxy: pass the proxy's CA bundle (PEM) to the builds,
+  `EXTRA_CA_FILE=/path/to/ca.crt make up` (absolute path; off by default). It is a BuildKit
+  secret, used only while building and never stored in an image.
 - `make ps` shows each service's health; `make logs` follows the logs (Ctrl-C to stop).
 - `port is already allocated`: stop whatever uses that port (often a local Postgres on 5432).
 - `make down` stops the stack **and deletes its volumes** (database, videos, certificates).
