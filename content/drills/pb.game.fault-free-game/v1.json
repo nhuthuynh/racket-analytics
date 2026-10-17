@@ -1,0 +1,42 @@
+{
+  "id": "pb.game.fault-free-game",
+  "version": 1,
+  "name": "Fault-free game",
+  "summary": "Competitive full-court game to 11 started by a serve; each player tallies every rally they end with their own fault of any kind.",
+  "skills": [
+    "AN-07",
+    "share:fault",
+    "game",
+    "serve",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "advanced",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 25,
+  "players": 2,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Play singles rallies on the full court, each started by a serve; serve and play as your rules allow (the fault rules are UNVERIFIED in this app)",
+    "Play every rally out live and competitively",
+    "Each player tallies the rallies they end with their own fault: serve, two-bounce, foot or non-volley-zone faults, or other",
+    "Game to 11 rallies; play 2 games and add up the faults"
+  ],
+  "success_criterion": "Over 2 games to 11, end at most 2 rallies with your own faults",
+  "progressions": [],
+  "regressions": [
+    "pb.dink.line-fault-game"
+  ],
+  "safety_notes": "Live rallies can include lobs and fast changes of direction: turn and run back for a lob, never backpedal. Stop if dizzy or in pain.",
+  "coach_rationale": "(judgment) In competitive play faults appear under fatigue and score pressure; a full game that counts every own fault, whatever the subtype, measures the AN-07 fault share in conditions close to a match. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}

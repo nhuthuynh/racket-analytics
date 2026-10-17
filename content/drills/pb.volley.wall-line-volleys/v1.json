@@ -1,0 +1,42 @@
+{
+  "id": "pb.volley.wall-line-volleys",
+  "version": 1,
+  "name": "Wall volleys behind a floor line",
+  "summary": "Alone at a wall, volley behind a taped floor line that stands in for the non-volley-zone line; count touches of the line.",
+  "skills": [
+    "AN-07",
+    "share:fault",
+    "volley",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the floor about 2.5 m from a flat wall (the non-volley-zone line) and a line on the wall about 1 m high (the net)",
+    "Stand with toes just behind the floor line and volley the ball against the wall above the wall line at a soft pace",
+    "Keep both feet behind the floor line; a foot touching or crossing it during a volley counts as an own fault",
+    "Sets of 20 volleys; rest 30 s between sets"
+  ],
+  "success_criterion": "In each of 3 sets of 20 volleys, at most 1 foot touch of the floor line",
+  "progressions": [
+    "pb.volley.line-volleys-no-step-in"
+  ],
+  "regressions": [],
+  "safety_notes": "Keep the pace soft and the ball below head height. Stop if in pain.",
+  "coach_rationale": "(judgment) A player alone can still train the balance that prevents line faults (the AN-07 fault share): a taped line gives an exact, countable boundary and a wall gives many volleys in a few minutes. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}

@@ -1,0 +1,41 @@
+{
+  "id": "pb.reset.block-the-drive",
+  "version": 1,
+  "name": "Block the drive",
+  "summary": "At the non-volley-zone line, block medium-pace fed drives softly into the non-volley zone; count blocks that land in the zone.",
+  "skills": [
+    "AN-07",
+    "share:forced-error",
+    "reset",
+    "volley"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Blocker at the non-volley-zone line; feeder at the baseline of the opposite side, in the same half",
+    "Feeder hits medium-pace drives from a bounce to the blocker's paddle side or body, one at a time; no full-power hits",
+    "Blocker absorbs the pace with a short, firm paddle and blocks the ball back softly into the non-volley zone",
+    "Sets of 20 feeds; swap roles after each set; count blocks that land in the zone"
+  ],
+  "success_criterion": "In each of 2 sets of 20 feeds, at least 12 blocks land in the non-volley zone",
+  "progressions": [
+    "pb.reset.speed-up-defence-game"
+  ],
+  "regressions": [],
+  "safety_notes": "Fed drives come at the body: wear eye protection, feed at medium pace only and stop the set if a ball hits the face. Stop if in pain.",
+  "coach_rationale": "(judgment) An error under pressure (a `forced_error`, AN-07 forced-error share) is most often a hard ball the player cannot control; a cooperative, medium-pace drive feed lets a beginner learn the soft block before live speed-ups. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}

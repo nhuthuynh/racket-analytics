@@ -1,0 +1,44 @@
+{
+  "id": "pb.reset.speed-up-defence-game",
+  "version": 1,
+  "name": "Speed-up defence game",
+  "summary": "Live dink rally where one player may speed up any high ball; the defender scores speed-ups blocked back in play.",
+  "skills": [
+    "AN-07",
+    "share:forced-error",
+    "reset",
+    "dink",
+    "speed-up"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "intermediate",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Both players at the non-volley-zone line, straight across, playing into one half of the court",
+    "Live dink rally; the attacker may speed up any ball above net height, aimed low at the defender's paddle side or hip, never at the face",
+    "The defender blocks or counters the speed-up back in play; after a speed-up the rally ends and is restarted with a dink",
+    "Sets of 10 speed-ups; swap roles after each set; the defender counts speed-ups returned in play"
+  ],
+  "success_criterion": "In each set of 10 speed-ups faced, return at least 6 in play",
+  "progressions": [
+    "pb.reset.transition-battle"
+  ],
+  "regressions": [
+    "pb.reset.block-the-drive"
+  ],
+  "safety_notes": "Speed-ups at close range: wear eye protection and aim speed-ups low, never at the face. Stop if in pain.",
+  "coach_rationale": "(judgment) Errors under pressure at the line are mostly failed answers to a speed-up; a live game that scores only the defence of speed-ups trains exactly the rallies the AN-07 forced-error share counts. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}
