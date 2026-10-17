@@ -512,3 +512,36 @@ def test_the_vm_r3_02_replay_on_the_real_history_names_both_merged_fix_tickets(
     assert "PE-PR24-01 (major) named by the PR title of ticket FIX-03-2b (#77)" in out.stdout
     assert "evidence changed by ticket FIX-03-2c (#78)" in out.stdout
     assert "(docs/sprints/sprint-03.md)" in out.stdout
+
+
+@pytest.mark.integration
+def test_cli_the_merge_of_the_pr_that_wrote_the_row_is_not_later_than_the_row(
+    tmp_path: Path,
+) -> None:
+    """A ticket PR that writes the open row and changes the file it cites, in one PR, did its own
+    reconciliation: its merge commit comes after the row's commit but is the same ticket."""
+    init_main(tmp_path, "# Review rounds\n\n", ["docs/design/flows.md"])
+    merge_ticket(
+        tmp_path,
+        "FIX-11",
+        9,
+        ["docs/design/flows.md"],
+        title="Meet goal metric PE-R9S9-05",
+        ledger_rows=open_row("PE-R9S9-05", "docs/design/flows.md"),
+    )
+    out = run_check(tmp_path / LEDGER, None, tmp_path / DECISIONS, "main")
+    assert out.returncode == 0, out.stdout + out.stderr
+    assert "reconcile-due: 1 open blocker/major rows, 0 due" in out.stdout
+
+
+@pytest.mark.integration
+def test_cli_a_later_merge_still_counts_after_the_pr_that_wrote_the_row(tmp_path: Path) -> None:
+    init_main(tmp_path, "# Review rounds\n\n", ["docs/design/flows.md"])
+    merge_ticket(
+        tmp_path, "FIX-11", 9, [], ledger_rows=open_row("PE-R9S9-05", "docs/design/flows.md")
+    )
+    merge_ticket(tmp_path, "FIX-12", 10, ["docs/design/flows.md"])
+    out = run_check(tmp_path / LEDGER, None, tmp_path / DECISIONS, "main")
+    assert out.returncode == 1, out.stdout + out.stderr
+    assert "evidence changed by ticket FIX-12 (#10)" in out.stdout
+    assert "FIX-11" not in out.stdout

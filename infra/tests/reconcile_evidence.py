@@ -43,7 +43,12 @@ def init_main(repo: Path, ledger_text: str, files: list[str]) -> None:
 
 
 def merge_ticket(
-    repo: Path, ticket: str, pr: int, changes: list[str], title: str = "change evidence"
+    repo: Path,
+    ticket: str,
+    pr: int,
+    changes: list[str],
+    title: str = "change evidence",
+    ledger_rows: str = "",
 ) -> str:
     """Merge a ticket branch that edits ``changes`` into ``main``; return the merge commit sha."""
     branch = f"s99/{ticket.lower()}"
@@ -52,6 +57,9 @@ def merge_ticket(
         (repo / name).parent.mkdir(parents=True, exist_ok=True)
         with (repo / name).open("a", encoding="utf-8") as fh:
             fh.write(f"changed by {ticket}\n")
+    if ledger_rows:
+        with (repo / LEDGER).open("a", encoding="utf-8") as fh:
+            fh.write("\n" + ledger_rows)
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", f"docs({ticket}): change evidence")
     git(repo, "checkout", "-q", "main")
