@@ -1,12 +1,14 @@
 """Binds tests/features/training_plan.feature (ST-056; FR-121; QD-PL-01..03).
 
 Pure domain: ``racket.coaching.plan.domain.assemble`` over a coach-reviewed test library
-(``tests.unit.coaching.plan_helpers``); no API and no database.
+(``tests.unit.coaching.plan_helpers``); no API. The ST-061a rule saves the plan through
+``racket.coaching.plan.repository`` on the migrated test database (``db_session``, rolled back).
 """
 
 from __future__ import annotations
 
 import random
+import uuid
 from typing import Any
 
 import pytest
@@ -215,3 +217,51 @@ def identical(ctx: dict[str, Any]) -> None:
         assert isinstance(other, TrainingPlan)
         assert other.content() == first.content()
         assert other.content_digest() == first.content_digest()
+
+
+# ----------------------------------------------------------------- ST-061a: saved plans
+def _repository(ctx: dict[str, Any], db_session: Any) -> Any:
+    from racket.coaching.plan.repository import PlanRepository
+
+    return PlanRepository(db_session, ctx["library"])
+
+
+def _owner(ctx: dict[str, Any], name: str) -> uuid.UUID:
+    return ctx.setdefault("owners", {}).setdefault(name, uuid.uuid4())
+
+
+@given(parsers.parse('the plan is assembled and saved for "{name}"'))
+def assembled_and_saved(ctx: dict[str, Any], db_session: Any, name: str) -> None:
+    plan = assemble(ctx["weaknesses"], ctx["prefs"], ctx["library"])
+    assert isinstance(plan, TrainingPlan), plan
+    ctx["saved"] = plan
+    ctx["saved_id"] = _repository(ctx, db_session).save(_owner(ctx, name), plan)
+    db_session.flush()
+    db_session.expire_all()
+
+
+@when(parsers.parse('"{name}" reads {whose} saved plan'))
+def reads_saved_plan(ctx: dict[str, Any], db_session: Any, name: str, whose: str) -> None:
+    ctx["read"] = _repository(ctx, db_session).get(_owner(ctx, name))
+
+
+@then(parsers.parse('"{name}" has no saved plan'))
+def has_no_saved_plan(ctx: dict[str, Any], name: str) -> None:
+    assert ctx["saved_id"] is not None
+    assert ctx["read"] is None
+
+
+@then("the plan read back is identical to the one saved, with the same content digest and version")
+def read_back_identical(ctx: dict[str, Any]) -> None:
+    stored, saved = ctx["read"], ctx["saved"]
+    assert stored is not None
+    assert stored.id == ctx["saved_id"]
+    assert stored.stale is False
+    plan = stored.plan
+    assert plan.preferences == saved.preferences
+    assert plan.weaknesses == saved.weaknesses
+    assert plan.unfitted == saved.unfitted
+    assert plan.sessions == saved.sessions
+    assert (plan.library_version, plan.version) == (saved.library_version, saved.version)
+    assert plan.content() == saved.content()
+    assert plan.content_digest() == saved.content_digest()
