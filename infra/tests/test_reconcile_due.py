@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from conftest import REPO_ROOT
 from reconcile_evidence import DECISIONS, LEDGER, append_ledger, init_main, merge_ticket, open_row
 from reconcile_ledger import (
     PLAN_0039,
@@ -453,3 +454,59 @@ def test_cli_a_ledger_outside_a_git_repo_with_a_base_is_refused(tmp_path: Path) 
     out = run_check(outside / "rr.md", None, repo / DECISIONS, "main")
     assert out.returncode == 2, out.stdout + out.stderr
     assert out.stderr.startswith("reconcile-due: "), out.stderr
+
+
+@pytest.mark.unit
+def test_an_evidence_cell_with_escaped_pipes_in_a_command_still_cites_its_files() -> None:
+    """The FIX-03-2a row shape: ``grep '^\\| R3-9 ' f \\| grep -c x`` must not split the cell."""
+    m = _module()
+    ledger = (
+        "| Finding | Severity | Disposition | Owner | Evidence |\n|---|---|---|---|---|\n"
+        "| PD-R9S9-01 | blocker | Open | pm | `grep '^\\| R3-9 ' docs/design/flows-sprint-03.md "
+        "\\| grep -c 'ba'` → 1; `sed -n 35p docs/sprints/sprint-03.md` → x |\n"
+    )
+    assert m.evidence_paths(m._evidence_cell(ledger.splitlines(), 3)) == [
+        "docs/design/flows-sprint-03.md",
+        "docs/sprints/sprint-03.md",
+    ]
+
+
+@pytest.mark.unit
+def test_a_merge_title_names_the_finding_ids_it_carries_but_not_its_own_ticket() -> None:
+    m = _module()
+    assert m.title_ids("[FIX-03-2b] Meet goal metric G03-12-PE-PR24-01\n") == [
+        "G03-12",
+        "PE-PR24-01",
+    ]
+    assert m.title_ids("[PE-R9S9-05] tidy\n") == []
+
+
+@pytest.mark.integration
+def test_cli_a_merge_whose_title_names_an_open_finding_after_its_row_is_due(tmp_path: Path) -> None:
+    init_main(tmp_path, open_row("PE-R9S9-05", "docs/design/flows.md"), ["docs/design/flows.md"])
+    merge_ticket(tmp_path, "FIX-10", 8, ["docs/other.md"], title="Meet goal metric PE-R9S9-05")
+    out = run_check(tmp_path / LEDGER, None, tmp_path / DECISIONS, "main")
+    assert out.returncode == 1, out.stdout + out.stderr
+    assert "PE-R9S9-05 (major) named by the PR title of ticket FIX-10 (#8)" in out.stdout
+
+
+VM_R3_02_MAIN = "6c666b9"  # origin/main when VERIFY-03-r3 saw "0 due" (scorecard §12.4)
+
+
+@pytest.mark.integration
+def test_the_vm_r3_02_replay_on_the_real_history_names_both_merged_fix_tickets(
+    tmp_path: Path,
+) -> None:
+    """VM-R3-02 as reported: at main 6c666b9 FIX-03-2b (#77) and FIX-03-2c (#78) bore on the two
+    open rows and the check said "0 due". Replayed on a shared clone of the real history."""
+    clone = tmp_path / "main"
+    git(tmp_path, "clone", "-q", "--shared", "--no-checkout", str(REPO_ROOT), str(clone))
+    git(clone, "sparse-checkout", "set", "--no-cone", "/docs/")
+    git(clone, "checkout", "-q", "--detach", VM_R3_02_MAIN)
+    sprint = clone / "docs" / "sprints" / "03"
+    adr = next((clone / "docs" / "decisions").glob("0039-*.md"))
+    out = run_check(sprint / "review-rounds.md", adr, sprint / "decisions", "HEAD")
+    assert out.returncode == 1, out.stdout + out.stderr
+    assert "PE-PR24-01 (major) named by the PR title of ticket FIX-03-2b (#77)" in out.stdout
+    assert "evidence changed by ticket FIX-03-2c (#78)" in out.stdout
+    assert "(docs/sprints/sprint-03.md)" in out.stdout

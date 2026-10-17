@@ -25,6 +25,12 @@ Feature: A merged ticket that changes an open row's evidence is flagged for reco
       Then the check passes
       And the report names PE-R9S9-05 as due because of ticket FIX-09 (#7)
 
+    Scenario: A merge whose PR title names the open finding is due
+      Given ticket FIX-10 is merged as PR #8 with the title "Meet goal metric G99-12-PE-R9S9-05"
+      When the reconciliation check runs against main
+      Then the check fails
+      And the report names PE-R9S9-05 as due because the title of ticket FIX-10 (#8) names it
+
   Rule: A merge that leaves the evidence alone, or a row written after it, is not due
 
     Scenario: A merge that changes only files the evidence does not cite is not due

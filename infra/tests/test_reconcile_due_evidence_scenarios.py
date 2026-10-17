@@ -55,6 +55,11 @@ def merged_ticket(ctx: dict, ticket: str, pr: int, changed: str) -> None:
     merge_ticket(_main(ctx), ticket, pr, [changed])
 
 
+@given(parsers.parse('ticket {ticket} is merged as PR #{pr:d} with the title "{title}"'))
+def merged_ticket_titled(ctx: dict, ticket: str, pr: int, title: str) -> None:
+    merge_ticket(_main(ctx), ticket, pr, ["docs/other.md"], title=title)
+
+
 @given(parsers.parse("the engineering-manager then writes a later row that keeps {finding} open"))
 def later_row(ctx: dict, finding: str) -> None:
     append_ledger(
@@ -93,6 +98,19 @@ def names_due(ctx: dict, finding: str, ticket: str, pr: str) -> None:
     due = [line for line in ctx["out"].stdout.splitlines() if line.startswith("due: ")]
     assert any(
         finding in line and f"ticket {ticket} ({pr})" in line and "evidence" in line for line in due
+    ), ctx["out"].stdout
+
+
+@then(
+    parsers.parse(
+        "the report names {finding} as due because the title of ticket {ticket} ({pr}) names it"
+    )
+)
+def names_due_by_title(ctx: dict, finding: str, ticket: str, pr: str) -> None:
+    due = [line for line in ctx["out"].stdout.splitlines() if line.startswith("due: ")]
+    assert any(
+        finding in line and f"named by the PR title of ticket {ticket} ({pr})" in line
+        for line in due
     ), ctx["out"].stdout
 
 

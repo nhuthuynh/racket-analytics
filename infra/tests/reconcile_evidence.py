@@ -42,7 +42,9 @@ def init_main(repo: Path, ledger_text: str, files: list[str]) -> None:
     git(repo, "commit", "-q", "-m", "base")
 
 
-def merge_ticket(repo: Path, ticket: str, pr: int, changes: list[str]) -> str:
+def merge_ticket(
+    repo: Path, ticket: str, pr: int, changes: list[str], title: str = "change evidence"
+) -> str:
     """Merge a ticket branch that edits ``changes`` into ``main``; return the merge commit sha."""
     branch = f"s99/{ticket.lower()}"
     git(repo, "checkout", "-q", "-b", branch)
@@ -62,7 +64,7 @@ def merge_ticket(repo: Path, ticket: str, pr: int, changes: list[str]) -> str:
         "-m",
         f"Merge pull request #{pr} from owner/{branch}",
         "-m",
-        f"[{ticket}] change evidence",
+        f"[{ticket}] {title}",
     )
     return git(repo, "rev-parse", "HEAD").strip()
 
