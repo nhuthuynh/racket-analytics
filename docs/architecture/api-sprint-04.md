@@ -18,9 +18,9 @@ Body (closed):
 
 | Field | Required | Rule (field code on failure) |
 |---|---|---|
-| `minutes_per_session` | yes | integer 10-180 (`out_of_range`) |
+| `minutes_per_session` | yes | integer 15-180 (`out_of_range`); 15 because a session must hold a 5-minute warm-up under the 40% cap (coaching-plan QD-PL-03: ⌊0.4 × 15⌋ = 6) |
 | `sessions_per_week` | yes | integer 1-7 (`out_of_range`) |
-| `weekly_minutes` | no (default `minutes_per_session × sessions_per_week`) | integer ≥ 10 and ≥ `sessions_per_week × 10` (`out_of_range`) |
+| `weekly_minutes` | no (default `minutes_per_session × sessions_per_week`) | integer ≥ `sessions_per_week × 15` (`out_of_range`), so the per-session budget ⌊`weekly_minutes` / `sessions_per_week`⌋ is ≥ 15 too |
 | `players_available` | yes | integer 1-4 (`out_of_range`) |
 | `equipment` | yes (may be `[]`) | unique items from `wall`, `half_court`, `full_court`, `ball_machine`, `partner_feeder` (`unknown_value`, `duplicate`) |
 | `level` | yes | `beginner` \| `intermediate` \| `advanced` (`unknown_value`) |
@@ -89,9 +89,9 @@ Commands on one plan are serialised by the plan's version check (coaching-plan �
 ## 4. Age confirmation (ST-068a; FR-003; flag `FEATURE_AGE_GATE`)
 
 - With the flag on, `POST /auth/exchange` for an address with **no account** sets the session cookie on a **pending sign-in** (no account row; `pending_sign_ins`, 0019). Every route except `POST /me/age-confirmation`, `POST /auth/sign-out`, `GET /config/public` and the auth routes answers **403 `age_confirmation_required`** "Please confirm your age to continue." for a pending sign-in, and for an existing account whose `age_confirmed_at` is null.
-- `POST /me/age-confirmation` body `{"is_adult": true | false}` (closed; `required`/`invalid`):
+- `POST /me/age-confirmation` body `{"is_adult": true | false, "confirm": "delete"}` (closed; `is_adult` required, `required`/`invalid`; `confirm` optional, see below):
   - `true` → **200** `GET /me` body plus `"age_confirmed_at"`. A pending sign-in becomes an account (new id) in the same transaction; only the timestamp is stored, never a birth date.
-  - `false` → **403 `under_age`** (interim text, PM-4 register, pending legal review), the pending sign-in deleted and the cookie cleared (`Max-Age=0`); **0 account rows** are created. For an existing unconfirmed account, `false` deletes it as `DELETE /me` does (judgment, SEC-4 to confirm).
+  - `false` → **403 `under_age`** (interim text, PM-4 register, pending legal review), the pending sign-in deleted and the cookie cleared (`Max-Age=0`); **0 account rows** are created. For an existing unconfirmed account (which may hold matches, videos, tags and stats), `false` deletes it as `DELETE /me` does **only with the same guard**: the body must also carry `"confirm": "delete"`, sent by the client only after the account-deletion page of api-sprint-03 §4.2 ("cannot be undone"). Without it the answer is **422 `validation_failed`** `{"field": "confirm", "code": "confirmation_required"}` and nothing changes (the account stays unconfirmed and gated). A pending sign-in holds no data, so `confirm` is not needed there and is ignored. (Judgment, SEC-4 to confirm.)
 - Flag off: no pending state; exchange creates accounts as in Sprint 1; the route is 404.
 
 ## 5. Video retention (ST-069; FR-008; ADR 0006; flag `FEATURE_RETENTION_SETTING`)
