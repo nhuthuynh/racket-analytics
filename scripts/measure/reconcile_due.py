@@ -44,7 +44,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from measurelib import _cells, open_defects
+from measurelib import _FINDING_ID, _cells, open_defects
 
 _SHA = re.compile(r"`?([0-9a-f]{7,40})`?")
 _PR = re.compile(r"#(\d+)\b")
@@ -56,6 +56,7 @@ _FILE = re.compile(
 _GITHUB_MERGE = re.compile(r"Merge pull request #(\d+) from [^/\s]+/(\S+)")
 _TITLE_TICKET = re.compile(r"\s*\[([^\]]+)\]")
 _NO_COMMIT = re.compile(r"0{40}")
+_UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
 
 
 def _merged_prs(plan_text: str) -> dict[str, dict[str, str]]:
@@ -167,6 +168,13 @@ def evidence_paths(cell: str) -> list[str]:
     return list(dict.fromkeys(paths))
 
 
+def title_ids(body: str) -> list[str]:
+    """The finding ids a merge's PR title (first body line) names, without its own ``[TICKET]``."""
+    title = body.strip().splitlines()[0] if body.strip() else ""
+    title = _TITLE_TICKET.sub("", title, count=1)
+    return list(dict.fromkeys(_FINDING_ID.findall(title)))
+
+
 def cited_changes(changed: list[str], cited: list[str]) -> list[str]:
     """The changed repo paths that a cited path names (whole path, path suffix, or glob)."""
     return [
@@ -195,19 +203,27 @@ def parse_merges(log: str) -> list[dict[str, Any]]:
                 "pr": f"#{merge.group(1)}",
                 "merged_as": sha.strip(),
                 "changed": [n.strip() for n in names.splitlines() if n.strip()],
+                "title_ids": title_ids(body),
             }
         )
     return merges
 
 
+def _row_cells(line: str) -> list[str]:
+    return [c.strip() for c in _UNESCAPED_PIPE.split(line.strip().strip("|"))]
+
+
 def _evidence_cell(lines: list[str], number: int) -> str:
-    """The Evidence cell of the table row at 1-based line ``number`` ("" when none)."""
+    """The Evidence cell of the table row at 1-based line ``number`` ("" when none).
+
+    Cells split on unescaped pipes only: an evidence command often carries ``\\|``.
+    """
     top = number - 1
     while top > 0 and lines[top - 1].lstrip().startswith("|"):
         top -= 1
-    header = [h.lower() for h in _cells(lines[top])]
+    header = [h.lower() for h in _row_cells(lines[top])]
     col = next((i for i, h in enumerate(header) if "evidence" in h), None)
-    cells = _cells(lines[number - 1])
+    cells = _row_cells(lines[number - 1])
     return cells[col] if col is not None and col < len(cells) else ""
 
 
@@ -217,7 +233,8 @@ def evidence_due(
     merges_after: Callable[[int], list[dict[str, Any]]],
     ledger_path: str,
 ) -> list[dict[str, Any]]:
-    """Open rows whose cited evidence a merge after their latest line changed (VM-R3-02).
+    """Open rows that a merge after their latest line bears on (VM-R3-02): its diff changes a
+    file the row's Evidence cell cites, or its PR title names one of the row's ids.
 
     ``merges_after(line)`` gives the ticket PR merges later than that ledger line's last write.
     A merge the row or its heading names (ticket, ``#n`` or sha) is already reconciled.
@@ -226,8 +243,6 @@ def evidence_due(
     due = []
     for row in rows:
         cited = evidence_paths(_evidence_cell(lines, row["line"]))
-        if not cited:
-            continue
         context = " | ".join(_cells(lines[row["line"] - 1])[1:])
         heading = next(
             (lines[i] for i in range(row["line"] - 1, -1, -1) if lines[i].startswith("#")), ""
@@ -235,8 +250,9 @@ def evidence_due(
         hits = []
         for merge in merges_after(row["line"]):
             changed = cited_changes([f for f in merge["changed"] if f != ledger_path], cited)
-            if changed and not _mentions(context, merge) and not _mentions(heading, merge):
-                hits.append({**merge, "changed": changed})
+            named = [f for f in row["ids"] if f in merge["title_ids"]]
+            if (changed or named) and not (_mentions(context, merge) or _mentions(heading, merge)):
+                hits.append({**merge, "changed": changed, "title_ids": named})
         if hits:
             due.append({**row, "evidence": hits})
     return due
@@ -266,10 +282,13 @@ class MergeHistory:
         self.path = ledger.resolve().relative_to(top).as_posix()
         self.name = ledger.name
         self.base = f"{base}^{{commit}}"
+        self.tracked = bool(_git(self.dir, "ls-files", "--", self.name).strip())
         _git(self.dir, "rev-parse", "--verify", "--quiet", self.base)
 
     def last_written(self, line: int) -> str | None:
         """The commit that last wrote ``line``; None when the line is not committed yet."""
+        if not self.tracked:
+            return None  # a ledger never committed: every line is newer than every merge
         out = _git(self.dir, "blame", "--porcelain", "-L", f"{line},{line}", "--", self.name)
         sha = out.split(" ", 1)[0]
         return None if _NO_COMMIT.fullmatch(sha) else sha
@@ -366,11 +385,12 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(f"due: line {row['line']}: {ids} ({row['severity']}) named by {named}")
         for m in row.get("evidence", []):
-            print(
-                f"due: line {row['line']}: {ids} ({row['severity']}) evidence changed by ticket"
-                f" {m['ticket']} ({m['pr']}) merged as {m['merged_as'][:7]}"
-                f" ({', '.join(m['changed'])})"
-            )
+            merge = f"ticket {m['ticket']} ({m['pr']}) merged as {m['merged_as'][:7]}"
+            due_row = f"due: line {row['line']}: {ids} ({row['severity']})"
+            if m["title_ids"]:
+                print(f"{due_row} named by the PR title of {merge}")
+            if m["changed"]:
+                print(f"{due_row} evidence changed by {merge} ({', '.join(m['changed'])})")
     open_count = len(open_rows)
     print(f"reconcile-due: {open_count} open blocker/major rows, {len(due)} due")
     if args.json:

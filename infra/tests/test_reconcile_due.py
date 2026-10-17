@@ -391,12 +391,14 @@ def test_merges_parse_from_the_git_log_as_merged_ticket_prs() -> None:
             "pr": "#78",
             "merged_as": "aaaaaaa1111",
             "changed": ["docs/sprints/sprint-03.md"],
+            "title_ids": [],
         },
         {
             "ticket": "s04/no-title",
             "pr": "#9",
             "merged_as": "ccccccc3333",
             "changed": ["a.md", "b.md"],
+            "title_ids": [],
         },
     ]
 
