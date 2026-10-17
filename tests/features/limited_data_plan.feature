@@ -1,6 +1,6 @@
 # Sprint 4 ST-057 (FR-123; QD-PL-06): a plan built on a low-sample top weakness says so.
 # Pure domain; the low-sample flag comes from the metric dictionary rule (ADR 0041, ADR 0005)
-# through the Analytics ACL. Steps: backend/tests/features/test_drill_rationale.py.
+# through the Analytics ACL. Steps: backend/tests/features/plan_citation_steps.py.
 @M5 @story-ST-057 @coaching
 Feature: A plan from little data says so
   When the metric of the player's top weakness is low-sample, the plan carries the number of

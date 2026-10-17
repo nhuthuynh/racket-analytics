@@ -122,6 +122,23 @@ def test_it_04_02b_two_matches_pool_their_numbers_and_evidence(
         assert len(c.rally_ids) <= 10
 
 
+def test_it_04_02b_low_sample_is_the_dictionary_rule_on_the_pooled_numbers(
+    api: ApiDriver, committed_db: Any
+) -> None:
+    """QD-PL-06 over two matches: each one-game match is low-sample for AN-04 in GET stats, the
+    two pooled (2 games) are not; AN-05 stays low-sample (n < 20 pooled)."""
+    first = st.tagged_example(api, "ivy", "IT-04-02b pooled first")
+    single = _facts(committed_db, api, "ivy")
+    assert single.citations["AN-04"].low_sample
+    second = st.tagged_example(api, "ivy", "IT-04-02b pooled second")
+    for match_id in (first, second):
+        assert _expected(st.stats_body(api, "ivy", match_id), "AN-04")[3] is True
+    pooled = _facts(committed_db, api, "ivy")
+    assert pooled.citations["AN-04"].n == 2
+    assert not pooled.citations["AN-04"].low_sample
+    assert pooled.citations["AN-05"].low_sample
+
+
 def test_it_04_02b_a_plan_from_one_short_match_cites_every_drill_and_says_limited_data(
     api: ApiDriver, committed_db: Any
 ) -> None:

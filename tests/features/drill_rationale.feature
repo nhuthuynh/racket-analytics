@@ -1,6 +1,6 @@
 # Sprint 4 ST-057 (FR-122; QD-PL-04): every drill assignment cites the metric, its value, n and
 # the evidence rallies. Pure domain (no API, no database); IT-04-02b checks the same citations
-# against GET stats and GET evidence in Postgres. Steps: backend/tests/features/test_drill_rationale.py.
+# against GET stats and GET evidence in Postgres. Steps: backend/tests/features/plan_citation_steps.py.
 @M5 @story-ST-057 @coaching
 Feature: Every drill says why
   Each assignment in a plan cites the player's own numbers: the metric, its value, n and up to
