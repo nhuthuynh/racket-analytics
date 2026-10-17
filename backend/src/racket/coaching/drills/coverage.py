@@ -15,7 +15,8 @@ each cell of a plan target it hits (weakness-catalogue §5: AN-07 only through i
 ``players`` <= 2 and at least 1 whose ``needs`` excludes ``ball_machine``. The library needs at
 least 20 reviewed drills, of them at least 3 warm-ups. An AN-07 drill without a share skill is
 named. The check prints the matrix, then one ``FAIL`` line per gap, e.g.
-``FAIL AN-05 × beginner: players ≤ 2: 0``. Exit codes: 0 pass, 1 gaps or a file that is not a
+``FAIL AN-05 x beginner: players <= 2: 0`` (printed with the signs U+00D7 and U+2264, as
+the checklist writes it). Exit codes: 0 pass, 1 gaps or a file that is not a
 schema-valid drill, 2 a path that is not a directory.
 
 ``check_coverage`` is pure (drills arrive as the plan's ``Drill`` values); ``main`` reads files.
@@ -39,6 +40,8 @@ MAX_SMALL_GROUP = 2  # players
 MIN_LIBRARY = 20  # FR-141
 MIN_WARM_UPS = 3  # ST-058a; drill-review-checklist §3
 BALL_MACHINE = "ball_machine"
+SHARE_TARGETS = frozenset({"AN-07:fault", "AN-07:forced-error"})
+TIMES, AT_MOST = "\u00d7", "\u2264"  # drill-review-checklist §3 output
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,12 +55,12 @@ class Cell:
     no_ball_machine: int
 
     def gaps(self) -> list[str]:
-        name = f"{self.target} × {self.level}"
+        name = f"{self.target} {TIMES} {self.level}"
         found = []
         if self.drills < MIN_DRILLS:
             found.append(f"{name}: drills: {self.drills}")
         if self.small_group < 1:
-            found.append(f"{name}: players ≤ {MAX_SMALL_GROUP}: 0")
+            found.append(f"{name}: players {AT_MOST} {MAX_SMALL_GROUP}: 0")
         if self.no_ball_machine < 1:
             found.append(f"{name}: no {BALL_MACHINE}: 0")
         return found
@@ -121,7 +124,8 @@ def check_coverage(drills: Iterable[Drill]) -> CoverageReport:
 
 def render(report: CoverageReport) -> list[str]:
     """The matrix: a header, then one row per cell in target x level order."""
-    lines = [f"{'target':<20}{'level':<14}{'drills':>7}{'players≤2':>11}{'no_ball_machine':>17}"]
+    small = f"players{AT_MOST}{MAX_SMALL_GROUP}"
+    lines = [f"{'target':<20}{'level':<14}{'drills':>7}{small:>11}{'no_ball_machine':>17}"]
     for c in report.cells:
         lines.append(
             f"{c.target:<20}{c.level:<14}{c.drills:>7}{c.small_group:>11}{c.no_ball_machine:>17}"
