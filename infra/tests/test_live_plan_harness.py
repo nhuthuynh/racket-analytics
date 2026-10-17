@@ -8,6 +8,7 @@ each scenario breaks in one way. Standard library plus pytest-bdd; no product im
 
 from __future__ import annotations
 
+import copy
 import json
 import secrets
 import ssl
@@ -46,12 +47,31 @@ def _drifts(p: dict, n: int) -> None:
     p["content_digest"] = f"sha256:{n}"
 
 
+def _reorders(p: dict, n: int) -> None:
+    p["ranking"] = copy.deepcopy(p["ranking"])
+    p["ranking"]["weaknesses"].reverse()
+
+
+def _no_limited_data(p: dict, n: int) -> None:
+    p["limited_data"] = None
+
+
+def _fault(p: dict, n: int) -> None:
+    """A defect of the stub's routes, not of the plan body (Stub.fault)."""
+
+
 DEFECTS = {
     "keeps every rule": lambda p, n: None,
     "has a session over its 30-minute budget": _over_budget,
     "starts a session without a warm-up": _no_warm_up,
     "cites a value the stats do not show": _wrong_value,
     "changes its content on every generation": _drifts,
+    "ranks the weaknesses in another order": _reorders,
+    "omits the limited-data note": _no_limited_data,
+    "replays a done as a new completion": _fault,
+    "keeps the drill on Not for me": _fault,
+    "swaps to a drill citing another metric": _fault,
+    "shows the plan to a second account": _fault,
 }
 
 
@@ -59,7 +79,7 @@ class Stub:
     """The routes the journey calls; plan routes answer 404 to any account but the owner."""
 
     def __init__(self, tls: tuple[str, str], mailpit: FakeMailpit, defect: str) -> None:
-        self.mailpit, self.defect, self.seen = mailpit, DEFECTS[defect], 0
+        self.mailpit, self.defect, self.fault, self.seen = mailpit, DEFECTS[defect], defect, 0
         self.owner, self.current, self.keys, self.posts = None, {}, set(), 0
         outer = self
 
@@ -108,19 +128,25 @@ class Stub:
             self.owner, self.posts, self.current = me, self.posts + 1, pf.plan(WANT)
             self.defect(self.current, self.posts)
             return h.reply(201, self.current)
-        if p.startswith("/me/plan") and me != self.owner:
+        leaky = self.fault == "shows the plan to a second account"
+        if p.startswith("/me/plan") and me != self.owner and not leaky:
             return h.reply(404, {"error": {"code": "not_found"}})
         if p == "/me/plan":
             return h.reply(200, self.current)
         if p.endswith("/done"):
             replayed = h.headers["Idempotency-Key"] in self.keys
+            replayed &= self.fault != "replays a done as a new completion"
             self.keys.add(h.headers["Idempotency-Key"])
             for sess in self.current["sessions"]:
                 sess["done"] = sess["done"] or sess["id"] == part[4]
             return h.reply(200, {"done": True, "plan_version": 2, "replayed": replayed})
         if p.endswith("/swap"):
             sess = next(x for x in self.current["sessions"] if x["id"] == part[4][:2])
-            sess["assignments"][int(part[4][-1]) - 1]["drill"] = pf.ALT
+            item = sess["assignments"][int(part[4][-1]) - 1]
+            if self.fault != "keeps the drill on Not for me":
+                item["drill"] = pf.ALT
+            if self.fault == "swaps to a drill citing another metric":
+                item["citation"] = pf.cite("AN-04")  # s5a2 cites AN-02
             return h.reply(200, sess | {"plan_version": 3})
         if p.endswith("/uploads"):
             return h.reply(201, {}, Location="/api/matches/m1/uploads/u1")
@@ -184,6 +210,11 @@ def _runs(world, runs, k):
     _main(world, "--runs", str(runs), "--determinism", str(k))
 
 
+@when("the plan harness runs 1 run with the default determinism")
+def _default_k(world):
+    _main(world, "--runs", "1")
+
+
 @when("the plan harness runs with a disk floor above the free space")
 def _floor(world):
     _main(world, "--min-free-gb", "1000000")
@@ -202,6 +233,11 @@ def _rc(world, rc):
 @then(parsers.parse('the "{step}" step names "{rule}"'))
 def _names(world, step, rule):
     assert rule in json.dumps(world["report"]["runs"][0][step]["problems"])
+
+
+@then(parsers.parse("the summary reports determinism k {k:d}"))
+def _k(world, k):
+    assert world["report"]["summary"]["determinism_k"] == k
 
 
 @then("the stub saw no request")

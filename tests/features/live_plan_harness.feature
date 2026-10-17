@@ -12,11 +12,30 @@ Feature: The live plan harness reports a broken plan as a failed step
     And the "<step>" step names "<rule>"
 
     Examples:
-      | defect                                  | step        | rule     |
-      | has a session over its 30-minute budget | plan_rules  | QD-PL-01 |
-      | starts a session without a warm-up      | plan_rules  | QD-PL-03 |
-      | cites a value the stats do not show     | citations   | QD-PL-04 |
-      | changes its content on every generation | determinism | differs  |
+      | defect                                  | step          | rule                |
+      | has a session over its 30-minute budget | plan_rules    | QD-PL-01            |
+      | starts a session without a warm-up      | plan_rules    | QD-PL-03            |
+      | cites a value the stats do not show     | citations     | QD-PL-04            |
+      | changes its content on every generation | determinism   | differs             |
+      | ranks the weaknesses in another order   | ranking       | ranking order       |
+      | omits the limited-data note             | limited_data  | limited_data        |
+      | replays a done as a new completion      | done          | replayed            |
+      | keeps the drill on Not for me           | swap          | swap 200            |
+      | swaps to a drill citing another metric  | swap          | swap 200            |
+      | shows the plan to a second account      | other_account | other account codes |
+
+  Scenario: Determinism is checked over 3 generations when no k is given
+    Given a stub stack whose plan changes its content on every generation
+    When the plan harness runs 1 run with the default determinism
+    Then it exits 1
+    And the "determinism" step names "differs across 3 generations"
+    And the summary reports determinism k 3
+
+  Scenario: It refuses a determinism k below 2, which could not see a difference
+    Given a stub stack whose plan keeps every rule
+    When the plan harness runs 1 run with determinism 1
+    Then it exits 2
+    And the stub saw no request
 
   Scenario: It refuses to start when the stack cannot be read
     Given no stack listening
