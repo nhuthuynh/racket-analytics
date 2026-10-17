@@ -23,6 +23,8 @@ Revises: 0017
 
 from __future__ import annotations
 
+import uuid
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
@@ -42,7 +44,7 @@ TABLES = (
 )
 
 
-def _parent(column: str, target: str, name: str) -> sa.Column:
+def _parent(column: str, target: str, name: str) -> sa.Column[uuid.UUID]:
     return sa.Column(
         column, sa.Uuid(), sa.ForeignKey(target, ondelete="CASCADE", name=name), nullable=False
     )

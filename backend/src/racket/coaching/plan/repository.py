@@ -1,4 +1,4 @@
-"""Persistence of the ``TrainingPlan`` aggregate (ST-061a; coaching-plan §1, §5, §9; migration 0018).
+"""Persistence of the ``TrainingPlan`` aggregate (ST-061a; coaching-plan §1, §5, §9; 0018).
 
 Infrastructure: SQLAlchemy Core tables, the aggregate <-> rows mapping, the owner filter on every
 query and the optimistic version check. Only Coaching reads these tables (context-map rule 1).
@@ -149,13 +149,27 @@ def to_rows(
     assignments: list[Row] = []
     for s in plan.sessions:
         session_id = new_id()
-        sessions.append({"id": session_id, "plan_id": plan_id, "owner_id": owner_id,
-                         "week": s.week, "session_index": s.index,
-                         "minutes_budget": s.minutes_budget, "done_at": None})  # fmt: skip
+        sessions.append(
+            {
+                "id": session_id,
+                "plan_id": plan_id,
+                "owner_id": owner_id,
+                "week": s.week,
+                "session_index": s.index,
+                "minutes_budget": s.minutes_budget,
+                "done_at": None,
+            }
+        )
         assignments += [
-            {"id": new_id(), "session_id": session_id, "owner_id": owner_id,
-             "position": x.position, "drill_ref": x.drill.ref, "minutes": x.minutes,
-             "weakness_id": x.weakness_id}  # fmt: skip
+            {
+                "id": new_id(),
+                "session_id": session_id,
+                "owner_id": owner_id,
+                "position": x.position,
+                "drill_ref": x.drill.ref,
+                "minutes": x.minutes,
+                "weakness_id": x.weakness_id,
+            }
             for x in s.assignments
         ]
     return PlanRows(root, sessions, assignments)
@@ -185,7 +199,9 @@ def from_rows(rows: PlanRows, library: Mapping[str, Drill]) -> TrainingPlan:
             index=s["session_index"],
             minutes_budget=s["minutes_budget"],
             assignments=tuple(
-                DrillAssignment(a["position"], drill(a["drill_ref"]), a["minutes"], a["weakness_id"])
+                DrillAssignment(
+                    a["position"], drill(a["drill_ref"]), a["minutes"], a["weakness_id"]
+                )
                 for a in sorted(by_session[s["id"]], key=lambda a: a["position"])
             ),
         )
@@ -200,8 +216,9 @@ def from_rows(rows: PlanRows, library: Mapping[str, Drill]) -> TrainingPlan:
             level=p["level"],
             weekly_minutes=p["weekly_minutes"],
         ),
-        weaknesses=tuple(PlanWeakness(w["id"], w["target"], w["rank"])
-                         for w in rows.plan["weaknesses"]),  # fmt: skip
+        weaknesses=tuple(
+            PlanWeakness(w["id"], w["target"], w["rank"]) for w in rows.plan["weaknesses"]
+        ),
         unfitted=tuple(Unfitted(u["weakness_id"], u["reason"]) for u in rows.plan["unfitted"]),
         sessions=tuple(sessions),
         library_version=rows.plan["library_version"],
@@ -274,8 +291,9 @@ class PlanRepository:
         plan_id = uuid.uuid4()
         rows = to_rows(plan, plan_id=plan_id, owner_id=owner_id)
         at = self.clock()
-        self.session.execute(sa.insert(training_plans).values(created_at=at, updated_at=at,
-                                                              **rows.plan))  # fmt: skip
+        self.session.execute(
+            sa.insert(training_plans).values(created_at=at, updated_at=at, **rows.plan)
+        )
         self.session.execute(sa.insert(plan_sessions), rows.sessions)
         self.session.execute(sa.insert(plan_assignments), rows.assignments)
         return plan_id
@@ -291,8 +309,9 @@ class PlanRepository:
                 training_plans.c.owner_id == owner_id,
                 training_plans.c.version == loaded_version,
             )
-            .values(version=plan.version, content_digest=plan.content_digest(),
-                    updated_at=self.clock())  # fmt: skip
+            .values(
+                version=plan.version, content_digest=plan.content_digest(), updated_at=self.clock()
+            )
         )
         if result.rowcount != 1:  # type: ignore[attr-defined]
             raise PlanConflict(str(plan_id))

@@ -77,8 +77,9 @@ def _new_warm_up_minutes(plan: TrainingPlan, n: int) -> int:
     s = plan.sessions[n]
     minutes = s.assignments[0].minutes
     new = minutes - 1 if minutes > 5 else minutes + 1
-    plan.replace_drill(week=s.week, index=s.index, position=1, drill=s.assignments[0].drill,
-                       minutes=new)  # fmt: skip
+    plan.replace_drill(
+        week=s.week, index=s.index, position=1, drill=s.assignments[0].drill, minutes=new
+    )
     return new
 
 
@@ -95,7 +96,10 @@ def _plan_rows(engine: Any, owner: uuid.UUID) -> dict[str, int]:
         "plan_done_ops": "SELECT count(*) FROM plan_done_ops WHERE account_id = :o",
     }
     with engine.connect() as conn:
-        return {t: int(conn.execute(sa.text(q), {"o": owner}).scalar_one()) for t, q in queries.items()}
+        counts = {
+            t: conn.execute(sa.text(q), {"o": owner}).scalar_one() for t, q in queries.items()
+        }
+    return {t: int(n) for t, n in counts.items()}
 
 
 @contextmanager
@@ -122,14 +126,15 @@ def test_it_04_02c_another_owner_sees_nothing(db_session: Session) -> None:
     assert _repo(db_session).delete_owned(carlos) == 0
 
     stored = _repo(db_session).get(ivy)
-    assert stored is not None and stored.id == plan_id and stored.owner_id == ivy
+    assert stored is not None
+    assert (stored.id, stored.owner_id) == (plan_id, ivy)
     _same(stored.plan, plan)
 
 
 @pytest.mark.parametrize("table", PLAN_TABLES)
 def test_it_04_02c_the_media_worker_cannot_read_plan_tables(db_engine: Any, table: str) -> None:
     with pytest.raises(ProgrammingError, match="permission denied"), _as_worker(db_engine) as conn:
-        conn.execute(sa.text(f"SELECT 1 FROM {table} LIMIT 1"))  # noqa: S608 - fixed names
+        conn.execute(sa.text(f"SELECT 1 FROM {table} LIMIT 1"))
 
 
 def test_it_04_02c_a_save_on_an_old_version_is_refused(db_session: Session) -> None:
@@ -174,17 +179,25 @@ def test_it_04_02c_an_update_keeps_the_ids_and_bumps_the_stored_version(
     ivy = uuid.uuid4()
     plan_id = _repo(db_session).save(ivy, _plan(solo_wall()))
     db_session.flush()
-    before = db_session.execute(
-        sa.text("SELECT id FROM plan_assignments WHERE owner_id = :o ORDER BY id"), {"o": ivy}
-    ).scalars().all()
+    before = (
+        db_session.execute(
+            sa.text("SELECT id FROM plan_assignments WHERE owner_id = :o ORDER BY id"), {"o": ivy}
+        )
+        .scalars()
+        .all()
+    )
     stored = _repo(db_session).get(ivy)
     assert stored is not None
     minutes = _new_warm_up_minutes(stored.plan, 1)
     _repo(db_session).update(ivy, plan_id, stored.plan, loaded_version=1)
     db_session.flush()
-    after = db_session.execute(
-        sa.text("SELECT id FROM plan_assignments WHERE owner_id = :o ORDER BY id"), {"o": ivy}
-    ).scalars().all()
+    after = (
+        db_session.execute(
+            sa.text("SELECT id FROM plan_assignments WHERE owner_id = :o ORDER BY id"), {"o": ivy}
+        )
+        .scalars()
+        .all()
+    )
     assert after == before
     again = _repo(db_session).get(ivy)
     assert again is not None
@@ -200,14 +213,16 @@ def test_it_04_02c_a_new_plan_replaces_the_owners_plan(db_session: Session) -> N
     db_session.flush()
     assert new != old
     stored = _repo(db_session).get(ivy)
-    assert stored is not None and stored.id == new
+    assert stored is not None
+    assert stored.id == new
     assert stored.plan.preferences == GROUP
     count = db_session.execute(
         sa.text("SELECT count(*) FROM training_plans WHERE owner_id = :o"), {"o": ivy}
     ).scalar_one()
     assert count == 1
     other = _repo(db_session).get(carlos)
-    assert other is not None and other.plan.preferences == solo_wall()
+    assert other is not None
+    assert other.plan.preferences == solo_wall()
 
 
 # ---------------------------------------------------------------- 3: account purge
@@ -231,4 +246,5 @@ def test_it_04_02c_the_account_purge_leaves_no_plan_row(api: ApiDriver, committe
     assert _plan_rows(committed_db, carlos) == carlos_before
     with Session(committed_db) as session:
         kept = _repo(session).get(carlos)
-    assert kept is not None and kept.plan.preferences == GROUP
+    assert kept is not None
+    assert kept.plan.preferences == GROUP
