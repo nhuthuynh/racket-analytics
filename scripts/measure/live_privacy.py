@@ -86,7 +86,8 @@ def quota_problems(
     if not flags_on:  # only an accepted upload session counts (ADR 0014: no vacuous pass)
         refused = body.get("code") == "storage_quota_exceeded" or "quota" in body
         problems = ["refused by the quota with the flag off"] if refused else []
-        if status != 201 or not location:
+        sessions_cap = status == 429 and body.get("code") == "upload_quota_exceeded"
+        if (status != 201 or not location) and not sessions_cap:  # api-sprint-01 §6.3 check 5
             problems.append(f"status {status}, Location {location!r} with the flag off")
         return problems
     if status != 429 or location:
