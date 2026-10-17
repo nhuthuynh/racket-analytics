@@ -213,7 +213,7 @@ def _no_request(world):
 def _all_passed(world):
     summary, (run,) = world["report"]["summary"], world["report"]["runs"]
     assert [k for k, v in run.items() if not v["ok"]] == []
-    assert len(run) == 10
+    assert len(run) == 11
     assert (summary["generate"]["n"], summary["done_visible"]["n"]) == (4, 1)
     assert summary["reference"] == {"comparisons": 9, "mismatches": [], "ok": True}
 

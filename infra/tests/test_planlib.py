@@ -65,7 +65,7 @@ def test_a_cited_value_or_rally_the_stats_do_not_show_is_named() -> None:
     plan["sessions"][1]["assignments"][2]["citation"]["rally_ids"] = ["r99"]
     got = pl.citation_problems(plan, stats, "A", ev, pf.library())
     assert [p.split(" (")[0] for p in got] == [
-        "QD-PL-04: s0a2 AN-02 0.99 n=7 is not GET stats",
+        "QD-PL-04: s0a2 AN-02 0.99 n=6 is not GET stats",
         "QD-PL-04: s1a3 AN-04 rally r99 is not in GET evidence",
     ]
 
