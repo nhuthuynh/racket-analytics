@@ -73,6 +73,14 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/ci/check_pr_size.py --base "origin/$BASE_REF" --head HEAD
+      # A PR commit changing backend/src or web/src needs a `Red:` body line or an earlier
+      # test-only commit; merges are not judged and no label waives it (C4-RED, R3-IN-1).
+      - name: Red first (R3-IN-1, C4-RED)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/ci/check_red_first.py --base "origin/$BASE_REF" --head HEAD
 
   workflow-lint:
     name: Workflow lint (actionlint)
@@ -555,8 +563,11 @@ jobs:
   perf-baseline:
     # ST-039 slice 3: Locust at 50 RPS on the API port, seeded through the https origin.
     # Gated now: availability >= 99.5% (NFR-041), correction/undo p95 <= 1.5 s (NFR-013),
-    # sheet restored byte-identical (C-04). Read p95 is a baseline until the R1 review (NFR-010).
-    name: Locust baseline 50 RPS (ST-039; NFR-010 baseline, NFR-013, NFR-041)
+    # sheet restored byte-identical (C-04). C4-LOCUST (ST-054): the dashboard reads, GET stats
+    # and GET evidence of the seeded tagged match, are gated per route at p95 <= 300 ms,
+    # p99 <= 800 ms, availability >= 99.5% (NFR-010 "dashboard", NFR-041); the Sprint 2 reads
+    # stay a baseline.
+    name: Locust baseline 50 RPS (ST-039, ST-054; NFR-010 dashboard, NFR-013, NFR-041)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -576,7 +587,7 @@ jobs:
         run: |
           mkdir -p reports/perf
           $COMPOSE cp web-tls:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/racket-dev-ca.crt"
-      - name: Locust, 50 readers at 1 RPS and 1 correction user, >= 60 s steady window
+      - name: Locust, 50 readers at 1 RPS (incl. stats, evidence) and 1 correction user, >= 60 s steady window
         env:
           RA_ORIGIN: https://localhost:3000
           RA_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
@@ -587,7 +598,7 @@ jobs:
           # Locust exits 1 on any failed request; perf_verdict.py decides the gate.
           # -t counts seeding (test_start) and spawn too: 90 s = a 60 s steady window plus
           # 30 s of warm-up allowance (PR #6 needed 13.8 s). CI-PERF-GATES.
-          uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_sprint02.py \
+          uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_sprint04.py \
             --headless --host http://127.0.0.1:8000 -u 51 -r 51 -t 90s \
             --csv reports/perf/perf --only-summary || echo "locust rc=$?"
       - name: Verdict (gates) and baseline table
@@ -595,7 +606,7 @@ jobs:
           python3 scripts/ci/perf_verdict.py --stats reports/perf/perf_stats.csv \
             --state reports/perf/perf_state.json --rps 50 --json reports/perf/verdict.json \
             --history reports/perf/perf_stats_history.csv --users 51 \
-            --summary "$GITHUB_STEP_SUMMARY"
+            --dashboard-reads stats,evidence --summary "$GITHUB_STEP_SUMMARY"
       - name: Service logs on failure
         if: failure()
         run: $COMPOSE logs --no-color --tail=200
