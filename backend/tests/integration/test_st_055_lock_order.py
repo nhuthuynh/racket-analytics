@@ -54,9 +54,7 @@ def _wait_until_blocking(engine: Any, pid: int) -> None:
 
 
 def _two_matches_larger_id_played_first(api: ApiDriver, engine: Any) -> list[uuid.UUID]:
-    ids = sorted(
-        uuid.UUID(st.tagged_example(api, "ivy", f"ST-055 race {n}")) for n in range(2)
-    )
+    ids = sorted(uuid.UUID(st.tagged_example(api, "ivy", f"ST-055 race {n}")) for n in range(2))
     smaller, larger = ids
     with engine.begin() as conn:
         for match_id, played_on in ((larger, date(2026, 1, 1)), (smaller, date(2026, 2, 1))):

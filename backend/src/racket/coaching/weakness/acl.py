@@ -43,11 +43,16 @@ def translate(facts: analytics.RallyFacts) -> tuple[RallyFact, ...]:
 
 
 def ranking_for(session: Session, owner_id: uuid.UUID) -> WeaknessRanking:
-    """The owner's weakness ranking over every tagged live match in scope."""
+    """The owner's weakness ranking over every tagged live match in scope.
+
+    Each ``rally_facts`` read keeps its match row ``FOR SHARE`` to the caller's commit, so the
+    rows are read in ascending match id order, the order ``DELETE /me`` tombstones them in
+    (global lock order, deletion-and-purge.md §3.1; PE-055-R1-01). The ranking does not depend
+    on the order of the matches."""
     losses: list[RallyLoss] = []
     games = rallies = skipped = 0
     rules: set[str] = set()
-    for match_id, side in matches.player_sides(session, owner_id):
+    for match_id, side in sorted(matches.player_sides(session, owner_id), key=_match_id):
         facts = analytics.rally_facts(session, match_id)
         if facts is None or not facts.rallies:
             continue  # deleted meanwhile, or not tagged
@@ -73,3 +78,7 @@ def _side_out_verified(rules_versions: Iterable[str]) -> bool:
     is verified (DOM G1 R2, P7); with no match in scope nothing is verified either."""
     versions = set(rules_versions)
     return bool(versions) and versions <= SIDE_OUT_VERIFIED_RULES
+
+
+def _match_id(match_side: tuple[uuid.UUID, str | None]) -> uuid.UUID:
+    return match_side[0]
