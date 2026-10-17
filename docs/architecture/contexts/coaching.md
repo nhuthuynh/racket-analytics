@@ -4,6 +4,8 @@
 - **Code modules:** `racket.coaching`, `racket.coaching.drills` (C1)
 - **Aggregates:** `TrainingPlan` (owns `Session`, `DrillAssignment`), `Drill` (library entry, versioned by `library_version`)
 
+- **R1 design (Sprint 4):** rules-only plan, no LLM: [`../coaching-plan.md`](../coaching-plan.md); HTTP: [`../api-sprint-04.md`](../api-sprint-04.md) §2-§3. Inbound is R8 through the ACL and R12 (context map).
+
 ## Purpose
 Assemble training plans from the curated drill library for the player's ranked weaknesses. Explain each "why" with evidence, and score plans afterwards.
 
