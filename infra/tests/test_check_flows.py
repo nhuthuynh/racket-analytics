@@ -81,10 +81,7 @@ def test_opened_row_without_opened_date_fails():
 
 
 def test_section_without_cell_column_fails():
-    text = (
-        "## DR-04\n\n| Role | Items | Opened |\n|---|---|---|\n"
-        f"| {ROLE} | R4-4 | 2026-10-17 |\n"
-    )
+    text = f"## DR-04\n\n| Role | Items | Opened |\n|---|---|---|\n| {ROLE} | R4-4 | 2026-10-17 |\n"
     assert cf.missing_cells(text, "DR-04", [ROLE]) == [
         "FAIL review: DR-04 has no decider table with a 'Cell' column"
     ]
