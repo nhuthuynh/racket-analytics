@@ -27,16 +27,12 @@ from extra_ca_fixtures import (
     rendered_secret_ids,
     sha256,
 )
+from test_compose_registry import built
 
 needs_docker = pytest.mark.skipif(shutil.which("docker") is None, reason="docker CLI missing")
 SOURCE = "extra_ca_file"
 TARGET = "${EXTRA_CA_FILE:+extra_ca}"
 DOCKERFILES = sorted((REPO_ROOT / "infra" / "docker").glob("*.Dockerfile"))
-
-
-def built() -> dict[str, dict]:
-    services = yaml.safe_load(COMPOSE.read_text())["services"]
-    return {n: s["build"] for n, s in services.items() if "build" in s}
 
 
 def _secrets(build: dict) -> list[dict]:

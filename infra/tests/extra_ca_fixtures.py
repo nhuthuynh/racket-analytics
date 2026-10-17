@@ -17,6 +17,7 @@ import tarfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import yaml
 from conftest import REPO_ROOT
@@ -48,14 +49,8 @@ def env_file(tmp: Path, extra_ca: Path | None) -> Path:
 
 
 def render(env: Path) -> dict:
-    res = subprocess.run(
-        ["docker", "compose", "-f", str(COMPOSE), "--env-file", str(env), "config"],
-        capture_output=True,
-        text=True,
-        env=docker_env(),
-        timeout=60,
-        check=False,
-    )
+    cmd = ["docker", "compose", "-f", str(COMPOSE), "--env-file", str(env), "config"]
+    res = _run(cmd, text=True, env=docker_env(), check=False)
     assert res.returncode == 0, res.stderr
     return yaml.safe_load(res.stdout)
 
@@ -72,36 +67,18 @@ def rendered_secret_ids(config: dict) -> dict[str, set[str]]:
     return ids
 
 
+def _run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, capture_output=True, timeout=300, **kw)
+
+
 def make_ca(tmp: Path) -> Path:
     """A throwaway self-signed CA certificate (never committed); its key is deleted."""
     key, crt = tmp / "ca.key", tmp / "ca.crt"
-    subprocess.run(
-        [
-            "openssl",
-            "req",
-            "-x509",
-            "-newkey",
-            "rsa:2048",
-            "-nodes",
-            "-days",
-            "1",
-            "-subj",
-            f"/CN=c4-ca-throwaway-{uuid.uuid4().hex[:12]}",
-            "-keyout",
-            str(key),
-            "-out",
-            str(crt),
-        ],
-        capture_output=True,
-        check=True,
-        timeout=60,
-    )
+    subj = f"/CN=c4-ca-throwaway-{uuid.uuid4().hex[:12]}"
+    cmd = ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj"]
+    _run([*cmd, subj, "-keyout", str(key), "-out", str(crt)], check=True)
     key.unlink()
     return crt
-
-
-def _blob_bytes(data: bytes) -> bytes:
-    return gzip.decompress(data) if data[:2] == b"\x1f\x8b" else data
 
 
 @dataclass
@@ -117,72 +94,35 @@ def probe_build(tmp: Path, env: Path) -> Probe:
     an earlier probe build would report that build's secret.
     """
     tag = f"racket-extra-ca-probe:{uuid.uuid4().hex[:12]}"
+    build = {"context": str(PROBE_DIR), "dockerfile": "probe.Dockerfile", "target": "probe"}
+    build["args"] = {"PROBE_IMAGE": PROBE_IMAGE}
     override = tmp / "probe.override.yaml"
-    override.write_text(
-        yaml.safe_dump(
-            {
-                "services": {
-                    "migrate": {
-                        "image": tag,
-                        "build": {
-                            "context": str(PROBE_DIR),
-                            "dockerfile": "probe.Dockerfile",
-                            "target": "probe",
-                            "args": {"PROBE_IMAGE": PROBE_IMAGE},
-                        },
-                    }
-                }
-            }
-        )
-    )
-    base = [
-        "docker",
-        "compose",
-        "-p",
-        f"extra-ca-{uuid.uuid4().hex[:8]}",
-        "-f",
-        str(COMPOSE),
-        "-f",
-        str(override),
-        "--env-file",
-        str(env),
-    ]
+    override.write_text(yaml.safe_dump({"services": {"migrate": {"image": tag, "build": build}}}))
+    project = f"extra-ca-{uuid.uuid4().hex[:8]}"
+    compose = ["docker", "compose", "-p", project, "-f", str(COMPOSE), "-f", str(override)]
     try:
-        res = subprocess.run(
-            [*base, "build", "--no-cache", "migrate"],
-            capture_output=True,
+        res = _run(
+            [*compose, "--env-file", str(env), "build", "--no-cache", "migrate"],
             text=True,
             env=docker_env(),
-            timeout=300,
             check=False,
         )
         assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-3000:]
-        seen = subprocess.run(
-            ["docker", "run", "--rm", tag, "cat", "/extra-ca-seen"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=60,
-        ).stdout.strip()
-        saved = subprocess.run(
-            ["docker", "save", tag], capture_output=True, check=True, timeout=120
-        ).stdout
+        seen = _run(["docker", "run", "--rm", tag, "cat", "/extra-ca-seen"], text=True, check=True)
+        saved = _run(["docker", "save", tag], check=True).stdout
     finally:
-        subprocess.run(["docker", "rmi", "-f", tag], capture_output=True, check=False, timeout=60)
+        _run(["docker", "rmi", "-f", tag], check=False)
     with tarfile.open(fileobj=io.BytesIO(saved)) as t:
-        layers = [_blob_bytes(t.extractfile(m).read()) for m in t.getmembers() if m.isfile()]
-    return Probe(seen=seen, layers=layers)
+        blobs = [t.extractfile(m).read() for m in t.getmembers() if m.isfile()]
+    layers = [gzip.decompress(b) if b[:2] == b"\x1f\x8b" else b for b in blobs]
+    return Probe(seen=seen.stdout.strip(), layers=layers)
 
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def pem_body_lines(path: Path) -> list[bytes]:
-    """The base64 lines of a PEM certificate: what a copied CA file would contain."""
-    return [ln for ln in path.read_bytes().splitlines() if ln and not ln.startswith(b"-----")]
-
-
 def holds_certificate(probe: Probe, ca: Path) -> bool:
-    lines = pem_body_lines(ca)
+    """Any inner base64 line of the PEM in any layer: what a copied CA file would contain."""
+    lines = [ln for ln in ca.read_bytes().splitlines() if ln and not ln.startswith(b"-----")]
     return any(ln in layer for layer in probe.layers for ln in lines[1:-1])
