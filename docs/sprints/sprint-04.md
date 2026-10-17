@@ -23,7 +23,7 @@
 | Weakness catalogue (Quick Tag ending → weakness → target metric, serve/receive split), the R1 targetable metrics, warm-up rule, drill review checklist | **Not met:** the metric dictionary has AN-01..AN-07 (`coach-reviewed`); no weakness catalogue | Gate ticket **COACH-4** |
 | ADR 0005 (Wilson 95%, n < 20 or width > 30 points) | **Proposed** (PM-1 carried from Sprint 3) | Gate ticket **PM-4**; FR-123 reads the low-sample rule from the metric dictionary (ADR 0041) either way |
 | Drill library | Schema v1, lint and lock exist (ST-053); `content/drills` holds 3 `pb.fixture.*` drills | ST-058a..c author ≥ 20 drills; ST-059 adds the coverage check |
-| OQ-05, OQ-06, OQ-07, OQ-08, OQ-13 | **Open** | Interim values behind default-off flags (ADR 0051 rule 4); P16 and P8 on the PO list |
+| OQ-05, OQ-06, OQ-07, OQ-08, OQ-13 | **Accepted by the PO on 2026-10-05** (ADR 0023 decision table; `open-questions.md` summary table: "Accepted"). Still open are only: the NFR-070 legal review (US + AU) of the OQ-05/06/07 wording and windows; the OQ-13 budget amount (P8); the coach's verification of the side-out rule behind OQ-08 (after OQ-01, P7) | Sprint 4 builds the accepted values (ADR 0051 rule 4) behind default-off flags, because no real user may see them before the legal review (P16). The PO is not asked again |
 | Disk | **9.5 GB free** on `/` (`df -h /`), below the 10 GB floor | Blocker row 2 (P5 prune). Every live step runs `bash scripts/disk-precheck.sh` first |
 
 ### 0.2 Product-owner decisions applied
@@ -34,6 +34,7 @@
 - **One PR per ticket, TDD + DDD, three test levels, two verdicts (PO 2026-10-07; P13).** Unchanged.
 - **Goals measured live; human-only items as "not met: waiting on P-n" (P12).** §9.1 and scorecard §5.
 - **Rulebook later (OQ-01, P7).** Scoring stays `PROVISIONAL-UNVERIFIED`; stats and the plan page carry the "unofficial scoring" notice once before the first card (as stats, DR-03 R3-3).
+- **OQ-05..OQ-08 accepted (2026-10-05, ADR 0023); built as accepted, not asked again.** OQ-05: account holders 18+ (FR-003), the capture guide asks not to upload matches with minors. OQ-06: training use is a separate opt-in, off by default and revocable (FR-009); a revoked match leaves all future gold-set versions, frozen historical versions are not edited and retire at their next scheduled refresh. OQ-07: ADR 0006 windows as interim defaults; review video by the user's setting, default 90 days. OQ-08: weaknesses ranked by rallies lost per game, split serve/receive (ADR 0003). Open parts only: the legal review (P16), the budget amount (P8), the side-out rule verification (P7).
 - **Jurisdictions US + AU (OQ-05 part).** The interim FR-003 wording names neither law as satisfied; NFR-070 legal review stays a human gate before any real-user beta.
 - **HTTPS dev stack, no insecure-cookie flag (ADR 0029).** Every live method runs over https through `web-tls`.
 - **Go port in S6.** Every new behaviour is pinned by a language-independent test (Gherkin, HTTP-level IT, Playwright, live scorecard) for the port to reuse.
@@ -56,7 +57,8 @@ These are not goal metrics. Each is a sprint-DoD row "not met: waiting on P-n" (
 | Item | Waits on | Need-by | What the team ships meanwhile |
 |---|---|---|---|
 | Human coach review of the starter drills (`verified`) | **P15** | 2026-12-11 | Drills at `coach-reviewed` by the coach agent (ADR 0044 analogue), `@needs-verification`, plan-page notice (interim wording) |
-| Final age threshold and legal wording (OQ-05), consent policy (OQ-06), retention windows (OQ-07), weakness unit (OQ-08) | **P16** | 2026-12-11 | Interim values behind default-off flags; unit "provisional" |
+| Legal review (NFR-070; US + AU) of the age wording and footage notice (OQ-05), the consent text (OQ-06) and the retention windows (OQ-07). The values themselves are PO-accepted (ADR 0023); only their legal adequacy is open | **P16** | before any real-user beta (none in Sprint 4) | Accepted values behind default-off flags; user-facing texts marked "interim, pending legal review (NFR-070)" |
+| Coach verification of the side-out rule behind the serve/receive split (OQ-08's open part; after OQ-01) | **P7** | 2026-11-16 (OQ-01) | Split shipped `@needs-verification`; plan page carries the "unofficial scoring" notice |
 | Storage quota size; monthly budgets for billing alerts; GPU budget | **P8** (OQ-13) | 2026-12-11 | 20 GB (judgment) as a setting; budgets as settings; SPIKE-03 not ticketed |
 | Screen-reader pass of Sprint 1-4 screens (NFR-027 b) | **P6** | overdue | Automated axe and keyboard checks (G04-08) |
 | Repository visibility | **P10** | sooner is safer | Nothing private in git |
@@ -72,7 +74,7 @@ These are not goal metrics. Each is a sprint-DoD row "not met: waiting on P-n" (
 ## 1. Sprint goal
 
 1. **A player can run the whole R1 journey on a local stack as a prototype:** `make up` then `make demo` gives a demo user with a tagged match, its score sheet, its stats and a generated 2-week plan; a fresh user can do the same by hand (upload → Quick Tag → score sheet → stats → plan).
-2. **The plan is rules-only, deterministic and honest:** weaknesses ranked by rallies lost per game, split serve/receive (unit labelled "provisional"); the 2-week plan fits the player's time per session and per week, players and equipment, starts every session with a warm-up, gives no drill more than 40% of a session, uses only reviewed library drills; every drill cites metric, value, n and the evidence rallies; a low-sample plan says so with its n; the code-grader eval passes at pass^3 = 100%.
+2. **The plan is rules-only, deterministic and honest:** weaknesses ranked by rallies lost per game, split serve/receive (ADR 0003, PO-accepted; the side-out part `@needs-verification` until P7); the 2-week plan fits the player's time per session and per week, players and equipment, starts every session with a warm-up, gives no drill more than 40% of a session, uses only reviewed library drills; every drill cites metric, value, n and the evidence rallies; a low-sample plan says so with its n; the code-grader eval passes at pass^3 = 100%.
 3. **A starter library of ≥ 20 drills** passes the lint and the coverage matrix in CI (content `needs-verification` until P15).
 4. **A player can follow the plan:** mark a session done offline (synced later, idempotent) and swap a drill with "Not for me" for another that targets the same metric and still fits.
 5. **R1 privacy and quotas exist behind default-off flags with interim wording:** age confirmation and footage notice, video retention choice, training-data consent, match-creation rate limit and storage quota; billing alert rules at 50/80/100%.
@@ -121,13 +123,13 @@ Ticket ids: `C4-*` carry-over, `PE-4`/`PD-4`/`SEC-4`/`COACH-4`/`PM-4` gate ticke
 | PD-4 | Flows for P- (plan), A- (age), R- (retention, consent), Q- (quota) with every state; DR-04 decider cells | principal-designer | senior-frontend-engineer | `docs/design/flows-sprint-04.md` |
 | SEC-4 | Threat notes for plans and R1 privacy/quotas; BOLA matrix additions | security-privacy-engineer | senior-backend-engineer | `docs/security/threat-notes-sprint-04.md` |
 | COACH-4 | Weakness catalogue, R1 targetable metrics, warm-up rule, drill review checklist and coverage scope | pickleball-domain-coach | senior-ml-cv-engineer | `docs/domain/weakness-catalogue.md`, `docs/domain/drill-review-checklist.md` |
-| PM-4 | ADR 0005 accept or amend (PM-1); interim wording register for the four flags and the provisional unit | product-manager | senior-qa-engineer | ADR 0005 status; `docs/requirements/interim-wording-sprint-04.md` |
+| PM-4 | ADR 0005 accept or amend (PM-1); interim wording register for the four flags (texts pending legal review, P16) | product-manager | senior-qa-engineer | ADR 0005 status; `docs/requirements/interim-wording-sprint-04.md` |
 
 ### 3.3 Prototype spine (FR-120..FR-124, FR-141, NFR-005a, NFR-019; QD §7)
 
 | ID | Title | Owner | Senior reviewer | Size | FR/NFR | Depends on |
 |---|---|---|---|---|---|---|
-| ST-055 | Weakness ranking by rallies lost per game, split serve/receive, unit provisional | senior-backend-engineer | senior-ml-cv-engineer | M | FR-120; ADR 0003 | PE-4, COACH-4 |
+| ST-055 | Weakness ranking by rallies lost per game, split serve/receive, side-out part `@needs-verification` | senior-backend-engineer | senior-ml-cv-engineer | M | FR-120; ADR 0003 | PE-4, COACH-4 |
 | ST-056 | `TrainingPlan` aggregate and rules-only assembly (QD-PL-01..03) | senior-backend-engineer | senior-qa-engineer | M | FR-121 | PE-4, COACH-4 |
 | ST-057 | Every assignment cites metric, value, n, evidence rallies; limited-data plan (QD-PL-04, PL-06) | senior-backend-engineer | senior-qa-engineer | S | FR-122, FR-123 | ST-055, ST-056, PM-4 |
 | ST-058a | Starter drills 1-7 (warm-ups; serve: AN-01, AN-05) | pickleball-domain-coach | senior-qa-engineer | S | FR-141 | COACH-4 |
@@ -144,7 +146,7 @@ Ticket ids: `C4-*` carry-over, `PE-4`/`PD-4`/`SEC-4`/`COACH-4`/`PM-4` gate ticke
 | ST-064 | `make demo` also generates the demo user's plan | sre-devops-engineer | senior-backend-engineer | S | QD §7 | ST-061b, ST-058c |
 | ST-065 | Playwright E2E for the full journey, plan states, offline done, swap, keyboard and narrow widths | senior-qa-engineer | senior-frontend-engineer | M | QD §7; NFR-024/027/034 | ST-063b, ST-063c |
 | ST-066 | README "Run it locally": prototype walkthrough and its checker | sre-devops-engineer | senior-qa-engineer | XS | QD §7 | ST-064, ST-063c |
-| ST-067 | Config scaffold: weakness unit and the four feature flags (default off), interim values as settings | senior-backend-engineer | senior-qa-engineer | S | FR-003/008/009/120/160 | PE-4 |
+| ST-067 | Config scaffold: weakness unit and the four feature flags (default off), PO-accepted values as settings | senior-backend-engineer | senior-qa-engineer | S | FR-003/008/009/120/160 | PE-4 |
 | QA-HARNESS-4a | Live goal harness: `planlib.py` reference and `live_plan.py` (G04-01..03) | senior-qa-engineer | senior-backend-engineer | M | scorecard | PE-4, COACH-4 |
 | QA-HARNESS-4b | Live goal harness: `live_privacy.py` (G04-09, G04-10) | senior-qa-engineer | senior-backend-engineer | S | scorecard | PE-4, SEC-4 |
 
@@ -185,7 +187,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 - **Checks (docs ticket):** `racket-adr`/markdown link check in CI; the contract's routes appear in the BOLA inventory plan (SEC-4); review by SBE and FE. **Context:** Coaching (C1), Analytics (ACL), Identity. **Dirs:** `docs/architecture/`.
 
 #### PD-4 Flows (gate)
-- **AC:** P-01 plan (weaknesses with "provisional" label, sessions, drill rows with "why: AN-xx value, n" and "Show me"; notice "unofficial scoring" once and "drills not yet checked by a human coach" (interim); limited-data banner with n), P-02 preferences, P-03 done/undo-offline/"Not for me" with reason, A-01 age question, footage notice on upload, R-01 retention and consent, Q-01 over-limit; empty, loading, error, offline, not-found states; HAX G1/G2/G11 and WCAG 2.2 AA checklists; 320/360 px layouts. DR-04 decider cells (FE, coach, PM, security, BA) recorded in the file with dates.
+- **AC:** P-01 plan (weaknesses with the unit name, sessions, drill rows with "why: AN-xx value, n" and "Show me"; notice "unofficial scoring" once and "drills not yet checked by a human coach" (interim); limited-data banner with n), P-02 preferences, P-03 done/undo-offline/"Not for me" with reason, A-01 age question, footage notice on upload, R-01 retention and consent, Q-01 over-limit; empty, loading, error, offline, not-found states; HAX G1/G2/G11 and WCAG 2.2 AA checklists; 320/360 px layouts. DR-04 decider cells (FE, coach, PM, security, BA) recorded in the file with dates.
 - **Checks:** link check; DR-04 cells present. **Dirs:** `docs/design/`.
 
 #### SEC-4 Threat notes (gate)
@@ -197,7 +199,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 - **Dirs:** `docs/domain/`.
 
 #### PM-4 ADR 0005 and interim wording (gate)
-- **AC:** ADR 0005 Accepted or amended with a dated row (thresholds stay config, ADR 0041); `interim-wording-sprint-04.md` lists every user-facing string for FR-003, FR-008, FR-009, FR-160 and the "provisional" weakness unit, each marked "interim, pending PO decision OQ-nn (P16/P8)", with the plain-language reading level check (NFR-028).
+- **AC:** ADR 0005 Accepted or amended with a dated row (thresholds stay config, ADR 0041); `interim-wording-sprint-04.md` lists every user-facing string for FR-003, FR-008, FR-009 and FR-160, each marked "interim, pending legal review (NFR-070, P16)" (the storage-quota text also "size pending P8"); the values in the texts are the PO-accepted ones (ADR 0023), with the plain-language reading level check (NFR-028).
 - **Dirs:** `docs/decisions/0005-*`, `docs/requirements/`.
 
 #### C4-G12 Close the G03-12 rows
@@ -225,8 +227,8 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 - **Gherkin:** `tests/features/reconcile_due.feature` new scenarios (negative first: "evidence changed, no reconciliation row → due"). **IT:** `infra/tests/test_reconcile_due.py` new cases on a temp git repo. **Unit:** id regex tests. **Dirs:** `scripts/measure/`, `infra/tests/`, `tests/features/`.
 
 #### ST-055 Weakness ranking (FR-120)
-- **AC:** pure domain `racket.coaching.weakness`: from per-side rally facts (ending type, responsible player, server side) over the player's tagged, non-deleted matches, compute rallies lost per game per weakness, split lost-on-serve and lost-on-receive; points conceded shown separately; ranking by total rallies lost per game, ties by the catalogue order (COACH-4); unit object carries `provisional=True` and the configured unit name; the FR-120 example ranks "unforced errors" above "serve faults"; zero games → empty ranking, not an error. Analytics data enters only through the `analytics.public` read model (ACL).
-- **Gherkin:** `tests/features/weakness_ranking.feature` (`@needs-verification`): FR-120 scenario; negative first "No tagged match → no weakness and a reason"; "Each weakness shows rallies lost on serve and on receive"; "Unit is labelled provisional". **IT:** IT-04-01 `backend/tests/integration/test_it_04_01_weakness_from_stats.py`: tagged worked example in Postgres → ranking through the ACL equals the coach's catalogue worked example. **Unit:** `backend/tests/unit/coaching/test_weakness.py` (tables from the catalogue; GS-AN-1 per side; property: sum of attributed rallies lost = rallies lost by that side, ≥ 1,000 examples). **Context:** Coaching (domain, no framework imports), Analytics public read model. **Dirs:** `backend/src/racket/coaching/weakness*`, `backend/src/racket/analytics/public.py` (read model addition only), `backend/tests/`, `tests/features/`.
+- **AC:** pure domain `racket.coaching.weakness`: from per-side rally facts (ending type, responsible player, server side) over the player's tagged, non-deleted matches, compute rallies lost per game per weakness, split lost-on-serve and lost-on-receive; points conceded shown separately; ranking by total rallies lost per game, ties by the catalogue order (COACH-4); unit object carries the configured unit name (ADR 0003) and a side-out-unverified mark (field name per PE-4) while the side-out rule is unverified (P7); the FR-120 example ranks "unforced errors" above "serve faults"; zero games → empty ranking, not an error. Analytics data enters only through the `analytics.public` read model (ACL).
+- **Gherkin:** `tests/features/weakness_ranking.feature` (`@needs-verification`): FR-120 scenario; negative first "No tagged match → no weakness and a reason"; "Each weakness shows rallies lost on serve and on receive"; "The serve/receive split is marked unverified". **IT:** IT-04-01 `backend/tests/integration/test_it_04_01_weakness_from_stats.py`: tagged worked example in Postgres → ranking through the ACL equals the coach's catalogue worked example. **Unit:** `backend/tests/unit/coaching/test_weakness.py` (tables from the catalogue; GS-AN-1 per side; property: sum of attributed rallies lost = rallies lost by that side, ≥ 1,000 examples). **Context:** Coaching (domain, no framework imports), Analytics public read model. **Dirs:** `backend/src/racket/coaching/weakness*`, `backend/src/racket/analytics/public.py` (read model addition only), `backend/tests/`, `tests/features/`.
 
 #### ST-056 `TrainingPlan` aggregate and assembly (FR-121; QD-PL-01..03)
 - **AC:** given top-3 weaknesses, preferences and the reviewed library, build a 2-week plan deterministically: sessions per week as stated; each session total ≤ minutes per session; weekly total ≤ stated weekly minutes; every session starts with a `warm-up` drill; no drill > 40% of its session; only `coach-reviewed`/`verified`, non-deprecated drills whose `players ≤ available` and `needs ⊆ equipment`; drills target the weakness metrics, spread by weakness rank; no feasible drill for a weakness → the plan names the weakness as "no drill fits your setup" instead of breaking a constraint. Aggregate guards its invariants on creation and on every change (swap, done).
@@ -253,7 +255,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 - **Gherkin:** `tests/features/training_plan.feature` scenario "A saved plan reads back identical". **IT:** IT-04-02c `backend/tests/integration/test_it_04_02_plan_repository.py` (round trip; another owner sees nothing; account purge leaves 0 plan rows). **Unit:** mapping tests. **Dirs:** `backend/src/racket/coaching/plan/repository.py`, `backend/src/racket/migrations/versions/0018_*`, `backend/src/racket/platform/purge.py` (inventory only), `backend/tests/`.
 
 #### ST-061b Plan API (FR-120..123; NFR-019)
-- **AC:** `POST /me/plan` validates preferences (422 with field errors), ranks weaknesses (ST-055), assembles (ST-056) with citations (ST-057), saves and returns 201 with the plan, weaknesses with the provisional unit, limited-data note and the "unofficial scoring" flag; `GET /me/plan` 200 or 404 `no_plan`; no tagged match → 409 `no_tagged_match` with the reason text; generation p95 ≤ 5 s (NFR-019) measured in IT; routes added to the BOLA matrix (other accounts get 404 for session/assignment ids); OpenAPI updated.
+- **AC:** `POST /me/plan` validates preferences (422 with field errors), ranks weaknesses (ST-055), assembles (ST-056) with citations (ST-057), saves and returns 201 with the plan, weaknesses with the unit and the side-out-unverified mark, limited-data note and the "unofficial scoring" flag; `GET /me/plan` 200 or 404 `no_plan`; no tagged match → 409 `no_tagged_match` with the reason text; generation p95 ≤ 5 s (NFR-019) measured in IT; routes added to the BOLA matrix (other accounts get 404 for session/assignment ids); OpenAPI updated.
 - **Gherkin:** `tests/features/rules_only_plan_api.feature` (negative first "no tagged match"). **IT:** IT-04-02 `backend/tests/integration/test_it_04_02_plan_api.py`; IT-04-03 BOLA rows in `backend/tests/regression/bola.py` (QA lane file: TCR row if an existing table entry changes; additions only expected). **Unit:** request/response schema tests. **Dirs:** `backend/src/racket/coaching/api.py`, `service.py`, `backend/src/racket/platform/app.py` (router include), `backend/tests/`, `tests/features/`.
 
 #### ST-062 Done and swap (FR-124)
@@ -261,7 +263,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 - **Gherkin:** `tests/features/plan_follow_through.feature`: negative first "no alternative drill → plan unchanged"; FR-124 "Swap a drill"; "Mark done twice offline → done once". **IT:** IT-04-04 `test_it_04_04_session_done_idempotent.py`; IT-04-05 `test_it_04_05_swap.py`. **Unit:** aggregate swap/done tests. **Dirs:** `backend/src/racket/coaching/`, `backend/tests/`, `tests/features/`.
 
 #### ST-063a Plan page P-01
-- **AC:** route `/plan` per PD-4: weaknesses (provisional label), sessions per week, each drill with name, minutes, players, equipment, "why" citing metric, value and n, and "Show me" opening the evidence panel for that metric (reuses `EvidencePanel`); notices: "unofficial scoring" once before the first card and the interim human-coach notice; limited-data banner; empty (no tagged match), loading, error, not-found states; nav link from the match stats page and the account menu; keyboard and 320/360 px.
+- **AC:** route `/plan` per PD-4: weaknesses (unit name; the "unofficial scoring" notice covers the unverified side-out split), sessions per week, each drill with name, minutes, players, equipment, "why" citing metric, value and n, and "Show me" opening the evidence panel for that metric (reuses `EvidencePanel`); notices: "unofficial scoring" once before the first card and the interim human-coach notice; limited-data banner; empty (no tagged match), loading, error, not-found states; nav link from the match stats page and the account menu; keyboard and 320/360 px.
 - **Gherkin:** bindings for `drill_rationale.feature` UI scenario in `web/tests/` (Vitest + Testing Library). **IT:** contract test against the OpenAPI schema (`web/tests/contract/plan.test.ts`) with MSW. **Unit:** component tests (`web/tests/unit/plan-view.test.tsx`), negative first (citation missing → row shows an error, not a blank). **Dirs:** `web/src/app/plan/`, `web/src/components/plan/PlanView*`, `web/src/lib/api/plan*`, `web/tests/`.
 
 #### ST-063b Plan preferences P-02
@@ -285,7 +287,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 - **Gherkin:** `tests/features/readme_quickstart.feature` new scenario (negative first: a missing step fails the checker). **IT:** `infra/tests/test_readme_quickstart.py` new case on the real README. **Unit:** checker unit test. **Dirs:** `README.md`, `scripts/ci/check_readme_quickstart.py`, `infra/tests/`, `tests/features/`.
 
 #### ST-067 Config scaffold
-- **AC:** `Settings` gains `coaching_weakness_unit` (only `rallies_lost_per_game`; anything else fails at start), `feature_age_gate`, `feature_retention_setting`, `feature_training_consent`, `feature_quotas` (all default `False`), `age_minimum` 18, `retention_choices_days` (30, 90, 365, none) and default 90, `match_creations_per_hour` 10, `storage_quota_bytes` 20 GB; `infra/env.example` lists them off with an "interim, OQ-nn" comment; a `GET /config/public` (or existing config route) exposes the flags the web needs.
+- **AC:** `Settings` gains `coaching_weakness_unit` (only `rallies_lost_per_game`; anything else fails at start), `feature_age_gate`, `feature_retention_setting`, `feature_training_consent`, `feature_quotas` (all default `False`), `age_minimum` 18, `retention_choices_days` (30, 90, 365, none) and default 90, `match_creations_per_hour` 10, `storage_quota_bytes` 20 GB; `infra/env.example` lists them off with a comment naming each value's source ("ADR 0023, OQ-nn"; "(judgment), P8" for the storage quota); a `GET /config/public` (or existing config route) exposes the flags the web needs.
 - **Gherkin:** `tests/features/feature_flags.feature`: negative first "unknown weakness unit refuses to start"; "flags are off by default". **IT:** `backend/tests/integration/test_it_04_17_public_config.py`. **Unit:** settings parsing tests. **Dirs:** `backend/src/racket/platform/settings.py`, `backend/src/racket/platform/http.py` (route), `infra/env.example`, `backend/tests/`, `tests/features/`.
 
 #### QA-HARNESS-4a Live harness for the plan
@@ -309,7 +311,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 - **Gherkin:** `tests/features/video_retention.feature` (FR-008; negative first "flag off → video kept"). **IT:** IT-04-07 `test_it_04_07_retention_purge.py` (object 404, stats 200). **Unit:** retention date rules. **Dirs:** `backend/src/racket/players/` (setting), `backend/src/racket/video_ingest/` (dates), `backend/src/racket/platform/purge.py`, migration `0020_*`, `backend/tests/`, `tests/features/`.
 
 #### ST-070 Training-data consent (FR-009)
-- **AC:** with `feature_training_consent` on, `PUT /me/training-consent {"opt_in": bool}` (default false, audit row per change); the label-set/gold-manifest builder in `racket.dataset` includes only matches whose owner has opted in at build time; revoke → excluded from the next build; frozen gold sets untouched (OQ-06 open, documented); flag off → the builder behaves as today (consented-match rule of FR-150 unchanged).
+- **AC:** with `feature_training_consent` on, `PUT /me/training-consent {"opt_in": bool}` (default false, audit row per change); the label-set/gold-manifest builder in `racket.dataset` includes only matches whose owner has opted in at build time; revoke → excluded from the next build; frozen gold-set versions are not edited and retire at their next scheduled refresh (OQ-06, accepted 2026-10-05, ADR 0023; documented); flag off → the builder behaves as today (consented-match rule of FR-150 unchanged).
 - **Gherkin:** `tests/features/training_consent.feature` (FR-009 both scenarios; negative first "not opted in → excluded"). **IT:** IT-04-08 `test_it_04_08_consent_label_set.py`. **Unit:** dataset selection rule tests. **Dirs:** `backend/src/racket/dataset/`, `backend/src/racket/players/` (consent setting), migration `0021_*`, `backend/tests/`, `tests/features/`.
 
 #### ST-071 Privacy settings R-01
@@ -336,7 +338,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 
 | Story | Ready? | Condition (owner, gate ticket) |
 |---|---|---|
-| ST-055 | Ready on condition | COACH-4 catalogue; PE-4 ACL; OQ-08 open → unit provisional (ADR 0051) |
+| ST-055 | Ready on condition | COACH-4 catalogue; PE-4 ACL; OQ-08 accepted (ADR 0003); side-out part `@needs-verification` until P7 (ADR 0051 rule 2) |
 | ST-056, ST-057 | Ready on condition | PE-4 aggregate; COACH-4 warm-up rule; PM-4 ADR 0005 (ST-057) |
 | ST-058a..c | Ready on condition | COACH-4 checklist and scope |
 | ST-059, ST-060 | Ready on condition | COACH-4 scope; library after ST-058c |
@@ -344,7 +346,7 @@ Each card names the Gherkin feature, the integration tests (IT) and the unit tes
 | ST-063a/b/c | Ready on condition | PD-4 flows and DR-04 cells; PM-4 wording; API tickets merged |
 | ST-064, ST-065, ST-066 | Ready on condition | API and UI tickets merged |
 | ST-067 | Ready on condition | PE-4 setting names |
-| ST-068a..ST-073 | Ready on condition | SEC-4 threat notes; PE-4 routes; PM-4 interim wording (P16/P8 open → interim values) |
+| ST-068a..ST-073 | Ready on condition | SEC-4 threat notes; PE-4 routes; PM-4 interim wording (values PO-accepted, ADR 0023; texts pending legal review P16; storage quota size P8) |
 | C4-* | Ready | inputs in the Sprint 3 ledger and report §9 |
 
 ## 4. Task breakdown per role agent
@@ -415,7 +417,7 @@ Real Postgres, object store (SeaweedFS) and Mailpit through `scripts/dev-postgre
 # tests/features/weakness_ranking.feature
 @needs-verification
 Feature: Weakness ranking
-  Rule: Weaknesses are ranked by rallies lost per game, split serve and receive (unit provisional, OQ-08)
+  Rule: Weaknesses are ranked by rallies lost per game, split serve and receive (OQ-08, ADR 0003; the side-out part needs verification)
     Scenario: No tagged match
       Given Ivy has no tagged match
       When her weaknesses are ranked
@@ -426,7 +428,7 @@ Feature: Weakness ranking
       When her weaknesses are ranked
       Then "unforced errors" ranks above "serve faults"
       And each weakness shows rallies lost on serve and on receive
-      And the unit is labelled "provisional"
+      And the serve and receive split is marked as not yet verified
 ```
 
 ```gherkin
@@ -525,7 +527,7 @@ Feature: Rules-only plan eval (NFR-005 a)
 
 ```gherkin
 # tests/features/age_confirmation.feature
-Feature: Age confirmation (interim, OQ-05)
+Feature: Age confirmation (OQ-05 accepted; wording interim until legal review)
   Scenario: Under-age applicant
     Given Sam is creating an account
     When Sam answers that he is under 18
@@ -543,7 +545,7 @@ Feature: Age confirmation (interim, OQ-05)
 
 ```gherkin
 # tests/features/video_retention.feature
-Feature: Video retention (interim, OQ-07)
+Feature: Video retention (OQ-07 accepted, ADR 0006; legal adequacy open)
   Scenario: Flag off keeps the video
     Given the retention setting is switched off
     When the purge runs
@@ -557,7 +559,7 @@ Feature: Video retention (interim, OQ-07)
 
 ```gherkin
 # tests/features/training_consent.feature
-Feature: Training-data consent (interim, OQ-06)
+Feature: Training-data consent (OQ-06 accepted; wording interim until legal review)
   Scenario: User has not opted in
     Given Ivy has not opted in to training use
     When the next label set is built
@@ -570,7 +572,7 @@ Feature: Training-data consent (interim, OQ-06)
 
 ```gherkin
 # tests/features/rate_limits.feature
-Feature: Rate limits and storage quota (interim values, OQ-13)
+Feature: Rate limits and storage quota (OQ-13 accepted; storage quota size (judgment) until P8)
   Scenario: Too many matches
     Given Ivy has created 10 matches in the last hour
     When she starts another
@@ -668,7 +670,8 @@ Sprint DoD:
 | Row | Item | Status at planning |
 |---|---|---|
 | S4-DoD-P15 | Human coach review of the starter drills (`verified`, FR-141) | not met: waiting on P15 |
-| S4-DoD-P16 | OQ-05/06/07/08 answers replacing the interim values | not met: waiting on P16 |
+| S4-DoD-P16 | Legal review (NFR-070, US + AU) of the age wording, footage notice, consent text and retention windows (values PO-accepted, ADR 0023) | not met: waiting on P16 |
+| S4-DoD-P7 | Coach verification of the side-out rule behind the serve/receive split (OQ-08's open part; needs the OQ-01 rulebook) | not met: waiting on P7 |
 | S4-DoD-P8 | Storage quota size and monthly budgets (OQ-13) | not met: waiting on P8 |
 | S4-DoD-P6 | Screen-reader pass of Sprint 1-4 screens (NFR-027 b) | not met: waiting on P6 |
 | S4-DoD-P10 | Repository visibility | not met: waiting on P10 |
@@ -696,7 +699,7 @@ Sprint DoD:
 
 1. `git clone` → `make up` → `make demo` (prints the stats URL and `https://localhost:3000/plan`). [G04-06]
 2. Sign in as Ivy; open the demo match: score sheet with "unofficial" label; stats with n and Wilson ranges. [Sprint 3]
-3. Open the plan: weaknesses with "provisional" unit, serve/receive split; limited-data banner "based on limited data from 12 rallies". [FR-120, FR-123]
+3. Open the plan: weaknesses by rallies lost per game with the serve/receive split (side-out part not yet verified); limited-data banner "based on limited data from 12 rallies". [FR-120, FR-123]
 4. Open a drill: "why" names metric, value and n; "Show me" plays the rallies. [FR-122]
 5. Go offline (devtools), mark a session done, reload, go online: synced once. [FR-124]
 6. "Not for me" on a drill: a different drill for the same metric; session still ≤ 30 min. [FR-124]
