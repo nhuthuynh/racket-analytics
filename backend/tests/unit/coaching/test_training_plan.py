@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 from hypothesis import HealthCheck, event, given, settings
 from hypothesis import strategies as st
+
 from racket.coaching.plan.domain import (
     NO_DRILL_FITS,
     Drill,
@@ -31,7 +32,6 @@ from racket.coaching.plan.domain import (
     Unfitted,
     assemble,
 )
-
 from tests.unit.coaching.plan_helpers import (
     TOP_3,
     drill,
@@ -458,10 +458,13 @@ def drills(draw: st.DrawFn, i: int) -> Drill:
 def inputs(draw: st.DrawFn) -> tuple[list[PlanWeakness], Preferences, list[Drill]]:
     n = draw(st.integers(0, 14))
     library = [draw(drills(i)) for i in range(n)]
+    # an empty ranking is covered by test_no_weakness_gives_no_plan; here 1-4 weaknesses
+    targets = draw(st.lists(st.sampled_from(TARGETS), min_size=1, max_size=4, unique=True))
     if draw(st.booleans()):  # often give the generator a chance to build a plan
+        metric, _, share = targets[0].partition(":")
         library.append(warm_up("pb.gen.warm"))
-        library.append(drill("pb.gen.easy", targets=("AN-04",), minutes=(5, 6)))
-    targets = draw(st.lists(st.sampled_from(TARGETS), max_size=4, unique=True))
+        skills = (f"share:{share}",) if share else ()
+        library.append(drill("pb.gen.easy", targets=(metric,), skills=skills, minutes=(5, 6)))
     weaknesses = [PlanWeakness(f"w{r}", t, r) for r, t in enumerate(targets, start=1)]
     spw = draw(st.integers(1, 7))
     mps = draw(st.integers(15, 180))
