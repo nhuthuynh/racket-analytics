@@ -44,9 +44,11 @@ Rule 0.2 makes S responsible for its own `unforced_error`, `forced_error` and `f
 
 Unforced errors → AN-04. Errors under pressure → AN-07 forced-error share. Other faults → AN-07 fault share. Serve faults → AN-05 if lost on serve ≥ lost on receive, else AN-07 fault share. Opponent winners → AN-01 if lost on serve ≥ lost on receive, else AN-02. The citation (QD-PL-04) is that metric's value and n for side S; for AN-07 the value is the named share.
 
+**Plan target** (what ST-056 matches a drill against, and ST-059 counts): the metric ID, except that AN-07 is split by share, because a drill that trains fewer faults (footwork at the line, serve routine) is not a drill that trains defending under pressure. The six plan targets are `AN-01`, `AN-02`, `AN-04`, `AN-05`, `AN-07:fault` and `AN-07:forced-error`. A drill hits `AN-07:fault` when `target_metrics` contains `AN-07` and `skills` contains `share:fault`; it hits `AN-07:forced-error` when `skills` contains `share:forced-error` (a drill may carry both). A weakness slot whose primary metric is an AN-07 share is filled only by a drill hitting that share; an AN-07 drill with no share skill fills no AN-07 slot. The drill schema (`target_metrics` `^AN-[0-9]{2}$`) is unchanged; the share lives in `skills` (checklist C3).
+
 ## 6. R1 targetable metrics
 
-**AN-01, AN-02, AN-04, AN-05, AN-07** (decided by the coach, judgment). AN-03 (points per service turn) and AN-06 (longest run) are summaries of serving and momentum, not a skill a drill trains directly; AN-03 also depends on unverified rotation rules. Drills may name them in `skills`, but plans never target them and coverage (drill-review-checklist §3) does not count them.
+**AN-01, AN-02, AN-04, AN-05, AN-07** (decided by the coach, judgment); as plan targets AN-07 counts twice, once per share (§5), so there are six plan targets. AN-03 (points per service turn) and AN-06 (longest run) are summaries of serving and momentum, not a skill a drill trains directly; AN-03 also depends on unverified rotation rules. Drills may name them in `skills`, but plans never target them and coverage (drill-review-checklist §3) does not count them.
 
 ## 7. Worked examples (pins ST-055 unit tables, `planlib`, G04-03 a)
 

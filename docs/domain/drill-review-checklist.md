@@ -11,7 +11,7 @@ A drill version moves `draft` → `coach-reviewed` only when every row passes. O
 |---|---|---|
 | C1 | Schema and lint | `cd backend && uv run racket-drill-lint ../content/drills` → `ok, 0 problem(s)` with the drill in the library |
 | C2 | Source | `source` names a verified source ID, **or** `coach_rationale` explains why the drill trains its target metric and contains "(judgment)" |
-| C3 | Target fit | every `target_metrics` ID is an R1 targetable metric (AN-01, AN-02, AN-04, AN-05, AN-07), or the drill is a warm-up (§2); the setup actually produces the shots that move that metric |
+| C3 | Target fit | every `target_metrics` ID is an R1 targetable metric (AN-01, AN-02, AN-04, AN-05, AN-07), or the drill is a warm-up (§2); a drill with `AN-07` has `share:fault` and/or `share:forced-error` in `skills`, and a drill without `AN-07` has neither (weakness-catalogue §5); the setup actually produces the shots that move that metric (that share for AN-07: fewer own faults, or fewer errors under pressure) |
 | C4 | Numeric success criterion | `success_criterion` is countable in one session ("7 of 10 serves land past the cone line"); no "improve", "feel" or "until comfortable" without a number |
 | C5 | Safety (QD-DR-04) | a drill with overhead lobs retreating backwards, diving, sprints or high-intensity footwork has non-empty `safety_notes` (e.g. "turn and run back, never backpedal"; "stop if dizzy or in pain"); content that could cause injury is escalated to the EM and the PO instead of reviewed |
 | C6 | Level fit | `level_min`..`level_max` matches the demand: beginner = cooperative feeds, no speed-ups; intermediate = some live balls; advanced = live, competitive or speed-up content |
@@ -29,8 +29,9 @@ The coach records one row per drill: `id@version`, C1..C8 pass/fail, the date. A
 
 ## 3. Coverage scope (QD-DR-05, FR-141; checked by ST-059)
 
-- **Cells:** each R1 targetable metric (AN-01, AN-02, AN-04, AN-05, AN-07) × each level (beginner, intermediate, advanced) = **15 cells**.
-- **Counted drills:** latest version, `review_status` `coach-reviewed` or `verified`, no `deprecated_by`, not a warm-up. A drill counts in every cell of each target metric × each level in `level_min`..`level_max`.
+- **Targets:** `AN-01`, `AN-02`, `AN-04`, `AN-05`, `AN-07:fault`, `AN-07:forced-error` (the plan targets of weakness-catalogue §5: AN-07 is split by share, so a library with no drill for one share fails).
+- **Cells:** each target × each level (beginner, intermediate, advanced) = **18 cells**.
+- **Counted drills:** latest version, `review_status` `coach-reviewed` or `verified`, no `deprecated_by`, not a warm-up. A drill counts in every cell of each target it hits × each level in `level_min`..`level_max`; for AN-07 it hits a share only through the `share:fault` / `share:forced-error` skill. An AN-07 drill with no share skill counts in no AN-07 cell and the check names it (`<id>@<version>: AN-07 without share skill`).
 - **Each cell needs:** ≥ 2 drills; of them ≥ 1 with `players ≤ 2` and ≥ 1 whose `needs` excludes `ball_machine` (one drill may satisfy both).
 - **Library:** ≥ 20 counted-or-warm-up reviewed drills in total, with ≥ 3 warm-ups (ST-058a). AN-03 and AN-06 are out of scope (weakness-catalogue §6).
-- The CI check prints the matrix (count, `players ≤ 2` count, no-ball-machine count per cell) and fails naming each empty cell, e.g. `AN-05 × beginner: players ≤ 2: 0`.
+- The CI check prints the matrix (count, `players ≤ 2` count, no-ball-machine count per cell) and fails naming each empty cell, e.g. `AN-05 × beginner: players ≤ 2: 0` or `AN-07:forced-error × advanced: drills: 0`.
