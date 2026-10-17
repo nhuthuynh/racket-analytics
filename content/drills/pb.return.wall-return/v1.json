@@ -1,0 +1,40 @@
+{
+  "id": "pb.return.wall-return",
+  "version": 1,
+  "name": "Deep return strokes against a wall",
+  "summary": "Alone at a wall, drop-feed and hit a full return-of-serve stroke above a tape line, then step forward as after a return.",
+  "skills": [
+    "AN-02",
+    "return"
+  ],
+  "target_metrics": [
+    "AN-02"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 1.5 m above the floor (well above net height)",
+    "Stand about 6 m from the wall; drop the ball, let it bounce, and hit a full, smooth forehand or backhand return above the line",
+    "After each stroke take two steps forward, as after a return, then walk back to the start",
+    "Sets of 10 strokes; count strokes that hit the wall above the line"
+  ],
+  "success_criterion": "In each of 3 sets of 10 strokes, at least 8 hit the wall above the tape line",
+  "progressions": [
+    "pb.return.deep-return-target"
+  ],
+  "regressions": [],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) A high, deep return gives the receiving side time to reach the non-volley-zone line, which supports winning rallies on receive (AN-02); a wall lets a player groove the stroke alone and with no court. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

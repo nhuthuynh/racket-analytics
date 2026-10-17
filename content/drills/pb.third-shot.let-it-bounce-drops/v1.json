@@ -1,0 +1,45 @@
+{
+  "id": "pb.third-shot.let-it-bounce-drops",
+  "version": 1,
+  "name": "Let it bounce, then drop",
+  "summary": "Serve deep, let the return bounce before hitting it, and play a soft third-shot drop into the non-volley zone; count own faults and drops that land in the zone.",
+  "skills": [
+    "AN-07",
+    "share:fault",
+    "AN-01",
+    "serve",
+    "third-shot"
+  ],
+  "target_metrics": [
+    "AN-07",
+    "AN-01"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Server at the baseline, partner as receiver; serve as your rules allow (the fault rules are UNVERIFIED in this app)",
+    "Receiver returns cooperatively, deep and soft, and stays back; the server lets the return bounce before hitting it (volleying the return counts as an own fault, `two_bounce`)",
+    "Server plays a soft third-shot drop aiming to land in the non-volley zone; the receiver catches the ball, so the rally is not played out",
+    "Rounds of 10 serves; swap roles after each round; count serve faults, two-bounce faults and drops that land in the zone"
+  ],
+  "success_criterion": "In each round of 10, at least 6 drops land in the non-volley zone with at most 1 own fault (serve or two-bounce)",
+  "progressions": [
+    "pb.serve.serve-and-third"
+  ],
+  "regressions": [
+    "pb.serve.deep-target"
+  ],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) On serve the serving side loses rallies with no opponent shot by faulting the serve or volleying the return; a cooperative serve-return-drop pattern trains both (AN-07 fault share) and the start of winning rallies on serve (AN-01) before live play. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
