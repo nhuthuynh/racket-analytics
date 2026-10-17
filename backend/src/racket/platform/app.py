@@ -22,7 +22,7 @@ from racket.platform import events
 from racket.platform.db import engine_for, session_factory, upgrade_to_head
 from racket.platform.errors import ErrorMapper
 from racket.platform.health import router as health_router
-from racket.platform.http import EdgeMiddleware, install_error_handlers
+from racket.platform.http import EdgeMiddleware, install_error_handlers, public_config_router
 from racket.platform.logs import configure_logging
 from racket.platform.settings import Settings
 from racket.platform.slis import HttpMetricsMiddleware, configure_metrics
@@ -94,6 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from racket.video_ingest.api import router as uploads_router
 
     app.include_router(health_router)
+    app.include_router(public_config_router)  # GET /config/public, no session (ST-067)
     app.include_router(players_router)
     if settings.dev_identity_enabled:
         app.include_router(dev_router)  # the /dev/* routes exist only when enabled (api §2)

@@ -8,6 +8,9 @@
 * turns any exception that escapes the app into the generic 500 body (AQS/SEC-12), so even
   a crash gets the headers, a ``support_ref`` and a log line with the same reference;
 * logs one JSON line per request with the route template, never the raw path or query.
+
+``public_config_router`` serves ``GET /config/public`` (ST-067; api-sprint-04 §1 rule 3): the
+R1 feature flags and the weakness unit the web reads before sign-in; no session needed.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, MutableMapping
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from opentelemetry.trace import SpanKind, Status, StatusCode
@@ -57,6 +60,14 @@ _OWNED_HEADERS = {name for name, _ in SECURITY_HEADERS} | {b"server", b"x-reques
 
 
 ERROR_HEADERS_STATE = "error_headers"
+public_config_router = APIRouter()
+
+
+@public_config_router.get("/config/public")
+def public_config(request: Request) -> dict[str, Any]:
+    """Cache-Control: no-store comes with every response (``SECURITY_HEADERS``)."""
+    config: dict[str, Any] = request.app.state.settings.public_config()
+    return config
 
 
 def route_error_headers(request: Request) -> dict[str, str]:
