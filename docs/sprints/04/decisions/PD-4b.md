@@ -1,0 +1,8 @@
+# PD-4b decisions
+
+Per-ticket decision file (PO rule 2026-10-07). Ticket: PD-4b, the executable gate check for design flows files (`docs/design/tools/check_flows.py` + `infra/tests/test_check_flows.py`), split out of PR #88 (PD-4) because the PR-size check failed (544 > 400) and the EM refused a waiver (`docs/sprints/04/decisions/PD-4.md`, EM row; the EM row calls this slice "PD-4a", the orchestrator's resume note names it PD-4b, same content).
+
+| Date | Who | Decision | Evidence | Why |
+|---|---|---|---|---|
+| 2026-10-17 | principal-designer | **The two files are moved byte-identical from `7530e85` (PD-4 branch, after review fix PE-PD4-01)**: `git checkout 7530e85 -- docs/design/tools/check_flows.py infra/tests/test_check_flows.py` on a branch from `origin/main` | Red-first history stays on the PD-4 branch: `5dd3fc8` (tests red, tool absent) and `419893c` (PE-PD4-01 red: 9 failed, 3 passed). On this branch: tool file removed → `cd infra && uv run -q pytest -q -p no:cacheprovider tests/test_check_flows.py` → `1 error during collection`; restored → `12 passed` | EM split decision; no test is changed, only moved (senior-qa-engineer row in PD-4.md: no TCR needed) |
+| 2026-10-17 | principal-designer | **The tool does not depend on the flows file and vice versa; this PR can merge before or after #88** | Against `flows-sprint-04.md` from the PD-4 branch: `--decider principal-designer --opened <5 deciders> --screen <7>` → `0 problem(s)`, rc 0; `--decider <5 deciders>` → 5 `FAIL cell` lines, rc 1 (DR-04 decider cells still pending) | Independent slices, each green on its own (EM row) |
