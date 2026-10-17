@@ -1,0 +1,42 @@
+{
+  "id": "pb.serve.pressure-ladder",
+  "version": 1,
+  "name": "Called-target serve under pressure",
+  "summary": "Partner calls a target (deep middle, deep sideline, short angle) after the server sets; a fault resets the score.",
+  "skills": [
+    "AN-05",
+    "AN-01",
+    "serve"
+  ],
+  "target_metrics": [
+    "AN-05",
+    "AN-01"
+  ],
+  "level_min": "advanced",
+  "level_max": "advanced",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "cones"
+  ],
+  "setup": [
+    "Cones mark 3 targets in each diagonal service box: deep middle, deep sideline, short angle",
+    "The partner calls the target only once the server is set, as in a match",
+    "Score +1 for the called target, 0 for in but missed target, and a fault resets the score to 0",
+    "Sets of 20 serves, alternating boxes"
+  ],
+  "success_criterion": "In a set of 20 serves: at least 18 in, at least 12 on the called target",
+  "progressions": [],
+  "regressions": [
+    "pb.serve.deep-target"
+  ],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) Late target calls and a reset on a fault add match-like pressure to serve placement, so serve faults (AN-05) and serve effectiveness (AN-01) hold when it matters. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

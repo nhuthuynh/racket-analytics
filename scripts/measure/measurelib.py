@@ -142,8 +142,9 @@ def junit_rate(
 
 # Any upper-case prefix, optional letter-bearing segments, then a number that may be dotted:
 # PE-R1-S1-02, QA-R2V-01, S-07, BLK-ASVS-6.3.3 (PE-R2-S1-02: the old pattern dropped the last two).
+# The prefix may mix digits and letters, so a verifier's id parses too: V04R1-01 (C4-RECON, M13).
 _FINDING_ID = re.compile(
-    r"\b[A-Z]{1,5}\d*(?:-(?=[A-Z0-9]*[A-Z])[A-Z0-9]+)*-\d+(?:\.\d+)*\b"
+    r"\b[A-Z]{1,5}(?:\d+[A-Z]+)*\d*(?:-(?=[A-Z0-9]*[A-Z])[A-Z0-9]+)*-\d+(?:\.\d+)*\b"
     # routed ids with a role suffix after a numbered segment: PD-RV2-DR-FE (PD-R3S2-04)
     r"|\b[A-Z]{1,5}-[A-Z]+\d+[A-Z0-9]*(?:-[A-Z]+)+\b"
 )

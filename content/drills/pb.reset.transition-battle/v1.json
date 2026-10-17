@@ -1,0 +1,42 @@
+{
+  "id": "pb.reset.transition-battle",
+  "version": 1,
+  "name": "Transition battle",
+  "summary": "One player starts at the baseline against a partner at the non-volley-zone line who attacks; the baseline player resets and works forward to the line.",
+  "skills": [
+    "AN-07",
+    "share:forced-error",
+    "reset",
+    "transition",
+    "speed-up"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "advanced",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Attacker at the non-volley-zone line; defender at the baseline of the opposite side, in the same half; no lobs",
+    "The attacker starts each rally with a feed and then plays live and competitively, driving or speeding up any ball the defender leaves high",
+    "The defender resets each ball softly into the non-volley zone and moves forward; the defender wins the rally on reaching the line and winning it there, or on an attacker error",
+    "Rounds of 10 rallies; swap roles after each round; the defender tallies rallies lost to their own errors under pressure"
+  ],
+  "success_criterion": "In each round of 10 rallies, lose at most 4 rallies to your own errors under pressure",
+  "progressions": [],
+  "regressions": [
+    "pb.reset.transition-reset-feeds"
+  ],
+  "safety_notes": "Drives and speed-ups come at the body: wear eye protection, aim low, never at the face, and play no lobs. Stop if in pain.",
+  "coach_rationale": "(judgment) Moving forward against an attacker at the line is where amateur players commit the most errors under pressure; a live, competitive version with an error tally trains and measures the AN-07 forced-error share at advanced level. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

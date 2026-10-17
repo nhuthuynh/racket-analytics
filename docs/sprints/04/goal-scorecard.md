@@ -138,3 +138,4 @@ $DC cp web-tls:/data/caddy/pki/authorities/local/root.crt "$GOAL/ca.crt"
 
 | Metric | Author | Date | Head | Command | rc |
 |---|---|---|---|---|---|
+| G04-01, G04-02, G04-03 (a, d) | senior-qa-engineer | 2026-10-17 | `64b8f08` (no stack: plan routes not on `main`) | `python3 scripts/measure/live_plan.py --base-url https://localhost:3000 --runs 5 --determinism 3 --json …` (red against PE-4; re-run on an isolated stack before VERIFY-04, `decisions/QA-HARNESS-4a.md`) | 2 |

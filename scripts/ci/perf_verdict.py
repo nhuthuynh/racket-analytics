@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Verdict on a Locust run of backend/tests/perf/locustfile_sprint02.py (ST-039, SRE slice).
+"""Verdict on a Locust run of backend/tests/perf/locustfile_sprint0{2,4}.py (ST-039, ST-054).
 
     python3 scripts/ci/perf_verdict.py --stats reports/perf/perf_stats.csv \
         --state reports/perf/perf_state.json --rps 50 --json reports/perf/verdict.json \
         [--history reports/perf/perf_stats_history.csv --users 51] \
-        [--summary "$GITHUB_STEP_SUMMARY"]
+        [--dashboard-reads stats,evidence] [--summary "$GITHUB_STEP_SUMMARY"]
 
 Gates (sprint-02 §8): every endpoint exercised; availability (non-failed / all) >= 99.5%
 (NFR-041); correction and undo p95 <= 1,500 ms (NFR-013, the larger of the two p95s); the
@@ -19,6 +19,13 @@ user spawn, which Locust counts inside --run-time, is excluded) to the last such
 window must last at least --min-window seconds (default 60), else the run fails. Without
 --history the whole-run rate is gated (stricter). Availability and latency always cover the
 whole run, warm-up included.
+
+Dashboard reads (C4-LOCUST, ST-054; NFR-010 "dashboard", NFR-041): each Locust name given
+with --dashboard-reads (the job passes ``stats,evidence``: GET stats and GET evidence of the
+seeded tagged match) must be exercised and, on its own route, have p95 <= 300 ms, p99 <=
+800 ms and availability >= 99.5% (gates ``dashboard_p95``, ``dashboard_p99``,
+``dashboard_availability``; ``dashboard_failed`` names the routes). A route with no samples
+or an "N/A" percentile fails closed. Without the flag the verdict is the Sprint 2 one.
 
 Exit 0 all gates met; 1 a gate failed; 2 the stats or state file is missing or unreadable.
 Standard library only.
@@ -38,6 +45,8 @@ MIN_AVAILABILITY = 0.995
 MAX_CORRECTION_P95_MS = 1500.0
 MIN_RATE_SHARE = 0.95
 MIN_WINDOW_S = 60.0
+DASHBOARD_P95_MS = 300.0  # NFR-010 "dashboard"
+DASHBOARD_P99_MS = 800.0  # NFR-010 "dashboard"
 
 
 def _num(raw: str) -> float | None:
@@ -84,6 +93,56 @@ def measurement_window(history: list[dict[str, str]], users: int) -> dict | None
     }
 
 
+def dashboard_reads(rows: dict[str, dict[str, str]], names: tuple[str, ...]) -> dict[str, dict]:
+    """Per-route figures of the dashboard reads; a route Locust never sampled has 0 requests
+    and no percentiles."""
+    reads = {}
+    for name in names:
+        row = rows.get(name, {})
+        n = _num(row.get("Request Count")) or 0.0
+        failed = _num(row.get("Failure Count")) or 0.0
+        reads[name] = {
+            "requests": int(n),
+            "failures": int(failed),
+            "availability": round((n - failed) / n, 5) if n else 0.0,
+            "p95_ms": _num(row.get("95%")),
+            "p99_ms": _num(row.get("99%")),
+        }
+    return reads
+
+
+def _route_failures(read: dict) -> list[str]:
+    """The dashboard gates this one route fails (fail closed on missing figures)."""
+    p95, p99 = read["p95_ms"], read["p99_ms"]
+    failed = []
+    if not read["requests"] or p95 is None or p95 > DASHBOARD_P95_MS:
+        failed.append("dashboard_p95")
+    if not read["requests"] or p99 is None or p99 > DASHBOARD_P99_MS:
+        failed.append("dashboard_p99")
+    if read["availability"] < MIN_AVAILABILITY:
+        failed.append("dashboard_availability")
+    return failed
+
+
+DASHBOARD_GATES = ("dashboard_p95", "dashboard_p99", "dashboard_availability")
+
+
+def dashboard_failed(reads: dict[str, dict]) -> dict[str, list[str]]:
+    """For each dashboard gate, the routes that fail it (empty list: the gate passes)."""
+    by_gate: dict[str, list[str]] = {g: [] for g in DASHBOARD_GATES}
+    for name, read in reads.items():
+        for gate in _route_failures(read):
+            by_gate[gate].append(name)
+    return by_gate
+
+
+def dashboard_checks(reads: dict[str, dict]) -> dict[str, bool]:
+    """The dashboard gates; none when no dashboard read is gated."""
+    if not reads:
+        return {}
+    return {gate: not names for gate, names in dashboard_failed(reads).items()}
+
+
 def evaluate(
     rows: dict[str, dict[str, str]],
     state: dict,
@@ -91,10 +150,10 @@ def evaluate(
     history: list[dict[str, str]] | None = None,
     users: int = 0,
     min_window_s: float = MIN_WINDOW_S,
+    dashboard: tuple[str, ...] = (),
 ) -> dict:
-    missing = [
-        n for n in (*READS, *COMMANDS) if _num(rows.get(n, {}).get("Request Count")) in (None, 0.0)
-    ]
+    endpoints = (*READS, *(d for d in dashboard if d not in READS), *COMMANDS)
+    missing = [n for n in endpoints if _num(rows.get(n, {}).get("Request Count")) in (None, 0.0)]
     agg = rows.get("Aggregated", {})
     total = _num(agg.get("Request Count")) or 0.0
     failed = _num(agg.get("Failure Count")) or 0.0
@@ -111,9 +170,10 @@ def evaluate(
             "p95_ms": _num(rows[n]["95%"]),
             "p99_ms": _num(rows[n]["99%"]),
         }
-        for n in (*READS, *COMMANDS)
+        for n in endpoints
         if n in rows
     }
+    reads = dashboard_reads(rows, dashboard)
     checks = {
         "all_endpoints": not missing,
         "availability": availability >= MIN_AVAILABILITY,
@@ -124,6 +184,7 @@ def evaluate(
     }
     if history is not None:
         checks["measurement_window"] = window is not None and window["seconds"] >= min_window_s
+    checks.update(dashboard_checks(reads))
     return {
         "ok": all(checks.values()),
         "checks": checks,
@@ -137,6 +198,8 @@ def evaluate(
         "window": window,
         "target_rps": rps,
         "baseline": baseline,
+        "dashboard": reads,
+        "dashboard_failed": dashboard_failed(reads) if reads else {},
     }
 
 
@@ -167,7 +230,25 @@ def markdown(v: dict) -> str:
             f"| {name} | {b['requests']} | {b['p50_ms']} | {b['p95_ms']} | {b['p99_ms']} |"
         )
     failed = [k for k, ok in v["checks"].items() if not ok]
-    lines += ["", f"Failed gates: {', '.join(failed) or 'none'}. Read latency is a baseline only."]
+    reads = v.get("dashboard") or {}
+    rest = "Other read latency is a baseline only." if reads else "Read latency is a baseline only."
+    lines += ["", f"Failed gates: {', '.join(failed) or 'none'}. {rest}"]
+    if reads:
+        lines += [
+            "",
+            f"#### Dashboard reads (NFR-010: p95 <= {DASHBOARD_P95_MS:.0f} ms, p99 <= "
+            f"{DASHBOARD_P99_MS:.0f} ms; NFR-041: availability >= {MIN_AVAILABILITY:.1%}, "
+            "per route)",
+            "",
+            "| Route | Requests | Failures | Availability | p95 ms | p99 ms | Gate |",
+            "|---|---|---|---|---|---|---|",
+        ]
+        for name, r in reads.items():
+            gate = "FAIL" if _route_failures(r) else "pass"
+            lines.append(
+                f"| {name} | {r['requests']} | {r['failures']} | {r['availability']:.4f} | "
+                f"{r['p95_ms']} | {r['p99_ms']} | {gate} |"
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -179,6 +260,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--history", type=Path, help="Locust --csv PREFIX_stats_history.csv")
     p.add_argument("--users", type=int, default=0, help="users that make the steady state")
     p.add_argument("--min-window", type=float, default=MIN_WINDOW_S, help="seconds")
+    p.add_argument(
+        "--dashboard-reads",
+        default="",
+        help="comma-separated Locust names gated as dashboard reads (NFR-010), e.g. stats,evidence",
+    )
     p.add_argument("--json", type=Path)
     p.add_argument("--summary", type=Path, help="append a Markdown table (GITHUB_STEP_SUMMARY)")
     args = p.parse_args(argv)
@@ -191,7 +277,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if history is not None and args.users < 1:
         p.error("--history needs --users (the users that make the steady state)")
-    v = evaluate(rows, state, args.rps, history, args.users, args.min_window)
+    dashboard = tuple(n.strip() for n in args.dashboard_reads.split(",") if n.strip())
+    v = evaluate(rows, state, args.rps, history, args.users, args.min_window, dashboard)
     text = json.dumps(v, indent=2)
     print(text)
     if args.json:

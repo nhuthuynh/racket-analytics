@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from racket.matches.deletion import Tombstone, confirm_deletion
 from racket.matches.domain import MatchId, OwnerId
-from racket.matches.repository import MatchRepository, matches
+from racket.matches.repository import MatchRepository, match_participants, matches
 from racket.matches.scorebook.domain import project
 from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import NotFound
@@ -210,3 +210,21 @@ def owned_format(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> 
     owner filter for another context's routes that also need the slots (Full Tag)."""
     match = MatchRepository(session).get_owned(MatchId(match_id), OwnerId(owner_id))
     return None if match is None else match.format.value
+
+
+def player_sides(session: Session, owner_id: uuid.UUID) -> list[tuple[uuid.UUID, str | None]]:
+    """The owner's live matches with the side of the participant marked ``is_me`` (``A`` or
+    ``B``), or ``None`` when no participant is "me" (ST-055; coaching-plan.md §3, §4). Ordered
+    by ``(played_on, id)``, undated matches last."""
+    me = (
+        sa.select(match_participants.c.match_id, match_participants.c.slot)
+        .where(match_participants.c.is_me.is_(True))
+        .subquery()
+    )
+    rows = session.execute(
+        sa.select(matches.c.id, me.c.slot)
+        .select_from(matches.outerjoin(me, me.c.match_id == matches.c.id))
+        .where(matches.c.owner_id == owner_id, matches.c.deleted_at.is_(None))
+        .order_by(matches.c.played_on.asc().nulls_last(), matches.c.id)
+    ).all()
+    return [(uuid.UUID(str(r.id)), None if r.slot is None else str(r.slot)[0]) for r in rows]

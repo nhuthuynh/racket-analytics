@@ -1,0 +1,41 @@
+{
+  "id": "pb.reset.transition-reset-feeds",
+  "version": 1,
+  "name": "Transition-zone resets",
+  "summary": "From the middle of the court, reset fed balls at the feet softly into the non-volley zone, then step in; count resets that land in the zone.",
+  "skills": [
+    "AN-07",
+    "share:forced-error",
+    "reset",
+    "transition"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Player stands in the middle of the court, between the baseline and the non-volley-zone line; feeder at the opposite non-volley-zone line in the same half",
+    "Feeder pats low balls that land at the player's feet, one at a time, at a cooperative pace",
+    "Player resets each ball softly into the non-volley zone after one bounce, then takes two steps in and walks back",
+    "Sets of 20 feeds; swap roles after each set; count resets that land in the zone"
+  ],
+  "success_criterion": "In each of 2 sets of 20 feeds, at least 12 resets land in the non-volley zone",
+  "progressions": [
+    "pb.reset.transition-battle"
+  ],
+  "regressions": [],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) Balls at the feet in the middle of the court are a common source of errors under pressure (AN-07 forced-error share); a soft reset is the answer, and cooperative feeds let a beginner groove it before live play. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

@@ -1,0 +1,41 @@
+{
+  "id": "pb.dink.line-fault-game",
+  "version": 1,
+  "name": "Line-fault dink game",
+  "summary": "Live cross-court dink game to 11 with volleys allowed; each player tallies rallies they end with their own faults (foot in the zone, volley in the zone).",
+  "skills": [
+    "AN-07",
+    "share:fault",
+    "dink",
+    "volley"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "intermediate",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Both players at the non-volley-zone line, cross-court, playing into one half of the court",
+    "Live dink rally; either player may volley a ball out of the air from behind the line; a speed-up is allowed only on a ball above net height",
+    "A foot on the line or in the zone during or right after a volley is an own fault (play it as your rules allow; the fault rules are UNVERIFIED in this app)",
+    "Game to 11 rallies; each player tallies rallies lost to their own faults; play 2 games"
+  ],
+  "success_criterion": "In a game to 11, lose at most 1 rally to your own faults",
+  "progressions": [],
+  "regressions": [
+    "pb.volley.line-volleys-no-step-in"
+  ],
+  "safety_notes": "Speed-ups at close range: wear eye protection and aim speed-ups low, never at the face. Stop if in pain.",
+  "coach_rationale": "(judgment) Line faults happen most when a player reaches for a volley under live pressure; a competitive dink game with volleys allowed produces exactly those moments and scores only own faults, the AN-07 fault share. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

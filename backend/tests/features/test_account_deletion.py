@@ -15,6 +15,7 @@ import httpx
 import pytest
 from pytest_bdd import given, scenarios, then, when
 
+from tests.support import scorebook as sb
 from tests.support import stats as st
 from tests.support.api import BASE_URL, ApiDriver, sign_in
 
@@ -81,3 +82,36 @@ def signs_in_again(ctx: dict[str, Any]) -> None:
 def no_matches(ctx: dict[str, Any]) -> None:
     body = _laptop(ctx, "matches").json()
     assert (body["items"] if isinstance(body, dict) else body) == []
+
+
+# ------------------------------------------------------------------ C4-TAC5 (T-AC-5)
+def _labelling_match(ctx: dict[str, Any], title: str) -> str:
+    api = ctx["api"]
+    client = api.as_user("ivy")
+    match_id: str = api.run(sb.create_doubles(client, title))
+    api.run(sb.receive_video(client, match_id))
+    st.probe_videos()
+    st.record_consent(match_id)
+    return match_id
+
+
+@given("Ivy was a labeller and deleted her account")
+def deleted_labeller(ctx: dict[str, Any]) -> None:
+    api = ctx["api"]
+    st.grant_labeller(api, "ivy")
+    ctx["id"] = st.me_id(api, "ivy")
+    own = _labelling_match(ctx, "Labelled match")
+    opened = st.fulltag(api, "ivy", "label_match", match_id=own)
+    assert opened.status_code == 200, f"positive control: {opened.status_code} {opened.text}"
+    deletes_account(ctx)
+
+
+@then("the Full Tag tool is not there for her, even on her own consented match")
+def no_full_tag(ctx: dict[str, Any]) -> None:
+    api = ctx["api"]
+    api.run(sign_in(api.as_user("ivy"), "ivy"))  # the driver's phone client follows her
+    mine = _labelling_match(ctx, "After re-sign-in")
+    for route in sorted(st.FULLTAG_ROUTES):
+        body = {"type": "hit", "frame": 1840, "hitter": "B1"} if route == "label_events" else None
+        answer = st.fulltag(api, "ivy", route, json_body=body, match_id=mine)
+        assert st.refusal(answer)[:2] == (404, "not_found"), f"{route}: {answer.text}"

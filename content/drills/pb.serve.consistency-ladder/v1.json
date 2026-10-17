@@ -1,0 +1,40 @@
+{
+  "id": "pb.serve.consistency-ladder",
+  "version": 1,
+  "name": "Serve consistency ladder",
+  "summary": "Serve into the diagonal service box and climb a ladder of consecutive serves in, from 3 to 10.",
+  "skills": [
+    "AN-05",
+    "serve"
+  ],
+  "target_metrics": [
+    "AN-05"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Bucket of at least 20 balls at the server's baseline",
+    "Serve from the right, then the left, into the diagonal service box",
+    "Rungs: 3, 5, 7, 10 serves in a row; a fault drops you back one rung",
+    "Use the same short pre-serve routine (feet set, breath, target) before every serve",
+    "Serve as your rules allow; the serve rules are UNVERIFIED in this app"
+  ],
+  "success_criterion": "Reach the 10-in-a-row rung, or at most 2 faults in 20 serves",
+  "progressions": [
+    "pb.serve.deep-target"
+  ],
+  "regressions": [],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) A repeatable routine and a consecutive-serve target reduce serve faults, which AN-05 counts directly; no partner needed. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

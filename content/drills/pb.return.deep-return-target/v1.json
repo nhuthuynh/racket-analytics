@@ -1,0 +1,42 @@
+{
+  "id": "pb.return.deep-return-target",
+  "version": 1,
+  "name": "Deep return to a target zone",
+  "summary": "Partner serves cooperatively; the receiver returns past a cone line deep in the server's half and moves in to the non-volley-zone line.",
+  "skills": [
+    "AN-02",
+    "return"
+  ],
+  "target_metrics": [
+    "AN-02"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "cones"
+  ],
+  "setup": [
+    "Cones in a line about 2 m inside the server's baseline",
+    "Partner serves at an easy pace into the receiver's service box; serve as your rules allow, the serve rules are UNVERIFIED in this app",
+    "Receiver lets the serve bounce, returns deep past the cones, then walks in to the non-volley-zone line; no rally after the return",
+    "Sets of 10 returns, then swap roles"
+  ],
+  "success_criterion": "In a set of 10 returns: at least 7 land in and past the cone line and at most 1 misses",
+  "progressions": [
+    "pb.return.return-and-move-in"
+  ],
+  "regressions": [
+    "pb.return.wall-return"
+  ],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) A deep return keeps the server back and buys the receiver time to reach the line, the usual base for winning a receiving rally (AN-02); cooperative serves and no live rally keep it beginner level. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

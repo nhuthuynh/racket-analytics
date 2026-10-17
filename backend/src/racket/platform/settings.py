@@ -22,6 +22,11 @@ DEV_EMAIL_KEY = "dev-only-email-key-not-a-secret"  # dev/test only; prod require
 EMAIL_KEY_MIN = 32
 MEDIA_URL_TTL_MAX = 15 * 60  # NFR-055
 _SECRETS = ("s3_secret_access_key", "s3_access_key_id", "auth_email_key")
+# ---- Sprint 4 (ST-067; api-sprint-04 §11). Interim values: ADR 0023, ADR 0051 rule 4.
+WEAKNESS_UNITS = ("rallies_lost_per_game",)  # ADR 0003 (OQ-08); the only unit in R1
+AGE_MINIMUM_FLOOR = 18  # FR-003 (OQ-05): R1 is adults only, never configurable lower
+RETENTION_NONE = "none"  # "keep until I delete it" (OQ-07)
+GIB = 1024**3
 
 
 class ConfigurationError(RuntimeError):
@@ -45,6 +50,30 @@ def _redact_url(url: str) -> str:
         host = f"{host}:{parts.port}"
     netloc = f"{parts.username}:{REDACTED}@{host}" if parts.username else f"{REDACTED}@{host}"
     return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
+def _retention_days(raw: str) -> int | None:
+    if raw == RETENTION_NONE:
+        return None
+    days = int(raw) if raw.isascii() and raw.isdigit() else 0
+    if days < 1:
+        raise ConfigurationError(
+            f"RETENTION_CHOICES_DAYS takes whole days of at least 1 or '{RETENTION_NONE}'"
+        )
+    return days
+
+
+def _retention_policy(
+    raw_choices: str, raw_default: str
+) -> tuple[tuple[int | None, ...], int | None]:
+    """The retention choices offered (OQ-07) and the default, which must be one of them."""
+    tokens = [token.strip() for token in raw_choices.split(",")]
+    choices = tuple(_retention_days(token) for token in tokens)
+    if len(set(choices)) != len(choices):
+        raise ConfigurationError("RETENTION_CHOICES_DAYS must not repeat a choice")
+    if raw_default not in tokens:
+        raise ConfigurationError("RETENTION_DEFAULT_DAYS must be one of RETENTION_CHOICES_DAYS")
+    return choices, choices[tokens.index(raw_default)]
 
 
 @dataclass(frozen=True)
@@ -100,6 +129,17 @@ class Settings:
     scorebook_command_limit_per_minute: int = 300
     scorebook_max_rallies: int = 500
     scorebook_max_changes: int = 2000
+    # ---- Sprint 4 (ST-067): weakness unit, R1 flags (default off) and their interim values
+    coaching_weakness_unit: str = WEAKNESS_UNITS[0]
+    feature_age_gate: bool = False
+    feature_retention_setting: bool = False
+    feature_training_consent: bool = False
+    feature_quotas: bool = False
+    age_minimum: int = AGE_MINIMUM_FLOOR
+    retention_choices_days: tuple[int | None, ...] = (30, 90, 365, None)  # None: no expiry
+    retention_default_days: int | None = 90
+    match_creations_per_hour: int = 10
+    storage_quota_bytes: int = 20 * GIB  # (judgment) until P8 (OQ-13)
 
     # -------------------------------------------------------------- construction
     @classmethod
@@ -177,6 +217,15 @@ class Settings:
         media_ttl = integer("MEDIA_URL_TTL_SECONDS", 300)
         if media_ttl > MEDIA_URL_TTL_MAX:
             raise ConfigurationError(f"MEDIA_URL_TTL_SECONDS must be at most {MEDIA_URL_TTL_MAX}")
+        weakness_unit = env.get("COACHING_WEAKNESS_UNIT") or WEAKNESS_UNITS[0]
+        if weakness_unit not in WEAKNESS_UNITS:  # ADR 0003: one unit; never a silent fallback
+            raise ConfigurationError(
+                f"COACHING_WEAKNESS_UNIT must be one of {', '.join(WEAKNESS_UNITS)}"
+            )
+        choices, retention_default = _retention_policy(
+            env.get("RETENTION_CHOICES_DAYS") or "30,90,365,none",
+            env.get("RETENTION_DEFAULT_DAYS") or "90",
+        )
 
         return cls(
             app_env=app_env,
@@ -229,6 +278,16 @@ class Settings:
             scorebook_command_limit_per_minute=integer("SCOREBOOK_COMMAND_LIMIT_PER_MINUTE", 300),
             scorebook_max_rallies=integer("SCOREBOOK_MAX_RALLIES", 500),
             scorebook_max_changes=integer("SCOREBOOK_MAX_CHANGES", 2000),
+            coaching_weakness_unit=weakness_unit,
+            feature_age_gate=boolean("FEATURE_AGE_GATE", default=False),
+            feature_retention_setting=boolean("FEATURE_RETENTION_SETTING", default=False),
+            feature_training_consent=boolean("FEATURE_TRAINING_CONSENT", default=False),
+            feature_quotas=boolean("FEATURE_QUOTAS", default=False),
+            age_minimum=integer("AGE_MINIMUM", AGE_MINIMUM_FLOOR, minimum=AGE_MINIMUM_FLOOR),
+            retention_choices_days=choices,
+            retention_default_days=retention_default,
+            match_creations_per_hour=integer("MATCH_CREATIONS_PER_HOUR", 10),
+            storage_quota_bytes=integer("STORAGE_QUOTA_BYTES", 20 * GIB),
         )
 
     # -------------------------------------------------------------- views
@@ -243,6 +302,19 @@ class Settings:
                 value = REDACTED
             view[f.name.upper()] = value
         return view
+
+    def public_config(self) -> dict[str, Any]:
+        """What the web may know before sign-in (api-sprint-04 §1 rule 3): which R1 features
+        are on and the weakness unit. Nothing else: no limits, no secrets."""
+        return {
+            "features": {
+                "age_gate": self.feature_age_gate,
+                "retention_setting": self.feature_retention_setting,
+                "training_consent": self.feature_training_consent,
+                "quotas": self.feature_quotas,
+            },
+            "coaching": {"weakness_unit": self.coaching_weakness_unit},
+        }
 
     @property
     def is_test(self) -> bool:

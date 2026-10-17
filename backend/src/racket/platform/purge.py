@@ -10,7 +10,8 @@ A composition root: no domain rule lives here. One pass:
    transaction, the match root last (objects before rows: a failure leaves rows that still
    name every object left, so there is no orphan and the next pass finishes the job);
 4. orphan snapshot rows are swept (SEC-S3-TM-02);
-5. deleted accounts with no match row left are purged.
+5. deleted accounts with no match row left are purged (their training-plan rows, then the
+   account row; ST-061a).
 
 Exit 0: every due item done; 1: an item failed and stays due; 2: usage or configuration.
 Log lines hold ids and the pseudonymous account id only (NFR-057).
@@ -33,6 +34,7 @@ from botocore.exceptions import ClientError
 
 from racket.analysis_jobs import public as analysis_jobs
 from racket.analytics import public as analytics
+from racket.coaching import public as coaching
 from racket.dataset import public as dataset
 from racket.matches import public as matches
 from racket.platform.logs import configure_logging, user_id_var
@@ -150,6 +152,7 @@ class ContextPorts:
         )
 
     def purge_account(self, session: Any, account_id: uuid.UUID) -> None:
+        coaching.purge_account(session, account_id)  # ST-061a: plan rows before the account row
         players.purge_account(session, account_id)
 
 
