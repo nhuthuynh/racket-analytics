@@ -132,65 +132,61 @@ def run(args: argparse.Namespace, ctx: Any, library: dict, out: dict) -> dict[st
         [f"limited_data {limited!r}"] * (limited != {"rallies": want["rallies"]})
     )
 
+    if not plan.get("sessions"):
+        return steps
     first, last = plan["sessions"][0], plan["sessions"][-1]
-    key, t0 = uuid.uuid4().hex, time.perf_counter()
-    done = [
-        c.request(
-            "POST",
-            f"/me/plan/sessions/{first['id']}/done",
-            json_body={},
-            headers={"Idempotency-Key": key},
-        )
-    ]
-    visible = None
+    old = next((a for a in last.get("assignments") or [] if not a.get("warm_up")), {})
+    steps |= follow_through(args, c, first, last, old, out)
+    other = Client(args.api, args.origin, ctx)
+    sign_in_as(other, args.mailpit, f"goal04-{uuid.uuid4().hex[:12]}@example.com")
+    codes = [other.request("GET", "/me/plan").status, done(other, first).status]
+    codes.append(swap(other, old).status)
+    steps["other_account"] = step([] if codes == [404] * 3 else [f"other account codes {codes}"])
+    other.close()
+    c.close()
+    return steps
+
+
+def done(c: Client, session: dict, key: str | None = None) -> Any:
+    headers = {"Idempotency-Key": key or uuid.uuid4().hex}
+    return c.request(
+        "POST", f"/me/plan/sessions/{session.get('id')}/done", json_body={}, headers=headers
+    )
+
+
+def swap(c: Client, assignment: dict) -> Any:
+    return c.request("POST", f"/me/plan/assignments/{assignment.get('id')}/swap", json_body={})
+
+
+def follow_through(
+    args: argparse.Namespace, c: Client, first: dict, last: dict, old: dict, out: dict
+) -> dict:
+    """Steps 8-9: done twice with one key (timed until GET shows it), then "Not for me"."""
+    key, t0, visible = uuid.uuid4().hex, time.perf_counter(), None
+    replies = [done(c, first, key)]
     while visible is None and time.perf_counter() - t0 < args.result_timeout:
         now = c.request("GET", "/me/plan").json() or {}
         if any(x.get("id") == first["id"] and x.get("done") for x in now.get("sessions") or []):
             visible = (time.perf_counter() - t0) * 1000
+        time.sleep(0.02)
     out["done_visible_ms"] += [visible] if visible is not None else []
-    done.append(
-        c.request(
-            "POST",
-            f"/me/plan/sessions/{first['id']}/done",
-            json_body={},
-            headers={"Idempotency-Key": key},
-        )
-    )
-    b1, b2 = (d.json() if d.status == 200 else {} for d in done)
+    replies.append(done(c, first, key))
+    b1, b2 = (d.json() if d.status == 200 else {} for d in replies)
     ok = b1.get("done") is True and b1.get("replayed") is False and b2.get("replayed") is True
     ok = ok and visible is not None and b2.get("plan_version") == b1.get("plan_version")
-    steps["done"] = step([] if ok else [f"done {[d.status for d in done]} {b1} {b2}"])
+    steps = {"done": step([] if ok else [f"done {[d.status for d in replies]} {b1} {b2}"])}
 
-    old = next((a for a in last["assignments"] if not a.get("warm_up")), {})
-    r = c.request("POST", f"/me/plan/assignments/{old.get('id')}/swap", json_body={})
+    r = swap(c, old)
     sess = (r.json() or {}).get("session", r.json()) if r.status == 200 else {}
-    new = next((a for a in sess.get("assignments") or [] if a.get("id") == old.get("id")), {})
-    swapped = new.get("drill", {}).get("id") not in (None, old.get("drill", {}).get("id"))
-    swapped = swapped and new.get("citation", {}).get("metric_id") == old["citation"]["metric_id"]
-    within = (
-        sum(a.get("minutes") or 0 for a in sess.get("assignments") or []) <= last["minutes_budget"]
-    )
+    items = sess.get("assignments") or []
+    new = next((a for a in items if a.get("id") == old.get("id")), {})
+    metric = (old.get("citation") or {}).get("metric_id")
+    ok = new.get("drill", {}).get("id") not in (None, old.get("drill", {}).get("id"))
+    ok = ok and (new.get("citation") or {}).get("metric_id") == metric
+    ok = ok and sum(a.get("minutes") or 0 for a in items) <= last.get("minutes_budget", 0)
     steps["swap"] = step(
-        [] if swapped and within else [f"swap {r.status}: {old.get('drill')} -> {new.get('drill')}"]
+        [] if ok else [f"swap {r.status}: {old.get('drill')} -> {new.get('drill')}"]
     )
-
-    other = Client(args.api, args.origin, ctx)
-    sign_in_as(other, args.mailpit, f"goal04-{uuid.uuid4().hex[:12]}@example.com")
-    codes = [other.request("GET", "/me/plan").status]
-    codes.append(
-        other.request(
-            "POST",
-            f"/me/plan/sessions/{first['id']}/done",
-            json_body={},
-            headers={"Idempotency-Key": uuid.uuid4().hex},
-        ).status
-    )
-    codes.append(
-        other.request("POST", f"/me/plan/assignments/{old.get('id')}/swap", json_body={}).status
-    )
-    steps["other_account"] = step([] if codes == [404] * 3 else [f"other account codes {codes}"])
-    other.close()
-    c.close()
     return steps
 
 
