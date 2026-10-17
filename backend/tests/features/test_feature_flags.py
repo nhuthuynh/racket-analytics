@@ -60,7 +60,7 @@ def refused(startup_error: BaseException | None) -> None:
     assert "COACHING_WEAKNESS_UNIT" in str(startup_error)
 
 
-@then(parsers.parse('the features on are "{names}"'))
+@then(parsers.re(r'the features on are "(?P<names>[a-z_,]*)"'))
 def features_on(public: dict[str, Any], names: str) -> None:
     on = set(filter(None, names.split(",")))
     assert public["features"] == {f: f in on for f in FEATURES}
