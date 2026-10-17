@@ -1,0 +1,40 @@
+{
+  "id": "pb.dink.safe-target-dinks",
+  "version": 1,
+  "name": "Safe-margin target dinks",
+  "summary": "Two players at the non-volley-zone line dink cross-court into a target zone and count their own unforced errors (net or out).",
+  "skills": [
+    "AN-04",
+    "dink"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "cones"
+  ],
+  "setup": [
+    "Both players at the non-volley-zone line; cones mark a target zone in the middle of each non-volley zone, away from the sideline",
+    "Cooperative dinks that clear the net by a comfortable margin and land in the target zone; no attacking shots",
+    "Each player counts their own errors: into the net, out, or outside the non-volley zone",
+    "Sets of 50 dinks per player"
+  ],
+  "success_criterion": "In a set of 50 dinks, at most 3 of your own dinks are errors",
+  "progressions": [
+    "pb.dink.error-free-dink-game"
+  ],
+  "regressions": [],
+  "safety_notes": "Cooperative pace, no speed-ups. Stop if in pain.",
+  "coach_rationale": "(judgment) Aiming at a central target with net clearance builds a safety margin, the usual cure for unforced errors (AN-04); the player counts exactly the errors AN-04 counts. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}

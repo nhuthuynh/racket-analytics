@@ -1,0 +1,42 @@
+{
+  "id": "pb.return.return-and-move-in",
+  "version": 1,
+  "name": "Return, move in, play it out",
+  "summary": "Partner serves and plays the third shot; the receiver returns deep, reaches the non-volley-zone line and the rally is played out live; score only the receiving side's rallies.",
+  "skills": [
+    "AN-02",
+    "return",
+    "fourth-shot"
+  ],
+  "target_metrics": [
+    "AN-02"
+  ],
+  "level_min": "intermediate",
+  "level_max": "advanced",
+  "duration_min": 15,
+  "duration_max": 20,
+  "players": 2,
+  "needs": [
+    "full_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Partner serves every rally; serve as your rules allow, the serve rules are UNVERIFIED in this app",
+    "Receiver returns deep and moves to the non-volley-zone line before the third shot arrives",
+    "Play the rally out live; after 10 rallies swap roles",
+    "Keep score as rallies won on receive out of 10"
+  ],
+  "success_criterion": "Win at least 5 of 10 rallies on receive",
+  "progressions": [
+    "pb.return.receive-pressure-game"
+  ],
+  "regressions": [
+    "pb.return.deep-return-target"
+  ],
+  "safety_notes": "Live rallies can include lobs: turn and run back for a lob, never backpedal. Stop if dizzy or in pain.",
+  "coach_rationale": "(judgment) AN-02 counts rallies won when receiving, so the drill practises the whole receiving pattern (deep return, move in, fourth shot) under live play and scores exactly that. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "pb.drive.wall-margin",
+  "version": 1,
+  "name": "Margin drives against a wall",
+  "summary": "Alone at a wall, rally drives above a tape line with a safety margin and count unforced errors per 50 shots.",
+  "skills": [
+    "AN-04",
+    "drive"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 1.2 m above the floor (above net height, the safety margin)",
+    "Stand about 5 m from the wall and rally controlled drives off one bounce, at a pace you can repeat",
+    "An error is a ball below the line, a mis-hit, or a ball you had time to reach but missed",
+    "Sets of 50 strokes; restart the rally after an error"
+  ],
+  "success_criterion": "In a set of 50 drives, at most 5 errors",
+  "progressions": [],
+  "regressions": [],
+  "safety_notes": "",
+  "coach_rationale": "(judgment) Repeatable pace and a margin above the net cut unforced errors (AN-04); counting them per 50 shots makes the error rate visible with no partner or court. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "draft"
+}
