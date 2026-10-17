@@ -1,0 +1,84 @@
+# NFR-022 spend guardrails (ST-073): billing alerts at 50/80/100% of the monthly budget for the
+# LLM provider and the object store. Config and rules only: no provider credential and no
+# receiver address here (SEC-4 T4-AL-1). The receiver label names an Alertmanager receiver whose
+# URL is a secret file named by BILLING_ALERT_RECEIVER_URL_FILE at deploy time.
+#
+# Inputs (docs/ops/billing-alerts.md):
+#   racket_billing_monthly_budget_usd{provider}      - from env, rendered by ../billing_budgets.py
+#   racket_billing_spend_month_to_date_usd{provider} - month-to-date spend, from the provider's
+#                                                      billing export (exporter not built yet)
+# Ratio form with a tolerance: spend / budget >= t - 1e-9. The bare ratio is NOT exact for every
+# budget: 2.4 / 3 == 0.7999999999999999 in float64, so `>= 0.8` misses 80% of a 3 USD budget
+# (PE-073-01). 1e-9 absorbs that rounding (< 1e-15) and is under one cent for any budget below
+# 10 million USD, so one cent below a threshold still does not fire.
+# Tested by billing.test.yml with `promtool test rules` (IT-04-10).
+groups:
+  - name: billing
+    interval: 5m
+    rules:
+      - alert: BillingLlmProviderBudget50
+        expr: >-
+          racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 0.5 - 1e-9
+        labels:
+          threshold_percent: "50"
+          severity: info
+          receiver: billing-owner
+        annotations:
+          summary: LLM provider spend reached 50% of the monthly budget
+          runbook: docs/ops/billing-alerts.md
+      - alert: BillingLlmProviderBudget80
+        expr: >-
+          racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 0.8 - 1e-9
+        labels:
+          threshold_percent: "80"
+          severity: warning
+          receiver: billing-owner
+        annotations:
+          summary: LLM provider spend reached 80% of the monthly budget
+          runbook: docs/ops/billing-alerts.md
+      - alert: BillingLlmProviderBudget100
+        expr: >-
+          racket_billing_spend_month_to_date_usd{provider="llm_provider"}
+          / on(provider) racket_billing_monthly_budget_usd{provider="llm_provider"} >= 1 - 1e-9
+        labels:
+          threshold_percent: "100"
+          severity: critical
+          receiver: billing-owner
+        annotations:
+          summary: LLM provider spend reached 100% of the monthly budget
+          runbook: docs/ops/billing-alerts.md
+      - alert: BillingObjectStoreBudget50
+        expr: >-
+          racket_billing_spend_month_to_date_usd{provider="object_store"}
+          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 0.5 - 1e-9
+        labels:
+          threshold_percent: "50"
+          severity: info
+          receiver: billing-owner
+        annotations:
+          summary: Object store spend reached 50% of the monthly budget
+          runbook: docs/ops/billing-alerts.md
+      - alert: BillingObjectStoreBudget80
+        expr: >-
+          racket_billing_spend_month_to_date_usd{provider="object_store"}
+          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 0.8 - 1e-9
+        labels:
+          threshold_percent: "80"
+          severity: warning
+          receiver: billing-owner
+        annotations:
+          summary: Object store spend reached 80% of the monthly budget
+          runbook: docs/ops/billing-alerts.md
+      - alert: BillingObjectStoreBudget100
+        expr: >-
+          racket_billing_spend_month_to_date_usd{provider="object_store"}
+          / on(provider) racket_billing_monthly_budget_usd{provider="object_store"} >= 1 - 1e-9
+        labels:
+          threshold_percent: "100"
+          severity: critical
+          receiver: billing-owner
+        annotations:
+          summary: Object store spend reached 100% of the monthly budget
+          runbook: docs/ops/billing-alerts.md
