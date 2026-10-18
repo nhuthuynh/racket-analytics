@@ -21,9 +21,7 @@ from racket.coaching.plan.domain.model import (
     DrillAssignment,
     PlanInvariantBroken,
     TrainingPlan,
-    cited_target,
 )
-from racket.coaching.plan.domain.model import citable_targets as _targets
 
 _Id = TypeVar("_Id", str, uuid.UUID)
 EVIDENCE_MAX = 10  # FR-103 "up to 10"
@@ -156,6 +154,11 @@ class CitedAssignment:
         return self.citation.why
 
 
+def _targets(d: Drill) -> list[str]:
+    """The drill's citable targets: its metrics in order, AN-07 as its share targets."""
+    return [t for m in d.target_metrics for t in sorted(d.plan_targets) if t.split(":")[0] == m]
+
+
 def citable(library: Iterable[Drill], citations: Mapping[str, Citation]) -> list[Drill]:
     """QD-PL-04: a drill with no citable metric is not eligible."""
     return [d for d in library if any(t in citations for t in _targets(d))]
@@ -184,6 +187,7 @@ class CitedPlan:
     def __init__(self, plan: TrainingPlan, citations: Mapping[str, Citation], rallies: int):
         self.plan = plan
         self.rallies = rallies
+        targets = {w.id: w.target for w in plan.weaknesses}
         by_rank = sorted(plan.weaknesses, key=lambda w: w.rank)
         ranked = [w.target for w in by_rank]
         found: list[str] = []
@@ -191,7 +195,12 @@ class CitedPlan:
         for s in plan.sessions:
             cited = []
             for x in s.assignments:
-                target = cited_target(x, plan.weaknesses, citations)
+                if x.weakness_id is not None:
+                    wanted = [targets[x.weakness_id]]
+                else:
+                    own = _targets(x.drill)
+                    wanted = [t for t in ranked if t in own] + own
+                target = next((t for t in wanted if t in citations), None)
                 if target is None:
                     at = f"week {s.week} session {s.index} {x.drill.ref}"
                     found.append(f"QD-PL-04: {at} has no citation")

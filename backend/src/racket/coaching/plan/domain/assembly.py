@@ -21,6 +21,7 @@ from dataclasses import dataclass
 
 from racket.coaching.plan.domain.model import (
     MAX_WEAKNESSES,
+    WARM_UP_MINUTES,
     WEEKS,
     Drill,
     DrillAssignment,
@@ -29,7 +30,6 @@ from racket.coaching.plan.domain.model import (
     Session,
     TrainingPlan,
     Unfitted,
-    warm_up_minutes,
 )
 
 RANK_WEIGHTS = (3, 2, 1)  # judgment, pinned in docs/sprints/04/decisions/ST-056.md
@@ -40,6 +40,13 @@ class Infeasible:
     """No plan: ``no_weakness`` (empty ranking) or ``no_plan_fits`` (api-sprint-04 §2.1)."""
 
     reason: str
+
+
+def warm_up_minutes(d: Drill, cap: int) -> int | None:
+    """The minutes a warm-up gets under ``cap``, or None when it cannot get 5-10 minutes."""
+    lo, hi = WARM_UP_MINUTES
+    minutes = min(d.duration_max, hi, cap)
+    return minutes if minutes >= max(lo, d.duration_min) else None
 
 
 class _RoundRobin:

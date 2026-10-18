@@ -6,9 +6,9 @@ field codes) -> rate limit (429, SEC-S4-TM-01, counted after validation) -> rank
 ``no_tagged_match``) -> assembly (409 ``no_plan_fits``) -> save; 201 with ``Location``.
 ``GET`` is 200 or 404 ``no_plan``.
 
-Follow-through (ST-062; FR-124; api-sprint-04 §3): ``POST``/``DELETE
-/me/plan/sessions/{session_id}/done`` and ``POST /me/plan/assignments/{assignment_id}/swap``.
-Checks in order: session (401) -> Origin (403) -> ``Idempotency-Key`` or body (422) -> the id
+Follow-through (ST-062; FR-124; api-sprint-04 §3.1, §3.2): ``POST``/``DELETE
+/me/plan/sessions/{session_id}/done``.
+Checks in order: session (401) -> Origin (403) -> ``Idempotency-Key`` (422) -> the id
 among the caller's own plan rows (404 ``not_found``, the same answer for another account's, an
 unknown or a malformed id; NFR-051) -> the command (409 codes).
 """
@@ -23,14 +23,7 @@ from fastapi import APIRouter, Body, Depends, Header
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from racket.coaching.schemas import (
-    PreferencesIn,
-    parse_op_id,
-    parse_preferences,
-    parse_swap_body,
-    plan_body,
-    session_body,
-)
+from racket.coaching.schemas import PreferencesIn, parse_op_id, parse_preferences, plan_body
 from racket.coaching.service import DoneState, PlanService, library_dir, load_library
 from racket.platform.db import get_session
 from racket.platform.errors import NotFound
@@ -41,7 +34,6 @@ router = APIRouter()
 DbSession = Annotated[Session, Depends(get_session)]
 PLAN_PATH = "/me/plan"
 DONE_PATH = "/me/plan/sessions/{session_id}/done"
-SWAP_PATH = "/me/plan/assignments/{assignment_id}/swap"
 GENERATIONS_PER_HOUR = 30  # SEC-4 T4-PL-6 (judgment); decisions ST-061b
 
 
@@ -161,36 +153,3 @@ def mark_session_done(
 def undo_session_done(session_id: str, account: CurrentAccount, session: DbSession) -> JSONResponse:
     state = _service(session).undo_done(account.id, _owned_id(session_id))
     return JSONResponse(_done_body(state, with_replayed=False))
-
-
-@router.post(
-    SWAP_PATH,
-    summary='"Not for me": swap a drill for another that trains the same metric',
-    responses={
-        200: _error("plan_version and the updated session (api-sprint-04 §2.3)"),
-        401: _error("unauthenticated"),
-        404: _error("not_found: not an assignment of the caller's plan"),
-        409: _error("no_alternative, session_done or plan_conflict; nothing changed"),
-        422: _error("validation_failed: reason too_long or invalid, unknown_field"),
-    },
-)
-def swap_drill(
-    assignment_id: str,
-    account: CurrentAccount,
-    session: DbSession,
-    body: Annotated[Any, Body(include_in_schema=False)] = None,
-) -> JSONResponse:
-    reason = parse_swap_body(body)
-    result = _service(session).swap(account.id, _owned_id(assignment_id), reason)
-    n, plan = result.session, result.stored.plan
-    return JSONResponse(
-        {
-            "plan_version": plan.version,
-            "session": session_body(
-                result.stored.sessions[n],
-                plan.sessions[n],
-                result.cited.sessions[n],
-                result.drill_names,
-            ),
-        }
-    )

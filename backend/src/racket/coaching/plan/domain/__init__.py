@@ -1,7 +1,7 @@
 """The ``TrainingPlan`` aggregate, rules-only assembly (ST-056) and citations (ST-057);
 coaching-plan §5-§6. Pure."""
 
-from racket.coaching.plan.domain.assembly import Infeasible, assemble
+from racket.coaching.plan.domain.assembly import Infeasible, assemble, warm_up_minutes
 from racket.coaching.plan.domain.citation import (
     Citation,
     CitedAssignment,
@@ -18,21 +18,16 @@ from racket.coaching.plan.domain.model import (
     NO_DRILL_FITS,
     Drill,
     DrillAssignment,
-    DrillSwapped,
     InvalidPreferences,
-    NoAlternative,
     PlanInvariantBroken,
     PlanWeakness,
     Preferences,
     Session,
-    SessionDone,
     SessionDoneUndone,
     SessionMarkedDone,
     TrainingPlan,
     Unfitted,
-    cited_target,
     violations,
-    warm_up_minutes,
 )
 
 __all__ = [
@@ -42,26 +37,22 @@ __all__ = [
     "CitedPlan",
     "Drill",
     "DrillAssignment",
-    "DrillSwapped",
     "EvidenceLink",
     "Infeasible",
     "InvalidPreferences",
     "LimitedData",
     "MissingCitation",
-    "NoAlternative",
     "PlanInvariantBroken",
     "PlanWeakness",
     "Preferences",
     "RallyRef",
     "Session",
-    "SessionDone",
     "SessionDoneUndone",
     "SessionMarkedDone",
     "TrainingPlan",
     "Unfitted",
     "assemble",
     "citable",
-    "cited_target",
     "deleted_sources",
     "source_matches",
     "violations",

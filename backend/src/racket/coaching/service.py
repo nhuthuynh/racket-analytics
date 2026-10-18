@@ -16,15 +16,13 @@ row "regenerated label" in docs/sprints/04/decisions/ST-061b.md (QA-ST061b-R2-03
 A lost save race (``IntegrityError``) is retried once from the start, then 409
 ``plan_conflict`` (api-sprint-04 §3.4).
 
-Follow-through (ST-062; FR-124; api-sprint-04 §3): ``mark_done`` / ``undo_done`` / ``swap`` load
-the owner's plan, find the session or assignment by its id among the owner's rows (anything else
-is 404 ``not_found``, as an unknown id), run the aggregate's command and save it with the
-version check (``PlanRepository.update``). Done ops are idempotent by ``(account_id, op_id)``: a
+Follow-through (ST-062; FR-124; api-sprint-04 §3.1, §3.2): ``mark_done`` / ``undo_done`` load the
+owner's plan, find the session by its id among the owner's rows (anything else is 404
+``not_found``, as an unknown id), run the aggregate's command and save it with the version check
+(``PlanRepository.update``). Done ops are idempotent by ``(account_id, op_id)``: a
 replay answers the stored result; the same key on another session is 409
 ``idempotency_key_reused``. A lost race (``IntegrityError`` or ``PlanConflict``) is retried once,
-then 409 ``plan_conflict``. A swap needs the live citations, so a stale plan, or one the live
-data no longer cites, is 409 ``plan_conflict`` (the client reloads; ``GET`` regenerates it).
-Events (coaching-plan §7) are logged after commit with ids only, never the reason.
+then 409 ``plan_conflict``. Events (coaching-plan §7) are logged after commit with ids only.
 
 Transactions: ``citations_for`` runs the stats read repair, which commits, so it runs first; then
 the account row is held ``FOR SHARE`` (SEC-S3-TM-05: a ``DELETE /me`` commits before or after,
@@ -56,10 +54,8 @@ from racket.coaching.plan.domain import (
     Drill,
     Infeasible,
     MissingCitation,
-    NoAlternative,
     PlanWeakness,
     Preferences,
-    SessionDone,
     assemble,
     citable,
     deleted_sources,
@@ -95,14 +91,6 @@ class PlanChanged(Conflict):
     code = "plan_conflict"
 
 
-class NoAlternativeDrill(Conflict):
-    code = "no_alternative"
-
-
-class SessionAlreadyDone(Conflict):
-    code = "session_done"
-
-
 class OpIdReused(Conflict):
     code = "idempotency_key_reused"
 
@@ -115,17 +103,6 @@ class DoneState:
     done_at: datetime | None
     plan_version: int
     replayed: bool = False
-
-
-@dataclass(frozen=True, slots=True)
-class SwapResult:
-    """The answer of ``.../swap``: the saved plan, its citations and the swapped session's
-    position in it."""
-
-    stored: StoredPlan
-    cited: CitedPlan
-    session: int
-    drill_names: Mapping[str, str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,16 +170,12 @@ class PlanService:
         """DELETE .../done: not done; a no-op when it is not done."""
         return self._retrying(lambda: self._undo_done(owner_id, session_id))
 
-    def swap(self, owner_id: uuid.UUID, assignment_id: uuid.UUID, reason: str | None) -> SwapResult:
-        """POST .../swap ("Not for me"): another drill for the same metric, or 409."""
-        return self._retrying(lambda: self._swap(owner_id, assignment_id, reason))
-
     def _owned(self, owner_id: uuid.UUID) -> StoredPlan:
         if not players.lock_live_account(self.session, owner_id):
             raise Unauthenticated("the account was deleted")
         stored = self.plans.get(owner_id)
         if stored is None:
-            raise NotFound("no such session or assignment")
+            raise NotFound("no such session")
         return stored
 
     def _session_slot(self, stored: StoredPlan, session_id: uuid.UUID) -> int:
@@ -247,66 +220,6 @@ class PlanService:
         self.session.commit()
         self._event("coaching.plan.session_undone", stored, session_id)
         return DoneState(session_id, None, plan.version)
-
-    def _swap(
-        self, owner_id: uuid.UUID, assignment_id: uuid.UUID, reason: str | None
-    ) -> SwapResult:
-        facts = citation_acl.citations_for(self.session, owner_id)
-        stored = self._owned(owner_id)
-        slot = next(
-            (
-                (n, k)
-                for n, ids in enumerate(stored.sessions)
-                for k, a in enumerate(ids.assignment_ids)
-                if a == assignment_id
-            ),
-            None,
-        )
-        if slot is None:
-            raise NotFound("no such assignment")
-        n, k = slot
-        plan, loaded = stored.plan, stored.plan.version
-        s = plan.sessions[n]
-        if s.done_at is not None:
-            raise SessionAlreadyDone("session is done")
-        live = citation_acl.live_matches(self.session, stored.source_match_ids)
-        if stored.stale or deleted_sources(stored.source_match_ids, live):
-            raise PlanChanged("plan is stale; reload it")
-        try:
-            CitedPlan(plan, facts.citations, facts.rallies)
-        except MissingCitation:
-            raise PlanChanged("the live data no longer cites the plan") from None
-        old = s.assignments[k]
-        try:
-            event = plan.swap(
-                week=s.week,
-                index=s.index,
-                position=old.position,
-                library=citable(self.library.drills, facts.citations),
-                cited=frozenset(facts.citations),
-                reason=reason,
-            )
-        except SessionDone:  # pragma: no cover - checked above
-            raise SessionAlreadyDone("session is done") from None
-        except NoAlternative:
-            raise NoAlternativeDrill("no other drill fits") from None
-        cited = CitedPlan(plan, facts.citations, facts.rallies)
-        self.plans.update(owner_id, stored.id, plan, loaded_version=loaded)
-        self.session.commit()
-        log.info(
-            "plan drill swapped",
-            extra={
-                "event": "coaching.plan.drill_swapped",
-                "plan_id": str(stored.id),
-                "assignment_id": str(assignment_id),
-                "from_drill": event.from_drill,
-                "to_drill": event.to_drill,
-                "metric_id": event.target.split(":")[0],
-                "reason_given": event.reason_given,
-                "version": event.version,
-            },
-        )
-        return SwapResult(stored, cited, n, self.library.names)
 
     def _event(
         self, name: str, stored: StoredPlan, session_id: uuid.UUID, op_id: str | None = None
