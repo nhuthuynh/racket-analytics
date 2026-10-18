@@ -5,8 +5,9 @@ A fresh checkout has no .hypothesis/constants, so each xdist worker's first exam
 local module (~1.3 s per worker; PE-R1-DB-01). This collects the same selection in one process,
 imports the rest of each source package collection touched (a test can import a module inside a
 function: create_app() imports every router; PR #111 run 39073707402 left 26 of 110 entries to
-the workers), and runs Hypothesis's local-constants scan. It runs no test and changes no
-generated value (the cache is keyed by source; each worker still scans only what it imported).
+the workers), runs Hypothesis's local-constants scan and draws one text example (unicode tables).
+It runs no test and changes no generated value (the cache is keyed by source; each worker still
+scans only what it imported).
 Usage (in backend): warm_hypothesis_constants.py PYTEST_ARGS...  Exit: pytest's; 3 if no cache.
 """
 
@@ -18,6 +19,8 @@ import sys
 from types import ModuleType
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from hypothesis.configuration import storage_directory
 from hypothesis.internal.conjecture.providers import _get_local_constants
 from hypothesis.internal.constants_ast import is_local_module_file
@@ -64,6 +67,13 @@ def import_source_packages(test_modules: set[str]) -> tuple[int, int]:
     return imported, failed
 
 
+@settings(max_examples=1, database=None)
+@given(st.text())
+def _draw_text(_: str) -> None:
+    """One text example: builds the unicode charmap and codec tables each worker's first
+    ``st.text()`` would build (run 39100944732: domain suite 10 s vs 8 s on main)."""
+
+
 def main(argv: list[str]) -> int:
     collected = _Collected()
     rc = pytest.main(["-q", "--collect-only", "-p", "no:cacheprovider", *argv], plugins=[collected])
@@ -74,6 +84,7 @@ def main(argv: list[str]) -> int:
     # The scan a worker's first example runs (writes one cache entry per local source module).
     # Called directly: a single drawn example may not reach it (no entry in a bare project).
     _get_local_constants()
+    _draw_text()
     cache = storage_directory("constants", intent_to_write=False).path
     files = [p for p in cache.glob("*") if not p.name.startswith(".")] if cache.is_dir() else []
     print(f"warm: {len(files)} Hypothesis constants cache entries in {cache}")
