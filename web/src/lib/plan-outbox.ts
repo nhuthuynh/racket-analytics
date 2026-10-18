@@ -74,15 +74,24 @@ export function createOutbox(store: OutboxStore, newOpId: () => string = randomO
     report.kept.push(op.session_id);
   }
 
+  // Writes from presses run one after another, so a double tap reads the op the first one stored.
+  let writes: Promise<unknown> = Promise.resolve();
+  function serial<T>(step: () => Promise<T>): Promise<T> {
+    const next = writes.then(step, step);
+    writes = next.catch(() => undefined);
+    return next;
+  }
+
   return {
-    async queueDone(sessionId) {
-      const queued = await store.get(sessionId);
-      if (queued) return queued;
-      const op = { op_id: newOpId(), session_id: sessionId };
-      await store.put(op);
-      return op;
-    },
-    cancel: (sessionId) => store.delete(sessionId),
+    queueDone: (sessionId) =>
+      serial(async () => {
+        const queued = await store.get(sessionId);
+        if (queued) return queued;
+        const op = { op_id: newOpId(), session_id: sessionId };
+        await store.put(op);
+        return op;
+      }),
+    cancel: (sessionId) => serial(() => store.delete(sessionId)),
     pending: () => store.all(),
     async sync(send) {
       const report: SyncReport = { synced: [], dropped: [], kept: [], planChanged: false, signedOut: false };
