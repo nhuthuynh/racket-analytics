@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
+
 from racket.coaching.plan.scope import ScopeMemo
 
 pytestmark = [pytest.mark.unit, pytest.mark.coaching]
