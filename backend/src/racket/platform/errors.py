@@ -78,6 +78,7 @@ CODE_MESSAGES.update(
         "no_tagged_match": "Tag at least one match to get a plan.",
         "no_plan_fits": "No plan fits these settings. Try more time or equipment.",
         "plan_conflict": "Your plan changed. Reload it.",
+        "idempotency_key_reused": "This request id was already used.",
     }
 )
 

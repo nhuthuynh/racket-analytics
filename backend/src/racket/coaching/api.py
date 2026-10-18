@@ -5,26 +5,35 @@ it. ``POST`` checks, in order: session (401) -> Origin (403, edge middleware) ->
 field codes) -> rate limit (429, SEC-S4-TM-01, counted after validation) -> ranking (409
 ``no_tagged_match``) -> assembly (409 ``no_plan_fits``) -> save; 201 with ``Location``.
 ``GET`` is 200 or 404 ``no_plan``.
+
+Follow-through (ST-062; FR-124; api-sprint-04 §3.1, §3.2): ``POST``/``DELETE
+/me/plan/sessions/{session_id}/done``.
+Checks in order: session (401) -> Origin (403) -> ``Idempotency-Key`` (422) -> the id
+among the caller's own plan rows (404 ``not_found``, the same answer for another account's, an
+unknown or a malformed id; NFR-051) -> the command (409 codes).
 """
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Header
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from racket.coaching.schemas import PreferencesIn, parse_preferences, plan_body
-from racket.coaching.service import PlanService, library_dir, load_library
+from racket.coaching.schemas import PreferencesIn, parse_op_id, parse_preferences, plan_body
+from racket.coaching.service import DoneState, PlanService, library_dir, load_library
 from racket.platform.db import get_session
+from racket.platform.errors import NotFound
 from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.players.api import CurrentAccount
 
 router = APIRouter()
 DbSession = Annotated[Session, Depends(get_session)]
 PLAN_PATH = "/me/plan"
+DONE_PATH = "/me/plan/sessions/{session_id}/done"
 GENERATIONS_PER_HOUR = 30  # SEC-4 T4-PL-6 (judgment); decisions ST-061b
 
 
@@ -85,3 +94,62 @@ def generate_plan(
 )
 def get_plan(account: CurrentAccount, session: DbSession) -> JSONResponse:
     return JSONResponse(plan_body(_service(session).current(account.id)))
+
+
+def _owned_id(raw: str) -> uuid.UUID:
+    """A malformed id is the 404 of an unknown one (NFR-051)."""
+    try:
+        return uuid.UUID(raw)
+    except ValueError:
+        raise NotFound("malformed id") from None
+
+
+def _done_body(state: DoneState, *, with_replayed: bool) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "session_id": str(state.session_id),
+        "done": state.done_at is not None,
+        "done_at": None
+        if state.done_at is None
+        else state.done_at.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "plan_version": state.plan_version,
+    }
+    if with_replayed:
+        body["replayed"] = state.replayed
+    return body
+
+
+@router.post(
+    DONE_PATH,
+    summary="Mark a session done (idempotent by the Idempotency-Key op id)",
+    responses={
+        200: _error("session_id, done, done_at, plan_version, replayed"),
+        401: _error("unauthenticated"),
+        404: _error("not_found: not a session of the caller's plan"),
+        409: _error("idempotency_key_reused or plan_conflict"),
+        422: _error("validation_failed: Idempotency-Key required or invalid"),
+    },
+)
+def mark_session_done(
+    session_id: str,
+    account: CurrentAccount,
+    session: DbSession,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> JSONResponse:
+    op_id = parse_op_id(idempotency_key)
+    state = _service(session).mark_done(account.id, _owned_id(session_id), op_id)
+    return JSONResponse(_done_body(state, with_replayed=True))
+
+
+@router.delete(
+    DONE_PATH,
+    summary="Undo a session's done mark",
+    responses={
+        200: _error("session_id, done (false), done_at (null), plan_version"),
+        401: _error("unauthenticated"),
+        404: _error("not_found: not a session of the caller's plan"),
+        409: _error("plan_conflict"),
+    },
+)
+def undo_session_done(session_id: str, account: CurrentAccount, session: DbSession) -> JSONResponse:
+    state = _service(session).undo_done(account.id, _owned_id(session_id))
+    return JSONResponse(_done_body(state, with_replayed=False))

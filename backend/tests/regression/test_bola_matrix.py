@@ -23,7 +23,15 @@ import pytest
 from tests.regression.bola import MATRIX, Probe, all_routes, id_routes, uncovered_routes
 from tests.support import contract, scorebook, tus
 from tests.support.api import async_client, lifespan, sign_in
-from tests.support.stats import LABELLER_ADMIN
+from tests.support.stats import LABELLER_ADMIN, WORKED_EXAMPLE
+
+PLAN_PREFERENCES = {
+    "minutes_per_session": 30,
+    "sessions_per_week": 3,
+    "players_available": 1,
+    "equipment": ["wall"],
+    "level": "intermediate",
+}
 
 
 @pytest.fixture
@@ -48,7 +56,23 @@ async def ivy_resources(users: dict[str, httpx.AsyncClient]) -> dict[str, str]:
     await scorebook.start_game(ivy, tagged)
     tags = await scorebook.tag_all(ivy, tagged, list(scorebook.taglib.JOURNEY_TAGS[:1]))
     rally_id = str(tags[0].json()[scorebook.tagcontract.RALLY_ID_KEY])
-    return {"match": match_id, "upload_url": upload.url, "tagged": tagged, "rally": rally_id}
+    # A third match with the worked example tagged, so Ivy has a plan for the plan id routes
+    # (ST-062; api-sprint-04 §8; TCR row 2026-10-18 in docs/sprints/04/decisions/ST-062.md).
+    example = await scorebook.create_doubles(ivy, "BOLA plan")
+    await scorebook.receive_video(ivy, example)
+    await scorebook.start_game(ivy, example)
+    await scorebook.tag_all(ivy, example, list(WORKED_EXAMPLE))
+    plan = await ivy.post("/me/plan", json=PLAN_PREFERENCES)
+    assert plan.status_code == 201, plan.text
+    session = plan.json()["sessions"][-1]
+    return {
+        "match": match_id,
+        "upload_url": upload.url,
+        "tagged": tagged,
+        "rally": rally_id,
+        "plan_session": str(session["id"]),
+        "plan_assignment": str(session["assignments"][-1]["id"]),
+    }
 
 
 async def _grant_labeller(client: httpx.AsyncClient) -> None:
@@ -63,6 +87,11 @@ def _url(probe: Probe, resources: dict[str, str], missing: bool) -> str:
     if probe.resource == "metric":
         return probe.template.format(
             match_id=uuid.uuid4() if missing else resources["match"], metric_id="AN-01"
+        )
+    if probe.resource in ("plan_session", "plan_assignment"):
+        resource_id = str(uuid.uuid4()) if missing else resources[probe.resource]
+        return probe.template.replace("{session_id}", resource_id).replace(
+            "{assignment_id}", resource_id
         )
     if probe.resource == "rally":
         return probe.template.format(
