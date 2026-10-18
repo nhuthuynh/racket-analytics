@@ -137,7 +137,8 @@ PLAN_ID_ROUTES_04 = {
     ("DELETE", "/me/plan/sessions/{session_id}/done"): lambda: {},
     ("POST", "/me/plan/assignments/{assignment_id}/swap"): lambda: {"json": {}},
 }
-SERVED_04: frozenset[RouteKey] = frozenset()
+# ST-062 serves all three (TCR row 2026-10-18 in docs/sprints/04/decisions/ST-062.md).
+SERVED_04: frozenset[RouteKey] = frozenset(PLAN_ID_ROUTES_04)
 
 
 def plan_resource(template: str) -> str:
