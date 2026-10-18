@@ -116,20 +116,38 @@ def metric_facts(session: Session, match_id: uuid.UUID, side: str) -> MatchMetri
     """The published metrics of the live sheet for ``side`` (read repair as ``GET …/stats``;
     commits the caller's session). ``None`` when the match is gone."""
     from racket.analytics import service
-    from racket.analytics.evidence import EvidenceQuery, evidence_page
-    from racket.sports.pickleball import metrics
 
     found = service.current(session, match_id, trigger="read")
     if found is None:
         return None
-    rows = found.sheet.get("rows", ())
+    return _match_metrics(found.sheet, found.snapshot.stats, side)
+
+
+def metric_facts_of_sheet(sheet: Mapping[str, Any], side: str) -> MatchMetrics:
+    """``metric_facts`` of a projected sheet that is not stored (pure; the ST-060 eval): the
+    same stats the snapshot holds (invariant S1) and the same evidence lists."""
+    from racket.analytics.snapshot import policy_from_dictionary
+    from racket.analytics.starter_stats import starter_stats
+    from racket.sports.pickleball import metrics
+
+    stats = starter_stats(sheet, policy_from_dictionary(metrics.load_dictionary()))
+    return _match_metrics(sheet, stats, side)
+
+
+def _match_metrics(
+    sheet: Mapping[str, Any], stats: Mapping[str, Mapping[str, Mapping[str, Any]]], side: str
+) -> MatchMetrics:
+    from racket.analytics.evidence import EvidenceQuery, evidence_page
+    from racket.sports.pickleball import metrics
+
+    rows = sheet.get("rows", ())
     out: dict[str, MetricFact] = {}
     for entry in metrics.load_dictionary().published():
-        fields = found.snapshot.stats.get(entry.id, {}).get(side)
+        fields = stats.get(entry.id, {}).get(side)
         k_key, n_key = _K_N.get(entry.id, ("k", "n"))
         if fields is None or n_key not in fields:
             continue
-        numbers = found.snapshot.rallies(entry.id, side)
+        numbers = list(fields["rallies"])
         everything = EvidenceQuery(side, len(numbers) + 1, 0)
         items, _, _ = evidence_page(rows, numbers, everything)
         out[entry.id] = MetricFact(
@@ -143,7 +161,7 @@ def metric_facts(session: Session, match_id: uuid.UUID, side: str) -> MatchMetri
             lower_bound=bool(fields.get("fault_type_not_tagged", 0)),
             rally_ids=tuple(str(i["rally_id"]) for i in items),
         )
-    rallies = len(facts_of_sheet(found.sheet).rallies)
+    rallies = len(facts_of_sheet(sheet).rallies)
     return MatchMetrics(rallies, out)
 
 

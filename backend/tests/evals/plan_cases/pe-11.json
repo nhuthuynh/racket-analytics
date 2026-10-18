@@ -1,0 +1,10 @@
+{
+ "description": "solo, 35 min x 2/week, wall, ball_machine, intermediate; low sample (19 tags in 1 match(es)), 'unforced' losses, player on side A (doubles)",
+ "dimensions": {"ball_machine": true, "level": "intermediate", "minutes_per_session": 35, "players": "solo", "sample": "low", "wall": true},
+ "expect": "plan",
+ "id": "pe-11",
+ "preferences": {"equipment": ["ball_machine", "wall"], "level": "intermediate", "minutes_per_session": 35, "players_available": 1, "sessions_per_week": 2},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "B", "tags": [{"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "fault", "fault_kind": "nvz", "responsible_player": "A2", "winning_side": "B"}, {"ending": "replay"}, {"ending": "fault", "fault_kind": "serve", "responsible_player": "B2", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "winner", "responsible_player": "A2", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A2", "winning_side": "A"}, {"ending": "fault", "fault_kind": "two_bounce", "responsible_player": "B2", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "unforced_error", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}]}], "side": "A"}
+ ]
+}

@@ -1,0 +1,10 @@
+{
+ "description": "pairs, 60 min x 2/week, half_court, wall, intermediate; low sample (19 tags in 1 match(es)), 'other-faults' losses, player on side A (doubles)",
+ "dimensions": {"ball_machine": false, "level": "intermediate", "minutes_per_session": 60, "players": "pairs", "sample": "low", "wall": true},
+ "expect": "plan",
+ "id": "pe-15",
+ "preferences": {"equipment": ["half_court", "wall"], "level": "intermediate", "minutes_per_session": 60, "players_available": 2, "sessions_per_week": 2},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "A", "tags": [{"ending": "fault", "fault_kind": "nvz", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "unforced_error", "winning_side": "B"}, {"ending": "fault", "fault_kind": "nvz", "responsible_player": "A2", "winning_side": "B"}, {"ending": "forced_error", "winning_side": "A"}, {"ending": "fault", "fault_kind": "foot", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "fault", "fault_kind": "other", "responsible_player": "A1", "winning_side": "B"}, {"ending": "fault", "fault_kind": "two_bounce", "winning_side": "A"}, {"ending": "winner", "responsible_player": "A2", "winning_side": "A"}, {"ending": "fault", "fault_kind": "nvz", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "other", "responsible_player": "A2", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "winner", "winning_side": "A"}]}], "side": "A"}
+ ]
+}
