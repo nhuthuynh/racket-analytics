@@ -7,6 +7,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createOutbox, type DoneOp, type SendDone } from '@/lib/plan-outbox';
 import { idbOutboxStore } from '@/lib/plan-outbox-idb';
+import { clearClientData } from '@/lib/session/clear';
 
 const S1 = '00000000-0000-4000-8000-000000000010';
 const S2 = '00000000-0000-4000-8000-000000000011';
@@ -125,5 +126,28 @@ describe('plan outbox (negative first)', () => {
     const report = await box.sync(async () => ({ kind: 'key_reused' }));
     expect(report.kept).toEqual([S1]);
     expect(await box.pending()).toEqual([{ op_id: 'op-2', session_id: S1 }]);
+  });
+});
+
+describe('plan outbox and sign-out (NFR-067)', () => {
+  it('sign-out is not blocked by an open outbox and leaves no op behind', async () => {
+    const box = outbox();
+    await box.queueDone(S1);
+    const outcome = await new Promise<string>((resolve) => {
+      const request = factory.deleteDatabase('ra-plan-outbox');
+      request.onsuccess = () => resolve('success');
+      request.onerror = () => resolve('error');
+      request.onblocked = () => resolve('blocked');
+    });
+    expect(outcome).toBe('success');
+    expect(await outbox().pending()).toEqual([]);
+  });
+
+  it('clearClientData wipes a queued op while the outbox that stored it is still open', async () => {
+    const box = outbox();
+    await box.queueDone(S1);
+    await clearClientData({ indexedDB: factory });
+    expect(await box.pending()).toEqual([]);
+    expect(await outbox().pending()).toEqual([]);
   });
 });
