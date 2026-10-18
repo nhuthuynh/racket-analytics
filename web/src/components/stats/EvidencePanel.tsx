@@ -6,7 +6,7 @@
 // (alert with "Try again"), empty, gone (404), and stale (another sheet version than the stats).
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import type { Evidence, Metric } from '@/lib/stats/types';
+import type { Evidence, MetricEntry } from '@/lib/stats/types';
 import type { Side } from '@/lib/tagging/types';
 import { EvidenceList } from './EvidenceList';
 import { isStatus, loadProblem } from './messages';
@@ -37,10 +37,12 @@ export function EvidencePanel({
 }: {
   id: string;
   matchId: string;
-  metric: Metric;
+  /** Only the entry's id and name are used, so P-01 can open it from a plan citation. */
+  metric: { entry: Pick<MetricEntry, 'id' | 'name'> };
   side: Side;
   sideWords: string;
-  sheetVersion: number;
+  /** The stats' sheet version for the stale line; null when the caller has none (P-01, ST-063a). */
+  sheetVersion: number | null;
   api: StatsApi;
   onReload: () => void;
 }) {
@@ -100,7 +102,7 @@ export function EvidencePanel({
         </>
       ) : (
         <>
-          {state.evidence.sheetVersion !== sheetVersion ? (
+          {sheetVersion !== null && state.evidence.sheetVersion !== sheetVersion ? (
             <div className="stack">
               <p>These stats changed since you opened this page. Reload the stats to see the new numbers.</p>
               <p>
