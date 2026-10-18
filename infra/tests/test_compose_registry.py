@@ -60,7 +60,9 @@ def test_no_built_service_pulls_the_dockerfile_frontend_from_docker_hub_uncondit
     offenders = [
         name
         for name, build in built().items()
-        if not (build.get("args") or {}).get("BUILDKIT_SYNTAX", "").startswith(f"{REG}/docker/dockerfile:")
+        if not (build.get("args") or {})
+        .get("BUILDKIT_SYNTAX", "")
+        .startswith(f"{REG}/docker/dockerfile:")
     ]
     assert offenders == [], f"syntax frontend ignores DOCKERHUB_REGISTRY: {offenders}"
 

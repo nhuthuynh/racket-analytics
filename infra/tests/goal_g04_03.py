@@ -1,10 +1,7 @@
 """Reads and runs the G04-03 (a)-(c) checks of the Sprint 4 goal scorecard (FIX-04-1c).
 
-QA-V04R1-01: the method checked the golden and property runs with ``--require weakness_golden``
-and ``--require plan_property``. ``junit_rate.py`` matches each pattern against the JUnit test
-id ``file|classname::name``, and a pytest marker is not part of that id, so both checks exited 1
-although every selected test passed. These helpers take the commands from the scorecard as
-written, so the tests guard the method itself, not a copy of it.
+QA-V04R1-01: a marker name given to ``--require`` never matches the JUnit id
+``file|classname::name``. The commands come from the scorecard as written.
 """
 
 from __future__ import annotations
@@ -19,7 +16,6 @@ from typing import Any
 from conftest import REPO_ROOT
 
 SCORECARD = REPO_ROOT / "docs" / "sprints" / "04" / "goal-scorecard.md"
-BACKEND = REPO_ROOT / "backend"
 JUNIT_RATE = REPO_ROOT / "scripts" / "measure" / "junit_rate.py"
 MARKERS = frozenset({"weakness_golden", "plan_property", "coaching", "scenario"})
 _ID = "tests.unit.coaching.test_weakness::"
@@ -43,9 +39,9 @@ PROPERTY_TEST = (
 REPORTS = {"weakness_golden": "weakness-golden.xml", "plan_property": "plan-property.xml"}
 
 
-def method_text(text: str | None = None) -> str:
+def method_text() -> str:
     """The scorecard §4 bullet for G04-03 (a)-(c), up to the next method bullet."""
-    text = SCORECARD.read_text(encoding="utf-8") if text is None else text
+    text = SCORECARD.read_text(encoding="utf-8")
     start = text.index("- **G04-03 (a)-(c):**")
     end = text.index("\n- **", start + 1)
     return text[start:end]
@@ -53,10 +49,8 @@ def method_text(text: str | None = None) -> str:
 
 def required_patterns(text: str) -> list[str]:
     """Every ``--require`` value written literally in the method text."""
-    out = []
-    for m in re.finditer(r"--require\s+('[^']*'|\"[^\"]*\"|[^\s`]+)", text):
-        out.append(m.group(1).strip("'\""))
-    return out
+    found = re.findall(r"--require\s+('[^']*'|\"[^\"]*\"|[^\s`]+)", text)
+    return [m.strip("'\"") for m in found]
 
 
 def command_lines(text: str) -> list[str]:

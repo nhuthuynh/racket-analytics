@@ -1,10 +1,4 @@
-"""Integration test: the G04-03 golden/property id constants match a real pytest run (FIX-04-1c).
-
-The unit tests check the scorecard's patterns against ``SCORECARD_COMPARISONS``,
-``EXTRA_GOLDEN`` and ``PROPERTY_TEST``. This test runs the real marker selections in backend/
-and checks those constants are exactly the JUnit ids the runs write, so a renamed test or a
-new golden case cannot leave the unit tests checking stale ids.
-"""
+"""IT: the G04-03 id constants are exactly the ids of a real marker run (FIX-04-1c)."""
 
 from __future__ import annotations
 

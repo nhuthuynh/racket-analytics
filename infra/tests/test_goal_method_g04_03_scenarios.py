@@ -1,8 +1,6 @@
 """Binds tests/features/goal_method_g04_03.feature (FIX-04-1c; QA-V04R1-01; G04-03 a, c).
 
-Each scenario runs the real backend pytest selection and the real junit_rate.py, with the
-commands taken from the Sprint 4 goal scorecard as written. Bound in infra/tests, beside the
-other goal-method guards (test_goal_scorecard_fast_tests.py).
+Real backend pytest selections and the real junit_rate.py, with the scorecard's commands.
 """
 
 from __future__ import annotations
@@ -70,15 +68,9 @@ def the_method(world: dict[str, Any]) -> None:
     world["method"] = method_text()
 
 
-@when("its weakness_golden pytest run and its golden junit_rate.py check run as written")
-def run_golden(world: dict[str, Any]) -> None:
-    _run_marker(world, "weakness_golden")
-    world["result"] = run_check(world["line"], world["goal"])
-
-
-@when("its plan_property pytest run and its property junit_rate.py check run as written")
-def run_property(world: dict[str, Any]) -> None:
-    _run_marker(world, "plan_property")
+@when(parsers.re(r"its (?P<marker>\w+) pytest run and its \w+ junit_rate.py check run as written"))
+def run_method(world: dict[str, Any], marker: str) -> None:
+    _run_marker(world, marker)
     world["result"] = run_check(world["line"], world["goal"])
 
 

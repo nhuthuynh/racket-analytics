@@ -1,9 +1,4 @@
-"""Unit tests of the scorecard G04-03 (a)/(c) checks (FIX-04-1c; QA-V04R1-01).
-
-The commands are read from docs/sprints/04/goal-scorecard.md and expanded by the shell, then
-matched against the JUnit test ids of the real golden and property tests (constants checked
-against a real run in test_goal_method_g04_03_it.py).
-"""
+"""Unit tests of the scorecard G04-03 (a)/(c) checks, read from the scorecard (FIX-04-1c)."""
 
 from __future__ import annotations
 
