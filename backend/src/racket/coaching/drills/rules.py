@@ -4,12 +4,15 @@ Each document is checked against ``schema.json`` (QD-DR-01); then: every target 
 ``AN-*`` skill) is in the metric dictionary; every progression and regression names a drill of the
 library, and neither graph has a cycle; no duration over 45 minutes and min <= max; level_min <=
 level_max; the success criterion contains a number; a ``source``, or a ``coach_rationale``
-labelled "(judgment)"; one file per (id, version); ``deprecated_by`` names a drill version.
+labelled "(judgment)"; one file per (id, version); ``deprecated_by`` names a drill version; a
+reviewed (``coach-reviewed``/``verified``), not deprecated drill whose content involves lobs,
+diving, sprints or footwork has non-blank ``safety_notes`` (QD-DR-04, checklist C5; FIX-04-1d).
 Immutability over versions (the lock) is in ``lock.py``.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -21,6 +24,10 @@ MAX_MINUTES = 45
 LEVELS = ("beginner", "intermediate", "advanced")
 _METRIC = re.compile(r"^AN-\d{2}$")
 _NUMBER = re.compile(r"\d")
+# QD-DR-04 / drill-review-checklist C5 triggers; the same pattern as the G04-05 (e) measurement.
+_SAFETY_TRIGGER = re.compile(r"lob|div(?:e|ing)|sprint|footwork", re.IGNORECASE)
+_REVIEWED = frozenset({"coach-reviewed", "verified"})
+_NOT_CONTENT = frozenset({"safety_notes", "review_status", "deprecated_by"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +71,22 @@ def _rules(src: str, d: Mapping[str, Any], metrics: frozenset[str], ids: set[str
         fail("no source", "neither source nor coach_rationale")
     elif rationale and not source and "(judgment)" not in rationale:
         fail("rationale not labelled", 'coach_rationale must say "(judgment)"')
+    if trigger := _safety_trigger(d):
+        detail = f"QD-DR-04: a reviewed drill involving {trigger!r} needs safety_notes"
+        fail("safety notes missing", detail)
     return found
+
+
+def _safety_trigger(d: Mapping[str, Any]) -> str | None:
+    """The C5 trigger word of a drill handed to players (reviewed, not deprecated) that has no
+    safety notes, else None. Drafts and deprecated versions are never assigned."""
+    if d.get("review_status") not in _REVIEWED or d.get("deprecated_by"):
+        return None
+    if str(d.get("safety_notes", "")).strip():
+        return None
+    content = json.dumps({k: v for k, v in d.items() if k not in _NOT_CONTENT})
+    match = _SAFETY_TRIGGER.search(content)
+    return match.group(0).lower() if match else None
 
 
 def _cycles(graph: Mapping[str, Sequence[str]]) -> list[list[str]]:
