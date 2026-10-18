@@ -9,11 +9,11 @@ from fastapi import APIRouter, Body, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from racket.matches.domain import Match, OwnerId
+from racket.matches.domain import CreationLimits, Match, OwnerId
 from racket.matches.schemas import MatchList, MatchOut, MediaOut
 from racket.matches.service import MatchService
 from racket.platform.db import get_session
-from racket.players.api import CurrentAccount
+from racket.players.api import CurrentAccount, request_ip
 
 router = APIRouter()
 
@@ -22,9 +22,9 @@ def get_match_service(
     request: Request, session: Annotated[Session, Depends(get_session)]
 ) -> MatchService:
     """ADR 0012 seam: tests override this to make the service fail."""
-    settings = request.app.state.settings
-    per_hour = settings.match_creations_per_hour if settings.feature_quotas else None
-    return MatchService(session, settings.api_public_path_prefix, creations_per_hour=per_hour)
+    s = request.app.state.settings
+    limits = CreationLimits(s.match_creations_per_hour, s.match_creations_per_ip_per_hour)
+    return MatchService(session, s.api_public_path_prefix, limits if s.feature_quotas else None)
 
 
 Service = Annotated[MatchService, Depends(get_match_service)]
@@ -42,11 +42,15 @@ OwnedMatch = Annotated[Match, Depends(owned_match)]
 
 @router.post("/matches", status_code=201)
 def create_match(
-    body: Annotated[Any, Body()], account: CurrentAccount, service: Service, response: Response
+    body: Annotated[Any, Body()],
+    account: CurrentAccount,
+    service: Service,
+    request: Request,
+    response: Response,
 ) -> MatchOut:
     """The body is validated by the domain (``MatchSetup``), so every field problem gets its
     code from api-sprint-01 §4.2 in form order (§5.3), never pydantic's first error."""
-    match = service.create(OwnerId(account.id), body)
+    match = service.create(OwnerId(account.id), body, client_ip=request_ip(request))
     response.headers["Location"] = f"/matches/{match.id}"
     return service.view(match)
 

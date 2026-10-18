@@ -394,10 +394,12 @@ class UploadService:
             raise UploadQuotaExceeded("too many unfinished uploads")
 
     def _check_storage_quota(self, owner_id: uuid.UUID, length: int, now: datetime) -> None:
-        """Check 4a under the owner's lock (T4-QT-5); a deleted match stops counting at once."""
+        """Check 4a under the owner's lock (T4-QT-5); a deleted match stops counting at once.
+        Reserved before stored: a completion committing between the two reads is then counted
+        twice (fail closed), never missed (PE-072a-02; it does not take the owner's lock)."""
+        _, reserved = self.uploads.open_for_owner(owner_id, now)
         stored = self.uploads.stored_by_match(owner_id)
         live = matches.live_ids(self.session, list(stored))
-        _, reserved = self.uploads.open_for_owner(owner_id, now)
         refusal = StorageQuota(self.settings.storage_quota_bytes).refusal(
             stored_bytes=sum(stored[m] for m in live), reserved_bytes=reserved,
             requested_bytes=length,

@@ -84,6 +84,25 @@ class OwnerId(_UuidId):
     pass
 
 
+@dataclass(frozen=True)
+class CreationLimits:
+    """FR-160 (api-sprint-04 §7; SEC-4 T4-QT-1, T4-QT-2): match creations per hour, per account
+    and per client IP. The account key comes first, so every request locks in one order."""
+
+    per_account: int
+    per_ip: int
+
+    def __post_init__(self) -> None:
+        if min(self.per_account, self.per_ip) < 1:
+            raise ValueError("a creation limit is at least 1")
+
+    def keys(self, owner: OwnerId, client_ip: str) -> tuple[tuple[str, int], ...]:
+        return (
+            (f"match:create:{owner.value}", self.per_account),
+            (f"match:create:ip:{client_ip}", self.per_ip),
+        )
+
+
 class MatchFormat(StrEnum):
     SINGLES = "singles"
     DOUBLES = "doubles"
