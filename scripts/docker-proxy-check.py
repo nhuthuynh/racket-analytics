@@ -194,17 +194,23 @@ def main(argv: list[str] | None = None) -> int:
     if not args.bridge:
         print(verdict.message, file=sys.stderr)
         return 4
+    return _bridge(daemon, session)
+
+
+def _bridge(daemon: str, session: str) -> int:
+    """Start the forwarder for a stale daemon proxy: 0 bridged, 4 not bridged, 2 bad URL."""
     try:
         if not session or not listens(*parse_proxy(session)):
-            print(
-                f"stale, not bridged: session proxy does not listen ({session or 'unset'})",
-                file=sys.stderr,
-            )
+            why = f"session proxy does not listen ({session or 'unset'})"
+            print(f"stale, not bridged: {why}", file=sys.stderr)
             return 4
         pid = start_bridge(daemon, session)
-    except (ValueError, OSError) as exc:
+    except ValueError as exc:
         print(f"docker-proxy-check: {exc}", file=sys.stderr)
-        return 4 if isinstance(exc, OSError) else 2
+        return 2
+    except OSError as exc:
+        print(f"docker-proxy-check: {exc}", file=sys.stderr)
+        return 4
     print(f"bridge pid: {pid}")
     print(f"ok: bridged daemon proxy {daemon} -> session proxy {session} (stop: kill {pid})")
     return 0
