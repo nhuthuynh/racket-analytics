@@ -5,6 +5,7 @@
 // If the last plan cannot be read the form starts empty: the server still checks every answer.
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { PageTitle } from '@/components/PageTitle';
 import { PlanPreferences } from './PlanPreferences';
 import { createPlanPreferencesApi } from './PlanPreferencesApi';
 import type { PlanPreferences as Preferences } from './PlanPreferencesModel';
@@ -27,7 +28,12 @@ export function PlanPreferencesRoute() {
   }, [api, router]);
 
   if (initial === undefined) {
-    return <p className="loading" role="status">Loading your setup…</p>;
+    return (
+      <>
+        <PageTitle>Your practice setup</PageTitle>
+        <p className="loading" role="status">Loading your setup…</p>
+      </>
+    );
   }
   return <PlanPreferences initial={initial} api={api} navigate={(path) => router.push(path)} />;
 }
