@@ -3,15 +3,18 @@
 // api-sprint-04 §2.1/§2.2 refusals. A fake fetch answers; the request the client sends is checked
 // against the operation's request schema. Negative first: every refusal is an outcome, never a throw.
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { createPlanPreferencesApi } from '@/components/plan/PlanPreferencesApi';
 import type { PlanPreferences } from '@/components/plan/PlanPreferencesModel';
 
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 type Schema = {
   type?: string; minimum?: number; maximum?: number; enum?: unknown[]; items?: Schema; anyOf?: Schema[];
   properties?: Record<string, Schema>; required?: string[]; additionalProperties?: boolean;
 };
-const op = JSON.parse(readFileSync(new URL('./fixtures/openapi-post-me-plan.json', import.meta.url), 'utf8')) as {
+const op = JSON.parse(readFileSync(path.join(HERE, 'fixtures/openapi-post-me-plan.json'), 'utf8')) as {
   path: string;
   post: { requestBody: { content: { 'application/json': { schema: Schema } } }; responses: Record<string, unknown> };
 };

@@ -2,6 +2,8 @@
 // component with a fake plan API. The first test keeps the binding honest: every scenario in the
 // feature file has a test here with the same name, and no test binds a scenario that is not there.
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,7 +11,8 @@ import { PlanPreferences } from '@/components/plan/PlanPreferences';
 import type { GenerateOutcome } from '@/components/plan/PlanPreferencesApi';
 import type { PlanPreferences as Preferences } from '@/components/plan/PlanPreferencesModel';
 
-const FEATURE = readFileSync(new URL('../features/plan_preferences_ui.feature', import.meta.url), 'utf8');
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const FEATURE = readFileSync(path.join(HERE, '../features/plan_preferences_ui.feature'), 'utf8');
 const BOUND = [
   'Minutes outside 15 to 180 are refused before any request',
   'Without a tagged match she is sent to tag one and her answers stay',

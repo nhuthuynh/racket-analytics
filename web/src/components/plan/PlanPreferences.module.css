@@ -1,0 +1,38 @@
+/* P-02 (flows-sprint-04 §11): number choices sit side by side as 48px targets and wrap at 320px;
+   checkboxes one per row; the button is full width on a phone. Tokens only, no new colour. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-target-gap);
+}
+
+.number {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--size-target-touch);
+  min-inline-size: var(--size-target-touch);
+  padding-inline-end: var(--space-2);
+}
+
+.number label {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--size-target-touch);
+  cursor: pointer;
+}
+
+.minutes {
+  inline-size: 6rem;
+  max-inline-size: 100%;
+}
+
+.submit {
+  inline-size: 100%;
+}
+
+@media (min-width: 30rem) {
+  .submit {
+    inline-size: auto;
+  }
+}
