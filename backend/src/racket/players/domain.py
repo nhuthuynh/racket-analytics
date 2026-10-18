@@ -265,3 +265,34 @@ class RetentionChoice:
                 "retention choice", [FieldError(RETENTION_FIELD, "unknown_value")]
             )
         return cls(value)
+
+
+TRAINING_CONSENT_FIELD = "opt_in"
+
+
+@dataclass(frozen=True)
+class TrainingConsentChoice:
+    """Whether the player lets their matches be used to train or evaluate models (FR-009; OQ-06;
+    api-sprint-04 §6): a separate opt-in, off by default and revocable. It belongs to the
+    session account only: the closed body names no account (T4-CS-4)."""
+
+    opt_in: bool
+
+    @classmethod
+    def parse(cls, body: object) -> TrainingConsentChoice:
+        """The closed body ``{"opt_in": true|false}``; one field code on failure, never an echo
+        of the input. Only a JSON boolean: no string, number or null that reads as one."""
+        if not isinstance(body, Mapping):
+            raise ValidationFailed("training consent", [FieldError(None, "invalid")])
+        if any(key != TRAINING_CONSENT_FIELD for key in body):
+            raise ValidationFailed("training consent", [FieldError(None, "unknown_field")])
+        if TRAINING_CONSENT_FIELD not in body:
+            raise ValidationFailed(
+                "training consent", [FieldError(TRAINING_CONSENT_FIELD, "required")]
+            )
+        value = body[TRAINING_CONSENT_FIELD]
+        if type(value) is not bool:
+            raise ValidationFailed(
+                "training consent", [FieldError(TRAINING_CONSENT_FIELD, "invalid")]
+            )
+        return cls(value)
