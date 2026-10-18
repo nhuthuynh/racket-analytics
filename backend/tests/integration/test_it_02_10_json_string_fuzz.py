@@ -1,8 +1,9 @@
 """IT-02-10 (QA-FUZZ, C-01; testing-strategy rule L11; NFR-041, NFR-058).
 
 Every JSON string field of every JSON route (auth, matches, games, rallies, corrections,
-resolutions), and every object key, gets Hypothesis-generated text holding at least one
-control (Cc) or surrogate (Cs) character, NUL and the line/paragraph separators included.
+resolutions, the plan swap reason), and every object key, gets Hypothesis-generated text
+holding at least one control (Cc) or surrogate (Cs) character, NUL and the line/paragraph
+separators included.
 The answer is a 4xx, never a 5xx, and no row is written anywhere.
 
 A second property sends any JSON value (not only strings) in each field: still never a 5xx
@@ -25,6 +26,7 @@ from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 from tests.support import scorebook as sb
+from tests.support import stats as stats_support
 from tests.support.api import ApiDriver
 
 SETTINGS = settings(
@@ -99,6 +101,12 @@ def participant_body(field: str, value: Any) -> dict[str, Any]:
     return body
 
 
+def swap_body(value: Any) -> dict[str, Any]:
+    """A reason may hold a line feed (T4-PL-7; decisions ST-062-part2.md), the one Cc character
+    it keeps, so a generated line feed becomes a NUL and the value stays bad for this field."""
+    return {"reason": value.replace("\n", "\x00") if isinstance(value, str) else value}
+
+
 # name -> (user, route name or raw (method, url template), body builder, positive-control body)
 Builder = Callable[[Any], Any]
 FIELDS: dict[str, tuple[str, Builder, Any]] = {
@@ -130,7 +138,17 @@ FIELDS: dict[str, tuple[str, Builder, Any]] = {
         "correct", lambda v: {"field": "responsible_player", "value": v}, None,
     ),
     "resolution.decision": ("resolution", lambda v: {"decision": v}, None),
+    # ST-062-part2 (T4-PL-7; PE-062P2-R2-01, SQA-062P2-R2-01): the free-text swap reason
+    "plan.swap.reason": ("swap", swap_body, "Too hard on my wrist"),
 }  # fmt: skip
+# A plan whose first session's second drill has alternatives in content/drills (IT-04-05)
+SWAP_PLAN = {
+    "minutes_per_session": 30,
+    "sessions_per_week": 3,
+    "players_available": 4,
+    "equipment": ["wall", "half_court", "full_court", "ball_machine", "partner_feeder"],
+    "level": "intermediate",
+}
 AUTH_URLS = {"links": "/auth/links", "exchange": "/auth/exchange", "dev_sign_in": "/dev/sign-in"}
 KEY_ROUTES = ("links", "exchange", "dev_sign_in", "matches", "start_game", "tag", "correct")
 
@@ -144,6 +162,17 @@ class Target:
         self.match_id = sb.ready_tagged_match(api, "ivy", title="IT-02-10")
         body = api.run(sb.sheet(api.as_user("ivy"), self.match_id)).json()
         self.rally_id = body["rows"][1]["rally_id"]  # rally 2: B, unforced error, no player
+        self.assignment_id: str | None = None
+
+    def swap_url(self) -> str:
+        """The swap route of a real, swappable assignment of Ivy's plan (made on first use), so
+        a reason the parser let through would reach the database write."""
+        if self.assignment_id is None:
+            stats_support.tagged_example(self.api, "ivy", "IT-02-10 plan")
+            plan = self.api.request("ivy", "POST", "/me/plan", json=SWAP_PLAN)
+            assert plan.status_code == 201, plan.text
+            self.assignment_id = plan.json()["sessions"][0]["assignments"][1]["id"]
+        return f"/me/plan/assignments/{self.assignment_id}/swap"
 
     def send(self, route: str, body: Any) -> Any:
         raw = json.dumps(body).encode()  # ensure_ascii: surrogates travel as \\uXXXX escapes
@@ -154,6 +183,8 @@ class Target:
             )
         if route == "matches":
             return self.api.request("ivy", "POST", "/matches", content=raw, headers=headers)
+        if route == "swap":
+            return self.api.request("ivy", "POST", self.swap_url(), content=raw, headers=headers)
         client = self.api.as_user("ivy")
         version = self.api.run(sb.version_of(client, self.match_id))
         name = "correct" if route in ("correct",) else route
@@ -184,6 +215,8 @@ def limits_out_of_the_way(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _check_refused(target: Target, route: str, body: Any) -> None:
+    if route == "swap":
+        target.swap_url()  # the plan is set up before the rows are counted
     before = sb.row_counts(target.engine)
     response = target.send(route, body)
     assert 400 <= response.status_code < 500, (
@@ -202,6 +235,10 @@ def test_it_02_10_positive_controls_each_route_accepts_its_valid_body(target: Ta
     assert target.send(
         "start_game", {"first_serving_side": "B", "ends_switched": False}
     ).status_code in (201, 409, 422)
+
+
+def test_it_02_10_positive_control_the_swap_route_accepts_a_plain_reason(target: Target) -> None:
+    assert target.send("swap", {"reason": "Too hard on my wrist"}).status_code == 200
 
 
 # ------------------------------------------------------------------ strings with bad characters

@@ -7,14 +7,16 @@
 * ``PreferencesIn`` documents the same closed body in OpenAPI; the route does not use it to parse,
   because Pydantic's errors cannot carry the contract's field codes.
 * ``plan_body`` renders a saved, cited plan (``PlanView``) as the §2.3 representation: rallies
-  lost per game rounded to 2 places, proportions to 4 (coaching-plan §6 step 4).
-* ``parse_op_id`` checks the ``Idempotency-Key`` of ``POST .../done`` (ST-062; api-sprint-04 §3.1).
+  lost per game rounded to 2 places, proportions to 4 (coaching-plan §6 step 4);
+  ``session_body`` one session of it (the swap answer, ST-062).
+* ``parse_op_id`` checks the ``Idempotency-Key`` of ``POST .../done`` and ``parse_swap_body`` the
+  closed ``{"reason"}`` body of ``.../swap`` (ST-062; api-sprint-04 §3.1, §3.3).
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from fractions import Fraction
@@ -22,11 +24,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from racket.coaching.plan.domain import CitedPlan, Preferences
+from racket.coaching.plan.domain import CitedAssignment, CitedPlan, Preferences, Session
 from racket.coaching.plan.domain.model import LEVELS, MIN_SESSION, NEEDS
-from racket.coaching.plan.repository import StoredPlan
+from racket.coaching.plan.repository import StoredPlan, StoredSession
 from racket.coaching.weakness.domain import WeaknessRanking
 from racket.platform.errors import FieldError, ValidationFailed
+from racket.platform.text import is_plain_line
 
 UNOFFICIAL_LABEL = "unofficial scoring (rules not yet verified)"  # FR-055, as GET stats
 MAX_MINUTES = 180
@@ -49,6 +52,7 @@ FIELDS = (
 OPTIONAL = frozenset({"weekly_minutes"})
 OP_ID_HEADER = "Idempotency-Key"
 _OP_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
+REASON_MAX = 200  # api-sprint-04 §3.3
 
 
 def parse_op_id(header: str | None) -> str:
@@ -58,6 +62,31 @@ def parse_op_id(header: str | None) -> str:
     if _OP_ID.fullmatch(header) is None:
         raise ValidationFailed("done op id", [FieldError(OP_ID_HEADER, "invalid")])
     return header
+
+
+def parse_swap_body(body: Any) -> str | None:
+    """The trimmed "Not for me" reason, or None; the body is closed (api-sprint-04 §3.3).
+
+    L11 (C-01): a control, lone surrogate or line/paragraph separator is ``invalid``, so NUL
+    and surrogates never reach the driver; a line feed is kept as data (T4-PL-7; decision row
+    in ``docs/sprints/04/decisions/ST-062-part2.md``).
+    """
+    if body is None:
+        return None
+    if not isinstance(body, dict):
+        raise ValidationFailed("swap body", [FieldError(None, "invalid")])
+    if set(body) - {"reason"}:
+        raise ValidationFailed("swap body", [FieldError(None, "unknown_field")])
+    reason = body.get("reason")
+    if reason is None:
+        return None
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValidationFailed("swap body", [FieldError("reason", "invalid")])
+    if not is_plain_line(reason.strip().replace("\n", "")):
+        raise ValidationFailed("swap body", [FieldError("reason", "invalid")])
+    if len(reason.strip()) > REASON_MAX:
+        raise ValidationFailed("swap body", [FieldError("reason", "too_long")])
+    return reason.strip()
 
 
 class PreferencesIn(BaseModel):
@@ -193,46 +222,60 @@ def _citation(c: Any) -> dict[str, Any]:
     }
 
 
-def plan_body(view: PlanView) -> dict[str, Any]:
+def session_body(
+    ids: StoredSession,
+    s: Session,
+    cited: Sequence[CitedAssignment],
+    drill_names: Mapping[str, str],
+) -> dict[str, Any]:
+    """One §2.3 session object; ids from the saved rows, done state from the aggregate."""
+    assignments = []
+    for assignment_id, x in zip(ids.assignment_ids, cited, strict=True):
+        d = x.assignment.drill
+        assignments.append(
+            {
+                "id": str(assignment_id),
+                "position": x.assignment.position,
+                "drill": {
+                    "id": d.id,
+                    "version": d.version,
+                    "name": drill_names.get(d.ref, d.id),
+                    "players": d.players,
+                    "needs": sorted(d.needs),
+                    "skills": sorted(d.skills),
+                },
+                "minutes": x.assignment.minutes,
+                "weakness_id": x.assignment.weakness_id,
+                "warm_up": x.assignment.weakness_id is None,
+                "citation": _citation(x.citation),
+                "why": x.why,
+            }
+        )
+    return {
+        "id": str(ids.id),
+        "week": s.week,
+        "index": s.index,
+        "minutes_budget": s.minutes_budget,
+        "done": s.done_at is not None,
+        "done_at": _time(s.done_at),
+        "assignments": assignments,
+    }
+
+
+def _check_ids(view: PlanView) -> None:
     stored, plan = view.stored, view.stored.plan
     shape = [len(s.assignments) for s in plan.sessions]
     if [len(s.assignment_ids) for s in stored.sessions] != shape:
         raise ValueError(f"plan {stored.id}: stored ids do not match its sessions")
-    sessions = []
-    for ids, s, cited in zip(stored.sessions, plan.sessions, view.cited.sessions, strict=True):
-        assignments = []
-        for assignment_id, x in zip(ids.assignment_ids, cited, strict=True):
-            d = x.assignment.drill
-            assignments.append(
-                {
-                    "id": str(assignment_id),
-                    "position": x.assignment.position,
-                    "drill": {
-                        "id": d.id,
-                        "version": d.version,
-                        "name": view.drill_names.get(d.ref, d.id),
-                        "players": d.players,
-                        "needs": sorted(d.needs),
-                        "skills": sorted(d.skills),
-                    },
-                    "minutes": x.assignment.minutes,
-                    "weakness_id": x.assignment.weakness_id,
-                    "warm_up": x.assignment.weakness_id is None,
-                    "citation": _citation(x.citation),
-                    "why": x.why,
-                }
-            )
-        sessions.append(
-            {
-                "id": str(ids.id),
-                "week": s.week,
-                "index": s.index,
-                "minutes_budget": s.minutes_budget,
-                "done": ids.done_at is not None,
-                "done_at": _time(ids.done_at),
-                "assignments": assignments,
-            }
-        )
+
+
+def plan_body(view: PlanView) -> dict[str, Any]:
+    stored, plan = view.stored, view.stored.plan
+    _check_ids(view)
+    sessions = [
+        session_body(ids, s, cited, view.drill_names)
+        for ids, s, cited in zip(stored.sessions, plan.sessions, view.cited.sessions, strict=True)
+    ]
     p = plan.preferences
     drills = [x.drill for s in plan.sessions for x in s.assignments]
     limited = view.cited.limited_data

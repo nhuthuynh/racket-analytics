@@ -78,6 +78,8 @@ CODE_MESSAGES.update(
         "no_tagged_match": "Tag at least one match to get a plan.",
         "no_plan_fits": "No plan fits these settings. Try more time or equipment.",
         "plan_conflict": "Your plan changed. Reload it.",
+        "no_alternative": "No other drill fits your settings for this.",
+        "session_done": "This session is already done.",
         "storage_quota_exceeded": "You have used your storage.",  # §7, ST-072a
         "idempotency_key_reused": "This request id was already used.",
     }
