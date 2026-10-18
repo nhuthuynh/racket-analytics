@@ -4,12 +4,13 @@
 ``is_me`` side (coaching-plan §3 scope), read only through ``racket.matches.public`` and
 ``racket.analytics.public``, and returns domain ``Citation`` values. With one match in scope the
 numbers equal ``GET /matches/{id}/stats`` for that side, and every rally is in its evidence.
+``live_matches`` says which of a plan's source matches are still live (coaching-plan §8).
 """
 
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
@@ -67,3 +68,8 @@ def citations_from(scoped: Sequence[tuple[str, str, analytics.MatchMetrics]]) ->
 
 def _k(target: str, fact: analytics.MetricFact) -> int:
     return fact.counts.get(_ENDINGS[target], 0) if target in _ENDINGS else fact.k
+
+
+def live_matches(session: Session, ids: Iterable[uuid.UUID]) -> set[uuid.UUID]:
+    """Which of ``ids`` are live (not deleted) matches: a plan built from any other is stale."""
+    return matches.live_ids(session, sorted(set(ids)))

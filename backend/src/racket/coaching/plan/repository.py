@@ -10,6 +10,9 @@ query and the optimistic version check. Only Coaching reads these tables (contex
   plan with ``UPDATE ... WHERE id AND owner_id AND version = :loaded`` (0 rows ->
   ``PlanConflict``) and keeps the session and assignment ids.
 * ``delete_owned`` removes every plan row of an account (the purge's ``purge_account``).
+* ``save`` also writes the plan's source matches (``plan_source_matches``, coaching-plan §8);
+  ``purge_match`` deletes every source-match and citation-rally row naming a purged match and
+  marks those plans stale (the purge's ``purge_match``, T4-PL-9 / SEC-S4-TM-03).
 
 Citation, done and swap columns exist for ST-057 and ST-062, which map them when the aggregate
 holds them.
@@ -79,6 +82,20 @@ plan_assignments = sa.Table(
     sa.Column("minutes", sa.SmallInteger(), nullable=False),
     sa.Column("weakness_id", sa.String(64), nullable=True),
 )
+plan_citation_rallies = sa.Table(
+    "plan_citation_rallies",
+    metadata,
+    sa.Column("assignment_id", sa.Uuid(), sa.ForeignKey("plan_assignments.id"), primary_key=True),
+    sa.Column("match_id", sa.Uuid(), nullable=False),
+    sa.Column("rally_id", sa.Uuid(), nullable=False),
+    sa.Column("position", sa.SmallInteger(), primary_key=True),
+)
+plan_source_matches = sa.Table(
+    "plan_source_matches",
+    metadata,
+    sa.Column("plan_id", sa.Uuid(), sa.ForeignKey("training_plans.id"), primary_key=True),
+    sa.Column("match_id", sa.Uuid(), primary_key=True),
+)
 plan_done_ops = sa.Table(
     "plan_done_ops",
     metadata,
@@ -106,11 +123,24 @@ class PlanRows:
 
 
 @dataclass(frozen=True, slots=True)
+class StoredSession:
+    """A saved session's identity and done state, in the plan's (week, index) order; its
+    assignment ids in position order (ST-061b: the API names sessions and assignments by id)."""
+
+    id: uuid.UUID
+    done_at: datetime | None
+    assignment_ids: tuple[uuid.UUID, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class StoredPlan:
     id: uuid.UUID
     owner_id: uuid.UUID
     stale: bool
     plan: TrainingPlan
+    created_at: datetime | None = None
+    sessions: tuple[StoredSession, ...] = ()
+    source_match_ids: frozenset[uuid.UUID] = frozenset()
 
 
 def _preferences(p: Preferences) -> Row:
@@ -226,16 +256,49 @@ def from_rows(rows: PlanRows, library: Mapping[str, Drill]) -> TrainingPlan:
     )
 
 
+def _identities(rows: PlanRows) -> tuple[StoredSession, ...]:
+    by_session: dict[uuid.UUID, list[Row]] = {s["id"]: [] for s in rows.sessions}
+    for a in rows.assignments:
+        by_session[a["session_id"]].append(a)
+    return tuple(
+        StoredSession(
+            s["id"],
+            s["done_at"],
+            tuple(a["id"] for a in sorted(by_session[s["id"]], key=lambda a: a["position"])),
+        )
+        for s in sorted(rows.sessions, key=lambda s: (s["week"], s["session_index"]))
+    )
+
+
 def delete_owned(session: DbSession, owner_id: uuid.UUID) -> int:
     """Every plan row of ``owner_id`` (children cascade from their plan); rows deleted."""
+    plans = sa.select(training_plans.c.id).where(training_plans.c.owner_id == owner_id)
     rows = 0
     for table, column in (
         (plan_done_ops, plan_done_ops.c.account_id),
+        (plan_source_matches, plan_source_matches.c.plan_id),
         (plan_assignments, plan_assignments.c.owner_id),
         (plan_sessions, plan_sessions.c.owner_id),
         (training_plans, training_plans.c.owner_id),
     ):
-        result = session.execute(sa.delete(table).where(column == owner_id))
+        match = column.in_(plans) if table is plan_source_matches else column == owner_id
+        result = session.execute(sa.delete(table).where(match))
+        rows += int(result.rowcount)  # type: ignore[attr-defined]
+    return rows
+
+
+def purge_match(session: DbSession, match_id: uuid.UUID) -> int:
+    """coaching-plan §8, T4-PL-9: every plan citing ``match_id`` becomes stale, and no
+    source-match or citation-rally row naming it survives; the number of rows deleted."""
+    citing = sa.select(plan_source_matches.c.plan_id).where(
+        plan_source_matches.c.match_id == match_id
+    )
+    session.execute(
+        sa.update(training_plans).where(training_plans.c.id.in_(citing)).values(stale=True)
+    )
+    rows = 0
+    for table in (plan_citation_rallies, plan_source_matches):
+        result = session.execute(sa.delete(table).where(table.c.match_id == match_id))
         rows += int(result.rowcount)  # type: ignore[attr-defined]
     return rows
 
@@ -280,13 +343,33 @@ class PlanRepository:
             [dict(s._mapping) for s in sessions],
             [dict(a._mapping) for a in assignments],
         )
-        return StoredPlan(root.id, root.owner_id, root.stale, from_rows(rows, self.library))
+        plan = from_rows(rows, self.library)
+        sources = self.session.execute(
+            sa.select(plan_source_matches.c.match_id).where(
+                plan_source_matches.c.plan_id == root.id
+            )
+        ).scalars()
+        return StoredPlan(
+            root.id,
+            root.owner_id,
+            root.stale,
+            plan,
+            root.created_at,
+            _identities(rows),
+            frozenset(uuid.UUID(str(m)) for m in sources),
+        )
 
     def delete_owned(self, owner_id: uuid.UUID) -> int:
         return delete_owned(self.session, owner_id)
 
-    def save(self, owner_id: uuid.UUID, plan: TrainingPlan) -> uuid.UUID:
-        """Store ``plan`` as the owner's plan, replacing any earlier one; its new id."""
+    def save(
+        self,
+        owner_id: uuid.UUID,
+        plan: TrainingPlan,
+        source_match_ids: Iterable[uuid.UUID] = (),
+    ) -> uuid.UUID:
+        """Store ``plan`` as the owner's plan, replacing any earlier one, with the matches it
+        was built from (coaching-plan §8); its new id."""
         delete_owned(self.session, owner_id)
         plan_id = uuid.uuid4()
         rows = to_rows(plan, plan_id=plan_id, owner_id=owner_id)
@@ -296,6 +379,9 @@ class PlanRepository:
         )
         self.session.execute(sa.insert(plan_sessions), rows.sessions)
         self.session.execute(sa.insert(plan_assignments), rows.assignments)
+        sources = [{"plan_id": plan_id, "match_id": m} for m in sorted(set(source_match_ids))]
+        if sources:
+            self.session.execute(sa.insert(plan_source_matches), sources)
         return plan_id
 
     def update(

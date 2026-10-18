@@ -22,6 +22,7 @@ Deleting is two steps. **Hide** happens in the DELETE request's own transaction:
 | Vision Analysis | `jobs` | `match_id` (no FK) | `analysis_jobs.public.purge_match` |
 | Analytics (new) | `metric_snapshots` | `match_id`, `owner_id` | `analytics.public.purge_match` |
 | Dataset & Labelling (new) | label consent record, label session/events (ST-052) | `match_id` | `dataset.public.purge_match` |
+| Coaching (S4) | `plan_source_matches`, `plan_citation_rallies` (the plan is marked stale) | `match_id` (no FK to `matches`) | `coaching.public.purge_match` (ST-061b) |
 | Identity & Players | `accounts` (root), `sessions` (FK cascade), labeller role rows (ST-052) | `account_id` | `players.public.purge_account` (after every match) |
 | Identity & Players | `sign_in_links`, `sign_in_requests` | the address (`email`) and `email_key` | deleted **in the DELETE /me transaction** (§3.2) |
 | Platform | `rate_limit_events` rows whose key ends with `:<account_id>` | the key text | `players.public.purge_account` calls `platform.ratelimit.forget(account_id)` |
@@ -103,6 +104,7 @@ pass():
           in ONE transaction:
               analytics.public.purge_match, dataset.public.purge_match,
               analysis_jobs.public.purge_match, video_ingest.public.purge_match,
+              coaching.public.purge_match,          # ST-061b: plan rows naming the match; plans stale
               matches.public.purge_match            # root last; the FK cascade removes the scorebook
           log match.purged (match_id, user_id)
   sweep_orphan_snapshots()                          # SEC-S3-TM-02 second net, below

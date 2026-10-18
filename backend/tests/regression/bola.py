@@ -123,6 +123,31 @@ LABEL_ROUTES_03 = {
     ("GET", "/label/matches/{match_id}/export"): lambda: {},
 }
 _PROBES += [Probe(m, t, "label", k) for (m, t), k in LABEL_ROUTES_03.items()]
+# Sprint 4 plan id routes (api-sprint-04 §8; SEC-4 threat notes §5, T4-PL-1): ST-061b adds the
+# rows, ST-062 serves the routes. Ivy's ids come from her generated plan (``Probe.resource`` kinds
+# "plan_session" and "plan_assignment"). As with MATCH_ID_ROUTES_03, a route joins MATRIX only once
+# it is served (the inventory's positive control requires every MATRIX route to be served): ST-062
+# adds it to SERVED_04 (TCR row in its decisions file). IT-04-03
+# (``tests/integration/test_it_04_03_bola_plan_routes.py``) probes every row meanwhile. The owner's
+# swap may answer 409 ``no_alternative`` (not 404/405), which is still a positive control.
+PLAN_ID_ROUTES_04 = {
+    ("POST", "/me/plan/sessions/{session_id}/done"): lambda: {
+        "headers": {"Idempotency-Key": "bola-probe-1"}
+    },
+    ("DELETE", "/me/plan/sessions/{session_id}/done"): lambda: {},
+    ("POST", "/me/plan/assignments/{assignment_id}/swap"): lambda: {"json": {}},
+}
+SERVED_04: frozenset[RouteKey] = frozenset()
+
+
+def plan_resource(template: str) -> str:
+    """The ``Probe.resource`` kind of a plan id route."""
+    return "plan_session" if "{session_id}" in template else "plan_assignment"
+
+
+_PROBES += [
+    Probe(m, t, plan_resource(t), PLAN_ID_ROUTES_04[(m, t)]) for (m, t) in sorted(SERVED_04)
+]
 MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
 # Routes with a path parameter that is not an owned resource ID. Each needs a reason.
