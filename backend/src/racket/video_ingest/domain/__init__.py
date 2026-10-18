@@ -11,6 +11,7 @@ from racket.video_ingest.domain.extensions import (
 from racket.video_ingest.domain.media_facts import InvalidProbeOutput, MediaFacts, NotAVideo
 from racket.video_ingest.domain.media_url import MediaUrlPolicy, UnsafeMediaUrl
 from racket.video_ingest.domain.policy import Rejection, UploadPolicy
+from racket.video_ingest.domain.quota import QuotaUsage, StorageQuota
 from racket.video_ingest.domain.uploads import (
     ChunkBeyondLength,
     ChunkPlan,
@@ -39,8 +40,10 @@ __all__ = [
     "ObjectKeyPolicy",
     "OffsetMismatch",
     "Part",
+    "QuotaUsage",
     "Rejection",
     "StagedChunk",
+    "StorageQuota",
     "UnsafeMediaUrl",
     "UploadAlreadyComplete",
     "UploadChecksum",

@@ -78,6 +78,16 @@ CODE_MESSAGES.update(
         "no_tagged_match": "Tag at least one match to get a plan.",
         "no_plan_fits": "No plan fits these settings. Try more time or equipment.",
         "plan_conflict": "Your plan changed. Reload it.",
+        "storage_quota_exceeded": "You have used your storage.",  # §7, ST-072a
+        "idempotency_key_reused": "This request id was already used.",
+    }
+)
+# Sprint 4 age codes (api-sprint-04 §4, §9; ST-068a). ``under_age`` carries the interim text
+# from settings (``racket.players.domain.under_age_message``); this is only the fallback.
+CODE_MESSAGES.update(
+    {
+        "age_confirmation_required": "Please confirm your age to continue.",
+        "under_age": "You can't have an account yet.",
     }
 )
 
@@ -172,6 +182,7 @@ class ErrorResponse:
     headers: Mapping[str, str] = field(default_factory=dict)
     fields: tuple[FieldError, ...] = ()
     retry_at: str | None = None
+    extra: Mapping[str, Any] = field(default_factory=dict)  # e.g. ``quota`` (api-sprint-04 §7)
 
     def body(self) -> dict[str, dict[str, Any]]:
         """api-sprint-01 §1.1: ``fields`` only on 422 (always a list), ``retry_at`` only on 429."""
@@ -184,6 +195,7 @@ class ErrorResponse:
             error["fields"] = [{"field": f.field, "code": f.code} for f in self.fields]
         if self.status == 429:
             error["retry_at"] = self.retry_at
+        error.update((k, v) for k, v in self.extra.items() if k not in error)
         return {"error": error}
 
 
@@ -203,6 +215,7 @@ class ErrorMapper:
                 headers={**exc.headers, **getattr(exc, "response_headers", {})},
                 fields=getattr(exc, "fields", ()),
                 retry_at=getattr(exc, "retry_at", None),
+                extra=getattr(exc, "body_extra", {}),
             )
         return self.for_status(500)
 

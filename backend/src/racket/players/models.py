@@ -19,6 +19,19 @@ accounts = sa.Table(
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     # Tombstone (ST-051): personal columns are NULL from the deletion on; purged later.
     sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+    # FR-003 (0019): only when the holder confirmed being an adult; never a birth date.
+    sa.Column("age_confirmed_at", sa.DateTime(timezone=True), nullable=True),
+)
+
+# FR-003 (0019): a signed-in address with no account yet, while the age gate is on.
+pending_sign_ins = sa.Table(
+    "pending_sign_ins",
+    metadata,
+    sa.Column("token_sha256", sa.String(64), primary_key=True),
+    sa.Column("email", sa.String(254), nullable=False),
+    sa.Column("email_key", sa.String(64), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
 )
 
 sessions = sa.Table(

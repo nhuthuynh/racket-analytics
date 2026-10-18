@@ -16,6 +16,16 @@ row "regenerated label" in docs/sprints/04/decisions/ST-061b.md (QA-ST061b-R2-03
 A lost save race (``IntegrityError``) is retried once from the start, then 409
 ``plan_conflict`` (api-sprint-04 §3.4).
 
+Follow-through (ST-062; FR-124; api-sprint-04 §3.1, §3.2): ``mark_done`` / ``undo_done`` load the
+owner's plan, find the session by its id among the owner's rows (anything else is 404
+``not_found``, as an unknown id), run the aggregate's command and save it with the version check
+(``PlanRepository.update``). Done ops are idempotent by ``(account_id, op_id)``: a
+replay answers the stored result; the same key on another session is 409
+``idempotency_key_reused``. Only a mark that changes the plan stores its op row; a new key on a
+session already done is a no-op that stores none (threat-notes-sprint-04 T4-PL-5). A lost
+race (``IntegrityError`` or ``PlanConflict``) is retried once, then 409 ``plan_conflict``.
+Events (coaching-plan §7) are logged after commit with ids only.
+
 Transactions: ``citations_for`` runs the stats read repair, which commits, so it runs first; then
 the account row is held ``FOR SHARE`` (SEC-S3-TM-05: a ``DELETE /me`` commits before or after,
 never across) and ``ranking_for`` holds the owner's match rows ``FOR SHARE`` to the commit.
@@ -53,7 +63,7 @@ from racket.coaching.plan.domain import (
     deleted_sources,
     source_matches,
 )
-from racket.coaching.plan.repository import PlanRepository
+from racket.coaching.plan.repository import DoneOp, PlanConflict, PlanRepository, StoredPlan
 from racket.coaching.schemas import PlanView
 from racket.coaching.weakness import acl as weakness_acl
 from racket.coaching.weakness.domain import NO_TAGGED_MATCH, WeaknessRanking
@@ -81,6 +91,20 @@ class NoPlanFits(Conflict):
 
 class PlanChanged(Conflict):
     code = "plan_conflict"
+
+
+class OpIdReused(Conflict):
+    code = "idempotency_key_reused"
+
+
+@dataclass(frozen=True, slots=True)
+class DoneState:
+    """The answer of ``POST``/``DELETE .../done`` (api-sprint-04 §3.1, §3.2)."""
+
+    session_id: uuid.UUID
+    done_at: datetime | None
+    plan_version: int
+    replayed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +146,7 @@ class PlanService:
         self.session = session
         self.library = library
         self.plans = PlanRepository(session, library.drills, clock=clock)
+        self.clock = clock
 
     def generate(self, owner_id: uuid.UUID, prefs: Preferences) -> PlanView:
         """POST /me/plan: the new plan replaces the owner's plan; nothing written on a refusal."""
@@ -139,14 +164,89 @@ class PlanService:
         self._generated(view, started)
         return replace(view, regenerated=SOURCE_MATCH_DELETED)
 
+    def mark_done(self, owner_id: uuid.UUID, session_id: uuid.UUID, op_id: str) -> DoneState:
+        """POST .../done: done once; a replay of ``op_id`` answers the stored result."""
+        return self._retrying(lambda: self._mark_done(owner_id, session_id, op_id))
+
+    def undo_done(self, owner_id: uuid.UUID, session_id: uuid.UUID) -> DoneState:
+        """DELETE .../done: not done; a no-op when it is not done."""
+        return self._retrying(lambda: self._undo_done(owner_id, session_id))
+
+    def _owned(self, owner_id: uuid.UUID) -> StoredPlan:
+        if not players.lock_live_account(self.session, owner_id):
+            raise Unauthenticated("the account was deleted")
+        stored = self.plans.get(owner_id)
+        if stored is None:
+            raise NotFound("no such session")
+        return stored
+
+    def _session_slot(self, stored: StoredPlan, session_id: uuid.UUID) -> int:
+        for n, ids in enumerate(stored.sessions):
+            if ids.id == session_id:
+                return n
+        raise NotFound("no such session")
+
+    def _mark_done(self, owner_id: uuid.UUID, session_id: uuid.UUID, op_id: str) -> DoneState:
+        stored = self._owned(owner_id)
+        n = self._session_slot(stored, session_id)
+        op = self.plans.done_op(owner_id, op_id)
+        if op is not None:
+            self.session.rollback()
+            if op.session_id != session_id:
+                raise OpIdReused("op id used for another session")
+            return DoneState(session_id, op.done_at, op.plan_version, replayed=True)
+        plan, loaded = stored.plan, stored.plan.version
+        s = plan.sessions[n]
+        event = plan.mark_done(week=s.week, index=s.index, at=self.clock())
+        done_at = plan.sessions[n].done_at
+        if done_at is None:  # pragma: no cover - mark_done leaves it set
+            raise AssertionError("session not done after mark_done")
+        if event is None:  # already done: a no-op that stores no op row (T4-PL-5)
+            self.session.rollback()
+            return DoneState(session_id, done_at, plan.version)
+        self.plans.update(owner_id, stored.id, plan, loaded_version=loaded)
+        self.plans.record_done_op(owner_id, op_id, DoneOp(session_id, plan.version, done_at))
+        self.session.commit()
+        self._event("coaching.plan.session_done", stored, session_id, op_id=op_id)
+        return DoneState(session_id, done_at, plan.version)
+
+    def _undo_done(self, owner_id: uuid.UUID, session_id: uuid.UUID) -> DoneState:
+        stored = self._owned(owner_id)
+        n = self._session_slot(stored, session_id)
+        plan, loaded = stored.plan, stored.plan.version
+        s = plan.sessions[n]
+        event = plan.undo_done(week=s.week, index=s.index)
+        if event is None:
+            self.session.rollback()
+            return DoneState(session_id, None, plan.version)
+        self.plans.update(owner_id, stored.id, plan, loaded_version=loaded)
+        self.session.commit()
+        self._event("coaching.plan.session_undone", stored, session_id)
+        return DoneState(session_id, None, plan.version)
+
+    def _event(
+        self, name: str, stored: StoredPlan, session_id: uuid.UUID, op_id: str | None = None
+    ) -> None:
+        """``SessionMarkedDone`` / ``SessionDoneUndone`` (coaching-plan §7), after commit."""
+        extra = {
+            "event": name,
+            "plan_id": str(stored.id),
+            "session_id": str(session_id),
+            "version": stored.plan.version,
+        }
+        if op_id is not None:
+            extra["op_id"] = op_id
+        log.info("plan session done state changed", extra=extra)
+
     def _retrying(self, attempt: Callable[[], _T]) -> _T:
         """api-sprint-04 §3.4, coaching-plan §5: a lost race (a concurrent save of the owner's
-        one plan, ``IntegrityError``) is retried once from the start, then 409
-        ``plan_conflict``. Any other failure rolls back and propagates."""
+        one plan or done op, ``IntegrityError``, or a command whose version check found the plan
+        moved, ``PlanConflict``) is retried once from the start, then 409 ``plan_conflict``.
+        Any other failure rolls back and propagates."""
         for tries in range(1, SAVE_ATTEMPTS + 1):
             try:
                 return attempt()
-            except IntegrityError:
+            except (IntegrityError, PlanConflict):
                 self.session.rollback()
                 if tries == SAVE_ATTEMPTS:
                     raise PlanChanged("plan saved concurrently") from None
