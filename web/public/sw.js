@@ -1,7 +1,8 @@
 /* Racket Analytics service worker (ST-010; NFR-067; AQS/STACK-04; api-sprint-00 §8).
  *
- * Cache rule: ONLY content-hashed build assets under /_next/static/ are cached, cache-first.
- * Everything else goes straight to the network and is never stored: pages (they depend on the
+ * Cache rule: content-hashed build assets under /_next/static/ are cached, cache-first; the plan
+ * page and the plan read are the one exception (below). Everything else goes straight to the
+ * network and is never stored: pages (they depend on the
  * session), /api/* responses, uploads and any media file. Tests: tests/unit/service-worker.test.ts
  * and web/e2e/security-headers.spec.ts.
  *
@@ -11,8 +12,8 @@
  *
  * Plan (ST-063c, flows-sprint-04 §2 P-01 Offline): the /plan page shell and the last
  * GET /api/me/plan answer are kept in their own cache, network first, so the plan can be read
- * offline. A refused plan read (401, 404, ...) removes the kept copy; sign-out deletes the whole
- * cache (lib/session/clear.ts). Tests: tests/unit/service-worker-plan.test.ts.
+ * offline. A refused plan read (401, 404, ...) removes the kept copy, a 5xx keeps it; sign-out
+ * deletes the whole cache (lib/session/clear.ts). Tests: tests/unit/service-worker-plan.test.ts.
  */
 const CACHE_NAME = 'ra-static-v1';
 const PLAN_CACHE = 'ra-plan-v1';
@@ -53,7 +54,8 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-/** Network first; a good answer is kept (stamped with when), a refused one removes the copy. */
+/** Network first; a good answer is kept (stamped with when), a refused one (4xx: signed out,
+ * no plan) removes the copy, a server error leaves it for the next offline read. */
 function planNetworkFirst(request, fallback) {
   return caches.open(PLAN_CACHE).then((cache) =>
     fetch(request).then(
@@ -63,7 +65,7 @@ function planNetworkFirst(request, fallback) {
           headers.set(OFFLINE_COPY, new Date().toISOString());
           const body = await response.clone().arrayBuffer();
           await cache.put(request, new Response(body, { status: response.status, headers }));
-        } else {
+        } else if (response.status >= 400 && response.status < 500) {
           await cache.delete(request);
         }
         return response;

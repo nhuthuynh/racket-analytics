@@ -39,5 +39,5 @@ This no-Docker recipe serves plain http, which only Chromium accepts for the `Se
 - Authorisation lives in the API only. Pages map a 401 to sign-in and a 404 to the single not-found page.
 - Titles and other user text are rendered as text, never as HTML (ESLint forbids `dangerouslySetInnerHTML` and `innerHTML`).
 - Colours come only from the token CSS variables (`--color-*`).
-- `public/sw.js` caches only content-hashed `/_next/static/` files and never caches pages, `/api/*` or media.
+- `public/sw.js` caches content-hashed `/_next/static/` files, and otherwise only the `/plan` shell and the last `GET /api/me/plan` answer (ST-063c, cache `ra-plan-v1`, cleared on sign-out); never other pages, other `/api/*` or media.
 - CSP uses a per-request nonce (`src/middleware.ts`, ADR 0018). Other security headers are set in `next.config.ts`.
