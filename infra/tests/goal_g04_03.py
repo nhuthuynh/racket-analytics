@@ -108,6 +108,15 @@ def matches(patterns: list[str], ids: tuple[str, ...]) -> dict[str, list[str]]:
     return {p: [i for i in ids if re.search(p, f"|{i}")] for p in patterns}
 
 
+def run_marker(marker: str, report: Path) -> None:
+    """``pytest -m <marker> --junitxml <report>`` in backend/, as the method runs it."""
+    from domain_budget import run_in_backend
+
+    cmd = ["uv", "run", "pytest", "-q", "-m", marker, "-p", "no:cacheprovider"]
+    res = run_in_backend([*cmd, "--junitxml", str(report)])
+    assert res.returncode == 0, res.stdout[-2000:] + res.stderr[-2000:]
+
+
 def run_check(line: str, goal: Path) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     argv = check_argv(line, goal)
     res = subprocess.run(

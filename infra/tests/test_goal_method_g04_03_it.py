@@ -11,19 +11,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from domain_budget import junit_outcomes, run_in_backend
-from goal_g04_03 import EXTRA_GOLDEN, PROPERTY_TEST, SCORECARD_COMPARISONS
+from domain_budget import junit_outcomes
+from goal_g04_03 import EXTRA_GOLDEN, PROPERTY_TEST, SCORECARD_COMPARISONS, run_marker
 
 pytestmark = pytest.mark.integration
 
 
 def _ids(marker: str, tmp_path: Path) -> dict[str, str]:
     report = tmp_path / f"{marker}.xml"
-    res = run_in_backend(
-        ["uv", "run", "pytest", "-q", "-m", marker, "-p", "no:cacheprovider",
-         "--junitxml", str(report)]
-    )  # fmt: skip
-    assert res.returncode == 0, res.stdout[-2000:]
+    run_marker(marker, report)
     return junit_outcomes(report)
 
 

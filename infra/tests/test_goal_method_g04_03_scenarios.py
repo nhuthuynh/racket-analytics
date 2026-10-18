@@ -7,12 +7,10 @@ other goal-method guards (test_goal_scorecard_fast_tests.py).
 
 from __future__ import annotations
 
-import shlex
 from pathlib import Path
 from typing import Any
 
 import pytest
-from domain_budget import run_in_backend
 from goal_g04_03 import (
     EXTRA_GOLDEN,
     PROPERTY_TEST,
@@ -24,6 +22,7 @@ from goal_g04_03 import (
     pytest_line,
     requires_of,
     run_check,
+    run_marker,
 )
 from pytest_bdd import given, parsers, scenarios, then, when
 
@@ -37,23 +36,17 @@ def world(tmp_path: Path) -> dict[str, Any]:
 
 
 def _run_marker(world: dict[str, Any], marker: str) -> None:
-    """The scorecard's pytest line for ``marker``, run in backend/ with $GOAL set."""
-    line = pytest_line(world.get("method", method_text()), marker)
-    cmd = shlex.split(line.replace("$GOAL", str(world["goal"])).replace('"', ""))
-    res = run_in_backend([*cmd, "-p", "no:cacheprovider"])
-    assert res.returncode == 0, res.stdout[-2000:] + res.stderr[-2000:]
-    world["line"] = check_line(world.get("method", method_text()), marker)
+    """The scorecard's pytest line for ``marker``: its selection and report, run in backend/."""
+    line = pytest_line(world["method"], marker)
+    report = line.split("--junitxml", 1)[1].split()[0].strip('"').replace("$GOAL", "")
+    run_marker(marker, world["goal"] / report.lstrip("/"))
+    world["line"] = check_line(world["method"], marker)
 
 
 @given("the JUnit report of the real weakness_golden run")
 def golden_report(world: dict[str, Any]) -> None:
-    report = world["goal"] / "weakness-golden.xml"
-    res = run_in_backend(
-        ["uv", "run", "pytest", "-q", "-m", "weakness_golden", "-p", "no:cacheprovider",
-         "--junitxml", str(report)]
-    )  # fmt: skip
-    assert res.returncode == 0, res.stdout[-2000:]
-    world["report"] = report
+    world["report"] = world["goal"] / "weakness-golden.xml"
+    run_marker("weakness_golden", world["report"])
 
 
 @when(parsers.parse('junit_rate.py checks it with "{args}"'))
