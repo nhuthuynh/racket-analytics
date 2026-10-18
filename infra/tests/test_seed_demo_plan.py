@@ -24,7 +24,7 @@ def fake() -> Iterator[FakeApi]:
         yield f
 
 
-def _demo(fake: FakeApi, tmp_path: Path):  # noqa: ANN202
+def _demo(fake: FakeApi, tmp_path: Path):
     env = tmp_path / "env"
     env.write_text("APP_ENV=dev\n")
     return run_demo("--base-url", fake.url, "--env-file", str(env), timeout=60)

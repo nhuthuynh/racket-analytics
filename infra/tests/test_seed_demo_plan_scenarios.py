@@ -86,10 +86,9 @@ def prints_plan_page(world: World) -> None:
     assert plan_id_in(res.stdout) == world.fake.plans[-1]["id"], res.stdout
 
 
-@then(
-    "the plan was generated once with solo, 30 min, 3 sessions a week, no ball machine, intermediate"
-)
-def generated_once(world: World) -> None:
+@then(parsers.parse("the plan was generated once with {preferences}"))
+def generated_once(world: World, preferences: str) -> None:
+    assert preferences == "solo, 30 min, 3 sessions a week, no ball machine, intermediate"
     assert world.fake.plan_posts() == [DEMO_PREFERENCES], world.fake.requests
     assert "ball_machine" not in DEMO_PREFERENCES["equipment"]
 

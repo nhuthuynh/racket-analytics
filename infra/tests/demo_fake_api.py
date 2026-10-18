@@ -31,7 +31,7 @@ class FakeApi:
     requests: list[tuple[str, str, Any]] = field(default_factory=list)  # method, path, body
 
     def plan_posts(self) -> list[Any]:
-        return [b for method, path, b in self.requests if (method, path) == ("POST", "/api/me/plan")]
+        return [b for m, path, b in self.requests if (m, path) == ("POST", "/api/me/plan")]
 
     def answer(self, method: str, path: str, body: Any) -> tuple[int, Any]:
         routes: dict[tuple[str, str], Any] = {

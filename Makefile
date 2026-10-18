@@ -34,13 +34,13 @@ ps: ## Show service status
 logs: ## Follow service logs
 	$(COMPOSE) logs -f --tail=100
 
-# ---------------------------------------------------------------- demo data (MVP-03)
+# ---------------------------------------------------------------- demo data (MVP-03, ST-064)
 # The stack's own dev CA (web-tls, ADR 0029): only the public root certificate is copied out.
 DEMO_URL ?= https://localhost:3000
 DEMO_CA := .local/demo/root.crt
 
 .PHONY: demo
-demo: ## Seed a ready-to-explore demo match into the running dev stack (run `make up` first)
+demo: ## Seed a demo match and generate the demo user's plan in the running dev stack (run `make up` first)
 	@mkdir -p $(dir $(DEMO_CA))
 	@$(COMPOSE) cp web-tls:/data/caddy/pki/authorities/local/root.crt $(DEMO_CA) >/dev/null 2>&1 \
 	  || { echo "make demo: the stack's web-tls service is not reachable; run 'make up' first" >&2; exit 1; }
