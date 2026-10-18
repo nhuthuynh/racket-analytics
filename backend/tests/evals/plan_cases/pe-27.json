@@ -1,0 +1,10 @@
+{
+ "description": "four, 90 min x 1/week, full_court, half_court, beginner; low sample (16 tags in 1 match(es)), 'winners-against' losses, player on side A (doubles)",
+ "dimensions": {"ball_machine": false, "level": "beginner", "minutes_per_session": 90, "players": "four", "sample": "low", "wall": false},
+ "expect": "plan",
+ "id": "pe-27",
+ "preferences": {"equipment": ["full_court", "half_court"], "level": "beginner", "minutes_per_session": 90, "players_available": 4, "sessions_per_week": 1},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "A", "tags": [{"ending": "unforced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}, {"ending": "fault", "fault_kind": "foot", "responsible_player": "B1", "winning_side": "A"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}, {"ending": "replay"}, {"ending": "forced_error", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "serve", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A1", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "replay"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}, {"ending": "winner", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}]}], "side": "A"}
+ ]
+}

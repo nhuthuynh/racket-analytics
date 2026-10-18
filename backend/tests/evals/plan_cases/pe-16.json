@@ -1,0 +1,10 @@
+{
+ "description": "pairs, 90 min x 2/week, full_court, half_court, ball_machine, advanced; low sample (12 tags in 1 match(es)), 'serve-faults' losses, player on side A (doubles)",
+ "dimensions": {"ball_machine": true, "level": "advanced", "minutes_per_session": 90, "players": "pairs", "sample": "low", "wall": false},
+ "expect": "plan",
+ "id": "pe-16",
+ "preferences": {"equipment": ["ball_machine", "full_court", "half_court"], "level": "advanced", "minutes_per_session": 90, "players_available": 2, "sessions_per_week": 2},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "A", "tags": [{"ending": "winner", "responsible_player": "A2", "winning_side": "A"}, {"ending": "fault", "fault_kind": "serve", "responsible_player": "A1", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A1", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "other", "responsible_player": "B1", "winning_side": "A"}, {"ending": "winner", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "fault", "fault_kind": "two_bounce", "responsible_player": "A1", "winning_side": "B"}, {"ending": "replay"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A1", "winning_side": "A"}]}], "side": "A"}
+ ]
+}

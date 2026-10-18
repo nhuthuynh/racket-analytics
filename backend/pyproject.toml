@@ -25,6 +25,7 @@ dependencies = [
 racket-manifest-check = "racket.dataset.cli:main"
 racket-drill-lint = "racket.coaching.drills.lint:main"
 racket-drill-coverage = "racket.coaching.drills.coverage:main"
+racket-plan-eval = "racket.coaching.evals.cli:main"
 
 [dependency-groups]
 dev = [

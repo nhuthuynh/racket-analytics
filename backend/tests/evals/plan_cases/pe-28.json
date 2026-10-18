@@ -1,0 +1,10 @@
+{
+ "description": "four, 45 min x 2/week, half_court, advanced; low sample (15 tags in 1 match(es)), 'unforced' losses, player on side A (doubles)",
+ "dimensions": {"ball_machine": false, "level": "advanced", "minutes_per_session": 45, "players": "four", "sample": "low", "wall": false},
+ "expect": "plan",
+ "id": "pe-28",
+ "preferences": {"equipment": ["half_court"], "level": "advanced", "minutes_per_session": 45, "players_available": 4, "sessions_per_week": 2},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "B", "tags": [{"ending": "fault", "fault_kind": "two_bounce", "responsible_player": "A2", "winning_side": "B"}, {"ending": "replay"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "fault", "fault_kind": "other", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "forced_error", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "winning_side": "B"}, {"ending": "unforced_error", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}]}], "side": "A"}
+ ]
+}

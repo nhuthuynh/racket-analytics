@@ -1,0 +1,10 @@
+{
+ "description": "four, 60 min x 7/week, full_court, half_court, intermediate; low sample (16 tags in 1 match(es)), 'mixed' losses, player on side A (doubles) Weekly minutes 210 over 7 sessions: a 30-minute budget.",
+ "dimensions": {"ball_machine": false, "level": "intermediate", "minutes_per_session": 60, "players": "four", "sample": "low", "wall": false},
+ "expect": "plan",
+ "id": "pe-32",
+ "preferences": {"equipment": ["full_court", "half_court"], "level": "intermediate", "minutes_per_session": 60, "players_available": 4, "sessions_per_week": 7, "weekly_minutes": 210},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "B", "tags": [{"ending": "replay"}, {"ending": "fault", "fault_kind": "nvz", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "winning_side": "A"}, {"ending": "fault", "fault_kind": "serve", "responsible_player": "A1", "winning_side": "B"}, {"ending": "fault", "fault_kind": "nvz", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "unforced_error", "winning_side": "A"}, {"ending": "unforced_error", "winning_side": "A"}, {"ending": "winner", "responsible_player": "A1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "foot", "responsible_player": "B1", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}]}], "side": "A"}
+ ]
+}

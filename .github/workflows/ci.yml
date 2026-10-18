@@ -177,6 +177,10 @@ jobs:
           python3 ../scripts/ci/run_with_budget.py "$PROPERTY_BUDGET_S" -- uv run --no-sync pytest -q -m "unit and not red_until" $DOMAIN_TEST_PATHS
       - name: Backend unit suite <= 60 s (NFR-073)
         run: python3 ../scripts/ci/run_with_budget.py "$BACKEND_UNIT_BUDGET_S" -- uv run --no-sync pytest -q -m "unit and not red_until" --junitxml=../reports/unit.xml
+      # ST-060 (NFR-005 a, G04-04): >= 30 eval cases, each planned 3 times over content/drills
+      # and graded by code; rc 1 unless every case passes all 3 runs byte-identically.
+      - name: Code-grader eval on rules-only plans, pass^3 = 100% (NFR-005a, ST-060)
+        run: uv run --no-sync racket-plan-eval --runs 3 --json ../reports/plan-eval.json
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -184,6 +188,7 @@ jobs:
           path: |
             reports/unit.xml
             reports/budget/domain-unit.json
+            reports/plan-eval.json
           if-no-files-found: warn
 
   drill-lint:

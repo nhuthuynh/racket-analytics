@@ -1,0 +1,10 @@
+{
+ "description": "pairs, 60 min x 3/week, wall, intermediate; low sample (16 tags in 1 match(es)), 'unforced' losses, player on side A (doubles) Pairs with only a wall: the solo wall drills fit.",
+ "dimensions": {"ball_machine": false, "level": "intermediate", "minutes_per_session": 60, "players": "pairs", "sample": "low", "wall": true},
+ "expect": "plan",
+ "id": "pe-22",
+ "preferences": {"equipment": ["wall"], "level": "intermediate", "minutes_per_session": 60, "players_available": 2, "sessions_per_week": 3},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "B", "tags": [{"ending": "replay"}, {"ending": "fault", "fault_kind": "nvz", "responsible_player": "B1", "winning_side": "A"}, {"ending": "replay"}, {"ending": "replay"}, {"ending": "forced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "winning_side": "B"}, {"ending": "replay"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}]}], "side": "A"}
+ ]
+}

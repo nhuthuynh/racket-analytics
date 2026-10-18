@@ -1,0 +1,10 @@
+{
+ "description": "solo, 30 min x 3/week, wall, intermediate; low sample (20 tags in 1 match(es)), 'mixed' losses, player on side A (doubles)",
+ "dimensions": {"ball_machine": false, "level": "intermediate", "minutes_per_session": 30, "players": "solo", "sample": "low", "wall": true},
+ "expect": "plan",
+ "id": "pe-01",
+ "preferences": {"equipment": ["wall"], "level": "intermediate", "minutes_per_session": 30, "players_available": 1, "sessions_per_week": 3},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "B", "tags": [{"ending": "fault", "fault_kind": "two_bounce", "responsible_player": "A1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "winner", "winning_side": "B"}, {"ending": "unforced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A2", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A2", "winning_side": "A"}, {"ending": "unforced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A1", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "B1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "foot", "responsible_player": "B1", "winning_side": "A"}, {"ending": "winner", "responsible_player": "A1", "winning_side": "A"}, {"ending": "replay"}, {"ending": "winner", "responsible_player": "B2", "winning_side": "B"}, {"ending": "forced_error", "responsible_player": "A1", "winning_side": "B"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}]}], "side": "A"}
+ ]
+}

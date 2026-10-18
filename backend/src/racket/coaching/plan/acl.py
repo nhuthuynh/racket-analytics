@@ -9,6 +9,7 @@ numbers equal ``GET /matches/{id}/stats`` for that side, and every rally is in i
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
@@ -37,6 +38,12 @@ def citations_for(session: Session, owner_id: uuid.UUID) -> CitationFacts:
         found = analytics.metric_facts(session, match_id, side)
         if found is not None and found.rallies:
             scoped.append((str(match_id), side, found))
+    return citations_from(scoped)
+
+
+def citations_from(scoped: Sequence[tuple[str, str, analytics.MatchMetrics]]) -> CitationFacts:
+    """Every plan target with n >= 1 pooled over matches already read, in the order given:
+    (match id, the player's side, its metrics with at least one counted rally). Pure (ST-060)."""
     citations = {}
     for target in PLAN_TARGETS:
         metric = target.split(":")[0]

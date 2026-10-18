@@ -7,20 +7,29 @@ transaction, so "upload complete", ``Match.mark_uploaded`` and the probe job com
 
 from __future__ import annotations
 
+import itertools
 import uuid
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from racket.matches.deletion import Tombstone, confirm_deletion
-from racket.matches.domain import MatchId, OwnerId
+from racket.matches.domain import DEFAULT_RULES_VERSION, MatchId, OwnerId
 from racket.matches.repository import MatchRepository, match_participants, matches
-from racket.matches.scorebook.domain import project
+from racket.matches.scorebook.domain import (
+    CommandContext,
+    OutcomeInput,
+    RallyTimes,
+    Scorebook,
+    project,
+)
 from racket.matches.scorebook.repository import ScorebookRepository
 from racket.platform.errors import NotFound
+from racket.sports.pickleball.rules import Side
 from racket.video_ingest.public import close_for_deleted_match, lock_upload_of_match
 
 __all__ = ["Tombstone", "confirm_deletion"]  # the deletion rules Identity & Players reuses
@@ -228,3 +237,41 @@ def player_sides(session: Session, owner_id: uuid.UUID) -> list[tuple[uuid.UUID,
         .order_by(matches.c.played_on.asc().nulls_last(), matches.c.id)
     ).all()
     return [(uuid.UUID(str(r.id)), None if r.slot is None else str(r.slot)[0]) for r in rows]
+
+
+def sheet_of_tags(
+    games: Iterable[Mapping[str, Any]],
+    *,
+    format: str = "doubles",
+    best_of: int = 3,
+    rules_version: str = DEFAULT_RULES_VERSION,
+) -> dict[str, Any]:
+    """The projected score sheet of a Quick Tag script, played through the scorebook's own
+    commands (``start_game``, ``tag``), so whatever they refuse is refused here (ST-060 eval
+    cases). ``games``: ``[{"first_serving_side": "A", "tags": [{"winning_side": ...,
+    "ending": ..., "fault_kind": ..., "responsible_player": ...}, ...]}, ...]``. Pure and
+    deterministic: ids count up from 1, rallies are 3 s long, 1 s apart."""
+    ids = itertools.count(1)
+    ctx = CommandContext(
+        actor_id=uuid.UUID(int=0),
+        at=datetime(2026, 1, 1, tzinfo=UTC),
+        new_id=lambda: uuid.UUID(int=next(ids)),
+    )
+    book = Scorebook.new(rules_version=rules_version, format=format, best_of=best_of)
+    start = 0
+    for game in games:
+        book = book.start_game(
+            first_serving_side=Side(game["first_serving_side"]),
+            ends_switched=False,
+            ready=True,
+            expected_version=book.version,
+            ctx=ctx,
+        )
+        for tag in game["tags"]:
+            outcome = OutcomeInput.parse(
+                {k: v for k, v in tag.items() if v is not None}, format=format
+            )
+            times = RallyTimes.parse(start, start + 3_000)
+            book, _ = book.tag(times, outcome, ready=True, expected_version=book.version, ctx=ctx)
+            start += 4_000
+    return project(book)
