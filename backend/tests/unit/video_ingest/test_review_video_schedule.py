@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
+
 from racket.video_ingest.domain.retention import ReviewVideoSchedule
 
 pytestmark = [pytest.mark.unit]
