@@ -65,3 +65,10 @@ export function madeOn(plan: TrainingPlan, timeZone?: string): string {
   const from = matches.size > 0 ? ` from ${count(matches.size, 'tagged match', 'tagged matches')}` : '';
   return `Made on ${formatLocalDate(plan.createdAt, timeZone)}${from}.`;
 }
+
+/** "18 Oct 2026, 10:30": when the service worker kept the plan shown offline (P-01 Offline). */
+export function offlineAsOf(iso: string, timeZone?: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(d);
+}
