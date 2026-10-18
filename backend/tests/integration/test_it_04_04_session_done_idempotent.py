@@ -202,3 +202,4 @@ def test_it_04_04_undo_clears_done_and_undo_when_not_done_is_a_no_op(
 def test_it_04_04_the_routes_are_in_the_openapi_document(api: ApiDriver) -> None:
     paths = api.app.openapi()["paths"]
     assert {"post", "delete"} <= set(paths["/me/plan/sessions/{session_id}/done"])
+    assert "post" in paths["/me/plan/assignments/{assignment_id}/swap"]
