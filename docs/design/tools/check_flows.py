@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate checks for a design flows file (PD-4; ADR 0047 rule 2).
+"""Gate checks for a design flows file (PD-4, PD-4b; ADR 0047 rule 2).
 
 Owner: principal-designer. Documentation tooling, not product code. It checks one flows file:
 
@@ -8,10 +8,16 @@ Owner: principal-designer. Documentation tooling, not product code. It checks on
    ``--states``;
 3. the design-review section named by ``--review`` (a heading that contains it) has a decider
    table (header with a ``Cell`` column) whose ``Cell`` column, in the row ``| <role> | ...``,
-   holds a verdict (accept or reject) and an ISO date (YYYY-MM-DD) for every role in
-   ``--decider``; dates in other columns (Opened, Due) do not count (PE-PD4-01);
+   opens with a verdict and its ISO date, ``[<role>:] [**]accept|reject[**] (YYYY-MM-DD``, for
+   every role in ``--decider``; dates in other columns (Opened, Due) do not count (PE-PD4-01),
+   nor does a verdict or date merely mentioned later in the cell (PE-PD4-05);
 4. for every role in ``--opened``, that table has the role's row with an ISO date in its
-   ``Opened`` column; the cell may still say "pending" (the review is opened, not held).
+   ``Opened`` column; the cell may still say "pending" (the review is opened, not held);
+5. every role named in ``--decider`` or ``--opened`` has exactly one row (SFE-PD4-07), so a
+   pending row cannot hide behind a decided one.
+
+``--decider`` rc 0 means the cells are written, not that the review passed: a ``reject`` cell
+counts as written and still blocks the tickets the review gates.
 
 Usage:
     python3 docs/design/tools/check_flows.py docs/design/flows-sprint-04.md --review DR-04 \
@@ -31,7 +37,7 @@ from pathlib import Path
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
-VERDICT = re.compile(r"\b(accept|reject)\b", re.I)
+DECIDED = re.compile(r"^(?:[\w-]+:\s*)?\**(?:accept|reject)\**\s*\(20\d\d-\d\d-\d\d\b", re.I)
 
 
 def broken_links(path: Path, text: str) -> list[str]:
@@ -84,8 +90,14 @@ def _column(header: list[str], rows: list[list[str]], role: str, name: str) -> l
     return [r[i] for r in rows if r and r[0] == role and len(r) > i]
 
 
+def _duplicate(review: str, role: str, values: list[str]) -> str | None:
+    if len(values) > 1:
+        return f"FAIL row: {review} has {len(values)} rows for {role}; exactly one per role"
+    return None
+
+
 def missing_cells(text: str, review: str, deciders: list[str]) -> list[str]:
-    """A decider cell counts only when its Cell column holds accept/reject and an ISO date."""
+    """A decider cell counts only when its one Cell opens with accept/reject and an ISO date."""
     table = _review_table(text, review)
     if isinstance(table, str):
         return [table]
@@ -93,7 +105,9 @@ def missing_cells(text: str, review: str, deciders: list[str]) -> list[str]:
     out = []
     for role in deciders:
         cells = _column(header, rows, role, "Cell")
-        if not any(DATE.search(c) and VERDICT.search(c) for c in cells):
+        if dup := _duplicate(review, role, cells):
+            out.append(dup)
+        elif not (cells and DECIDED.match(cells[0])):
             out.append(f"FAIL cell: {review} has no dated decider cell for {role}")
     return out
 
@@ -106,11 +120,14 @@ def unopened_rows(text: str, review: str, roles: list[str]) -> list[str]:
     header, rows = table
     if "Opened" not in header:
         return [f"FAIL review: {review} decider table has no 'Opened' column"]
-    return [
-        f"FAIL opened: {review} has no row with a dated Opened column for {role}"
-        for role in roles
-        if not any(DATE.search(c) for c in _column(header, rows, role, "Opened"))
-    ]
+    out = []
+    for role in roles:
+        opened = _column(header, rows, role, "Opened")
+        if dup := _duplicate(review, role, opened):
+            out.append(dup)
+        elif not (opened and DATE.search(opened[0])):
+            out.append(f"FAIL opened: {review} has no row with a dated Opened column for {role}")
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
