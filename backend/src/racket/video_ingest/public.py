@@ -9,6 +9,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
@@ -24,8 +25,10 @@ from racket.video_ingest.domain.object_refs import (
     StagingPrefix,
     UnsafeObjectRef,
 )
+from racket.video_ingest.domain.retention import ReviewVideoSchedule
 from racket.video_ingest.domain.uploads import ORIGINAL_CONTENT_TYPE
 from racket.video_ingest.repository import (
+    PROBE_DONE,
     PROBE_FAILED,
     MediaRepository,
     UploadRepository,
@@ -45,17 +48,22 @@ __all__ = [
     "ObjectRef",
     "OriginalKey",
     "PendingUpload",
+    "ReviewVideo",
+    "ReviewVideoSchedule",
     "StagingPrefix",
     "UnsafeObjectRef",
     "UploadStatus",
     "abandoned_upload_ids",
     "claim_abandoned_upload",
+    "claim_review_video",
     "close_for_deleted_match",
+    "forget_review_video",
     "forget_upload",
     "lock_upload_of_match",
     "media_link",
     "media_summary",
     "object_refs",
+    "probed_review_videos",
     "purge_match",
 ]
 
@@ -81,6 +89,7 @@ class MediaSummary:
     facts: MediaFacts | None
     probe_failed: bool
     pending: PendingUpload | None = None
+    analysed_at: datetime | None = None  # R1: the probe's success time (api-sprint-04 §5)
 
 
 def media_summary(session: Session, match_id: uuid.UUID) -> MediaSummary:
@@ -120,6 +129,9 @@ def media_summary(session: Session, match_id: uuid.UUID) -> MediaSummary:
         facts=facts,
         probe_failed=asset is not None and asset.probe_status == PROBE_FAILED,
         pending=pending,
+        analysed_at=row.created_at
+        if row is not None and asset is not None and asset.probe_status == PROBE_DONE
+        else None,
     )
 
 
@@ -307,3 +319,78 @@ def forget_upload(session: Session, upload_id: uuid.UUID) -> None:
     """Delete the session row once its bytes are gone: no longer listed or resumable (HEAD and
     PATCH then answer 404, IT-03-09). In the caller's transaction."""
     session.execute(sa.delete(upload_sessions).where(upload_sessions.c.id == upload_id))
+
+
+# ------------------------------------------------------------------ FR-008 review video (ST-069)
+@dataclass(frozen=True)
+class ReviewVideo:
+    """A probed match video the player reviews (R1: the stored upload; ADR 0006 user rule).
+    ``ref`` is typed and shape-checked (ADR 0045), so only a generated name reaches the store."""
+
+    match_id: uuid.UUID
+    owner_id: uuid.UUID
+    asset_id: uuid.UUID
+    analysed_at: datetime
+    ref: OriginalKey
+
+
+def _probed() -> sa.Select[Any]:
+    """Probed assets with the time their facts were written (the analysed time)."""
+    return (
+        sa.select(
+            media_assets.c.match_id,
+            media_assets.c.owner_id,
+            media_assets.c.id,
+            media_assets.c.object_key,
+            media_facts.c.created_at,
+        )
+        .join(media_facts, media_facts.c.media_asset_id == media_assets.c.id)
+        .where(media_assets.c.probe_status == PROBE_DONE)
+    )
+
+
+def _review_video(row: Any) -> ReviewVideo:
+    return ReviewVideo(
+        uuid.UUID(str(row.match_id)),
+        uuid.UUID(str(row.owner_id)),
+        uuid.UUID(str(row.id)),
+        row.created_at,
+        OriginalKey(str(row.object_key)),
+    )
+
+
+def probed_review_videos(
+    session: Session, *, after: uuid.UUID | None = None, limit: int = 500
+) -> list[ReviewVideo]:
+    """One keyset page by match id of probed review videos, unlocked. The caller decides which
+    are due with each owner's own choice (T4-RT-1). ``UnsafeObjectRef`` for a key of another
+    shape fails the whole page closed (ADR 0045)."""
+    query = _probed()
+    if after is not None:
+        query = query.where(media_assets.c.match_id > after)
+    rows = session.execute(query.order_by(media_assets.c.match_id).limit(limit)).all()
+    return [_review_video(row) for row in rows]
+
+
+def claim_review_video(session: Session, match_id: uuid.UUID) -> ReviewVideo | None:
+    """The match's probed review video, its asset row locked until the caller commits
+    (``FOR UPDATE SKIP LOCKED``); ``None`` when another pass holds it or it is gone.
+    ``UnsafeObjectRef`` when another match names the same object (§4.6 (2))."""
+    row = session.execute(
+        _probed()
+        .where(media_assets.c.match_id == match_id)
+        .with_for_update(of=media_assets, skip_locked=True)
+    ).one_or_none()
+    if row is None:
+        return None
+    video = _review_video(row)
+    if _shared(session, video.ref.key, match_id):
+        raise UnsafeObjectRef("another match names the same object")
+    return video
+
+
+def forget_review_video(session: Session, video: ReviewVideo) -> None:
+    """Delete the media row once its object is gone (objects first, ADR 0042), in the
+    caller's transaction. The upload session row stays, so the match keeps "video received"
+    and cannot take a second upload; tags, stats and plans are other contexts' rows."""
+    MediaRepository(session).delete_asset(video.asset_id)
