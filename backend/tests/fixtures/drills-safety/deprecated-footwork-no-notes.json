@@ -1,0 +1,37 @@
+{
+  "id": "pb.safety.deprecated-footwork",
+  "version": 1,
+  "name": "deprecated footwork drill, no safety notes",
+  "summary": "Fixture for FIX-04-1d (QD-DR-04): deprecated footwork drill, no safety notes.",
+  "skills": [
+    "AN-04",
+    "volley",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddles"
+  ],
+  "setup": [
+    "Feeder at the kitchen line",
+    "Hitter at the baseline, one step in after each set of 10"
+  ],
+  "success_criterion": "8 of 10 drops bounce in the kitchen",
+  "regressions": [],
+  "safety_notes": "",
+  "review_status": "coach-reviewed",
+  "progressions": [],
+  "coach_rationale": "Negative fixture (judgment)",
+  "deprecated_by": "pb.safety.draft-footwork@1"
+}
