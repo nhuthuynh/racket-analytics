@@ -45,7 +45,9 @@ from racket.video_ingest.domain import (
     ExpiryPolicy,
     ObjectKeyPolicy,
     OffsetMismatch,
+    QuotaUsage,
     Rejection,
+    StorageQuota,
     UploadChecksum,
     UploadExpired,
     UploadFile,
@@ -89,6 +91,17 @@ class UploadQuotaExceeded(AppError):
 
     status, code = 429, "upload_quota_exceeded"
     retry_at = None
+
+
+class StorageQuotaExceeded(AppError):
+    """429 with ``retry_at: null`` and the caller's ``quota`` numbers (api-sprint-04 §7, 4a)."""
+
+    status, code = 429, "storage_quota_exceeded"
+    retry_at = None
+
+    def __init__(self, usage: QuotaUsage) -> None:
+        super().__init__("storage quota exceeded")
+        self.body_extra = {"quota": vars(usage).copy()}
 
 
 def _utcnow() -> datetime:
@@ -261,6 +274,8 @@ class UploadService:
         # The quota is read under the owner's lock, held to the commit, so parallel creations
         # see each other's sessions (C-02, PE-R3R-01; READ COMMITTED reads after the lock).
         self.uploads.lock_owner(owner_id)
+        if self.settings.feature_quotas:
+            self._check_storage_quota(owner_id, length, now)
         self._check_quota(owner_id, length, now)
         # SEC-S3-TM-05: the account row FOR SHARE, held to the commit, before anything is written
         # and before the expired upload row is locked: account row, upload row, match row is the
@@ -377,6 +392,21 @@ class UploadService:
             or declared + length > self.settings.upload_max_open_bytes
         ):
             raise UploadQuotaExceeded("too many unfinished uploads")
+
+    def _check_storage_quota(self, owner_id: uuid.UUID, length: int, now: datetime) -> None:
+        """Check 4a under the owner's lock (T4-QT-5); a deleted match stops counting at once.
+        Reserved before stored: a completion committing between the two reads is then counted
+        twice (fail closed), never missed (PE-072a-02; it does not take the owner's lock)."""
+        _, reserved = self.uploads.open_for_owner(owner_id, now)
+        stored = self.uploads.stored_by_match(owner_id)
+        live = matches.live_ids(self.session, list(stored))
+        refusal = StorageQuota(self.settings.storage_quota_bytes).refusal(
+            stored_bytes=sum(stored[m] for m in live), reserved_bytes=reserved,
+            requested_bytes=length,
+        )  # fmt: skip
+        if refusal is not None:
+            self.session.rollback()
+            raise StorageQuotaExceeded(refusal)
 
     # ------------------------------------------------------------ HEAD / PATCH
     def load_owned(

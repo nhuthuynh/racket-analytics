@@ -139,6 +139,7 @@ class Settings:
     retention_choices_days: tuple[int | None, ...] = (30, 90, 365, None)  # None: no expiry
     retention_default_days: int | None = 90
     match_creations_per_hour: int = 10
+    match_creations_per_ip_per_hour: int = 60  # (judgment; SEC-S4-POS-01 confirmed)
     storage_quota_bytes: int = 20 * GIB  # (judgment) until P8 (OQ-13)
 
     # -------------------------------------------------------------- construction
@@ -287,6 +288,7 @@ class Settings:
             retention_choices_days=choices,
             retention_default_days=retention_default,
             match_creations_per_hour=integer("MATCH_CREATIONS_PER_HOUR", 10),
+            match_creations_per_ip_per_hour=integer("MATCH_CREATIONS_PER_IP_PER_HOUR", 60),
             storage_quota_bytes=integer("STORAGE_QUOTA_BYTES", 20 * GIB),
         )
 
