@@ -15,7 +15,7 @@ import re
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 SIGN_IN_TOKEN = re.compile(r"/auth/callback#token=(?P<token>[A-Za-z0-9_-]{43})")
 SESSION_COOKIES = ("__Host-racket_session", "racket_session")
@@ -107,6 +107,12 @@ def _outcome(case: ET.Element) -> str:
     return "passed"
 
 
+class _Case(NamedTuple):
+    test_id: str
+    outcome: str
+    markers: frozenset[str]
+
+
 def _markers(case: ET.Element) -> frozenset[str]:
     """The marker names a test case recorded as its JUnit property ``markers``."""
     values = (p.get("value", "") for p in case.iter("property") if p.get("name") == "markers")
@@ -129,18 +135,20 @@ def junit_rate(
     so ``require`` cannot ask for one. A missing marker is reported as ``marker:<name>``.
     """
     pattern = re.compile(include)
-    selected: list[tuple[str, str, frozenset[str]]] = []
+    selected: list[_Case] = []
     for path in paths:
         for case in ET.parse(path).getroot().iter("testcase"):  # noqa: S314 (local reports)
             test_id = f"{case.get('file', '')}|{case.get('classname', '')}::{case.get('name', '')}"
             if pattern.search(test_id):
-                selected.append((test_id, _outcome(case), _markers(case)))
-    counts = {k: sum(1 for _, o, _ in selected if o == k) for k in ("passed", "failed", "skipped")}
+                selected.append(_Case(test_id, _outcome(case), _markers(case)))
+    counts = {
+        k: sum(1 for c in selected if c.outcome == k) for k in ("passed", "failed", "skipped")
+    }
     denominator = len(selected) - (counts["skipped"] if allow_skips else 0)
     rate = counts["passed"] / denominator if denominator > 0 else None
-    missing = [r for r in require if not any(re.search(r, t) for t, _, _ in selected)]
+    missing = [r for r in require if not any(re.search(r, c.test_id) for c in selected)]
     missing += [
-        f"marker:{name}" for name in require_markers if not any(name in m for _, _, m in selected)
+        f"marker:{name}" for name in require_markers if not any(name in c.markers for c in selected)
     ]
     return {
         "include": include,
@@ -148,7 +156,7 @@ def junit_rate(
         **counts,
         "rate": rate,
         "missing": missing,
-        "failures": [t for t, o, _ in selected if o == "failed"],
+        "failures": [c.test_id for c in selected if c.outcome == "failed"],
         "ok": rate == 1.0 and not missing and counts["failed"] == 0,
     }
 

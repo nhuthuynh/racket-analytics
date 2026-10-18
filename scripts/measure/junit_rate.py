@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
         "--require-marker",
         action="append",
         default=[],
-        help="pytest marker name a selected test must record (JUnit property 'markers'); repeatable",
+        help="marker name a selected test must record (JUnit property markers); repeatable",
     )
     parser.add_argument("--allow-skips", action="store_true")
     parser.add_argument("--json", type=Path, help="also write the result here")
