@@ -317,14 +317,17 @@ class PlanService:
         return facts, ranking
 
     def _scope_key(self, owner_id: uuid.UUID) -> ScopeKey:
-        if not players.lock_live_account(self.session, owner_id):
-            raise Unauthenticated("the account was deleted")
+        self._lock_account(owner_id)
         return citation_acl.scope_key(self.session, owner_id)
 
     def _ranking(self, owner_id: uuid.UUID) -> WeaknessRanking:
+        self._lock_account(owner_id)
+        return weakness_acl.ranking_for(self.session, owner_id)
+
+    def _lock_account(self, owner_id: uuid.UUID) -> None:
+        """The account row ``FOR SHARE`` to the commit (SEC-S3-TM-05); 401 once deleted."""
         if not players.lock_live_account(self.session, owner_id):
             raise Unauthenticated("the account was deleted")
-        return weakness_acl.ranking_for(self.session, owner_id)
 
     def _drop(self, owner_id: uuid.UUID) -> NoReturn:
         """No tagged match or no fitting plan left: the old plan goes, 404 ``no_plan``."""
