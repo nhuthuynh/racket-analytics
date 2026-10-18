@@ -61,6 +61,8 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 
 `.github/workflows/ci.yml` runs on every PR, on pushes to `main`, nightly at 03:17 UTC and on manual dispatch. **Every gate fails closed.** A missing project, lockfile, manifest or report is a red gate, never a silent skip (ADR 0014).
 
+**Draft PRs run no job (CI-DRAFT-SKIP, ADR 0052).** Every job, `pr-policy` and `ci-gate` included, carries `if: github.event_name != 'pull_request' || !github.event.pull_request.draft` (`ci-gate`: `always() && (...)`). Open a ticket PR as a draft, get the `size-waiver` / `qa-approved-test-change` decisions while it is a draft, push red-first commits together with their green commit, and mark it ready only when `check_pr_size.py`, `check_test_immutability.py` and the touched suites pass locally. `ready_for_review` (and `labeled`/`unlabeled` on a ready PR) starts the full run. A skipped `ci-gate` is not a success: `merge_ready.py` refuses it, and GitHub does not merge drafts. Gates are unchanged on ready PRs, `main`, nightly and dispatch.
+
 | Job | Gate (sprint-00 §8) | Threshold |
 |---|---|---|
 | `pr-policy` | Test and gold immutability; PR size | No unapproved change under protected paths; > 400 lines needs `size-waiver` |

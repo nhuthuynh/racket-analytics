@@ -36,7 +36,8 @@ def test_ci_gate_needs_every_per_pr_job() -> None:
     nightly_only = {"flaky-report"}
     expected = set(jobs) - {"ci-gate"} - nightly_only
     assert set(jobs["ci-gate"]["needs"]) == expected
-    assert jobs["ci-gate"]["if"] == "always()"
+    # CI-DRAFT-SKIP (TCR 2026-10-18): always(), combined with the draft guard
+    assert jobs["ci-gate"]["if"].replace(" ", "").startswith("always()&&(")
 
 
 def test_every_third_party_action_is_pinned_to_a_commit_sha() -> None:
