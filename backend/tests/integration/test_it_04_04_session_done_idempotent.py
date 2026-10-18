@@ -5,7 +5,7 @@ Negative cases first: a missing or malformed key (422), another account's or an 
 (404, the same body), the same key for another session (409 ``idempotency_key_reused``) and a
 session of a replaced plan (404). Then: done once, a replay returns the stored result without
 bumping the version, a new key on a done session is a no-op, undo, undo when not done, and the
-op rows (one per accepted key, gone with the plan).
+op rows (one per mark, none for a no-op, per account, gone with the plan).
 """
 
 from __future__ import annotations
@@ -167,6 +167,29 @@ def test_it_04_04_a_new_op_id_on_a_done_session_is_a_no_op(
     assert again.status_code == 200, again.text
     assert again.json() == first  # same done_at and version, not a replay of op-a
     assert _read(api, "ivy")["version"] == plan["version"] + 1
+    # T4-PL-5: the no-op stores no record, so a client looping new keys grows nothing
+    assert _ops(committed_db) == [("op-a", session_id, plan["version"] + 1)]
+    assert _done(api, "ivy", session_id, "op-b").json() == first
+    assert _ops(committed_db) == [("op-a", session_id, plan["version"] + 1)]
+
+
+def test_it_04_04_an_op_id_is_scoped_to_the_account(api: ApiDriver, committed_db: Any) -> None:
+    """T4-PL-3 / SEC-S4-TM-02: Ivy's key is just a new key for Carlos, never her result."""
+    ivy, carlos = _plan(api, "ivy"), _plan(api, "carlos")
+    hers, his = ivy["sessions"][0]["id"], carlos["sessions"][0]["id"]
+    assert _done(api, "ivy", hers, "op-shared").status_code == 200
+    on_hers = _done(api, "carlos", hers, "op-shared")
+    unknown = _done(api, "carlos", str(uuid.uuid4()), "op-shared")
+    assert on_hers.status_code == 404, on_hers.text
+    assert _no_ref(on_hers) == _no_ref(unknown)
+    on_his = _done(api, "carlos", his, "op-shared")
+    assert on_his.status_code == 200, on_his.text
+    body = on_his.json()
+    assert (body["session_id"], body["done"], body["replayed"]) == (his, True, False)
+    assert body["plan_version"] == carlos["version"] + 1
+    assert sorted(_ops(committed_db)) == sorted(
+        [("op-shared", hers, ivy["version"] + 1), ("op-shared", his, carlos["version"] + 1)]
+    )
 
 
 def test_it_04_04_undo_clears_done_and_undo_when_not_done_is_a_no_op(
