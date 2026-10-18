@@ -52,6 +52,13 @@ describe('plan outbox (negative first)', () => {
     expect(await box.pending()).toEqual([{ op_id: 'op-1', session_id: S1 }]);
   });
 
+  it('two presses at once (a double tap) store one op and both get it', async () => {
+    const box = outbox();
+    const [a, b] = await Promise.all([box.queueDone(S1), box.queueDone(S1)]);
+    expect(b).toEqual(a);
+    expect(await box.pending()).toEqual([a]);
+  });
+
   it('the op survives a new page (a new outbox on the same IndexedDB)', async () => {
     await outbox().queueDone(S1);
     expect(await outbox().pending()).toEqual([{ op_id: 'op-1', session_id: S1 }]);
