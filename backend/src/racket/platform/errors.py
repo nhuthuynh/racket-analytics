@@ -186,7 +186,8 @@ class ErrorResponse:
             error["fields"] = [{"field": f.field, "code": f.code} for f in self.fields]
         if self.status == 429:
             error["retry_at"] = self.retry_at
-        return {"error": {**self.extra, **error}}
+        error.update((k, v) for k, v in self.extra.items() if k not in error)
+        return {"error": error}
 
 
 class ErrorMapper:
