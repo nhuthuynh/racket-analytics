@@ -75,6 +75,11 @@ describe('POST /me/plan/sessions/{id}/done contract (negative first)', () => {
     await expect(api.markDone({ op_id: 'op-1', session_id: SESSION })).resolves.toEqual({ kind: 'failed', supportRef: null });
   });
 
+  it.each([[{}], [{ plan_version: 0, replayed: true }]])('a 200 without a valid plan_version is failed: %j', async (body) => {
+    answer('post', DONE_URL, 200, body);
+    expect(await api.markDone({ op_id: 'op-1', session_id: SESSION })).toEqual({ kind: 'failed', supportRef: null });
+  });
+
   it('a 200 proxy page keeps every queued op and the sync still reports (review F1)', async () => {
     const S2 = '00000000-0000-4000-8000-000000000011';
     page('post', DONE_URL, '<html>proxy</html>');
@@ -120,6 +125,11 @@ describe('DELETE /me/plan/sessions/{id}/done contract (undo)', () => {
   it('a 200 proxy page is failed, not undone', async () => {
     page('delete', DONE_URL, '<html>proxy</html>');
     await expect(api.undoDone(SESSION)).resolves.toEqual({ kind: 'failed', supportRef: null });
+  });
+
+  it('a 200 without a valid plan_version is failed, not undone', async () => {
+    answer('delete', DONE_URL, 200, { session_id: SESSION, done: false, done_at: null });
+    expect(await api.undoDone(SESSION)).toEqual({ kind: 'failed', supportRef: null });
   });
 
   it('200 is undone', async () => {
