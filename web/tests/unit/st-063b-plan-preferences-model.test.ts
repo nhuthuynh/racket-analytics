@@ -69,6 +69,25 @@ describe('the POST /me/plan body and the last preferences', () => {
     expect(preferencesFrom({ minutes_per_session: 30, sessions_per_week: 3, players_available: 1, equipment: ['rocket'], level: 'pro' })).toBeNull();
   });
 
+  // Each case breaks one integer or range rule of api-sprint-04 §2.3 and nothing else.
+  const valid = { minutes_per_session: 30, sessions_per_week: 3, players_available: 1, equipment: ['wall'], level: 'intermediate' };
+  it.each([
+    ['minutes_per_session', 14], ['minutes_per_session', 181], ['minutes_per_session', 30.5], ['minutes_per_session', '30'],
+    ['sessions_per_week', 0], ['sessions_per_week', 8], ['sessions_per_week', 2.5],
+    ['players_available', 0], ['players_available', 5], ['players_available', 1.5],
+  ])('reads nothing when %s is %j', (field, value) => {
+    expect(preferencesFrom({ ...valid, [field]: value })).toBeNull();
+  });
+
+  it('reads the edges 15 and 180 minutes, 1 and 7 sessions, 1 and 4 players', () => {
+    expect(preferencesFrom({ ...valid, minutes_per_session: 15, sessions_per_week: 1, players_available: 1 })).toMatchObject({
+      minutesPerSession: 15, sessionsPerWeek: 1, playersAvailable: 1,
+    });
+    expect(preferencesFrom({ ...valid, minutes_per_session: 180, sessions_per_week: 7, players_available: 4 })).toMatchObject({
+      minutesPerSession: 180, sessionsPerWeek: 7, playersAvailable: 4,
+    });
+  });
+
   it('prefills the draft from the last preferences', () => {
     const last = preferencesFrom({
       minutes_per_session: 45, sessions_per_week: 2, weekly_minutes: 90, players_available: 2,
