@@ -4,7 +4,6 @@
 // the sync replays it with the same op id, so a replay is idempotent on the server (ST-062).
 // Framework-free: the store (IndexedDB, plan-outbox-idb.ts) and the sender (the HTTP client,
 // plan-outbox-api.ts) are ports.
-import type { DoneResult } from './plan-outbox-api';
 
 export interface DoneOp {
   op_id: string;
@@ -18,6 +17,18 @@ export interface OutboxStore {
   delete(sessionId: string): Promise<void>;
   all(): Promise<DoneOp[]>;
 }
+
+/**
+ * The sender's answer for one op. The domain owns this port's result; the HTTP adapter
+ * (plan-outbox-api.ts) maps each status to one of these.
+ */
+export type DoneResult =
+  | { kind: 'done'; planVersion: number; replayed: boolean }
+  | { kind: 'not_found' }
+  | { kind: 'key_reused' }
+  | { kind: 'plan_conflict' }
+  | { kind: 'signed_out' }
+  | { kind: 'failed'; supportRef: string | null };
 
 export type SendDone = (op: DoneOp) => Promise<DoneResult>;
 

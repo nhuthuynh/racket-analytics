@@ -3,16 +3,10 @@
 // P-03's words; a dropped connection or an undocumented status is `failed` (a "done" stays queued).
 // Authorisation is the API's: every route is the session's own plan [AQS/SEC-03].
 import { parseSession, type Session } from '@/lib/api/plan';
-import type { DoneOp } from './plan-outbox';
+import type { DoneOp, DoneResult } from './plan-outbox';
 
+export type { DoneResult };
 type Failed = { kind: 'failed'; supportRef: string | null };
-export type DoneResult =
-  | { kind: 'done'; planVersion: number; replayed: boolean }
-  | { kind: 'not_found' }
-  | { kind: 'key_reused' }
-  | { kind: 'plan_conflict' }
-  | { kind: 'signed_out' }
-  | Failed;
 export type UndoResult =
   | { kind: 'undone'; planVersion: number }
   | { kind: 'not_found' }
