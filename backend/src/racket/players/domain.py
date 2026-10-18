@@ -16,8 +16,10 @@ import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import Any
 
+from racket.platform.errors import FieldError, ValidationFailed
 from racket.platform.text import is_plain_line
 
 EMAIL_MIN, EMAIL_MAX = 3, 254
@@ -159,3 +161,77 @@ class SignInEmail:
             f"<p>{safe}</p><p>{html.escape(notice)}</p></body></html>"
         )
         return cls(subject="Your sign-in link", text=text, html=body)
+
+
+# ---------------------------------------------------------------- FR-003 age confirmation
+PENDING_SIGN_IN_TTL_MAX = timedelta(hours=24)  # SEC-4 T4-AG-3
+AGE_ANSWER_FIELDS = frozenset({"is_adult", "confirm"})
+
+
+class AgeOutcome(Enum):
+    CONFIRM = "confirm"  # store age_confirmed_at (a pending sign-in becomes an account)
+    END_PENDING = "end_pending"  # delete the pending sign-in; no account row is written
+    DELETE_ACCOUNT = "delete_account"  # an existing account goes as ``DELETE /me`` does
+
+
+@dataclass(frozen=True)
+class AgeAnswer:
+    """The answer to "Are you {age_minimum} or over?" (api-sprint-04 §4). Self-declared: no
+    birth date or age is asked for or kept (OQ-05, T4-AG-1)."""
+
+    is_adult: bool
+    confirm_delete: bool = False
+
+    @classmethod
+    def parse(cls, body: object) -> AgeAnswer:
+        """The closed body ``{"is_adult": bool, "confirm": "delete"}``; one field code on
+        failure, never an echo of the input."""
+        if body is None:
+            body = {}
+        if not isinstance(body, Mapping):
+            raise ValidationFailed("age answer", [FieldError(None, "invalid")])
+        if any(key not in AGE_ANSWER_FIELDS for key in body):
+            raise ValidationFailed("age answer", [FieldError(None, "unknown_field")])
+        if "is_adult" not in body:
+            raise ValidationFailed("age answer", [FieldError("is_adult", "required")])
+        if not isinstance(body["is_adult"], bool):
+            raise ValidationFailed("age answer", [FieldError("is_adult", "invalid")])
+        if body.get("confirm", "delete") != "delete":
+            raise ValidationFailed("age answer", [FieldError("confirm", "invalid")])
+        return cls(body["is_adult"], body.get("confirm") == "delete")
+
+    def outcome(self, *, has_account: bool) -> AgeOutcome:
+        """A pending sign-in holds no data, so ``false`` simply ends it. An existing account may
+        hold matches, so ``false`` deletes it only with the typed confirmation of ``DELETE /me``
+        (T4-AG-5)."""
+        if self.is_adult:
+            return AgeOutcome.CONFIRM
+        if not has_account:
+            return AgeOutcome.END_PENDING
+        if not self.confirm_delete:
+            raise ValidationFailed(
+                "deletion not confirmed", [FieldError("confirm", "confirmation_required")]
+            )
+        return AgeOutcome.DELETE_ACCOUNT
+
+
+@dataclass(frozen=True)
+class AgeGate:
+    """``FEATURE_AGE_GATE``: while on, only a holder with a confirmation time is admitted."""
+
+    enabled: bool
+
+    def admits(self, age_confirmed_at: datetime | None) -> bool:
+        return not self.enabled or age_confirmed_at is not None
+
+
+def pending_sign_in_expiry(now: datetime, session_absolute: timedelta) -> datetime:
+    """A pending sign-in ends with its session, and after 24 h at the latest (T4-AG-3)."""
+    return now + min(session_absolute, PENDING_SIGN_IN_TTL_MAX)
+
+
+def under_age_message(age_minimum: int) -> str:
+    """The ``under_age`` text: interim wording W-A07 (PM-4 register, pending legal review)."""
+    return (
+        f"You need to be {age_minimum} or over to use this app. We did not make an account for you."
+    )

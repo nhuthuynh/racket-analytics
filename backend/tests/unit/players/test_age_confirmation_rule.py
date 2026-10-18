@@ -82,4 +82,5 @@ def test_the_under_age_text_uses_the_configured_minimum(minimum: int) -> None:
 
     assert f"{minimum} or over" in text
     assert "We did not make an account for you." in text
-    assert "birth" not in text.lower() and "again" not in text.lower()
+    assert "birth" not in text.lower()
+    assert "again" not in text.lower()

@@ -49,7 +49,8 @@ def signed_in(api: ApiDriver, db_session: Any) -> httpx.AsyncClient:
 @given(parsers.parse('the applicant\'s account answers "{code}"'))
 def account_answers(api: ApiDriver, client: httpx.AsyncClient, code: str) -> None:
     response = api.run(client.get(contract.ME))
-    assert response.status_code == 403 and response.json()["error"]["code"] == code
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == code
 
 
 @when(parsers.re(r"the applicant answers that they are (?P<answer>not )?an adult"),

@@ -31,13 +31,22 @@ from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.platform.settings import Settings
 from racket.players import public as players
 from racket.players.domain import (
+    AgeAnswer,
+    AgeOutcome,
     LinkExpired,
     MagicLinkToken,
     SessionLifetime,
     email_key,
     normalise_email,
+    pending_sign_in_expiry,
 )
-from racket.players.models import accounts, sessions, sign_in_links, sign_in_requests
+from racket.players.models import (
+    accounts,
+    pending_sign_ins,
+    sessions,
+    sign_in_links,
+    sign_in_requests,
+)
 
 # "dana" never gets a match from any spec: the E2E empty-state check signs in as her (QA-R1-04).
 DEV_USERS = {"ivy": "Ivy", "carlos": "Carlos", "dana": "Dana"}
@@ -61,6 +70,7 @@ def security_event(message: str, event: str, **fields: Any) -> None:
 class Account:
     id: uuid.UUID
     display_name: str | None
+    age_confirmed_at: datetime | None = None
 
 
 def token_digest(token: str) -> str:
@@ -145,6 +155,7 @@ class IdentityService:
 
     def sign_out(self, token: str) -> None:
         account_id = self._delete_session(token)
+        self.end_pending(token)
         self.session.commit()
         if account_id is not None:
             security_event("auth.signed_out", "auth.signed_out", account_id=str(account_id))
@@ -153,8 +164,8 @@ class IdentityService:
         now = self.clock()
         row = self.session.execute(
             sa.select(
-                accounts.c.id, accounts.c.display_name, sessions.c.created_at,
-                sessions.c.last_seen_at,
+                accounts.c.id, accounts.c.display_name, accounts.c.age_confirmed_at,
+                sessions.c.created_at, sessions.c.last_seen_at,
             )
             .join(sessions, sessions.c.account_id == accounts.c.id)
             .where(
@@ -175,7 +186,43 @@ class IdentityService:
                 .values(last_seen_at=now)
             )
             self.session.commit()
-        return Account(row.id, row.display_name)
+        return Account(row.id, row.display_name, row.age_confirmed_at)
+
+    # ------------------------------------------------------------ pending sign-ins (FR-003)
+    def is_pending(self, token: str) -> bool:
+        """Whether ``token`` is a live pending sign-in (an address without an account yet)."""
+        found = self.session.execute(
+            sa.select(pending_sign_ins.c.token_sha256).where(
+                pending_sign_ins.c.token_sha256 == token_digest(token),
+                pending_sign_ins.c.expires_at > self.clock(),
+            )
+        ).first()
+        return found is not None
+
+    def start_pending(self, email: str, key: str, previous_token: str | None) -> str:
+        """A session token for a pending sign-in; expired pending rows go first (T4-AG-3)."""
+        if previous_token:
+            self._delete_session(previous_token)
+            self.end_pending(previous_token)
+        now = self.clock()
+        self.session.execute(
+            sa.delete(pending_sign_ins).where(pending_sign_ins.c.expires_at <= now)
+        )
+        token = secrets.token_urlsafe(32)
+        self.session.execute(
+            sa.insert(pending_sign_ins).values(
+                token_sha256=token_digest(token), email=email, email_key=key, created_at=now,
+                expires_at=pending_sign_in_expiry(now, self.lifetime.absolute),
+            )
+        )  # fmt: skip
+        return token
+
+    def end_pending(self, token: str) -> None:
+        self.session.execute(
+            sa.delete(pending_sign_ins).where(
+                pending_sign_ins.c.token_sha256 == token_digest(token)
+            )
+        )
 
     # ------------------------------------------------------------ dev provider (ST-006)
     def seed_dev_users(self) -> None:
@@ -221,7 +268,7 @@ class IdentityService:
 
 @dataclass(frozen=True)
 class Exchanged:
-    account: Account
+    account: Account | None  # None: a pending sign-in (FR-003, age gate on)
     session_token: str
     new_account: bool
 
@@ -303,11 +350,18 @@ class MagicLinkService:
             self.session.rollback()
             security_event("auth.link_refused", "auth.refused", email_key=row.email_key)
             raise LinkRefused("link already used")
+        identity = IdentityService(self.session, self.settings, self.clock)
         if row.email is None:  # a link issued before migration 0008 (ADR 0032 legacy path)
             account, new_account = self._legacy_account_for(used.email_key, now)
         else:
-            account, new_account = self._account_for(row.email, used.email_key, now)
-        identity = IdentityService(self.session, self.settings, self.clock)
+            gated = self.settings.feature_age_gate
+            found, new_account = self._account_for(row.email, used.email_key, now, create=not gated)
+            if found is None:  # FR-003: no account row until the holder confirms being an adult
+                token = identity.start_pending(row.email, used.email_key, previous_token)
+                self.session.commit()
+                security_event("auth.link_exchanged", "auth.pending", email_key=used.email_key)
+                return Exchanged(None, token, True)
+            account = found
         session_token = identity.start_session(account.id, previous_token)
         self.session.commit()
         user_id_var.set(str(account.id))
@@ -317,9 +371,12 @@ class MagicLinkService:
         )  # fmt: skip
         return Exchanged(account, session_token, new_account)
 
-    def _account_for(self, email: str, key: str, now: datetime) -> tuple[Account, bool]:
+    def _account_for(
+        self, email: str, key: str, now: datetime, *, create: bool = True
+    ) -> tuple[Account | None, bool]:
         """The account for this address, created at its first successful exchange (ADR 0032:
-        the stored normalised address is the identity; ``email_key`` is only a pseudonym)."""
+        the stored normalised address is the identity; ``email_key`` is only a pseudonym).
+        ``create=False`` (age gate on): ``None`` instead of a new account."""
         found = self._account_by_email(email)
         if found is not None:
             return found, False
@@ -339,6 +396,8 @@ class MagicLinkService:
         ).one_or_none()
         if claimed is not None:  # a legacy account (email IS NULL) is claimed once
             return Account(claimed.id, claimed.display_name), False
+        if not create:
+            return None, True
         created = self.session.execute(
             insert(accounts)
             .values(id=uuid.uuid4(), email=email, email_key=key, created_at=now)
@@ -413,3 +472,68 @@ class AccountDeletion:
                    "matches": len(match_ids)},
         )  # fmt: skip
         return matches.Tombstone(at)
+
+
+class AgeConfirmation:
+    """``POST /me/age-confirmation`` (ST-068a; FR-003; api-sprint-04 §4): one transaction per
+    answer. ``true`` stores only ``age_confirmed_at`` (a pending sign-in becomes an account with a
+    new session); ``false`` ends a pending sign-in with no account row written, or deletes an
+    existing account through the ``DELETE /me`` path."""
+
+    def __init__(
+        self, session: Session, settings: Settings, clock: Callable[[], datetime] = _utcnow
+    ) -> None:
+        self.session = session
+        self.settings = settings
+        self.clock = clock
+        self.identity = IdentityService(session, settings, clock)
+
+    def answer_pending(self, token: str, body: object) -> tuple[Account, str] | None:
+        """The account and its new session token for ``true``; ``None`` for ``false``."""
+        answer = AgeAnswer.parse(body)
+        pending = self.session.execute(
+            sa.delete(pending_sign_ins)
+            .where(
+                pending_sign_ins.c.token_sha256 == token_digest(token),
+                pending_sign_ins.c.expires_at > self.clock(),
+            )
+            .returning(pending_sign_ins.c.email, pending_sign_ins.c.email_key)
+        ).one_or_none()
+        if pending is None:
+            self.session.rollback()
+            raise Unauthenticated("pending sign-in gone")
+        if answer.outcome(has_account=False) is AgeOutcome.END_PENDING:
+            self.session.commit()
+            security_event("age.refused", "age.refused", email_key=pending.email_key)
+            return None
+        now = self.clock()
+        self.session.execute(
+            insert(accounts)
+            .values(id=uuid.uuid4(), email=pending.email, email_key=pending.email_key,
+                    created_at=now, age_confirmed_at=now)
+            .on_conflict_do_nothing(index_elements=["email"])
+        )  # fmt: skip
+        account = self._confirm(accounts.c.email == pending.email, now)
+        session_token = self.identity.start_session(account.id, None)
+        self.session.commit()
+        security_event("age.confirmed", "age.confirmed", account_id=str(account.id))
+        return account, session_token
+
+    def answer_account(self, account: Account, body: object) -> Account | None:
+        """The confirmed account for ``true``; ``None`` once ``false`` deleted it."""
+        outcome = AgeAnswer.parse(body).outcome(has_account=True)
+        if outcome is AgeOutcome.DELETE_ACCOUNT:
+            AccountDeletion(self.session, self.clock).delete(account.id, {"confirm": "delete"})
+            return None
+        confirmed = self._confirm(accounts.c.id == account.id, self.clock())
+        self.session.commit()
+        return confirmed
+
+    def _confirm(self, which: Any, now: datetime) -> Account:
+        row = self.session.execute(
+            sa.update(accounts)
+            .where(which, accounts.c.deleted_at.is_(None))
+            .values(age_confirmed_at=sa.func.coalesce(accounts.c.age_confirmed_at, now))
+            .returning(accounts.c.id, accounts.c.display_name, accounts.c.age_confirmed_at)
+        ).one()
+        return Account(row.id, row.display_name, row.age_confirmed_at)
