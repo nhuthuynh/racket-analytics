@@ -49,13 +49,23 @@ def ranking_for(session: Session, owner_id: uuid.UUID) -> WeaknessRanking:
     rows are read in ascending match id order, the order ``DELETE /me`` tombstones them in
     (global lock order, deletion-and-purge.md §3.1; PE-055-R1-01). The ranking does not depend
     on the order of the matches."""
+    scoped = []
+    for match_id, side in sorted(matches.player_sides(session, owner_id), key=_match_id):
+        facts = analytics.rally_facts(session, match_id)
+        if facts is not None and facts.rallies:  # else deleted meanwhile, or not tagged
+            scoped.append((match_id, side, facts))
+    return ranking_of(scoped)
+
+
+def ranking_of(
+    scoped: Iterable[tuple[uuid.UUID, str | None, analytics.RallyFacts]],
+) -> WeaknessRanking:
+    """The ranking over tagged matches already read: (match id, the player's side or None,
+    the match's rally facts). A match without a side is skipped and counted (pure; ST-060)."""
     losses: list[RallyLoss] = []
     games = rallies = skipped = 0
     rules: set[str] = set()
-    for match_id, side in sorted(matches.player_sides(session, owner_id), key=_match_id):
-        facts = analytics.rally_facts(session, match_id)
-        if facts is None or not facts.rallies:
-            continue  # deleted meanwhile, or not tagged
+    for match_id, side, facts in scoped:
         if side is None:
             skipped += 1
             continue

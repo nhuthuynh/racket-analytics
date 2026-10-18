@@ -1,0 +1,10 @@
+{
+ "description": "pairs, 40 min x 4/week, full_court, half_court, beginner; low sample (13 tags in 1 match(es)), 'other-faults' losses, player on side B (doubles)",
+ "dimensions": {"ball_machine": false, "level": "beginner", "minutes_per_session": 40, "players": "pairs", "sample": "low", "wall": false},
+ "expect": "plan",
+ "id": "pe-24",
+ "preferences": {"equipment": ["full_court", "half_court"], "level": "beginner", "minutes_per_session": 40, "players_available": 2, "sessions_per_week": 4},
+ "matches": [
+  {"best_of": 1, "format": "doubles", "games": [{"first_serving_side": "B", "tags": [{"ending": "fault", "fault_kind": "foot", "responsible_player": "B2", "winning_side": "A"}, {"ending": "fault", "fault_kind": "serve", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A2", "winning_side": "A"}, {"ending": "forced_error", "responsible_player": "B2", "winning_side": "A"}, {"ending": "fault", "fault_kind": "two_bounce", "responsible_player": "B2", "winning_side": "A"}, {"ending": "fault", "fault_kind": "two_bounce", "responsible_player": "B1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "foot", "winning_side": "A"}, {"ending": "winner", "winning_side": "A"}, {"ending": "fault", "fault_kind": "nvz", "responsible_player": "B2", "winning_side": "A"}, {"ending": "winner", "responsible_player": "B1", "winning_side": "B"}, {"ending": "winner", "responsible_player": "A1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "serve", "responsible_player": "B1", "winning_side": "A"}, {"ending": "fault", "fault_kind": "other", "responsible_player": "B2", "winning_side": "A"}]}], "side": "B"}
+ ]
+}
