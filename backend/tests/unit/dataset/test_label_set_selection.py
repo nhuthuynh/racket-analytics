@@ -13,6 +13,7 @@ from collections.abc import Collection
 from datetime import UTC, datetime
 
 import pytest
+
 from racket.dataset.label_set import (
     LABEL_SET_SCHEMA,
     Candidate,
