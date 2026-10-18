@@ -61,3 +61,12 @@ def test_a_source_module_imported_only_inside_a_function_is_warmed(tmp_path: Pat
     assert _key(files["init"]) in entries
     # A module that cannot be imported outside its runtime does not stop the warm-up.
     assert "warm:" in res.stdout
+
+
+def test_the_warm_up_also_builds_the_unicode_charmap(tmp_path: Path) -> None:
+    """PR #111 run 39100944732: without ``charmap.json.gz`` each xdist worker builds it on its
+    first ``st.text()`` (domain suite 10 s vs 8 s on main); main's warm-up drew one text example."""
+    _layout(tmp_path)
+    res, cache = _warm(tmp_path)
+    assert res.returncode == 0, res.stdout[-2000:] + res.stderr[-2000:]
+    assert list(cache.parent.glob("unicode_data/*/charmap.json.gz")), res.stdout[-1000:]
