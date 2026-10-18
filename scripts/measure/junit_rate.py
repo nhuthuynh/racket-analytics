@@ -7,6 +7,10 @@
 Selection is a regex over ``file|classname::name``. Exit 0 only when every selected test
 passed, nothing selected failed, at least one test was selected and every ``--require``
 pattern matched. Skips count as not passed unless ``--allow-skips``.
+
+``--require`` is a regex over test ids; a marker is not in a test id, so a marker is required with
+``--require-marker NAME`` (exact name, from the testcase property ``markers`` that the backend's
+coaching tests record; FIX-04-2c, goal scorecard G04-03).
 """
 
 from __future__ import annotations
@@ -25,10 +29,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("reports", nargs="+", type=Path, help="JUnit XML files")
     parser.add_argument("--include", required=True, help="regex over file|classname::name")
     parser.add_argument("--require", action="append", default=[], help="regex; repeatable")
+    parser.add_argument(
+        "--require-marker",
+        action="append",
+        default=[],
+        help="pytest marker name a selected test must record (JUnit property 'markers'); repeatable",
+    )
     parser.add_argument("--allow-skips", action="store_true")
     parser.add_argument("--json", type=Path, help="also write the result here")
     args = parser.parse_args(argv)
-    result = junit_rate(args.reports, args.include, args.require, args.allow_skips)
+    result = junit_rate(
+        args.reports, args.include, args.require, args.allow_skips, args.require_marker
+    )
     text = json.dumps(result, indent=2)
     print(text)
     if args.json:

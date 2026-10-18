@@ -107,35 +107,48 @@ def _outcome(case: ET.Element) -> str:
     return "passed"
 
 
+def _markers(case: ET.Element) -> frozenset[str]:
+    """The marker names a test case recorded as its JUnit property ``markers``."""
+    values = (p.get("value", "") for p in case.iter("property") if p.get("name") == "markers")
+    return frozenset(name for value in values for name in value.split(",") if name)
+
+
 def junit_rate(
     paths: Sequence[Path],
     include: str,
     require: Sequence[str] = (),
     allow_skips: bool = False,
+    require_markers: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Pass rate of the test cases whose ``classname::name`` (or ``file``) matches ``include``.
 
     Skips count as not passed unless ``allow_skips``; then they leave the denominator.
-    Every pattern in ``require`` must match at least one selected case.
+    Every pattern in ``require`` must match at least one selected case's id. Every name in
+    ``require_markers`` must be, exactly, one of the pytest markers at least one selected case
+    records in its ``markers`` property (comma-separated; FIX-04-2c): a test id names no marker,
+    so ``require`` cannot ask for one. A missing marker is reported as ``marker:<name>``.
     """
     pattern = re.compile(include)
-    selected: list[tuple[str, str]] = []
+    selected: list[tuple[str, str, frozenset[str]]] = []
     for path in paths:
         for case in ET.parse(path).getroot().iter("testcase"):  # noqa: S314 (local reports)
             test_id = f"{case.get('file', '')}|{case.get('classname', '')}::{case.get('name', '')}"
             if pattern.search(test_id):
-                selected.append((test_id, _outcome(case)))
-    counts = {k: sum(1 for _, o in selected if o == k) for k in ("passed", "failed", "skipped")}
+                selected.append((test_id, _outcome(case), _markers(case)))
+    counts = {k: sum(1 for _, o, _ in selected if o == k) for k in ("passed", "failed", "skipped")}
     denominator = len(selected) - (counts["skipped"] if allow_skips else 0)
     rate = counts["passed"] / denominator if denominator > 0 else None
-    missing = [r for r in require if not any(re.search(r, t) for t, _ in selected)]
+    missing = [r for r in require if not any(re.search(r, t) for t, _, _ in selected)]
+    missing += [
+        f"marker:{name}" for name in require_markers if not any(name in m for _, _, m in selected)
+    ]
     return {
         "include": include,
         "selected": len(selected),
         **counts,
         "rate": rate,
         "missing": missing,
-        "failures": [t for t, o in selected if o == "failed"],
+        "failures": [t for t, o, _ in selected if o == "failed"],
         "ok": rate == 1.0 and not missing and counts["failed"] == 0,
     }
 
