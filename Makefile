@@ -18,6 +18,7 @@ env: $(ENV_FILE) ## Create infra/.env from infra/env.example
 
 .PHONY: up
 up: $(ENV_FILE) ## Build and start the full stack, wait until healthy
+	python3 scripts/docker-proxy-check.py  # FIX-04-1a: a stale daemon proxy fails here, named
 	$(COMPOSE) up -d --build --wait
 
 .PHONY: up-deps

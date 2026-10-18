@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.util
 import shutil
 import subprocess
+import sys
 
 import pytest
 from conftest import REPO_ROOT
@@ -31,6 +32,7 @@ def _load():
     assert spec is not None, TOOL
     assert spec.loader is not None, TOOL
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod  # dataclasses look the module up by name
     spec.loader.exec_module(mod)
     return mod
 
