@@ -178,6 +178,34 @@ async def test_it_04_06_adult_answer_creates_the_account_with_only_a_timestamp(
     assert me.json()["id"] == str(row.id)
 
 
+async def test_it_04_06_existing_unconfirmed_account_confirms_once_and_keeps_its_session(
+    open_app: Opener, db_session: Any
+) -> None:
+    """PE-068a-1, QA-ST068a-R1-01: how every pre-0019 account passes the gate. ``true`` is
+    committed (it survives a rollback), a second ``true`` keeps the first time (``coalesce``)
+    and the session is not rotated (no cookie is set)."""
+    _, client = await open_app(True)
+    await sign_in(client, "ivy")
+
+    first = await client.post(AGE_CONFIRMATION, json={"is_adult": True})
+    db_session.rollback()  # undoes only what the service left uncommitted
+    stored = {str(r.id): r.age_confirmed_at for r in accounts_for(db_session)}
+    second = await client.post(AGE_CONFIRMATION, json={"is_adult": True})
+    again = {str(r.id): r.age_confirmed_at for r in accounts_for(db_session)}
+    me = await client.get(contract.ME)
+
+    assert first.status_code == 200, first.text
+    assert first.json()["display_name"] == "Ivy"
+    assert set(first.json()) == {"id", "display_name", "age_confirmed_at"}
+    assert "set-cookie" not in first.headers
+    assert stored[first.json()["id"]] is not None
+    assert second.status_code == 200, second.text
+    assert second.json()["age_confirmed_at"] == first.json()["age_confirmed_at"]
+    assert again == stored  # to the microsecond: the first time is kept
+    assert me.status_code == 200, me.text
+    assert me.json()["id"] == first.json()["id"]
+
+
 async def test_it_04_06_existing_account_deleted_only_with_typed_confirm(
     open_app: Opener,
 ) -> None:
