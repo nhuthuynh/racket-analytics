@@ -78,8 +78,7 @@ export interface TrainingPlan {
 }
 
 export type PlanRead =
-  /** `offlineAsOf`: the service worker's kept copy, answered offline (ST-063c). */
-  | { kind: 'plan'; plan: TrainingPlan; offlineAsOf?: string }
+  | { kind: 'plan'; plan: TrainingPlan }
   | { kind: 'no_plan' }
   | { kind: 'no_tagged_match' }
   | { kind: 'signed_out' }
@@ -238,8 +237,6 @@ export function parsePlan(raw: unknown): TrainingPlan {
 }
 
 const SUPPORT_REF_RE = /^ref_[0-9a-f]{16}$/;
-/** Set by public/sw.js on a plan read answered from its cache: when that copy was kept. */
-export const OFFLINE_COPY = 'x-ra-offline-copy';
 
 async function errorCode(response: Response): Promise<{ code: string | null; supportRef: string | null }> {
   try {
@@ -271,10 +268,7 @@ export function createPlanApi({ baseUrl, fetch: fetchFn }: { baseUrl: string; fe
       }
       if (response.ok) {
         try {
-          const plan = parsePlan(await response.json());
-          // The service worker's kept copy, answered offline (public/sw.js, ST-063c).
-          const kept = response.headers.get(OFFLINE_COPY);
-          return kept ? { kind: 'plan', plan, offlineAsOf: kept } : { kind: 'plan', plan };
+          return { kind: 'plan', plan: parsePlan(await response.json()) };
         } catch {
           return { kind: 'error', supportRef: null };
         }

@@ -65,27 +65,3 @@ export function madeOn(plan: TrainingPlan, timeZone?: string): string {
   const from = matches.size > 0 ? ` from ${count(matches.size, 'tagged match', 'tagged matches')}` : '';
   return `Made on ${formatLocalDate(plan.createdAt, timeZone)}${from}.`;
 }
-
-/** "18 Oct 2026, 10:30": when the service worker kept the plan shown offline (P-01 Offline). */
-export function offlineAsOf(iso: string, timeZone?: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(d);
-}
-
-/**
- * P-03 "Not for me" over the swap limit (429 `rate_limited`, `plan:swap` 120 per hour, ST-062-part2).
- * Local 24-hour time like `uploadRateLimitMessage`; interim copy (judgment) until PD-4 names the state.
- */
-export function swapRateLimitMessage(retryAt: string | null, timeZone?: string): string {
-  const lead = 'You have swapped many drills in a short time.';
-  const at = retryAt ? new Date(retryAt) : null;
-  if (!at || Number.isNaN(at.getTime())) return `${lead} Try again in an hour. Your reason is kept.`;
-  const time = new Intl.DateTimeFormat('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    ...(timeZone ? { timeZone } : {}),
-  }).format(at);
-  return `${lead} You can swap again at ${time}. Your reason is kept.`;
-}
