@@ -53,6 +53,27 @@ describe('P-02 validation (negative first)', () => {
 });
 
 describe('P-02 refusals keep the answers', () => {
+  it('422 invalid: the API field errors become the error summary with links, the answers stay', async () => {
+    const { generatePlan, navigate, user } = setup({
+      kind: 'invalid', errors: [{ field: 'minutes-per-session', message: 'Enter a number between 15 and 180' }],
+    });
+    await answerAll(user);
+    await user.click(makeMyPlan());
+    expect(generatePlan).toHaveBeenCalledTimes(1);
+    const summary = await screen.findByRole('alert');
+    expect(summary).toHaveFocus();
+    const link = within(summary).getByRole('link', { name: 'Enter a number between 15 and 180' });
+    await user.click(link);
+    const minutes = screen.getByLabelText('How long is each session?');
+    expect(minutes).toHaveFocus();
+    expect(minutes).toHaveAccessibleDescription(/Enter a number between 15 and 180/);
+    expect(minutes).toHaveValue('30');
+    expect(screen.getByLabelText('A wall')).toBeChecked();
+    expect(screen.getByLabelText('Intermediate')).toBeChecked();
+    expect(document.title).toMatch(/^Error: Your practice setup/);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('409 no_tagged_match: the reason with a link to tag a match, focus on the alert', async () => {
     const { user, navigate } = setup({ kind: 'no_tagged_match' });
     await answerAll(user);
