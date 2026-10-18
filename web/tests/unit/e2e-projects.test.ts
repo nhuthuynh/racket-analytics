@@ -2,6 +2,7 @@
 // specs each runs. The flags-on project runs web/e2e/sprint-04/flags-on/*.spec.ts only, against
 // a stack started with every FEATURE_* on; the per-PR chromium and webkit projects never do.
 // Negative cases first.
+import type { Project } from '@playwright/test';
 import { describe, expect, it } from 'vitest';
 import { e2eProjects, isFlagOnSpec, selectedProjects } from '../../e2e/helpers/projects';
 
@@ -9,10 +10,11 @@ const SPEC_ROOT = '/repo/web/e2e';
 const FLAG_ON = `${SPEC_ROOT}/sprint-04/flags-on/age.spec.ts`;
 const PLAIN = `${SPEC_ROOT}/sprint-04/journey-v3.spec.ts`;
 
-/** Whether a project's testMatch/testIgnore lets Playwright run the file. */
-function runs(project: { testMatch?: RegExp; testIgnore?: RegExp }, file: string): boolean {
-  if (project.testIgnore?.test(file)) return false;
-  return project.testMatch ? project.testMatch.test(file) : true;
+/** Whether a project's testMatch/testIgnore (each a RegExp here) lets Playwright run the file. */
+function runs(project: Project | undefined, file: string): boolean {
+  const { testMatch, testIgnore } = project ?? {};
+  if (testIgnore instanceof RegExp && testIgnore.test(file)) return false;
+  return testMatch instanceof RegExp ? testMatch.test(file) : testMatch === undefined;
 }
 
 describe('selectedProjects', () => {
@@ -63,21 +65,23 @@ describe('e2eProjects', () => {
 
   it('runs only flag-on specs in the flags-on project', () => {
     const [flagsOn] = e2eProjects({ PW_PROJECTS: 'flags-on' }, opts);
-    expect(flagsOn.name).toBe('flags-on');
+    expect(flagsOn?.name).toBe('flags-on');
     expect(runs(flagsOn, FLAG_ON)).toBe(true);
     expect(runs(flagsOn, PLAIN)).toBe(false);
   });
 
   it('runs the flags-on project in the same desktop Chrome as the chromium project', () => {
     const [chromium, flagsOn] = e2eProjects({ PW_PROJECTS: 'chromium,flags-on' }, opts);
-    expect(flagsOn.use).toEqual(chromium.use);
-    expect(flagsOn.use?.channel).toBe('chrome');
-    expect(flagsOn.use?.launchOptions?.args).toEqual(['--ignore-certificate-errors']);
-    expect(flagsOn.use?.defaultBrowserType).toBe('chromium');
+    expect(flagsOn?.use).toEqual(chromium?.use);
+    expect(flagsOn?.use).toMatchObject({
+      channel: 'chrome',
+      defaultBrowserType: 'chromium',
+      launchOptions: { args: ['--ignore-certificate-errors'] },
+    });
   });
 
   it('omits the channel when none is chosen (the bundled Chromium)', () => {
-    const [chromium] = e2eProjects({ PW_PROJECTS: 'chromium' }, { chromiumArgs: [] });
-    expect(chromium.use).not.toHaveProperty('channel');
+    const projects = e2eProjects({ PW_PROJECTS: 'chromium' }, { chromiumArgs: [] });
+    expect(projects[0]?.use).not.toHaveProperty('channel');
   });
 });

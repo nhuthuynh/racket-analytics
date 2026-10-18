@@ -31,8 +31,10 @@ SPEC = """import {{ test }} from '@playwright/test';
 
 test({title!r}, async () => {{}});
 """
-# `--list` prints one line per test and project: "  [chromium] › sprint-04/x.spec.ts:3:5 › title"
-LISTED = re.compile(r"^\s*\[(?P<project>[^\]]+)\] › .* › (?P<title>.+)$")
+# `--list` prints one line per test and project, the parts joined by U+203A:
+# "  [chromium] > sprint-04/x.spec.ts:3:5 > title" (">" standing for U+203A here).
+SEP = "\u203a"
+LISTED = re.compile(rf"^\s*\[(?P<project>[^\]]+)\] {SEP} .* {SEP} (?P<title>.+)$")
 
 
 @dataclass
