@@ -111,9 +111,9 @@ describe('P-01 header and notices', () => {
     expect(unofficial).toHaveLength(1);
     const coach = screen.getByText('These drills have not yet been checked by a human coach. Warm up first, and stop any drill that hurts.');
     const limited = screen.getByText('Based on limited data from 14 rallies. Tag more matches for a firmer plan.');
-    const order = [unofficial[0], coach, limited, heading];
+    const order = [unofficial[0]!, coach, limited, heading];
     for (let i = 1; i < order.length; i += 1) {
-      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(order[i - 1]!.compareDocumentPosition(order[i]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
   });
 
@@ -144,7 +144,7 @@ describe('P-01 what the plan works on', () => {
   it('says when no drill fits a weakness, with a way to change the setup', async () => {
     setup([loaded({ ...planBody(), unfitted: [{ weakness_id: 'serve_faults', reason: 'no_drill_fits' }] })]);
     const list = await screen.findByRole('list', { name: 'What the plan works on' });
-    const serve = within(list).getAllByRole('listitem')[1];
+    const serve = within(list).getAllByRole('listitem')[1]!;
     expect(serve).toHaveTextContent('No drill fits your setup for this one.');
     expect(within(serve).getByRole('link', { name: 'Change my setup' })).toHaveAttribute('href', '/plan/new');
   });

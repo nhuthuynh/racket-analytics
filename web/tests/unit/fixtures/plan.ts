@@ -75,6 +75,6 @@ type Body = Record<string, unknown>;
 export function withFirstAssignment(change: (a: Body) => void): Body {
   const body = planBody();
   const sessions = body.sessions as { assignments: Body[] }[];
-  change(sessions[0].assignments[0]);
+  change(sessions[0]!.assignments[0]!);
   return body;
 }

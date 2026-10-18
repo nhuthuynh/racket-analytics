@@ -2,6 +2,8 @@
 // named as in the feature file, and the first test checks that the two lists match, so a scenario
 // added to the file without a binding fails here.
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,7 +11,7 @@ import { PlanView } from '@/components/plan/PlanView';
 import { parsePlan } from '@/lib/api/plan';
 import { MATCH_ID, RALLY_ID, planBody, withFirstAssignment } from '../unit/fixtures/plan';
 
-const FEATURE = readFileSync(new URL('./drill_rationale_ui.feature', import.meta.url), 'utf8');
+const FEATURE = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'drill_rationale_ui.feature'), 'utf8');
 const SCENARIOS = {
   missing: 'A drill whose citation is missing shows an error, not a blank',
   why: 'Why this drill, on the plan page',
@@ -41,7 +43,7 @@ function row(name: string): HTMLElement {
 
 describe('Feature: Every drill says why, on the plan page', () => {
   it('binds every scenario of the feature file', () => {
-    const inFile = [...FEATURE.matchAll(/^\s*Scenario: (.+)$/gm)].map((m) => m[1].trim()).sort();
+    const inFile = [...FEATURE.matchAll(/^\s*Scenario: (.+)$/gm)].map((m) => m[1]!.trim()).sort();
     expect(inFile).toEqual(Object.values(SCENARIOS).sort());
   });
 
