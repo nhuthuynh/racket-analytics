@@ -78,7 +78,8 @@ export interface TrainingPlan {
 }
 
 export type PlanRead =
-  | { kind: 'plan'; plan: TrainingPlan }
+  /** `offlineAsOf`: the service worker's kept copy, answered offline (ST-063c). */
+  | { kind: 'plan'; plan: TrainingPlan; offlineAsOf?: string }
   | { kind: 'no_plan' }
   | { kind: 'no_tagged_match' }
   | { kind: 'signed_out' }

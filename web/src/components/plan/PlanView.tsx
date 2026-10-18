@@ -12,6 +12,8 @@ import { browserApi } from '@/lib/api/browser';
 import { planApi, type DrillAssignment, type PlanApi, type PlanRead, type TrainingPlan } from '@/lib/api/plan';
 import { EvidencePanel } from '@/components/stats/EvidencePanel';
 import type { StatsApi } from '@/components/stats/StatsDashboard';
+import type { Outbox } from '@/lib/plan-outbox';
+import type { FollowThroughApi } from '@/lib/plan-outbox-api';
 import { factsLine, madeOn, showMeName, splitLine, weaknessRate, whyParts } from './PlanViewWords';
 
 const COACH_NOTICE =
@@ -32,6 +34,9 @@ export function PlanView({
   onSignedOut = signIn,
 }: {
   api?: Pick<PlanApi, 'getPlan'>;
+  /** ST-063c ports (red stub: not used yet). */
+  followApi?: FollowThroughApi;
+  outbox?: Outbox;
   evidenceApi?: StatsApi;
   onSignedOut?: () => void;
 }) {
