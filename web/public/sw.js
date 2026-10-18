@@ -55,23 +55,29 @@ self.addEventListener('activate', (event) => {
 });
 
 /** Network first; a good answer is kept (stamped with when), a refused one (4xx: signed out,
- * no plan) removes the copy, a server error leaves it for the next offline read. */
+ * no plan) removes the copy, a server error leaves it for the next offline read. Storage can fail
+ * (full quota, blocked storage): that only loses the kept copy, never the network answer (PE-1). */
 function planNetworkFirst(request, fallback) {
-  return caches.open(PLAN_CACHE).then((cache) =>
-    fetch(request).then(
-      async (response) => {
-        if (response.ok && response.type !== 'opaque') {
-          const headers = new Headers(response.headers);
-          headers.set(OFFLINE_COPY, new Date().toISOString());
-          const body = await response.clone().arrayBuffer();
-          await cache.put(request, new Response(body, { status: response.status, headers }));
-        } else if (response.status >= 400 && response.status < 500) {
-          await cache.delete(request);
-        }
-        return response;
-      },
-      () => cache.match(request).then((kept) => kept || fallback()),
-    ),
+  const cache = Promise.resolve().then(() => caches.open(PLAN_CACHE));
+  cache.catch(() => undefined);
+  const keep = async (response) => {
+    if (response.ok && response.type !== 'opaque') {
+      const headers = new Headers(response.headers);
+      headers.set(OFFLINE_COPY, new Date().toISOString());
+      const body = await response.clone().arrayBuffer();
+      await (await cache).put(request, new Response(body, { status: response.status, headers }));
+    } else if (response.status >= 400 && response.status < 500) {
+      await (await cache).delete(request);
+    }
+  };
+  return fetch(request).then(
+    (response) => keep(response).then(() => response, () => response),
+    () =>
+      cache
+        .then((c) => c.match(request))
+        .catch(() => undefined)
+        .then((kept) => kept || fallback())
+        .catch(() => Response.error()),
   );
 }
 

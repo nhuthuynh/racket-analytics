@@ -3,77 +3,9 @@
 // page shell (`/plan`) and the last `GET /api/me/plan` answer are kept, in their own cache, network
 // first; nothing else of the API or of the pages is stored, and sign-out clears the plan cache.
 // Negative first: offline with nothing kept is a network error, never a made-up plan.
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { clearClientData } from '@/lib/session/clear';
-
-const testDir = path.dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(path.join(testDir, '../../public/sw.js'), 'utf8');
-const ORIGIN = 'https://app.example';
-const PLAN_CACHE = 'ra-plan-v1';
-
-type Listener = (event: unknown) => void;
-
-/** A Cache Storage with real Responses, keyed by cache name and URL. */
-function fakeCaches(seed: Record<string, Record<string, Response>> = {}) {
-  const store = new Map<string, Map<string, Response>>(
-    Object.entries(seed).map(([name, entries]) => [name, new Map(Object.entries(entries))]),
-  );
-  const key = (r: string | { url: string }) => (typeof r === 'string' ? new URL(r, ORIGIN).href : r.url);
-  const open = async (name: string) => {
-    if (!store.has(name)) store.set(name, new Map());
-    const c = store.get(name)!;
-    return {
-      match: async (r: string | { url: string }) => c.get(key(r))?.clone(),
-      put: async (r: string | { url: string }, res: Response) => void c.set(key(r), res),
-      delete: async (r: string | { url: string }) => c.delete(key(r)),
-      addAll: async () => undefined,
-      keys: async () => [...c.keys()].map((url) => ({ url })),
-    };
-  };
-  return {
-    store,
-    api: {
-      open,
-      keys: async () => [...store.keys()],
-      delete: async (name: string) => store.delete(name),
-      match: async (r: string) => {
-        for (const c of store.values()) {
-          const hit = c.get(key(r));
-          if (hit) return hit.clone();
-        }
-        return undefined;
-      },
-    },
-  };
-}
-
-function loadWorker(caches: unknown, fetch: unknown) {
-  const listeners: Record<string, Listener> = {};
-  const self = {
-    location: { origin: ORIGIN },
-    addEventListener: (type: string, fn: Listener) => {
-      listeners[type] = fn;
-    },
-    skipWaiting: () => Promise.resolve(),
-    clients: { claim: () => Promise.resolve() },
-  };
-  vm.runInNewContext(source, { self, URL, caches, fetch, Response, Headers, Date });
-  return listeners;
-}
-
-function request(url: string, mode = 'cors', method = 'GET') {
-  return { url, method, mode, headers: { has: () => false } };
-}
-
-async function dispatch(listeners: Record<string, Listener>, req: ReturnType<typeof request>) {
-  let response: Promise<Response> | undefined;
-  listeners.fetch!({ request: req, respondWith: (r: Promise<Response>) => (response = r) });
-  return response;
-}
+import { ORIGIN, PLAN_CACHE, dispatch, fakeCaches, loadWorker, request } from './fixtures/sw';
 
 const planJson = () =>
   new Response(JSON.stringify({ id: 'p1' }), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -150,5 +82,29 @@ describe('service worker plan cache (negative first)', () => {
     const c = fakeCaches({ [PLAN_CACHE]: { [`${ORIGIN}/api/me/plan`]: planJson() } });
     await clearClientData({ caches: c.api });
     expect(c.store.has(PLAN_CACHE)).toBe(false);
+  });
+});
+
+describe('service worker plan cache: storage failures never break the page (review PE-1)', () => {
+  const quota = () => new DOMException('quota', 'QuotaExceededError');
+  const page = () => new Response('<h1>Your training plan</h1>', { status: 200 });
+
+  it.each([
+    ['put', 'plan read', `${ORIGIN}/api/me/plan`, 'cors', planJson, 200],
+    ['put', '/plan navigation', `${ORIGIN}/plan`, 'navigate', page, 200],
+    ['open', 'plan read', `${ORIGIN}/api/me/plan`, 'cors', planJson, 200],
+    ['delete', 'refused plan read', `${ORIGIN}/api/me/plan`, 'cors', () => new Response('{}', { status: 401 }), 401],
+  ] as const)('a failing cache %s still passes the network answer of the %s on', async (call, _what, url, mode, net, status) => {
+    const sw = loadWorker(fakeCaches({}, { [call]: quota() }).api, () => Promise.resolve(net()));
+    expect((await (await dispatch(sw, request(url, mode)))!).status).toBe(status);
+  });
+
+  it('offline with a failing cache read: the plan read is a network error, the navigation the offline page', async () => {
+    const offline = () => Promise.reject(new TypeError('offline'));
+    const api = loadWorker(fakeCaches({}, { match: quota() }).api, offline);
+    expect((await (await dispatch(api, request(`${ORIGIN}/api/me/plan`)))!).type).toBe('error');
+    const kept = { 'ra-static-v1': { [`${ORIGIN}/offline.html`]: new Response('You are offline') } };
+    const nav = loadWorker(fakeCaches(kept, { open: quota() }).api, offline);
+    expect(await (await dispatch(nav, request(`${ORIGIN}/plan`, 'navigate')))!.text()).toBe('You are offline');
   });
 });
