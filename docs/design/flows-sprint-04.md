@@ -18,7 +18,9 @@
 | P-02 | P-02 | Plan preferences | `/plan/new` | ST-063b |
 | P-03 | P-03 | Mark done (offline) and "Not for me" (dialog on P-01) | `/plan` | ST-063c |
 | A-10 | A-01 | Are you 18 or over? | `/welcome/age` | ST-068b |
-| A-11 | A-01 | You need to be 18 or over (outcome) | `/welcome/age?under=1` | ST-068b |
+| A-11 | A-01 | You need to be 18 or over (outcome, pending sign-in: no account existed) | `/welcome/age?under=1` | ST-068b |
+| A-12 | A-01 | Delete your account? (existing account answered "No") | `/welcome/age/delete` | ST-068b |
+| A-13 | A-01 | Your account has been deleted (outcome after A-12) | `/signed-out?deleted=1&under=1` (A-05 route, X-03 text plus one line) | ST-068b |
 | (notice) | footage notice | Footage notice on F-01, Q-06 and U-04 | existing routes | ST-068b |
 | R-01 | R-01 | Privacy settings | `/settings/privacy` | ST-071 |
 | Q-10 | Q-01 | Over-limit messages on Q-07 and U-01 | existing routes | ST-072b |
@@ -41,8 +43,11 @@
    │ "Show me" (per drill) ──► E-01 panel (rallies behind the cited value) ──► S-01 at the rally
    │ "Mark done" ──online──► done ;  ──offline──► "Saved on this device, will sync" ──online──► done
    │ "Not for me" ──► P-03 dialog (reason optional) ──swap──► new drill focused ; 409 ──► "no other drill fits"
- A-03 Signing you in ──new account, age flag on──► A-10 Are you 18 or over? ──yes──► F-01 (with footage notice)
-                                                                     └──no───► A-11 (no account created)
+ A-03 Signing you in ──new address or unconfirmed account, age flag on──► A-10 Are you 18 or over? ──yes──► F-01 (with footage notice)
+                                                                     ├──no, pending sign-in (403 under_age)──► A-11 (no account created)
+                                                                     └──no, existing account (422 confirmation_required)──► A-12 Delete your account?
+ A-12 ──"Delete my account" (confirm: delete; 403 under_age)──► A-13 "Your account has been deleted"
+      └──"Cancel"──► A-10 (nothing deleted; account stays unconfirmed and gated)
  X-00 Your account / account menu ──"Privacy settings" (flag on)──► R-01
  Q-07 "Create match and upload" ──429 rate_limited──► Q-10 notice on Q-07 (answers kept)
  U-01 upload start ──storage quota refused──► Q-10 notice on U-01 (nothing stored)
@@ -71,19 +76,21 @@
 ## 3. P-02 Plan preferences (ST-063b; FR-121)
 
 - **One page, five short questions** with fieldsets, not one question per page (decision PD-4 row 3): a regenerate visit changes one answer, and five pages for that would be slower. `<h1>` "Your practice setup". Prefilled with the last preferences on a regenerate visit.
-  1. "How long is each session?" number input, "minutes", hint "Between 10 and 120." (range per PE-4).
+  1. "How long is each session?" number input, "minutes", hint "Between 15 and 180." (api-sprint-04 §2.1: 15-180).
   2. "How many sessions a week?" radios 1-7.
   3. "How many players, including you?" radios 1, 2, 3, 4.
   4. "What do you have?" checkboxes (optional): "A wall", "Half a court", "A full court", "A ball machine", "Someone to feed balls" (drill-schema `needs`; words per coach).
   5. "Your level" radios "Beginner", "Intermediate", "Advanced" (words per coach).
 - Button **"Make my plan"**. Under it: "This replaces your current plan." on a regenerate visit. Weekly limit = minutes × sessions (judgment; PE-4 may add a separate weekly field, then it is question 3 with the hint "Leave blank to use sessions × minutes").
-- Validation (422 field codes): "Enter the minutes for each session" / "Enter a number between 10 and 120" / "Choose how many sessions a week" / "Choose how many players" / "Choose your level". Summary links to each field; the field keeps the value.
+- **409 `no_plan_fits`** (api-sprint-04 §2.1, assembly infeasible): alert at the top, not the error summary (no field is wrong on its own): "No plan fits these settings. Try more minutes, more sessions or more equipment." On a regenerate visit, a second line: "Your current plan is unchanged." Focus moves to the alert; the answers stay; nothing is written.
+- **409 `plan_conflict`** (api-sprint-04 §3.4, the plan changed on another device during the request): alert "Your plan changed on another device, so this one was not saved. Your answers are kept." with the button "Make my plan" still enabled (a new press replaces the current plan, as the "This replaces your current plan." line says) and the link "See your current plan" (→ P-01). Focus moves to the alert; nothing is written.
+- Validation (422 field codes): "Enter the minutes for each session" / "Enter a number between 15 and 180" / "Choose how many sessions a week" / "Choose how many players" / "Choose your level". Summary links to each field; the field keeps the value.
 
 | Screen | State | What the player sees |
 |---|---|---|
 | P-02 | Empty | First visit: nothing prefilled, no default chosen (no hidden assumption about the player). 409 `no_tagged_match` on submit: "Tag a match first. Your plan is built from the rallies you tag." with link "Your matches"; the answers stay |
 | P-02 | Loading | "Making your plan…" on the button (disabled, `aria-busy`), polite status; ≤ 5 s expected (NFR-019); after 10 s "Still working…" |
-| P-02 | Error | Error summary for 422; alert with `Reference:` for 5xx; answers kept |
+| P-02 | Error | Error summary for 422; alert for 409 `no_plan_fits` and 409 `plan_conflict` (texts above); alert with `Reference:` for 5xx; answers kept in every case |
 | P-02 | Offline | Form readable and editable; "Make my plan" disabled with "Needs a connection to make your plan." |
 | P-02 | Not-found | N/A: P-02 reads no resource by id; an unknown sub-route is the app's not-found page |
 
@@ -92,21 +99,28 @@
 - **Mark done** (per session): online → "Done" at once (optimistic), confirmed by the server; offline → the op is kept on this device and the row says "Saved on this device, will sync" (polite status). Sync on reconnect and on page load; then "Done" and the polite status "Session 2 synced." Pressing twice offline stores one op (idempotent, ST-062). **Undo** → "Not done"; offline undo removes the queued op.
 - **"Not for me"** opens a dialog (`role="dialog"`, labelled by its `<h2>` "Swap <drill name>?"): text "We will pick another drill that works on the same thing and fits your session."; optional reason field "Why not? (optional)", 200 characters, with a counter; buttons **Cancel** (focused on open, flows-sprint-03 §0) and **"Swap drill"**. Success → the dialog closes, the new drill replaces the row and **gets focus**, polite status "Swapped for <new name>." The swapped-out drill is not offered again in this plan.
 - **409 `no_alternative`**: inside the dialog, alert "No other drill fits your setup for this. Your plan is unchanged." with "Close"; focus moves to the alert.
+- **409 `session_done`** (swap on a session already done, e.g. marked done on another device): inside the dialog, alert "This session is already done, so its drills cannot be swapped. Your plan is unchanged." with "Close"; focus moves to the alert. On close, P-01 refetches, the session shows "Done", and focus returns to that session's "Undo".
+- **409 `plan_conflict` on swap** (api-sprint-04 §3.4): inside the dialog, alert "Your plan changed on another device. Nothing was swapped." with the button "Reload plan". It closes the dialog and refetches P-01; focus goes to the same drill row if it is still in the plan, else to the `<h1>`. The reason text is not kept (it belonged to a drill that may be gone; judgment).
+- **409 `plan_conflict` on mark done or undo**: the op stays queued, P-01 refetches with the polite status "Your plan changed on another device. Showing your current plan.", and the op is sent once more after the refetch. If its session is gone (404), the sync-conflict line below applies.
+- **409 `idempotency_key_reused` on mark done** (the device reused an op id for another session; a client fault, not the player's): the queued op gets a new op id and is sent once more, with no message (a new key on that session is allowed, api-sprint-04 §3.1). If that send fails too, the Done Error state applies (op kept). Never a raw code.
 - **Sync conflict** (session gone or plan replaced): "We could not save 'done' for a session that is no longer in your plan." in the row area; the op is dropped (data loss is shown, not hidden).
 
 | Screen | State | What the player sees |
 |---|---|---|
 | P-03 | Empty | N/A: P-03 acts on an existing session or drill; with no plan, P-01's Empty state applies |
 | P-03 | Loading | "Swap drill" shows "Swapping…" (disabled); "Mark done" has no spinner (optimistic) |
-| P-03 | Error | Done: "We could not save 'done'. It stays on this device and will sync." (op kept, ST-063c negative test). Swap: alert in the dialog with `Reference:`; the reason text is kept |
+| P-03 | Error | Done: "We could not save 'done'. It stays on this device and will sync." (op kept, ST-063c negative test); 409 `plan_conflict` and `idempotency_key_reused` as above. Swap: 409 `no_alternative`, `session_done`, `plan_conflict` as above; 5xx → alert in the dialog with `Reference:`, the reason text is kept |
 | P-03 | Offline | Done is queued (above). "Not for me" is disabled with "Needs a connection" (a swap needs the library and the server's invariants) |
 | P-03 | Not-found | 404 on the session or drill: the sync-conflict line above, then P-01 refetches |
 
 ## 5. A-10 / A-11 Age question and the footage notice (ST-068b; FR-003; flag `feature_age_gate`)
 
-- **A-10** (question page [DPA/DESIGN-12]): after A-03 for a sign-in with no confirmed account. `<h1>` "Are you 18 or over?" Radios "Yes, I am 18 or over" / "No, I am under 18". Hint: "You need to be 18 or over to have an account. We do not ask for or keep your date of birth." Button "Continue". No "Back" link (there is no earlier page). Nothing else of the app is reachable until answered (routes answer 403 `age_confirmation_required`; the client sends them here).
-- **Yes** → F-01, which shows the footage notice. **No** → A-11.
-- **A-11** `<h1>` "You need to be 18 or over to use this app". "We have not created an account, and we have not kept your email address." What to do instead (PM-4 wording; proposal): "You can come back when you are 18." Link "Close and return to the start" (→ `/`). No way to change the answer from here (the pending sign-in is gone, ST-068a); signing in again asks again.
+- **A-10** (question page [DPA/DESIGN-12]): after A-03, and after any 403 `age_confirmation_required`, in two cases (api-sprint-04 §4): a **pending sign-in** (new address, no account row) and an **existing account whose age is not confirmed** (it may hold matches, videos, tags and stats). The page looks the same in both; the client does not know which case it is until the answer. `<h1>` "Are you 18 or over?" Radios "Yes, I am 18 or over" / "No, I am under 18". Hint: "You need to be 18 or over to have an account. We do not ask for or keep your date of birth." Button "Continue". No "Back" link (there is no earlier page). Nothing else of the app is reachable until answered (routes answer 403 `age_confirmation_required`; the client sends them here).
+- **Yes** → F-01, which shows the footage notice (an existing account goes to D-01 instead, judgment: it has seen F-01).
+- **No**: the client sends `{"is_adult": false}` **without** `confirm`. Pending sign-in → 403 `under_age` → **A-11**. Existing account → **422 `confirmation_required`** (field `confirm`), nothing changed → **A-12**. This 422 is a step, not an error: the player sees no error summary and no "Error: " title prefix.
+- **A-11** (pending sign-in only; its text is false for an existing account, which goes to A-12) `<h1>` "You need to be 18 or over to use this app". "We have not created an account, and we have not kept your email address." What to do instead (PM-4 wording; proposal): "You can come back when you are 18." Link "Close and return to the start" (→ `/`). No way to change the answer from here (the pending sign-in is gone, ST-068a); signing in again asks again.
+- **A-12** (existing account answered "No"; the account-deletion page api-sprint-04 §4 requires, built from X-02, flows-sprint-03): `<h1>` "Delete your account?" Text: "You told us you are under 18. You need to be 18 or over to have an account, so we need to delete yours." Then X-02's consequences: "This deletes your account and all your matches: every video, tag, score sheet and stat." / "You will be signed out on every device." / "It cannot be undone." Buttons **"Cancel"** (first in order and focused on load, flows-sprint-03 §0) and **"Delete my account"** (error outline, ≥ 48 px). "Delete my account" sends `{"is_adult": false, "confirm": "delete"}` → 403 `under_age`, cookie cleared → A-13. "Cancel" → A-10 with "No" still chosen; nothing is deleted and the account stays gated (api-sprint-04 §4: "the account stays unconfirmed and gated"); no text invites a different answer (PM-4 rule 4). A page, not a dialog: there is no host page behind it (every other route is gated).
+- **A-13** (outcome of A-12; X-03 on the A-05 route): `<h1>` "Your account has been deleted". "You need to be 18 or over to use this app." then X-03's lines: "The app's data on this device has been cleared. Its stored files are removed within 7 days." Link "Close and return to the start" (→ `/`). The client shows A-13 only after it sent `confirm: "delete"` and got 403 `under_age`; it never says "we have not created an account".
 - **Footage notice** (flag on), one paragraph with an info icon and the heading "Before you upload" (`<h2>`): "Only upload matches where everyone on the video is 18 or over. Do not upload matches that show children." On F-01 under the promise, on Q-06 above "Choose video", and on U-04 (choosing the file again). Not a checkbox: the notice informs, it does not create consent (judgment; PM-4 and security decide, §14 R4-5).
 
 | Screen | State | What the player sees |
@@ -121,6 +135,16 @@
 | A-11 | Error | If the 403 `under_age` response did not arrive, A-10's Error state applies and A-11 is not shown |
 | A-11 | Offline | Static page; the "Close" link works offline (judgment) |
 | A-11 | Not-found | Direct visit without a refused answer → redirect to `/` |
+| A-12 | Empty | N/A: a confirmation page; it reads no data (the 422 that led here carries none) |
+| A-12 | Loading | "Delete my account" shows "Deleting…" (disabled, `aria-busy`), polite status; Cancel disabled while the request runs |
+| A-12 | Error | 5xx: alert "Your account was not deleted. Try again." with `Reference:` (X-02 text); nothing changed. A 422 `confirmation_required` here (body sent without `confirm`) → the same alert; never a raw code. 401 → A-10's Not-found state, nothing deleted |
+| A-12 | Offline | "You are offline. Connect to delete your account." "Delete my account" disabled with that text; Cancel works |
+| A-12 | Not-found | Direct visit without a 422 `confirmation_required` from A-10 → redirect to A-10 (never a delete without the age answer) |
+| A-13 | Empty | N/A: an outcome page, it has no data |
+| A-13 | Loading | N/A: static text rendered with the delete's response |
+| A-13 | Error | If the 403 `under_age` response did not arrive, A-12's Error state applies and A-13 is not shown |
+| A-13 | Offline | Static page; the "Close" link works offline (as A-11) |
+| A-13 | Not-found | Direct visit without a confirmed delete → X-03's own rule (A-05 text) |
 
 ## 6. R-01 Privacy settings (ST-071; FR-008, FR-009; ADR 0006; flags `feature_retention_setting`, `feature_training_consent`)
 
@@ -164,6 +188,7 @@
 | P-01 | "The split between serve and receive is not yet verified." | until P7 |
 | P-01 | "Why: <metric name>: <value> of <n> <unit>" | FR-122; names from the API |
 | A-10/A-11, notice | §5 texts | interim, PM-4 register, P16 |
+| A-12/A-13 | "You told us you are under 18. You need to be 18 or over to have an account, so we need to delete yours." / "You need to be 18 or over to use this app." (other lines reused from X-02, X-03) | proposal; PM-4 register has no row for an existing account yet (PD-FL4-06); interim, P16 |
 | R-01 | §6 texts | interim, PM-4 register, P16 |
 | Q-10 | §7 texts | FR-160; quota size P8 |
 
@@ -182,7 +207,7 @@
 
 "✓" means this file specifies it. Implementation evidence: G04-08 (axe and target checks per family P, A, R, Q; keyboard E2E-04-05; 320/360 px) and the human pass (P6).
 
-| Check | P-01 | P-02 | P-03 | A-10/A-11 | R-01 | Q-10 |
+| Check | P-01 | P-02 | P-03 | A-10..A-13 | R-01 | Q-10 |
 |---|---|---|---|---|---|---|
 | Unique title, one `<h1>` (SC 2.4.2) | ✓ | ✓ "Error: " prefix on errors | — (dialog `<h2>`) | ✓ | ✓ | — (host page) |
 | Targets ≥ 24 px; primary ≥ 48 px (SC 2.5.8; NFR-028) | ✓ | ✓ whole radio/checkbox row | ✓ | ✓ | ✓ | ✓ links |
@@ -207,7 +232,7 @@
 | P-01 | Notices full width; weakness lines on two lines (name + rate / split); drill row: name, facts line, "Why" line, then "Show me" and "Not for me" side by side (each ≥ 48 px high, 8 px gap) | Same order; the two buttons stack full width; the facts line wraps at "·"; E-01 panel full width under the row |
 | P-02 | Radios 1-7 in one row of 48 px targets | Radios 1-7 wrap to two rows; checkboxes one per row; button full width |
 | P-03 | Dialog 100% width minus gutters; reason field 4 rows | Same; buttons stack, Cancel first |
-| A-10/A-11 | Question page, `content-max` 40 rem | Same; radios one per row |
+| A-10..A-13 | Question page, `content-max` 40 rem; A-12 buttons side by side, Cancel first | Same; radios one per row; A-12 buttons stack, Cancel first |
 | R-01 | Sections stacked; date list as a list, not a table | Date list items wrap (title, then date on its own line) |
 | Q-10 | Alert full width above Q-07's summary / U-01's file control | Same; links stack |
 
@@ -219,6 +244,7 @@
 | PD-FL4-02 | "Show me" for a plan citation spans matches; E-01 takes `rally_ids` grouped by match. Needs either an evidence read by rally ids or the match id in each citation | principal-engineer, PE-4 |
 | PD-FL4-03 | Weakness names, "Points given away", equipment and level words; the human-coach notice | pickleball-domain-coach, COACH-4 |
 | PD-FL4-04 | A-11 "what to do instead", the footage notice and R-01 texts | product-manager, PM-4 |
+| PD-FL4-06 | A-12/A-13 words for an existing unconfirmed account that answers "No" (PM-4 has rows only for a pending sign-in); whether A-12 "Cancel" back to A-10 is acceptable for the gate (api-sprint-04 §4 keeps the account gated) | product-manager (PM-4 register), security-privacy-engineer (SEC-4) |
 | PD-FL4-05 | The ticket map and story cards say "A-01" / "Q-01"; this file uses A-10/A-11 and Q-10 (§0). G04-08's families A and Q mean these ids | principal-engineer (ticket map), senior-qa-engineer (G04-08) |
 
 ## 13. Traceability
@@ -228,7 +254,7 @@
 | P-01 | FR-120, FR-122, FR-123; NFR-039 | `weakness_ranking.feature`, `drill_rationale.feature`, `limited_data_plan.feature` |
 | P-02 | FR-121; NFR-019 | `training_plan.feature` |
 | P-03 | FR-124 | `plan_follow_through.feature` |
-| A-10/A-11, notice | FR-003 | `age_confirmation.feature` |
+| A-10..A-13, notice | FR-003 | `age_confirmation.feature` |
 | R-01 | FR-008, FR-009 | `video_retention.feature`, `training_consent.feature` |
 | Q-10 | FR-160; NFR-023 | `rate_limits.feature` |
 
@@ -246,7 +272,7 @@
 | R4-2 | Drill row "Why" wording, "Show me" reusing E-01 with the plan's rally ids; the human-coach notice words (§2, §8) | Accept | senior-frontend-engineer, pickleball-domain-coach, product-manager |
 | R4-3 | P-02 one page with five questions, no defaults on the first visit, weekly limit = minutes × sessions (§3) | Accept | senior-frontend-engineer, pickleball-domain-coach, business-analyst (FR-121) |
 | R4-4 | P-03 optimistic done, offline queue shown in words, swap disabled offline, Cancel focused, new drill focused (§4) | Accept | senior-frontend-engineer, product-manager, security-privacy-engineer (device outbox holds ids only, cleared on sign-out) |
-| R4-5 | A-10/A-11 and the footage notice as information, not a checkbox (§5) | Accept | product-manager, security-privacy-engineer, business-analyst (FR-003) |
+| R4-5 | A-10/A-11 and the footage notice as information, not a checkbox; A-12/A-13 for an existing unconfirmed account answering "No" (§5) | Accept | product-manager, security-privacy-engineer, business-analyst (FR-003) |
 | R4-6 | R-01: two independent saves, consent unchecked by default, shorter-retention dialog, date list (§6) | Accept | product-manager, security-privacy-engineer, business-analyst (FR-008, FR-009) |
 | R4-7 | Q-10 texts, local `HH:MM`, usage and limit from the API (§7) | Accept | senior-frontend-engineer, product-manager, business-analyst (FR-160) |
 | R4-8 | States, HAX G1/G2/G11, WCAG and 320/360 layouts (§2-§11); screen ids A-10/A-11, Q-10 (§0) | Accept | senior-frontend-engineer, business-analyst |
