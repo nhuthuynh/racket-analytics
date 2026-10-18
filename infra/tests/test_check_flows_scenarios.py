@@ -47,6 +47,16 @@ def two_rows(ctx: dict, a: str, b: str) -> None:
     ctx["file"].write_text(_table(a, b), encoding="utf-8")
 
 
+@given(parsers.parse('a flows file with a link to "{target}"'))
+def with_link(ctx: dict, target: str) -> None:
+    ctx["file"].write_text(f"[see]({target})\n| P-01 | Empty | card |\n", encoding="utf-8")
+
+
+@given(parsers.parse('a flows file with the state row "{row}"'))
+def with_state_row(ctx: dict, row: str) -> None:
+    ctx["file"].write_text(f"{row} card |\n", encoding="utf-8")
+
+
 @given("the Sprint 4 flows file")
 def sprint_4(ctx: dict) -> None:
     ctx["file"] = FLOWS_04
@@ -65,6 +75,11 @@ def _run(ctx: dict, *args: str) -> None:
 @when(parsers.parse("the checker runs with the decider {role}"))
 def run_decider(ctx: dict, role: str) -> None:
     _run(ctx, "--decider", role)
+
+
+@when(parsers.parse('the checker runs with the screen {screen} and the states "{states}"'))
+def run_states(ctx: dict, screen: str, states: str) -> None:
+    _run(ctx, "--screen", screen, "--states", states)
 
 
 @when("the checker runs the opened form for DR-04 and its nine screens")

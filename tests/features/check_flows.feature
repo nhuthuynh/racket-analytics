@@ -1,4 +1,4 @@
-# PD-4b (split from PD-4, PR #88; ADR 0037 rule 2, ADR 0047 rule 2): PE-PD4-01, PE-PD4-05, SFE-PD4-07.
+# PD-4b (split from PD-4, PR #88; ADR 0037 rule 2, ADR 0047 rule 2): PE-PD4-01, PE-PD4-05, SFE-PD4-07, PE-PD4b-01, SFE-PD4b-01.
 Feature: The flows checker reports a design review as held only from written decider cells
   As the principal-designer chairing a design review
   I want the decider cells checked by a tool that can fail
@@ -25,6 +25,18 @@ Feature: The flows checker reports a design review as held only from written dec
       Given a flows file whose security-privacy-engineer cell says "**reject** (2026-10-18): consent default"
       When the checker runs with the decider security-privacy-engineer
       Then the checker exits 0 with "0 problem(s)"
+
+  Rule: Links and screen states are checked, not assumed
+
+    Scenario: A relative link to a missing file is refused
+      Given a flows file with a link to "missing.md"
+      When the checker runs with the screen P-01 and the states "Empty"
+      Then the checker exits 1 with "FAIL link: missing.md"
+
+    Scenario: A screen without one of its state rows is refused
+      Given a flows file with the state row "| P-01 | Empty |"
+      When the checker runs with the screen P-01 and the states "Empty,Error"
+      Then the checker exits 1 with "FAIL state: P-01 has no 'Error' row"
 
   Rule: The opened form proves only that the review was opened
 
