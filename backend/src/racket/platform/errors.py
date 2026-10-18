@@ -79,6 +79,7 @@ CODE_MESSAGES.update(
         "no_plan_fits": "No plan fits these settings. Try more time or equipment.",
         "plan_conflict": "Your plan changed. Reload it.",
         "storage_quota_exceeded": "You have used your storage.",  # §7, ST-072a
+        "idempotency_key_reused": "This request id was already used.",
     }
 )
 

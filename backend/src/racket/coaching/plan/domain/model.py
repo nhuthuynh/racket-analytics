@@ -3,6 +3,11 @@
 Pure domain (coaching-plan §5): standard library only, no clock, no randomness, no ids. The root
 checks every invariant on creation and after every change; a violation raises
 ``PlanInvariantBroken`` and leaves the plan as it was.
+
+Follow-through commands (ST-062; FR-124; coaching-plan §5, §7): ``mark_done`` and ``undo_done``.
+Sessions are named by ``(week, index)`` (the service maps the API's ids). Each accepted change
+returns its event and adds 1 to ``version``; a no-op returns None; a refusal (``KeyError``)
+changes nothing.
 """
 
 from __future__ import annotations
@@ -11,6 +16,7 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from typing import Any
 
 LEVELS = ("beginner", "intermediate", "advanced")
@@ -186,10 +192,25 @@ class Session:
     index: int
     minutes_budget: int
     assignments: tuple[DrillAssignment, ...]
+    done_at: datetime | None = None
 
     @property
     def total_minutes(self) -> int:
         return sum(x.minutes for x in self.assignments)
+
+
+@dataclass(frozen=True, slots=True)
+class SessionMarkedDone:
+    week: int
+    index: int
+    version: int
+
+
+@dataclass(frozen=True, slots=True)
+class SessionDoneUndone:
+    week: int
+    index: int
+    version: int
 
 
 def violations(
@@ -320,6 +341,33 @@ class TrainingPlan:
                 self._change((*self.sessions[:n], changed, *self.sessions[n + 1 :]))
                 return
         raise KeyError(f"no assignment at week {week} session {index} position {position}")
+
+    def _session_at(self, week: int, index: int) -> int:
+        for n, s in enumerate(self.sessions):
+            if (s.week, s.index) == (week, index):
+                return n
+        raise KeyError(f"no session at week {week} session {index}")
+
+    def _with_session(self, n: int, s: Session) -> tuple[Session, ...]:
+        return (*self.sessions[:n], s, *self.sessions[n + 1 :])
+
+    def mark_done(self, *, week: int, index: int, at: datetime) -> SessionMarkedDone | None:
+        """Mark one session done at ``at``; None (no change) when it is done already."""
+        n = self._session_at(week, index)
+        s = self.sessions[n]
+        if s.done_at is not None:
+            return None
+        self._change(self._with_session(n, replace(s, done_at=at)))
+        return SessionMarkedDone(week, index, self.version)
+
+    def undo_done(self, *, week: int, index: int) -> SessionDoneUndone | None:
+        """Clear one session's done mark; None (no change) when it is not done."""
+        n = self._session_at(week, index)
+        s = self.sessions[n]
+        if s.done_at is None:
+            return None
+        self._change(self._with_session(n, replace(s, done_at=None)))
+        return SessionDoneUndone(week, index, self.version)
 
     def content(self) -> dict[str, Any]:
         """The plan's content (coaching-plan §6 step 5): no ids, version, clock or done state."""

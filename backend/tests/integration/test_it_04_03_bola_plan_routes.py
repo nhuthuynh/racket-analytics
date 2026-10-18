@@ -83,7 +83,9 @@ def test_it_04_03_another_account_gets_the_404_of_an_unknown_id(
     assert attacker.status_code == 404, attacker.text
     assert _without_support_ref(attacker) == _without_support_ref(unknown)
     assert _without_support_ref(attacker) == _without_support_ref(malformed)
+    # Carlos changed nothing; checked before the owner's positive control, which may change
+    # state (ST-062 serves the routes; TCR row 2026-10-18 in docs/sprints/04/decisions/ST-062.md)
+    assert api.request("ivy", "GET", "/me/plan").json()["sessions"] == ivy["sessions"]
     if (method, template) in SERVED_04:
         owner = api.request("ivy", method, _url(template, own), **kwargs())
         assert owner.status_code not in (404, 405), f"positive control failed: {owner.text}"
-    assert api.request("ivy", "GET", "/me/plan").json()["sessions"] == ivy["sessions"]

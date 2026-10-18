@@ -10,7 +10,9 @@ Through the public HTTP API only, as the browser does (https://localhost:3000/ap
     a doubles match, uploads the 60 s H.264 fixture by tus and waits for "Video received";
  4. starts game 1 and tags the 12 rallies of demoplan.rally_plan (POST .../games and
     POST .../rallies with If-Match versions), then checks the stats have metrics;
- 5. prints the stats page to open and who to sign in as.
+ 5. keeps Ivy's plan if she has one (GET /me/plan); otherwise generates it with the fixed demo
+    preferences (POST /me/plan, demoplan.demo_preferences; ST-064), so a re-run adds nothing;
+ 6. prints the stats page and the plan page to open, and who to sign in as.
 
     python3 scripts/demo/seed_demo.py --base-url https://localhost:3000 --cacert root.crt
 
@@ -150,6 +152,25 @@ def check_stats(c: Client, match_id: str) -> int:
     return len(metrics)
 
 
+@dataclass(frozen=True)
+class DemoPlan:
+    id: str
+    generated: bool  # False when Ivy's existing plan was kept
+
+
+def ensure_plan(c: Client) -> DemoPlan:
+    """Ivy's current plan, or a new one with the demo preferences (after the match is tagged)."""
+    current = c.request("GET", "/me/plan")
+    try:
+        kept = plan.plan_to_keep(current.status, current.json() if current.body else None)
+    except ValueError as e:
+        raise StepFailed(f"read the plan: {e}") from e
+    if kept is not None:
+        return DemoPlan(kept, generated=False)
+    made = c.request("POST", "/me/plan", json_body=plan.demo_preferences())
+    return DemoPlan(str(_expect(made, 201, "generate the plan")["id"]), generated=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--base-url", default="https://localhost:3000", help="web origin (web-tls)")
@@ -177,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
             return REFUSED
         seeded = seed(c, args)
         metrics = check_stats(c, seeded.match_id)
+        demo_plan = ensure_plan(c)
     except (StepFailed, OSError) as e:
         print(f"make demo failed: {e}. Is the stack up (`make up`)?", file=sys.stderr)
         return FAILED
@@ -187,6 +209,10 @@ def main(argv: list[str] | None = None) -> int:
             else "already seeded; nothing added (use --new for another)")  # fmt: skip
     print(f"{seeded.title}: {done}; {metrics} published metrics.")
     print(f"Open {plan.stats_url(base, seeded.match_id)}")
+    made = ("generated with the demo preferences" if demo_plan.generated
+            else "already generated; nothing added")  # fmt: skip
+    print(f"Plan {demo_plan.id}: {made}.")
+    print(f"Open {plan.plan_url(base)}")
     print(f"Sign in as {plan.DEMO_USER_LABEL} (the 'Sign in as {plan.DEMO_USER_LABEL}' button).")
     return 0
 

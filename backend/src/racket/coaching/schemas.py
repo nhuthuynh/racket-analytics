@@ -8,10 +8,12 @@
   because Pydantic's errors cannot carry the contract's field codes.
 * ``plan_body`` renders a saved, cited plan (``PlanView``) as the §2.3 representation: rallies
   lost per game rounded to 2 places, proportions to 4 (coaching-plan §6 step 4).
+* ``parse_op_id`` checks the ``Idempotency-Key`` of ``POST .../done`` (ST-062; api-sprint-04 §3.1).
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -45,6 +47,17 @@ FIELDS = (
     "level",
 )
 OPTIONAL = frozenset({"weekly_minutes"})
+OP_ID_HEADER = "Idempotency-Key"
+_OP_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def parse_op_id(header: str | None) -> str:
+    """The client's op id: 1-64 characters ``A-Z a-z 0-9 - _`` (api-sprint-04 §3.1)."""
+    if not header:
+        raise ValidationFailed("done op id", [FieldError(OP_ID_HEADER, "required")])
+    if _OP_ID.fullmatch(header) is None:
+        raise ValidationFailed("done op id", [FieldError(OP_ID_HEADER, "invalid")])
+    return header
 
 
 class PreferencesIn(BaseModel):

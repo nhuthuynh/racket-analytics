@@ -14,8 +14,11 @@ query and the optimistic version check. Only Coaching reads these tables (contex
   ``purge_match`` deletes every source-match and citation-rally row naming a purged match and
   marks those plans stale (the purge's ``purge_match``, T4-PL-9 / SEC-S4-TM-03).
 
-Citation, done and swap columns exist for ST-057 and ST-062, which map them when the aggregate
-holds them.
+Done state (ST-062) is mapped both ways (``plan_sessions.done_at``); ``update`` writes it.
+ST-062-part2 maps the swap columns (``plan_assignments.reason_not_for_me``,
+``training_plans.excluded_drills``). ``record_done_op`` / ``done_op`` keep the idempotent done
+ops (``plan_done_ops``, unique ``(account_id, op_id)``; api-sprint-04 §3.1); they go with the plan
+(``delete_owned``).
 """
 
 from __future__ import annotations
@@ -133,6 +136,15 @@ class StoredSession:
 
 
 @dataclass(frozen=True, slots=True)
+class DoneOp:
+    """A recorded ``POST .../done`` op: its session, the plan version and done time it answered."""
+
+    session_id: uuid.UUID
+    plan_version: int
+    done_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class StoredPlan:
     id: uuid.UUID
     owner_id: uuid.UUID
@@ -187,7 +199,7 @@ def to_rows(
                 "week": s.week,
                 "session_index": s.index,
                 "minutes_budget": s.minutes_budget,
-                "done_at": None,
+                "done_at": s.done_at,
             }
         )
         assignments += [
@@ -234,6 +246,7 @@ def from_rows(rows: PlanRows, library: Mapping[str, Drill]) -> TrainingPlan:
                 )
                 for a in sorted(by_session[s["id"]], key=lambda a: a["position"])
             ),
+            done_at=s.get("done_at"),
         )
         for s in sorted(rows.sessions, key=lambda s: (s["week"], s["session_index"]))
     ]
@@ -410,6 +423,14 @@ class PlanRepository:
             )
         }
         for s in plan.sessions:
+            self.session.execute(
+                sa.update(plan_sessions)
+                .where(
+                    plan_sessions.c.owner_id == owner_id,
+                    plan_sessions.c.id == slots.get((s.week, s.index)),
+                )
+                .values(done_at=s.done_at)
+            )
             for x in s.assignments:
                 changed = self.session.execute(
                     sa.update(plan_assignments)
@@ -422,3 +443,26 @@ class PlanRepository:
                 )
                 if changed.rowcount != 1:  # type: ignore[attr-defined]
                     raise ValueError(f"plan {plan_id} has no slot {s.week}.{s.index}.{x.position}")
+
+    def done_op(self, owner_id: uuid.UUID, op_id: str) -> DoneOp | None:
+        row = self.session.execute(
+            sa.select(plan_done_ops).where(
+                plan_done_ops.c.account_id == owner_id, plan_done_ops.c.op_id == op_id
+            )
+        ).one_or_none()
+        if row is None:
+            return None
+        return DoneOp(row.session_id, row.plan_version, row.created_at)
+
+    def record_done_op(self, owner_id: uuid.UUID, op_id: str, result: DoneOp) -> None:
+        """Store the op's answer; a concurrent op with the same key raises ``IntegrityError``.
+        ``created_at`` holds the answered ``done_at`` (decision row in ST-062.md)."""
+        self.session.execute(
+            sa.insert(plan_done_ops).values(
+                account_id=owner_id,
+                op_id=op_id,
+                session_id=result.session_id,
+                plan_version=result.plan_version,
+                created_at=result.done_at,
+            )
+        )

@@ -41,6 +41,11 @@ export default async function StatsPage({ params }: Props) {
       <h1>Stats</h1>
       <p>{match.title}</p>
       <p>
+        <Link href="/plan" className="touch-link">
+          Your training plan
+        </Link>
+      </p>
+      <p>
         These stats come from the rallies you tagged. Change a rally on the{' '}
         <Link href={`/matches/${match.id}/sheet`} className="inline-target">
           score sheet

@@ -4,8 +4,9 @@ Standard library only, no I/O (seed_demo.py does the HTTP). Ubiquitous language 
 and Scorebook contexts (api-sprint-02 §2): a doubles *match* gets *game* 1, and each *rally* is
 a Quick Tag: its time on the video, the *ending*, the *winning side* and, where the player said
 so, the *responsible player* and *fault kind*. The demo only says what a player would tap; the
-API decides the score and the stats (no product rule is copied here).
-Tests: infra/tests/test_demo_plan.py.
+API decides the score and the stats (no product rule is copied here). ST-064 (Coaching context):
+the demo player's *preferences* go to ``POST /me/plan``; the API ranks and assembles the *plan*.
+Tests: infra/tests/test_demo_plan.py, infra/tests/test_demo_plan_step.py.
 """
 
 from __future__ import annotations
@@ -137,3 +138,33 @@ def choose(found: Iterable[DemoMatch], *, planned: int, new: bool = False) -> Ac
 
 def stats_url(origin: str, match_id: str) -> str:
     return f"{origin.rstrip('/')}/matches/{match_id}/stats"
+
+
+NO_PLAN = "no_plan"
+
+
+def demo_preferences() -> dict[str, Any]:
+    """The ``POST /me/plan`` body of the fixed demo player: solo, 30 min, 3 sessions a week, no
+    ball machine (a wall only, as live_plan.PREFS), intermediate; a fresh dict per call."""
+    return {"minutes_per_session": 30, "sessions_per_week": 3, "players_available": 1,
+            "equipment": ["wall"], "level": "intermediate"}  # fmt: skip
+
+
+def plan_to_keep(status: int, body: Any) -> str | None:
+    """From ``GET /me/plan``: the id of the plan Ivy already has, or None when she has none
+    (404 ``no_plan``). Anything else is not a plan API answer: ValueError says why."""
+    if status == 404:
+        code = ((body or {}).get("error") or {}).get("code") if isinstance(body, dict) else None
+        if code == NO_PLAN:
+            return None
+        raise ValueError(f"GET /me/plan is 404 {code!r}, not {NO_PLAN!r}: no plan API here")
+    if status != 200:
+        raise ValueError(f"GET /me/plan: HTTP {status}")
+    plan_id = body.get("id") if isinstance(body, dict) else None
+    if not isinstance(plan_id, str) or not plan_id:
+        raise ValueError("GET /me/plan answered 200 with no plan id")
+    return plan_id
+
+
+def plan_url(origin: str) -> str:
+    return f"{origin.rstrip('/')}/plan"
