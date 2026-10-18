@@ -112,6 +112,13 @@ describe('service worker plan cache (negative first)', () => {
     expect(c.store.get(PLAN_CACHE)!.size).toBe(0);
   });
 
+  it('a server error (5xx) is passed on and keeps the kept plan', async () => {
+    const c = fakeCaches({ [PLAN_CACHE]: { [`${ORIGIN}/api/me/plan`]: planJson() } });
+    const sw = loadWorker(c.api, () => Promise.resolve(new Response('{}', { status: 502 })));
+    expect((await (await dispatch(sw, request(`${ORIGIN}/api/me/plan`)))!).status).toBe(502);
+    expect(c.store.get(PLAN_CACHE)!.size).toBe(1);
+  });
+
   it('keeps the /plan shell and serves it to an offline navigation', async () => {
     const c = fakeCaches();
     let up = true;
