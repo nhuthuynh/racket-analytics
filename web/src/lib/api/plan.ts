@@ -173,7 +173,8 @@ function parseAssignment(raw: unknown): DrillAssignment {
   };
 }
 
-function parseSession(raw: unknown): Session {
+/** A §2.3 session object (also the swap answer's `session`, ST-063c); throws `PlanShapeError`. */
+export function parseSession(raw: unknown): Session {
   const s = obj(raw, 'session');
   return {
     id: str(s.id, 'session.id'),
