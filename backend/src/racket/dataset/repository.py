@@ -88,6 +88,26 @@ class LabelRepository:
             .values(version=version, rallies=rallies, events=events, updated_at=at)
         )
 
+    def full_tag_label_counts(self) -> dict[uuid.UUID, int]:
+        """Each label session's count of rallies plus events (ST-070 label-set candidates)."""
+        rows = self.session.execute(
+            sa.select(
+                label_sessions.c.match_id,
+                sa.func.jsonb_array_length(label_sessions.c.rallies)
+                + sa.func.jsonb_array_length(label_sessions.c.events),
+            )
+        ).all()
+        return {uuid.UUID(str(r[0])): int(r[1]) for r in rows}
+
+    def team_consented(self, match_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+        """Which of ``match_ids`` have a team-held consent record (FR-150)."""
+        if not match_ids:
+            return set()
+        found = self.session.execute(
+            sa.select(label_consents.c.match_id).where(label_consents.c.match_id.in_(match_ids))
+        ).scalars()
+        return {uuid.UUID(str(m)) for m in found}
+
     def delete_for_match(self, match_id: uuid.UUID) -> int:
         rows = 0
         for table in (label_sessions, label_consents):

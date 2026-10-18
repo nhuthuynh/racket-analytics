@@ -20,6 +20,8 @@ from racket.players.models import (
     sessions,
     sign_in_links,
     sign_in_requests,
+    training_consent_events,
+    training_consents,
 )
 
 ROLES = frozenset({"labeller"})  # FR-150: the Full Tag tool exists only for this role
@@ -94,6 +96,8 @@ def purge_account(session: Session, account_id: uuid.UUID) -> None:
     session.execute(
         sa.delete(retention_settings).where(retention_settings.c.account_id == account_id)
     )
+    for table in (training_consent_events, training_consents):  # FR-009 (0021)
+        session.execute(sa.delete(table).where(table.c.account_id == account_id))
     session.execute(
         sa.delete(rate_limit_events).where(rate_limit_events.c.key.like(f"%:{account_id}"))
     )
@@ -115,6 +119,24 @@ def review_video_days(
         )
     } if account_ids else {}  # fmt: skip
     return {a: chosen.get(a, default) for a in account_ids}
+
+
+def training_opted_in(session: Session, account_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """FR-009 (ST-070; context map R9): which of ``account_ids`` are live accounts that opted in
+    to training use now. No row means not opted in (T4-CS-1); a deleted account never counts.
+    A database error propagates, so the caller's build fails closed."""
+    if not account_ids:
+        return set()
+    found = session.execute(
+        sa.select(training_consents.c.account_id)
+        .join(accounts, accounts.c.id == training_consents.c.account_id)
+        .where(
+            training_consents.c.account_id.in_(account_ids),
+            training_consents.c.opt_in.is_(True),
+            accounts.c.deleted_at.is_(None),
+        )
+    ).scalars()
+    return {uuid.UUID(str(a)) for a in found}
 
 
 def has_role(session: Session, account_id: uuid.UUID, role: str) -> bool:

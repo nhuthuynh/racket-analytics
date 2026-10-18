@@ -28,6 +28,8 @@ from racket.players.service import (
     IdentityService,
     MagicLinkService,
     RetentionSettings,
+    TrainingConsentSettings,
+    TrainingConsentState,
 )
 
 security_log = logging.getLogger(SECURITY_LOGGER)
@@ -329,3 +331,49 @@ def put_retention(
     """FR-008: one of the choices (closed body; ``unknown_value``, ``required``); applies to
     every match of the account from the next purge pass."""
     return _retention(settings, RetentionSettings(session, settings).choose(account.id, body))
+
+
+def _training_consent(state: TrainingConsentState) -> JSONResponse:
+    changed_at = None
+    if state.changed_at is not None:
+        changed_at = (
+            state.changed_at.astimezone(UTC)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
+    body = {"opt_in": state.opt_in, "changed_at": changed_at}
+    return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+
+def _training_consent_on(request: Request) -> Settings:
+    """api-sprint-04 §1 rule 2: 404 while ``FEATURE_TRAINING_CONSENT`` is off, before the
+    session check, so the route does not exist for anyone."""
+    settings = settings_of(request)
+    if not settings.feature_training_consent:
+        raise NotFound("training consent off")
+    return settings
+
+
+TrainingConsentOn = Annotated[Settings, Depends(_training_consent_on)]
+
+
+@router.get("/me/training-consent")
+def get_training_consent(
+    _: TrainingConsentOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    """FR-009 (api-sprint-04 §6): the session account's opt-in; off until it opts in."""
+    return _training_consent(TrainingConsentSettings(session).state(account.id))
+
+
+@router.put("/me/training-consent")
+def put_training_consent(
+    _: TrainingConsentOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+    body: Annotated[Any, Body()] = None,
+) -> Response:
+    """FR-009: opt in or revoke (closed body ``{"opt_in": bool}``); applies from the next
+    label-set build; one audit event per change (T4-CS-3)."""
+    return _training_consent(TrainingConsentSettings(session).choose(account.id, body))
