@@ -78,7 +78,8 @@ export interface TrainingPlan {
 }
 
 export type PlanRead =
-  | { kind: 'plan'; plan: TrainingPlan }
+  /** `offlineAsOf`: the service worker's kept copy, answered offline (ST-063c). */
+  | { kind: 'plan'; plan: TrainingPlan; offlineAsOf?: string }
   | { kind: 'no_plan' }
   | { kind: 'no_tagged_match' }
   | { kind: 'signed_out' }
@@ -173,7 +174,8 @@ function parseAssignment(raw: unknown): DrillAssignment {
   };
 }
 
-function parseSession(raw: unknown): Session {
+/** A §2.3 session object (also the swap answer's `session`, ST-063c); throws `PlanShapeError`. */
+export function parseSession(raw: unknown): Session {
   const s = obj(raw, 'session');
   return {
     id: str(s.id, 'session.id'),
@@ -236,6 +238,8 @@ export function parsePlan(raw: unknown): TrainingPlan {
 }
 
 const SUPPORT_REF_RE = /^ref_[0-9a-f]{16}$/;
+/** Set by public/sw.js on a plan read answered from its cache: when that copy was kept. */
+export const OFFLINE_COPY = 'x-ra-offline-copy';
 
 async function errorCode(response: Response): Promise<{ code: string | null; supportRef: string | null }> {
   try {
@@ -267,7 +271,10 @@ export function createPlanApi({ baseUrl, fetch: fetchFn }: { baseUrl: string; fe
       }
       if (response.ok) {
         try {
-          return { kind: 'plan', plan: parsePlan(await response.json()) };
+          const plan = parsePlan(await response.json());
+          // The service worker's kept copy, answered offline (public/sw.js, ST-063c).
+          const kept = response.headers.get(OFFLINE_COPY);
+          return kept ? { kind: 'plan', plan, offlineAsOf: kept } : { kind: 'plan', plan };
         } catch {
           return { kind: 'error', supportRef: null };
         }
