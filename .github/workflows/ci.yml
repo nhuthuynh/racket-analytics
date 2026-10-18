@@ -1,6 +1,8 @@
 # CI and merge gates (ST-002; sprint-00 §3.1, §8; working-agreement §7.1).
 # Every gate fails closed: a missing project, lockfile or report is a red gate, never a skip.
 # Branch protection requires the single `ci-gate` check (docs/process/ci-cd.md).
+# Draft PRs run no job (CI-DRAFT-SKIP, ADR 0052): policy decisions are made while draft, and
+# `ready_for_review` starts the full run; merge_ready.py needs ci-gate success on the head.
 name: CI
 
 on:
@@ -42,7 +44,7 @@ jobs:
   # ------------------------------------------------------------------ PR policy gates
   pr-policy:
     name: PR policy (test immutability, size)
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     # Both steps read the PR's current labels from the API (pr_labels.py); the frozen PR_LABELS
@@ -84,6 +86,7 @@ jobs:
 
   workflow-lint:
     name: Workflow lint (actionlint)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -99,6 +102,7 @@ jobs:
   # ------------------------------------------------------------------ backend static checks
   python-lint:
     name: Python lint and format (Ruff)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -118,6 +122,7 @@ jobs:
 
   python-types:
     name: Python types (mypy; strict on domain modules)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -136,6 +141,7 @@ jobs:
 
   python-unit:
     name: Python unit suites (time-budgeted)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -196,6 +202,7 @@ jobs:
     # PE-R1-ST053-01: also against the base branch's library.lock, so a PR cannot delete or edit
     # a locked drill version by changing the lock in the same PR.
     name: Drill library lint (FR-140, ST-053)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     defaults:
@@ -234,6 +241,7 @@ jobs:
   # ------------------------------------------------------------------ integration on Compose
   integration:
     name: Integration, scenario and regression suites on Compose (+ changed-lines coverage)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -369,6 +377,7 @@ jobs:
 
   fixture-integrity:
     name: Fixture and gold-set integrity (FR-151, NFR-078)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -386,6 +395,7 @@ jobs:
 
   infra-tests:
     name: Infra, hooks and CI-script tests (ST-001..ST-003)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -414,6 +424,7 @@ jobs:
   # ------------------------------------------------------------------ web
   web-checks:
     name: Web lint, types, unit, coverage, bundle budget
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -452,6 +463,7 @@ jobs:
     # browsers one after the other took 18-19 min of gated run plus ~9 min listed run, and a
     # slower runner (main run 38016581726) ran past the job limit with no report.
     name: E2E (Playwright, ${{ matrix.project }}) with axe-core
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     # 45: the gated step stops itself at its --global-timeout (18 min) with its report, and the
     # listed red-until step runs failing tests to their own timeouts (ST-054).
@@ -575,6 +587,7 @@ jobs:
     # p99 <= 800 ms, availability >= 99.5% (NFR-010 "dashboard", NFR-041); the Sprint 2 reads
     # stay a baseline.
     name: Locust baseline 50 RPS (ST-039, ST-054; NFR-010 dashboard, NFR-013, NFR-041)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -627,6 +640,7 @@ jobs:
   # ------------------------------------------------------------------ supply chain
   secrets-and-audit:
     name: Secret scan, dependency audit
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -663,6 +677,7 @@ jobs:
 
   sbom-licences:
     name: SBOM (CycloneDX) and licence gate
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -710,7 +725,7 @@ jobs:
   # ------------------------------------------------------------------ nightly flaky report
   flaky-report:
     name: Flaky-test report (NFR-074)
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -753,7 +768,8 @@ jobs:
   # ------------------------------------------------------------------ single required check
   ci-gate:
     name: ci-gate
-    if: always()
+    # always() so a failed or skipped gate is judged; never on a draft (CI-DRAFT-SKIP)
+    if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     needs:
       - pr-policy
       - workflow-lint
