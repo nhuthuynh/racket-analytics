@@ -18,20 +18,14 @@ scenarios("check_flows.feature")
 
 TOOL = REPO_ROOT / "docs" / "design" / "tools" / "check_flows.py"
 FLOWS_04 = REPO_ROOT / "docs" / "design" / "flows-sprint-04.md"
-DECIDERS = [
-    "senior-frontend-engineer",
-    "pickleball-domain-coach",
-    "product-manager",
-    "security-privacy-engineer",
-    "business-analyst",
-]
+ROLE = "security-privacy-engineer"
+DECIDERS = ["senior-frontend-engineer", "pickleball-domain-coach", "product-manager", ROLE]
+DECIDERS += ["business-analyst"]
 SCREENS = ["P-01", "P-02", "P-03", "A-10", "A-11", "A-12", "A-13", "R-01", "Q-10"]
 
 
 def _table(*cells: str) -> str:
-    rows = "".join(
-        f"| security-privacy-engineer | R4-4 | 2026-10-17 | 2026-10-18 | {c} |\n" for c in cells
-    )
+    rows = "".join(f"| {ROLE} | R4-4 | 2026-10-17 | 2026-10-18 | {c} |\n" for c in cells)
     return (
         "## 14. Design review record (DR-04)\n\n| Role | Items | Opened | Due | Cell |\n"
         f"|---|---|---|---|---|\n{rows}\n## 15. Next\n"
@@ -60,7 +54,7 @@ def sprint_4(ctx: dict) -> None:
 
 @given("a flows file path that does not exist")
 def missing(ctx: dict) -> None:
-    pass  # ctx["file"] is never written
+    ctx["file"] = ctx["file"].with_name("absent.md")
 
 
 def _run(ctx: dict, *args: str) -> None:

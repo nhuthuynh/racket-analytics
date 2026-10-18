@@ -1,6 +1,4 @@
-# PD-4b (split from PD-4, PR #88; ADR 0037 rule 2, ADR 0047 rule 2): the design-review gate
-# check for a flows file. A decider cell counts only when the decider has written its verdict
-# with a date (PE-PD4-01, PE-PD4-05), and each decider has exactly one row (SFE-PD4-07).
+# PD-4b (split from PD-4, PR #88; ADR 0037 rule 2, ADR 0047 rule 2): PE-PD4-01, PE-PD4-05, SFE-PD4-07.
 Feature: The flows checker reports a design review as held only from written decider cells
   As the principal-designer chairing a design review
   I want the decider cells checked by a tool that can fail

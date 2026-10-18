@@ -2,7 +2,6 @@
 """Gate checks for a design flows file (PD-4, PD-4b; ADR 0047 rule 2).
 
 Owner: principal-designer. Documentation tooling, not product code. It checks one flows file:
-
 1. every relative Markdown link resolves to a file in the repository (anchors are ignored);
 2. every screen named with ``--screen`` has a states row ``| <id> | <state> |`` for each state in
    ``--states``;
@@ -15,17 +14,10 @@ Owner: principal-designer. Documentation tooling, not product code. It checks on
    ``Opened`` column; the cell may still say "pending" (the review is opened, not held);
 5. every role named in ``--decider`` or ``--opened`` has exactly one row (SFE-PD4-07), so a
    pending row cannot hide behind a decided one.
-
 ``--decider`` rc 0 means the cells are written, not that the review passed: a ``reject`` cell
 counts as written and still blocks the tickets the review gates.
-
-Usage:
-    python3 docs/design/tools/check_flows.py docs/design/flows-sprint-04.md --review DR-04 \
-        --decider principal-designer --opened senior-frontend-engineer \
-        --screen P-01 --states Empty,Loading,Error
-
-Exit codes: 0 all checks pass; 1 at least one problem (one ``FAIL`` line each); 2 file missing.
-Standard library only.
+Usage: check_flows.py FILE --review DR-04 [--decider R] [--opened R] [--screen ID] [--states A,B]
+Exit 0 all pass; 1 at least one problem (one ``FAIL`` line each); 2 file missing. Stdlib only.
 """
 
 from __future__ import annotations
@@ -33,7 +25,11 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
+
+Check = Callable[[str], Any]
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
@@ -85,49 +81,39 @@ def _review_table(text: str, review: str) -> tuple[list[str], list[list[str]]] |
     return f"FAIL review: {review} has no decider table with a 'Cell' column"
 
 
-def _column(header: list[str], rows: list[list[str]], role: str, name: str) -> list[str]:
-    i = header.index(name)
-    return [r[i] for r in rows if r and r[0] == role and len(r) > i]
-
-
-def _duplicate(review: str, role: str, values: list[str]) -> str | None:
-    if len(values) > 1:
-        return f"FAIL row: {review} has {len(values)} rows for {role}; exactly one per role"
-    return None
+def _role_check(
+    text: str, review: str, roles: list[str], column: str, ok: Check, fail: str
+) -> list[str]:
+    """Each role has exactly one row (SFE-PD4-07) and ``ok`` holds for its ``column`` value."""
+    table = _review_table(text, review)
+    if isinstance(table, str):
+        return [table]
+    header, rows = table
+    if column not in header:
+        return [f"FAIL review: {review} decider table has no '{column}' column"]
+    i, out = header.index(column), []
+    for role in roles:
+        values = [r[i] for r in rows if r and r[0] == role and len(r) > i]
+        if len(values) > 1:
+            out.append(
+                f"FAIL row: {review} has {len(values)} rows for {role}; exactly one per role"
+            )
+        elif not (values and ok(values[0])):
+            out.append(f"FAIL {fail} for {role}")
+    return out
 
 
 def missing_cells(text: str, review: str, deciders: list[str]) -> list[str]:
     """A decider cell counts only when its one Cell opens with accept/reject and an ISO date."""
-    table = _review_table(text, review)
-    if isinstance(table, str):
-        return [table]
-    header, rows = table
-    out = []
-    for role in deciders:
-        cells = _column(header, rows, role, "Cell")
-        if dup := _duplicate(review, role, cells):
-            out.append(dup)
-        elif not (cells and DECIDED.match(cells[0])):
-            out.append(f"FAIL cell: {review} has no dated decider cell for {role}")
-    return out
+    return _role_check(
+        text, review, deciders, "Cell", DECIDED.match, f"cell: {review} has no dated decider cell"
+    )
 
 
 def unopened_rows(text: str, review: str, roles: list[str]) -> list[str]:
     """A role's row exists and its Opened column has an ISO date (the cell may still be pending)."""
-    table = _review_table(text, review)
-    if isinstance(table, str):
-        return [table]
-    header, rows = table
-    if "Opened" not in header:
-        return [f"FAIL review: {review} decider table has no 'Opened' column"]
-    out = []
-    for role in roles:
-        opened = _column(header, rows, role, "Opened")
-        if dup := _duplicate(review, role, opened):
-            out.append(dup)
-        elif not (opened and DATE.search(opened[0])):
-            out.append(f"FAIL opened: {review} has no row with a dated Opened column for {role}")
-    return out
+    fail = f"opened: {review} has no row with a dated Opened column"
+    return _role_check(text, review, roles, "Opened", DATE.search, fail)
 
 
 def main(argv: list[str] | None = None) -> int:

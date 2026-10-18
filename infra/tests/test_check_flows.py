@@ -1,18 +1,11 @@
-"""PD-4b unit tests: the DR-04 decider-cell check in docs/design/tools/check_flows.py.
-
-Regression for review finding PE-PD4-01: the check counted any ISO date anywhere in a decider's
-row, so the Opened and Due columns made a "pending" cell pass. A decider cell counts only when
-the Cell column itself holds a verdict (accept or reject) with an ISO date. A row that is only
-opened (dated Opened column, pending cell) is reported by ``--opened``, never by ``--decider``.
-PE-PD4-05: the verdict and its date must open the cell (``[role:] [**]accept|reject[**] (date``),
-so a cell that only mentions them does not pass. SFE-PD4-07: a role with more than one row fails,
-so a pending row cannot hide behind a decided one. Negative cases first.
-"""
+"""PD-4b unit tests for docs/design/tools/check_flows.py, negative cases first. PE-PD4-01: only
+the Cell column counts (a pending cell with dated Opened/Due fails; ``--opened`` proves opened).
+PE-PD4-05: the cell must open with ``[role:] [**]accept|reject[**] (date``. SFE-PD4-07: one row
+per role, so a pending row cannot hide behind a decided one."""
 
 from __future__ import annotations
 
 import importlib.util
-import sys
 from pathlib import Path
 
 import pytest
@@ -23,17 +16,11 @@ pytestmark = pytest.mark.unit
 TOOL = REPO_ROOT / "docs" / "design" / "tools" / "check_flows.py"
 
 
-def _load():
-    spec = importlib.util.spec_from_file_location("check_flows", TOOL)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["check_flows"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-cf = _load()
+_spec = importlib.util.spec_from_file_location("check_flows", TOOL)
+assert _spec
+assert _spec.loader
+cf = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(cf)
 
 HEAD = (
     "## 14. Design review record (DR-04)\n\n"
@@ -47,9 +34,6 @@ def _doc(*rows: str) -> str:
 
 
 ROLE = "security-privacy-engineer"
-
-
-# --- negative cases first -------------------------------------------------------------------
 
 
 def test_pending_cell_with_dated_opened_and_due_columns_fails():
@@ -111,9 +95,6 @@ def test_cli_pending_cell_exits_1(tmp_path: Path, capsys):
     f.write_text(_doc(f"| {ROLE} | R4-4 | 2026-10-17 | 2026-10-18 | pending |"))
     assert cf.main([str(f), "--review", "DR-04", "--decider", ROLE]) == 1
     assert "check-flows: 1 problem(s)" in capsys.readouterr().out
-
-
-# --- positive cases -------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
