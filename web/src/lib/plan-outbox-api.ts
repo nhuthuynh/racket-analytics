@@ -26,6 +26,7 @@ export type SwapResult =
   | { kind: 'plan_conflict' }
   | { kind: 'not_found' }
   | { kind: 'signed_out' }
+  | { kind: 'rate_limited'; retryAt: string | null }
   | Failed;
 
 export interface FollowThroughApi {
@@ -35,6 +36,8 @@ export interface FollowThroughApi {
 }
 
 const SUPPORT_REF_RE = /^ref_[0-9a-f]{16}$/;
+/** RFC 3339 UTC `retry_at` on a 429 (api-sprint-01 §1.1); anything else is read as no time. */
+const RETRY_AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
 /** 409 codes each route documents (api-sprint-04 §9). */
 const DONE_CODES = { idempotency_key_reused: 'key_reused', plan_conflict: 'plan_conflict' } as const;
 const SWAP_CODES = { no_alternative: 'no_alternative', session_done: 'session_done', plan_conflict: 'plan_conflict' } as const;
@@ -125,6 +128,11 @@ export function createFollowThroughApi({ baseUrl, fetch: fetchFn }: { baseUrl: s
         } catch {
           return failed;
         }
+      }
+      if (a.status === 429 && errorOf(a.body).code === 'rate_limited') {
+        const e = (a.body as { error?: { retry_at?: unknown } } | null)?.error;
+        const at = typeof e?.retry_at === 'string' && RETRY_AT_RE.test(e.retry_at) ? e.retry_at : null;
+        return { kind: 'rate_limited', retryAt: at };
       }
       return refused(a, SWAP_CODES);
     },

@@ -10,6 +10,7 @@ import type { Session } from '@/lib/api/plan';
 import { createOutbox, memoryOutboxStore, type Outbox } from '@/lib/plan-outbox';
 import type { FollowThroughApi, SwapResult } from '@/lib/plan-outbox-api';
 import { idbOutboxStore } from '@/lib/plan-outbox-idb';
+import { swapRateLimitMessage } from './PlanViewWords';
 
 export const WORDS = {
   queued: 'Saved on this device, will sync',
@@ -251,9 +252,13 @@ const REASON_MAX = 200;
 
 type Problem =
   | { kind: 'no_alternative' | 'session_done' | 'plan_conflict' }
-  | { kind: 'failed'; supportRef: string | null };
+  | { kind: 'failed'; supportRef: string | null }
+  | { kind: 'rate_limited'; retryAt: string | null };
 
-const PROBLEM_TEXT: Record<Problem['kind'], string> = {
+/** The dialog stays open with the form (and the reason) for these; the others close it. */
+const KEEPS_FORM: ReadonlySet<Problem['kind']> = new Set(['failed', 'rate_limited']);
+
+const PROBLEM_TEXT: Record<Exclude<Problem['kind'], 'rate_limited'>, string> = {
   no_alternative: 'No other drill fits your setup for this. Your plan is unchanged.',
   session_done: 'This session is already done, so its drills cannot be swapped. Your plan is unchanged.',
   plan_conflict: 'Your plan changed on another device. Nothing was swapped.',
@@ -301,10 +306,10 @@ export function NotForMeDialog({
     const r = await onSwap(reason);
     setBusy(false);
     if (r.kind === 'no_alternative' || r.kind === 'session_done' || r.kind === 'plan_conflict') setProblem({ kind: r.kind });
-    else if (r.kind === 'failed') setProblem(r);
+    else if (r.kind === 'failed' || r.kind === 'rate_limited') setProblem(r);
   }
 
-  const closing = problem && problem.kind !== 'failed';
+  const closing = problem && !KEEPS_FORM.has(problem.kind);
   return (
     <dialog
       ref={dialog}
@@ -319,7 +324,7 @@ export function NotForMeDialog({
         <h2 id={`${id}-title`}>{`Swap ${drillName}?`}</h2>
         {problem ? (
           <div ref={alert} role="alert" tabIndex={-1} className="notice notice--error">
-            <p>{PROBLEM_TEXT[problem.kind]}</p>
+            <p>{problem.kind === 'rate_limited' ? swapRateLimitMessage(problem.retryAt) : PROBLEM_TEXT[problem.kind]}</p>
             {problem.kind === 'failed' && problem.supportRef ? <p>{`Reference: ${problem.supportRef}`}</p> : null}
           </div>
         ) : null}
