@@ -12,6 +12,7 @@ import httpx
 import pytest
 import sqlalchemy as sa
 
+from racket.video_ingest.repository import UploadRepository
 from tests.support import contract, tus
 from tests.support.api import ApiDriver
 from tests.support.flows import create_match
@@ -68,6 +69,25 @@ def test_it_04_09_invalid_bodies_spend_no_slot_and_the_limit_is_per_account(
     assert api.run(create_match(api.as_user("carlos"), "Carlos's own"))
 
 
+@pytest.mark.parametrize("env", [{"MATCH_CREATIONS_PER_HOUR": 1000, "TRUSTED_PROXY_HOPS": 1}],
+                         indirect=True)  # fmt: skip
+def test_it_04_09_the_61st_create_from_one_ip_is_refused_and_a_forged_xff_does_not_rotate_it(
+    env: None, api: ApiDriver, committed_db: Any
+) -> None:
+    """SEC-4 T4-QT-2: ``match:create:ip:<ip>`` 60/h over accounts; the left-most hop is forged."""
+
+    def post(who: str, xff: str) -> httpx.Response:
+        body, headers = {"title": "IP", "format": "doubles"}, {"X-Forwarded-For": xff}
+        return api.request(who, "POST", contract.MATCHES, json=body, headers=headers)
+
+    for i in range(60):
+        assert post(("ivy", "carlos")[i % 2], f"10.0.0.{i}, 203.0.113.7").status_code == 201
+    over = post("dana", "10.9.9.9, 203.0.113.7")
+    assert (over.status_code, over.json()["error"]["code"]) == (429, "rate_limited"), over.text
+    assert post("dana", "203.0.113.8").status_code == 201
+    assert _count(committed_db, "SELECT count(*) FROM matches") == 61
+
+
 OUT_OF_THE_WAY = {"MATCH_CREATIONS_PER_HOUR": 1000, "UPLOAD_MAX_OPEN_SESSIONS": 1000,
                   "UPLOAD_CREATE_LIMIT_PER_HOUR": 1000}  # fmt: skip
 
@@ -117,3 +137,40 @@ def test_it_04_09_flag_off_keeps_todays_limits(
     assert _codes(responses) == {(201, None): BURST}
     first = responses[0].json()["id"]
     assert api.run(tus.create(api.as_user("ivy"), first, LENGTH)).status_code == 201
+
+
+@pytest.mark.parametrize("env", [{"STORAGE_QUOTA_BYTES": LENGTH + 1}], indirect=True)
+def test_it_04_09_a_completion_between_the_quota_reads_is_never_missed(
+    env: None, api: ApiDriver, committed_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PE-072a-02: a PATCH completion commits between check 4a's two reads → fail closed."""
+    ivy = api.as_user("ivy")
+    done = api.run(create_match(ivy, "Completing"))
+    api.run(tus.start(ivy, done, LENGTH))
+    completed: list[bool] = []
+
+    def complete_after(read: Any) -> Any:
+        def wrapped(self: UploadRepository, *args: Any) -> Any:
+            result = read(self, *args)
+            if not completed:  # what PATCH completion commits, between the two reads
+                completed.append(True)
+                with committed_db.begin() as conn:
+                    asset = conn.execute(sa.text(
+                        "INSERT INTO media_assets (id, owner_id, match_id, object_key, size_bytes,"
+                        " probe_status, created_at, updated_at) SELECT gen_random_uuid(), owner_id,"
+                        " match_id, object_key, length, 'pending', now(), now()"
+                        " FROM upload_sessions WHERE match_id = :m RETURNING id"), {"m": done}
+                    ).scalar_one()  # fmt: skip
+                    conn.execute(sa.text("UPDATE upload_sessions SET status = 'complete',"
+                                         " media_asset_id = :a WHERE match_id = :m"),
+                                 {"a": asset, "m": done})  # fmt: skip
+            return result
+
+        return wrapped
+
+    for name in ("open_for_owner", "stored_by_match"):
+        monkeypatch.setattr(UploadRepository, name, complete_after(getattr(UploadRepository, name)))
+    over = api.run(tus.create(ivy, api.run(create_match(ivy, "Over")), 2))
+    assert (over.status_code, over.json()["error"]["code"]) == (429, "storage_quota_exceeded"), (
+        over.text
+    )

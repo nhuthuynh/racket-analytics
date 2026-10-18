@@ -28,11 +28,16 @@ def quotas_on(monkeypatch: pytest.MonkeyPatch, quota: str | None) -> None:
         monkeypatch.setenv("STORAGE_QUOTA_BYTES", quota)
 
 
-@given(parsers.parse("Ivy has created {n:d} matches in the last hour"))
-def created(ctx: dict[str, Any], api: ApiDriver, n: int) -> None:
-    ctx["api"] = api
-    for i in range(n):
-        api.run(create_match(api.as_user("ivy"), f"Hour {i}"))
+@given(parsers.parse("each account may create {n:d} matches an hour"))
+def per_account(monkeypatch: pytest.MonkeyPatch, n: int) -> None:
+    monkeypatch.setenv("MATCH_CREATIONS_PER_HOUR", str(n))
+
+
+@given(parsers.re(r"(?P<who>[\w ]+?) ha(?:s|ve) created (?P<n>\d+) matches in the last hour"))
+def created(ctx: dict[str, Any], api: ApiDriver, who: str, n: str) -> None:
+    ctx["api"], users = api, who.lower().split(" and ")  # in turn, all from one test address
+    for i in range(int(n)):
+        api.run(create_match(api.as_user(users[i % len(users)]), f"Hour {i}"))
 
 
 @given(parsers.parse("Ivy has an unfinished upload of {length:d} bytes"))
@@ -42,10 +47,10 @@ def unfinished(ctx: dict[str, Any], api: ApiDriver, length: int) -> None:
     api.run(tus.start(ivy, api.run(create_match(ivy, "Open")), length))
 
 
-@when("Ivy creates another match")
-def create_another(ctx: dict[str, Any]) -> None:
+@when(parsers.parse("{who} creates another match"))
+def create_another(ctx: dict[str, Any], who: str) -> None:
     body = {"title": "One more", "format": "doubles"}
-    ctx["response"] = ctx["api"].request("ivy", "POST", contract.MATCHES, json=body)
+    ctx["response"] = ctx["api"].request(who.lower(), "POST", contract.MATCHES, json=body)
 
 
 @when(parsers.parse("Ivy starts an upload of {length:d} bytes on another match"))
@@ -71,9 +76,9 @@ def rate_limited(ctx: dict[str, Any]) -> None:
     assert int(ctx["response"].headers["Retry-After"]) >= 1
 
 
-@then(parsers.parse("Ivy still has {n:d} matches"))
-def still_has(ctx: dict[str, Any], n: int) -> None:
-    assert len(ctx["api"].request("ivy", "GET", contract.MATCHES).json()["items"]) == n
+@then(parsers.parse("{who} still has {n:d} matches"))
+def still_has(ctx: dict[str, Any], who: str, n: int) -> None:
+    assert len(ctx["api"].request(who.lower(), "GET", contract.MATCHES).json()["items"]) == n
 
 
 @then(parsers.parse("it is refused as over the storage quota with {used:d} used of {limit:d}"))
