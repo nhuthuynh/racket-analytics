@@ -5,7 +5,8 @@ import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { browserOutbox } from '@/components/plan/PlanFollowThrough';
 import { PlanView } from '@/components/plan/PlanView';
 import { parsePlan, type PlanRead } from '@/lib/api/plan';
 import { createOutbox, type Outbox } from '@/lib/plan-outbox';
@@ -22,6 +23,7 @@ beforeEach(() => {
   vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
   outbox = createOutbox(idbOutboxStore(new IDBFactory()));
 });
+afterEach(() => vi.unstubAllGlobals());
 
 function followApi(over: Partial<FollowThroughApi> = {}): FollowThroughApi {
   return {
@@ -113,6 +115,46 @@ describe('Mark done (negative first)', () => {
     await userEvent.setup().click(within(session1()).getByRole('button', { name: 'Undo' }));
     expect(await within(session1()).findByRole('button', { name: 'Mark done' })).toBeVisible();
     expect(api.undoDone).toHaveBeenCalledWith(S1);
+  });
+});
+
+// IndexedDB fails late: the store opens lazily, so a blocked store (open throws SecurityError), a
+// failing open request or a disabled one (null) only shows on the first operation (review M1/F1).
+const throwingOpen = {
+  open: () => {
+    throw new DOMException('blocked', 'SecurityError');
+  },
+} as unknown as IDBFactory;
+const failingOpen = {
+  open: () => {
+    const request = { error: new DOMException('broken', 'UnknownError') } as unknown as IDBOpenDBRequest;
+    setTimeout(() => request.onerror?.(new Event('error')));
+    return request;
+  },
+} as unknown as IDBFactory;
+
+describe('IndexedDB unavailable: the outbox falls back to memory (negative first)', () => {
+  it.each([
+    ['open throws', throwingOpen],
+    ['open fails', failingOpen],
+    ['indexedDB is null', null],
+  ])('%s: ops are still queued, listed and cancelled', async (_, factory) => {
+    vi.stubGlobal('indexedDB', factory);
+    const box = browserOutbox();
+    expect(await box.pending()).toEqual([]);
+    await box.queueDone(S1);
+    expect((await box.pending()).map((o) => o.session_id)).toEqual([S1]);
+    await box.cancel(S1);
+    expect(await box.pending()).toEqual([]);
+  });
+
+  it('offline, "Mark done" still says it will sync', async () => {
+    vi.stubGlobal('indexedDB', throwingOpen);
+    outbox = browserOutbox();
+    await show(followApi());
+    online = false;
+    await userEvent.setup().click(within(session1()).getByRole('button', { name: 'Mark done' }));
+    expect(await within(session1()).findByText('Saved on this device, will sync')).toBeVisible();
   });
 });
 

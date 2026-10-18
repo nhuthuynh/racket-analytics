@@ -28,3 +28,9 @@ Feature: Following the plan through, on the plan page
       Then the server got one "done" with that op id
       And the page says "Session 1 synced."
       And no op is left on this device
+
+    Scenario: Mark done when the browser blocks IndexedDB
+      Given this browser blocks IndexedDB
+      When the player marks "Session 1 of 3" done
+      Then the server got one "done"
+      And the session says "Done"

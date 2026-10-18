@@ -9,7 +9,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { browserOutbox } from '@/components/plan/PlanFollowThrough';
 import { PlanView } from '@/components/plan/PlanView';
 import { parsePlan } from '@/lib/api/plan';
 import { createOutbox, type Outbox } from '@/lib/plan-outbox';
@@ -24,6 +25,7 @@ const FEATURE = readFileSync(
 const SCENARIOS = {
   syncFails: 'Mark done offline, and the sync fails',
   twice: 'Mark done offline twice',
+  blocked: 'Mark done when the browser blocks IndexedDB',
 };
 const SESSION_1 = '00000000-0000-4000-8000-000000000010';
 
@@ -35,6 +37,7 @@ beforeEach(() => {
   vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
   outbox = createOutbox(idbOutboxStore(new IDBFactory()));
 });
+afterEach(() => vi.unstubAllGlobals());
 
 function followApi(over: Partial<FollowThroughApi> = {}): FollowThroughApi {
   return {
@@ -99,5 +102,21 @@ describe('Feature: Following the plan through, on the plan page', () => {
     expect(api.markDone).toHaveBeenCalledWith(ops[0]);
     await waitFor(async () => expect(await outbox.pending()).toEqual([]));
     expect(within(session1()).getByText('Done')).toBeVisible();
+  });
+
+  it(`Scenario: ${SCENARIOS.blocked}`, async () => {
+    // Given this browser blocks IndexedDB (storage blocked: open throws SecurityError)
+    vi.stubGlobal('indexedDB', {
+      open: () => {
+        throw new DOMException('blocked', 'SecurityError');
+      },
+    });
+    outbox = browserOutbox();
+    const api = followApi();
+    await givenPlan(api);
+    await userEvent.setup().click(within(session1()).getByRole('button', { name: 'Mark done' }));
+    expect(await within(session1()).findByText('Done')).toBeVisible();
+    expect(api.markDone).toHaveBeenCalledTimes(1);
+    expect(api.markDone).toHaveBeenCalledWith({ op_id: expect.any(String), session_id: SESSION_1 });
   });
 });
