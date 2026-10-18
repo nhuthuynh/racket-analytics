@@ -1,0 +1,41 @@
+{
+  "id": "pb.volley.line-volleys-no-step-in",
+  "version": 2,
+  "name": "Line volleys without stepping in",
+  "summary": "At the non-volley-zone line, volley soft feeds back to a partner without a foot touching the line or the zone; count your own faults.",
+  "skills": [
+    "AN-07",
+    "share:fault",
+    "volley",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 2,
+  "needs": [
+    "half_court"
+  ],
+  "equipment": [
+    "balls",
+    "paddle"
+  ],
+  "setup": [
+    "Volleyer stands with both toes just behind the non-volley-zone line; feeder stands at the opposite non-volley-zone line in the same half",
+    "Feeder tosses or pats soft, high balls to the volleyer's forehand and backhand; the volleyer volleys them back softly without letting them bounce",
+    "After each volley the volleyer checks the feet: a foot on the line or in the zone during or right after the volley counts as an own fault (play it as your rules allow; the fault rules are UNVERIFIED in this app)",
+    "Sets of 20 volleys; swap roles after each set"
+  ],
+  "success_criterion": "In each of 2 sets of 20 volleys, at most 1 own fault (foot on the line or in the zone)",
+  "progressions": [
+    "pb.dink.line-fault-game"
+  ],
+  "regressions": [],
+  "safety_notes": "Soft feeds below head height only: hold your balance at the line, never lunge or jump forward for a ball. Stop if in pain.",
+  "coach_rationale": "(judgment) Faults at the line (a foot in the non-volley zone on a volley, tagged `nvz` or `foot`) end rallies with no opponent shot, which is what the AN-07 fault share counts; soft cooperative feeds let a beginner fix the balance and the stop after the volley first. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
