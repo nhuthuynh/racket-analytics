@@ -1,6 +1,7 @@
 // The outbox store in IndexedDB (ST-063c): database `ra-plan-outbox`, object store `done_ops`
 // keyed by `session_id`, so one session holds one op. Sign-out deletes every IndexedDB database
-// (lib/session/clear.ts), so no op outlives the session on the device.
+// (lib/session/clear.ts), so no op outlives the session on the device: the cached connection
+// closes itself on `versionchange`, so it never blocks that delete (from this tab or another).
 import type { DoneOp, OutboxStore } from './plan-outbox';
 
 const DB = 'ra-plan-outbox';
@@ -19,7 +20,14 @@ export function idbOutboxStore(factory: IDBFactory): OutboxStore {
     db ??= new Promise((resolve, reject) => {
       const request = factory.open(DB, 1);
       request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: 'session_id' });
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const conn = request.result;
+        conn.onversionchange = () => {
+          conn.close();
+          db = null;
+        };
+        resolve(conn);
+      };
       request.onerror = () => {
         db = null;
         reject(request.error);
