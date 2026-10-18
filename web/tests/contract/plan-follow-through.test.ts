@@ -8,6 +8,7 @@ import { http, HttpResponse, type JsonBodyType } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createFollowThroughApi } from '@/lib/plan-outbox-api';
+import { createOutbox, memoryOutboxStore } from '@/lib/plan-outbox';
 import { planBody } from '../unit/fixtures/plan';
 
 const openapi = JSON.parse(
@@ -42,6 +43,11 @@ function answer(method: 'post' | 'delete', url: string, status: number, body: Js
   );
 }
 
+/** A 200 whose body is not JSON (a captive portal or proxy page) or is empty. */
+function page(method: 'post' | 'delete', url: string, body: string | null) {
+  server.use(http[method](url, () => new HttpResponse(body, { status: 200, headers: { 'content-type': 'text/html' } })));
+}
+
 function session() {
   return (planBody().sessions as Record<string, unknown>[])[0]!;
 }
@@ -59,6 +65,30 @@ describe('POST /me/plan/sessions/{id}/done contract (negative first)', () => {
       kind: 'failed',
       supportRef: 'ref_0123456789abcdef',
     });
+  });
+
+  it.each([
+    ['a proxy page', '<html>proxy</html>'],
+    ['an empty body', null],
+  ])('a 200 with %s is failed, not a TypeError (review F1)', async (_what, body) => {
+    page('post', DONE_URL, body);
+    await expect(api.markDone({ op_id: 'op-1', session_id: SESSION })).resolves.toEqual({ kind: 'failed', supportRef: null });
+  });
+
+  it.each([[{}], [{ plan_version: 0, replayed: true }]])('a 200 without a valid plan_version is failed: %j', async (body) => {
+    answer('post', DONE_URL, 200, body);
+    expect(await api.markDone({ op_id: 'op-1', session_id: SESSION })).toEqual({ kind: 'failed', supportRef: null });
+  });
+
+  it('a 200 proxy page keeps every queued op and the sync still reports (review F1)', async () => {
+    const S2 = '00000000-0000-4000-8000-000000000011';
+    page('post', DONE_URL, '<html>proxy</html>');
+    page('post', `${BASE}${DONE.replace('{session_id}', S2)}`, '<html>proxy</html>');
+    const box = createOutbox(memoryOutboxStore(), () => 'op-new');
+    await box.queueDone(SESSION);
+    await box.queueDone(S2);
+    await expect(box.sync((op) => api.markDone(op))).resolves.toMatchObject({ synced: [], dropped: [], kept: [SESSION, S2] });
+    expect((await box.pending()).map((op) => op.session_id)).toEqual([SESSION, S2]);
   });
 
   it('sends the op id as Idempotency-Key and reads the documented 200', async () => {
@@ -89,6 +119,16 @@ describe('POST /me/plan/sessions/{id}/done contract (negative first)', () => {
 describe('DELETE /me/plan/sessions/{id}/done contract (undo)', () => {
   it('a dropped connection is failed', async () => {
     server.use(http.delete(DONE_URL, () => HttpResponse.error()));
+    expect(await api.undoDone(SESSION)).toEqual({ kind: 'failed', supportRef: null });
+  });
+
+  it('a 200 proxy page is failed, not undone', async () => {
+    page('delete', DONE_URL, '<html>proxy</html>');
+    await expect(api.undoDone(SESSION)).resolves.toEqual({ kind: 'failed', supportRef: null });
+  });
+
+  it('a 200 without a valid plan_version is failed, not undone', async () => {
+    answer('delete', DONE_URL, 200, { session_id: SESSION, done: false, done_at: null });
     expect(await api.undoDone(SESSION)).toEqual({ kind: 'failed', supportRef: null });
   });
 
@@ -151,6 +191,11 @@ describe('POST /me/plan/assignments/{id}/swap contract (negative first)', () => 
     expect(r.planVersion).toBe(4);
     expect(r.session.id).toBe(SESSION);
     expect(r.session.assignments.find((a) => a.id === ASSIGNMENT)!.drill.name).toBe('Deep serves');
+  });
+
+  it('a 200 proxy page is failed, not a swap', async () => {
+    page('post', SWAP_URL, '<html>proxy</html>');
+    await expect(api.swap(ASSIGNMENT, '')).resolves.toEqual({ kind: 'failed', supportRef: null });
   });
 
   it('a 200 that breaks the session representation is failed, not a swap', async () => {

@@ -47,14 +47,19 @@ async function read(response: Response): Promise<unknown> {
 }
 
 function errorOf(body: unknown): { code: string | null; supportRef: string | null } {
-  const outer = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
+  const outer = fields(body);
   const e = (typeof outer.error === 'object' && outer.error !== null ? outer.error : outer) as Record<string, unknown>;
   const ref = typeof e.support_ref === 'string' && SUPPORT_REF_RE.test(e.support_ref) ? e.support_ref : null;
   return { code: typeof e.code === 'string' ? e.code : null, supportRef: ref };
 }
 
+/** The body as a JSON object, or an empty one (not JSON, null, an array or a scalar). */
+function fields(body: unknown): Record<string, unknown> {
+  return typeof body === 'object' && body !== null && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
+}
+
 function version(body: unknown): number | null {
-  const v = typeof body === 'object' && body !== null ? (body as Record<string, unknown>).plan_version : null;
+  const v = fields(body).plan_version;
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? v : null;
 }
 
@@ -93,8 +98,7 @@ export function createFollowThroughApi({ baseUrl, fetch: fetchFn }: { baseUrl: s
       if (a === null) return failed;
       if (a.status === 200) {
         const v = version(a.body);
-        const replayed = (a.body as Record<string, unknown>).replayed === true;
-        return v === null ? failed : { kind: 'done', planVersion: v, replayed };
+        return v === null ? failed : { kind: 'done', planVersion: v, replayed: fields(a.body).replayed === true };
       }
       return refused(a, DONE_CODES);
     },
@@ -117,7 +121,7 @@ export function createFollowThroughApi({ baseUrl, fetch: fetchFn }: { baseUrl: s
       if (a.status === 200) {
         const v = version(a.body);
         try {
-          const session = parseSession((a.body as Record<string, unknown>).session);
+          const session = parseSession(fields(a.body).session);
           return v === null ? failed : { kind: 'swapped', session, planVersion: v };
         } catch {
           return failed;
