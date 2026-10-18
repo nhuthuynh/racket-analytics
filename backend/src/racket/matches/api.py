@@ -22,7 +22,9 @@ def get_match_service(
     request: Request, session: Annotated[Session, Depends(get_session)]
 ) -> MatchService:
     """ADR 0012 seam: tests override this to make the service fail."""
-    return MatchService(session, request.app.state.settings.api_public_path_prefix)
+    settings = request.app.state.settings
+    per_hour = settings.match_creations_per_hour if settings.feature_quotas else None
+    return MatchService(session, settings.api_public_path_prefix, creations_per_hour=per_hour)
 
 
 Service = Annotated[MatchService, Depends(get_match_service)]

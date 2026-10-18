@@ -137,6 +137,15 @@ class UploadRepository:
         ).one()
         return int(count), int(total)
 
+    def stored_by_match(self, owner_id: uuid.UUID) -> dict[uuid.UUID, int]:
+        """Bytes of the owner's stored videos per match (storage quota, ST-072a)."""
+        rows = self.session.execute(
+            sa.select(media_assets.c.match_id, media_assets.c.size_bytes).where(
+                media_assets.c.owner_id == owner_id
+            )
+        )
+        return {uuid.UUID(str(m)): int(size) for m, size in rows}
+
     def state_for_match(self, match_id: uuid.UUID) -> UploadStatus | None:
         query = sa.select(upload_sessions.c.status).where(upload_sessions.c.match_id == match_id)
         status: UploadStatus | None = self.session.execute(query).scalar_one_or_none()

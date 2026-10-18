@@ -58,9 +58,10 @@ def quotas(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
 @pytest.fixture
 def burst_env(quotas: pytest.MonkeyPatch) -> None:
     """Only the storage quota binds: the other limits are out of the way."""
-    for name, value in {"STORAGE_QUOTA_BYTES": 10 * LENGTH, "MATCH_CREATIONS_PER_HOUR": 1000,
-                        "UPLOAD_MAX_OPEN_SESSIONS": 1000, "UPLOAD_CREATE_LIMIT_PER_HOUR": 1000}.items():  # fmt: skip
-        quotas.setenv(name, str(value))
+    quotas.setenv("STORAGE_QUOTA_BYTES", str(10 * LENGTH))
+    for name in ("MATCH_CREATIONS_PER_HOUR", "UPLOAD_MAX_OPEN_SESSIONS"):
+        quotas.setenv(name, "1000")
+    quotas.setenv("UPLOAD_CREATE_LIMIT_PER_HOUR", "1000")
 
 
 @pytest.fixture

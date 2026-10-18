@@ -24,18 +24,19 @@ def test_open_uploads_count_like_stored_bytes() -> None:
 
 def test_an_account_already_over_a_lowered_limit_cannot_add_a_byte() -> None:
     refusal = QUOTA.refusal(stored_bytes=1500, reserved_bytes=0, requested_bytes=1)
-    assert refusal is not None and refusal.used_bytes == 1500
+    assert refusal is not None
+    assert refusal.used_bytes == 1500
 
 
 @pytest.mark.parametrize("counts", [(-1, 0, 1), (0, -1, 1), (0, 0, 0), (0, 0, -5)])
 def test_impossible_byte_counts_are_refused_loudly(counts: tuple[int, int, int]) -> None:
     stored, reserved, requested = counts
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="impossible byte counts"):
         QUOTA.refusal(stored_bytes=stored, reserved_bytes=reserved, requested_bytes=requested)
 
 
 def test_a_negative_limit_is_not_a_quota() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="never negative"):
         StorageQuota(limit_bytes=-1)
 
 

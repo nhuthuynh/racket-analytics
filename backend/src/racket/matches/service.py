@@ -7,7 +7,7 @@ Capture & Media's ``media_summary`` port (context map R2; api-sprint-00 §5.1).
 from __future__ import annotations
 
 import logging
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,7 @@ from racket.matches.schemas import (
 )
 from racket.platform.errors import NotFound, Unauthenticated
 from racket.platform.logs import SECURITY_LOGGER
+from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.players import public as players
 from racket.video_ingest.public import (
     UploadStatus,
@@ -45,10 +46,13 @@ def _rfc3339(value: datetime) -> str:
 
 
 class MatchService:
-    def __init__(self, session: Session, api_path_prefix: str = "") -> None:
+    def __init__(
+        self, session: Session, api_path_prefix: str = "", creations_per_hour: int | None = None
+    ) -> None:
         self.session = session
         self.matches = MatchRepository(session)
         self.api_path_prefix = api_path_prefix  # resume_url like the tus Location (§5.2)
+        self.creations_per_hour = creations_per_hour  # None: FEATURE_QUOTAS off (ST-072a)
 
     def create(self, owner: OwnerId, body: object, *, today: date | None = None) -> Match:
         """``POST /matches`` (api-sprint-01 §5.1): every field problem is reported at once."""
@@ -56,11 +60,26 @@ class MatchService:
         if not players.lock_live_account(self.session, owner.value):  # SEC-S3-TM-05
             self.session.rollback()
             raise Unauthenticated("the account was deleted")
+        self._spend_creation_slot(owner)
         match = Match.set_up(owner_id=owner, setup=setup)
         self.matches.add(match)
         self.session.commit()
         log.info("match created", extra={"event": "match.created", "match_id": str(match.id)})
         return match
+
+    def _spend_creation_slot(self, owner: OwnerId) -> None:
+        """FR-160 (api-sprint-04 §7): per account, counted after the body validates; over the
+        limit nothing is written. The limiter serialises the key, so a burst cannot share the
+        last slot (SEC-4 T4-QT-1)."""
+        if self.creations_per_hour is None:
+            return
+        now = datetime.now(UTC)
+        retry_at = RateLimiter(self.session, clock=lambda: now).hit(
+            f"match:create:{owner.value}", limit=self.creations_per_hour, window=timedelta(hours=1)
+        )
+        if retry_at is not None:
+            self.session.rollback()
+            raise RateLimited(retry_at, now)
 
     def list_for_owner(self, owner: OwnerId, limit: int) -> list[Match]:
         return self.matches.list_for_owner(owner, limit)
