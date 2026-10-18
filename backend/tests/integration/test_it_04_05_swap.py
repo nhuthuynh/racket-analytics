@@ -34,13 +34,18 @@ SOLO_WALL = {
     "equipment": ["wall"],
     "level": "intermediate",
 }
+# A setup where the second drill of the first session has alternatives in content/drills
+GROUP_ALL = SOLO_WALL | {
+    "players_available": 4,
+    "equipment": ["wall", "half_court", "full_court", "ball_machine", "partner_feeder"],
+}
 SWAPS_MAX = 40
 REASON = "My wrist hurts after this one"
 
 
-def _plan(api: ApiDriver, user: str) -> dict[str, Any]:
+def _plan(api: ApiDriver, user: str, prefs: dict[str, Any] = SOLO_WALL) -> dict[str, Any]:
     st.tagged_example(api, user, f"IT-04-05 {user}")
-    response = api.request(user, "POST", PLAN, json=SOLO_WALL)
+    response = api.request(user, "POST", PLAN, json=prefs)
     assert response.status_code == 201, response.text
     body: dict[str, Any] = response.json()
     return body
@@ -160,7 +165,7 @@ def test_it_04_05_no_alternative_is_409_and_leaves_the_plan_unchanged(
 def test_it_04_05_swap_gives_another_reviewed_drill_for_the_same_metric(
     api: ApiDriver, committed_db: Any, caplog: pytest.LogCaptureFixture
 ) -> None:
-    plan = _plan(api, "ivy")
+    plan = _plan(api, "ivy", GROUP_ALL)
     library = planlib.load_library(REPO / "content" / "drills")
     old_session = plan["sessions"][0]
     old = old_session["assignments"][1]
@@ -187,7 +192,9 @@ def test_it_04_05_swap_gives_another_reviewed_drill_for_the_same_metric(
     assert new["citation"]["metric_id"] == old["citation"]["metric_id"]
     assert new["citation"]["metric_id"] in library[_ref(new)]["target_metrics"]
     assert new["why"]
-    assert [a["id"] for a in session["assignments"]] == [a["id"] for a in old_session["assignments"]]
+    assert [a["id"] for a in session["assignments"]] == [
+        a["id"] for a in old_session["assignments"]
+    ]
     assert session["assignments"][0] == old_session["assignments"][0]
     assert session["assignments"][2:] == old_session["assignments"][2:]
     assert REASON not in response.text
@@ -204,11 +211,11 @@ def test_it_04_05_swap_gives_another_reviewed_drill_for_the_same_metric(
 def test_it_04_05_a_swapped_out_drill_is_never_offered_again_in_that_plan(
     api: ApiDriver, committed_db: Any
 ) -> None:
-    plan = _plan(api, "ivy")
+    plan = _plan(api, "ivy", GROUP_ALL)
     library = planlib.load_library(REPO / "content" / "drills")
     assignment = plan["sessions"][0]["assignments"][1]
     offered = _swap_until_refused(api, assignment["id"])
-    assert offered, "the solo-wall plan's second drill has no alternative in the library"
+    assert offered, "the group plan's second drill has no alternative in the library"
     history = [_ref(assignment), *offered]
     assert len(set(history)) == len(history), history
     read = _read(api, "ivy")
@@ -216,7 +223,7 @@ def test_it_04_05_a_swapped_out_drill_is_never_offered_again_in_that_plan(
     metric = assignment["citation"]["metric_id"]
     assert read["sessions"][0]["assignments"][1]["citation"]["metric_id"] == metric
     # a new plan starts with nothing excluded
-    again = api.request("ivy", "POST", PLAN, json=SOLO_WALL)
+    again = api.request("ivy", "POST", PLAN, json=GROUP_ALL)
     assert again.status_code == 201, again.text
     first = _swap(api, "ivy", again.json()["sessions"][0]["assignments"][1]["id"])
     assert first.status_code == 200, first.text

@@ -58,7 +58,9 @@ def test_a_well_formed_idempotency_key_is_the_op_id(key: str) -> None:
         ({"reason": "x" * 201}, [FieldError("reason", "too_long")]),
     ],
 )
-def test_a_bad_swap_body_is_refused_with_its_field_code(body: Any, fields: list[FieldError]) -> None:
+def test_a_bad_swap_body_is_refused_with_its_field_code(
+    body: Any, fields: list[FieldError]
+) -> None:
     with pytest.raises(ValidationFailed) as exc:
         parse_swap_body(body)
     assert _fields(exc) == fields

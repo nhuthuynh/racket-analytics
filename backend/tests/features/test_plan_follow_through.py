@@ -31,6 +31,11 @@ SOLO_WALL = {
     "equipment": ["wall"],
     "level": "intermediate",
 }
+# A setup where the second drill of the first session has alternatives in content/drills
+GROUP_ALL = SOLO_WALL | {
+    "players_available": 4,
+    "equipment": ["wall", "half_court", "full_court", "ball_machine", "partner_feeder"],
+}
 SWAPS_MAX = 40  # more than the drill library holds: a swap loop that does not end fails
 
 
@@ -73,7 +78,21 @@ def tagged_example(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
     )
 )
 def has_plan(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
-    response = api.request(user, "POST", PLAN, json=SOLO_WALL)
+    _new_plan(api, ctx, user, SOLO_WALL)
+
+
+@given(
+    parsers.parse(
+        '"{user}" has a plan as a group of 4 with every kind of equipment, 30 minutes per '
+        "session, 3 sessions a week"
+    )
+)
+def has_group_plan(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
+    _new_plan(api, ctx, user, GROUP_ALL)
+
+
+def _new_plan(api: ApiDriver, ctx: dict[str, Any], user: str, prefs: dict[str, Any]) -> None:
+    response = api.request(user, "POST", PLAN, json=prefs)
     assert response.status_code == 201, response.text
     ctx["plan"] = response.json()
     target = ctx["plan"]["sessions"][0]["assignments"][1]
@@ -159,7 +178,8 @@ def same_metric(ctx: dict[str, Any]) -> None:
     assert new["weakness_id"] == old["weakness_id"]
     library = planlib.load_library(REPO / "content" / "drills")
     assert library[_ref(new)]["review_status"] in ("coach-reviewed", "verified")
-    assert "reason" not in str(new) and "My wrist hurts" not in str(ctx["session"])
+    assert "reason" not in str(new)
+    assert "My wrist hurts" not in str(ctx["session"])
 
 
 @then("the plan still keeps every rule QD-PL-01 to QD-PL-03")

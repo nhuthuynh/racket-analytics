@@ -3,14 +3,21 @@
 Pure domain (coaching-plan §5): standard library only, no clock, no randomness, no ids. The root
 checks every invariant on creation and after every change; a violation raises
 ``PlanInvariantBroken`` and leaves the plan as it was.
+
+Follow-through commands (ST-062; FR-124; coaching-plan §5, §7): ``mark_done``, ``undo_done`` and
+``swap`` ("Not for me"). Sessions are named by ``(week, index)`` and assignments by their position
+(the service maps the API's ids). Each accepted change returns its event and adds 1 to
+``version``; a no-op returns None; a refusal (``NoAlternative``, ``SessionDone``, ``KeyError``)
+changes nothing.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from typing import Any
 
 LEVELS = ("beginner", "intermediate", "advanced")
@@ -28,6 +35,14 @@ _SHARES = {"share:fault": "AN-07:fault", "share:forced-error": "AN-07:forced-err
 
 class InvalidPreferences(ValueError):
     """Preferences outside the ranges of api-sprint-04 §2.1."""
+
+
+class NoAlternative(LookupError):
+    """``swap``: no other eligible drill cites the same target and keeps every rule."""
+
+
+class SessionDone(ValueError):
+    """``swap``: a done session is not changed."""
 
 
 class PlanInvariantBroken(ValueError):
@@ -178,6 +193,7 @@ class DrillAssignment:
     drill: Drill
     minutes: int
     weakness_id: str | None  # None for the warm-up
+    reason_not_for_me: str | None = None  # the player's reason for the last swap (ST-062)
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,10 +202,63 @@ class Session:
     index: int
     minutes_budget: int
     assignments: tuple[DrillAssignment, ...]
+    done_at: datetime | None = None
 
     @property
     def total_minutes(self) -> int:
         return sum(x.minutes for x in self.assignments)
+
+
+@dataclass(frozen=True, slots=True)
+class SessionMarkedDone:
+    week: int
+    index: int
+    version: int
+
+
+@dataclass(frozen=True, slots=True)
+class SessionDoneUndone:
+    week: int
+    index: int
+    version: int
+
+
+@dataclass(frozen=True, slots=True)
+class DrillSwapped:
+    week: int
+    index: int
+    position: int
+    from_drill: str
+    to_drill: str
+    target: str
+    reason_given: bool
+    version: int
+
+
+def warm_up_minutes(d: Drill, cap: int) -> int | None:
+    """The minutes a warm-up gets under ``cap``, or None when it cannot get 5-10 minutes."""
+    lo, hi = WARM_UP_MINUTES
+    minutes = min(d.duration_max, hi, cap)
+    return minutes if minutes >= max(lo, d.duration_min) else None
+
+
+def citable_targets(d: Drill) -> list[str]:
+    """The drill's citable targets: its metrics in order, AN-07 as its share targets."""
+    return [t for m in d.target_metrics for t in sorted(d.plan_targets) if t.split(":")[0] == m]
+
+
+def cited_target(
+    x: DrillAssignment, weaknesses: Sequence[PlanWeakness], cited: Collection[str]
+) -> str | None:
+    """QD-PL-04: the target an assignment cites, or None. A weakness drill cites its weakness's
+    target; a warm-up the highest-ranked weakness target it trains, else its first citable one."""
+    if x.weakness_id is not None:
+        wanted = [w.target for w in weaknesses if w.id == x.weakness_id]
+    else:
+        own = citable_targets(x.drill)
+        ranked = [w.target for w in sorted(weaknesses, key=lambda w: w.rank)]
+        wanted = [t for t in ranked if t in own] + own
+    return next((t for t in wanted if t in cited), None)
 
 
 def violations(
@@ -289,8 +358,10 @@ class TrainingPlan:
     sessions: tuple[Session, ...]
     library_version: str = ""
     version: int = field(default=1)
+    excluded_drills: frozenset[str] = frozenset()  # swapped out: never offered again (ST-062)
 
     def __post_init__(self) -> None:
+        self.excluded_drills = frozenset(self.excluded_drills)
         self.weaknesses = tuple(self.weaknesses)
         self.unfitted = tuple(self.unfitted)
         self.sessions = tuple(self.sessions)
@@ -320,6 +391,93 @@ class TrainingPlan:
                 self._change((*self.sessions[:n], changed, *self.sessions[n + 1 :]))
                 return
         raise KeyError(f"no assignment at week {week} session {index} position {position}")
+
+    def _session_at(self, week: int, index: int) -> int:
+        for n, s in enumerate(self.sessions):
+            if (s.week, s.index) == (week, index):
+                return n
+        raise KeyError(f"no session at week {week} session {index}")
+
+    def _with_session(self, n: int, s: Session) -> tuple[Session, ...]:
+        return (*self.sessions[:n], s, *self.sessions[n + 1 :])
+
+    def mark_done(self, *, week: int, index: int, at: datetime) -> SessionMarkedDone | None:
+        """Mark one session done at ``at``; None (no change) when it is done already."""
+        n = self._session_at(week, index)
+        s = self.sessions[n]
+        if s.done_at is not None:
+            return None
+        self._change(self._with_session(n, replace(s, done_at=at)))
+        return SessionMarkedDone(week, index, self.version)
+
+    def undo_done(self, *, week: int, index: int) -> SessionDoneUndone | None:
+        """Clear one session's done mark; None (no change) when it is not done."""
+        n = self._session_at(week, index)
+        s = self.sessions[n]
+        if s.done_at is None:
+            return None
+        self._change(self._with_session(n, replace(s, done_at=None)))
+        return SessionDoneUndone(week, index, self.version)
+
+    def swap(
+        self,
+        *,
+        week: int,
+        index: int,
+        position: int,
+        library: Iterable[Drill],
+        cited: Collection[str],
+        reason: str | None = None,
+    ) -> DrillSwapped:
+        """ "Not for me": put the first other eligible drill (``(id, version)`` order) that cites
+        the same target as the assignment and keeps every rule with the session's other
+        assignments; the swapped-out drill joins ``excluded_drills``. ``cited`` holds the targets
+        that have a citation (QD-PL-04). KeyError, ``SessionDone`` or ``NoAlternative`` change
+        nothing."""
+        n = self._session_at(week, index)
+        s = self.sessions[n]
+        if not 1 <= position <= len(s.assignments):
+            raise KeyError(f"no assignment at week {week} session {index} position {position}")
+        if s.done_at is not None:
+            raise SessionDone(f"week {week} session {index} is done")
+        old = s.assignments[position - 1]
+        target = cited_target(old, self.weaknesses, cited)
+        if target is None:
+            raise NoAlternative(f"{old.drill.ref} cites nothing")
+        others = [y for y in s.assignments if y is not old]
+        taken = {y.drill.ref for y in others} | {old.drill.ref} | self.excluded_drills
+        room = s.minutes_budget - sum(y.minutes for y in others)
+        cap = self.preferences.drill_cap
+        for d in sorted(library, key=lambda d: (d.id, d.version)):
+            if d.ref in taken or d.is_warm_up != (position == 1) or not d.fits(self.preferences):
+                continue
+            if position == 1:
+                minutes = warm_up_minutes(d, min(cap, room))
+            else:
+                minutes = min(d.duration_max, cap, room)
+                minutes = minutes if minutes >= d.duration_min else None
+            if minutes is None:
+                continue
+            new = replace(old, drill=d, minutes=minutes, reason_not_for_me=reason)
+            if cited_target(new, self.weaknesses, cited) != target:
+                continue
+            assignments = (*s.assignments[: position - 1], new, *s.assignments[position:])
+            try:
+                self._change(self._with_session(n, replace(s, assignments=assignments)))
+            except PlanInvariantBroken:
+                continue
+            self.excluded_drills = self.excluded_drills | {old.drill.ref}
+            return DrillSwapped(
+                week,
+                index,
+                position,
+                old.drill.ref,
+                d.ref,
+                target,
+                reason is not None,
+                self.version,
+            )
+        raise NoAlternative(f"no other drill for {old.drill.ref} cites {target}")
 
     def content(self) -> dict[str, Any]:
         """The plan's content (coaching-plan §6 step 5): no ids, version, clock or done state."""

@@ -72,7 +72,8 @@ def _no_ref(response: httpx.Response) -> tuple[int, Any]:
 
 # ------------------------------------------------------------------ refusals (negative first)
 @pytest.mark.parametrize(
-    ("key", "code"), [(None, "required"), ("", "required"), ("bad key!", "invalid"), ("x" * 65, "invalid")]
+    ("key", "code"),
+    [(None, "required"), ("", "required"), ("bad key!", "invalid"), ("x" * 65, "invalid")],
 )
 def test_it_04_04_a_missing_or_malformed_op_id_is_422_and_changes_nothing(
     api: ApiDriver, committed_db: Any, key: str | None, code: str

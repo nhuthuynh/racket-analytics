@@ -136,9 +136,7 @@ def test_swap_never_picks_a_drill_whose_target_has_no_citation() -> None:
     p = plan()
     serve_alt = drill("pb.test.serve-alt", targets=("AN-05",), minutes=(5, 10))
     with pytest.raises(NoAlternative):
-        p.swap(
-            week=1, index=1, position=3, library=[serve_alt], cited=CITED - {"AN-05"}
-        )
+        p.swap(week=1, index=1, position=3, library=[serve_alt], cited=CITED - {"AN-05"})
     assert p.version == 1
 
 
@@ -266,3 +264,24 @@ def test_done_reason_and_excluded_drills_survive_the_rows_round_trip() -> None:
     library = {d.ref: d for d in [*reviewed_test_library(), DRIVES]}
     back = from_rows(rows, library)
     assert snapshot(back) == snapshot(p)
+
+
+def test_swap_of_a_warm_up_fits_its_minutes_into_the_room_left() -> None:
+    """The new warm-up gets min(duration_max, 10, cap, room), so a 5-10 minute warm-up fits a
+    session whose other drills leave 8 minutes (it would break QD-PL-01 at 10)."""
+    tight = Session(
+        1,
+        1,
+        30,
+        (a(1, WARM, 8, None), a(2, DINKS, 12, "unforced_errors"), a(3, SERVE, 10, "serve_faults")),
+    )
+    p = TrainingPlan(
+        preferences=solo_wall(),
+        weaknesses=TOP_3,
+        unfitted=(Unfitted("errors_under_pressure"),),
+        sessions=(tight, *(session(w, i) for w, i in [(1, 2), (1, 3), (2, 1), (2, 2), (2, 3)])),
+    )
+    roomy = warm_up("pb.test.a-long-warm-up", minutes=(5, 10))
+    swap(p, [roomy], position=1)
+    assert (p.sessions[0].assignments[0].drill, p.sessions[0].assignments[0].minutes) == (roomy, 8)
+    assert p.sessions[0].total_minutes == 30

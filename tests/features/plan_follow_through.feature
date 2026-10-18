@@ -21,7 +21,7 @@ Feature: Plan follow-through
 
     Scenario: Swap a drill
       Given "ivy" has tagged the worked example
-      And "ivy" has a plan as a solo player with a wall, 30 minutes per session, 3 sessions a week
+      And "ivy" has a plan as a group of 4 with every kind of equipment, 30 minutes per session, 3 sessions a week
       When "ivy" says "Not for me" to the second drill of the first session because "My wrist hurts"
       Then the answer is 200 with the session and the next plan version
       And the assignment keeps its id and gets another reviewed drill for the same metric
