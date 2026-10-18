@@ -1,0 +1,10 @@
+# SMOKE-04 decisions
+
+Per-ticket decision file (PO rule 2026-10-07). Ticket: integration smoke of `origin/main` at `3c4be05` after the Sprint 4 merges so far (ADR 0022 rule 2), reported in `docs/sprints/04/smoke.md`. This is a docs-only ticket, so there is no Gherkin, IT or unit test. The check used instead is the run itself: every command and its result line are in `smoke.md`.
+
+| Date | Who | Decision | Evidence | Why |
+|---|---|---|---|---|
+| 2026-10-18 | sre-devops-engineer | **No Compose image build.** The stack used the SMOKE-03 topology: Compose for postgres, objectstore and mailpit, the committed Caddyfile, and the app services as local processes | `df -Pk /` → 12.2 GiB free after prune steps 2-3, under the 16 GB build floor; `docker info` → `HTTPS Proxy: http://127.0.0.1:34223` (port closed) | A build would break the disk floor, and the daemon cannot pull anyway. Restarting `dockerd` would stop another lane's running stack (`racket-analytics-*`) |
+| 2026-10-18 | sre-devops-engineer with senior-qa-engineer | **The 4 `test_compose_extra_ca*` failures are recorded as environment-only, not as a product red or a TCR** | Each one fails at `resolve image config … proxyconnect tcp: dial tcp 127.0.0.1:34223: connect: connection refused`; the CI `infra-tests` job of run 39090166506 on the same SHA is `success` | The tests are correct and pass where the daemon can reach a registry. No test is changed or skipped |
+| 2026-10-18 | sre-devops-engineer with senior-qa-engineer | **`live_plan.py` rc 1 is "fails closed, expected", not a defect row** | `POST /api/me/plan` → 404; ST-061b PR #111 is open | The plan API is not on `main` yet. VERIFY-04 measures G04-01..03 after the plan tickets merge |
+| 2026-10-18 | sre-devops-engineer | **This PR does not edit the shared files.** The routed problems are listed in `smoke.md` §"Problems routed" and not in `review-rounds.md` or `blockers.md` | Brief: ticket PRs must not edit `decision-log.md`, `blockers.md`, `status.json` or `progress.md` | RETRO-04 consolidates. The two open Sprint 3 ledger rows are already in the ledger |
