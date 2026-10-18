@@ -429,11 +429,11 @@ class TrainingPlan:
         cited: Collection[str],
         reason: str | None = None,
     ) -> DrillSwapped:
-        """ "Not for me": put the first other eligible drill (``(id, version)`` order) that cites
-        the same target as the assignment and keeps every rule with the session's other
-        assignments; the swapped-out drill joins ``excluded_drills``. ``cited`` holds the targets
-        that have a citation (QD-PL-04). KeyError, ``SessionDone`` or ``NoAlternative`` change
-        nothing."""
+        """The "Not for me" swap: put the first other eligible drill (``(id, version)`` order)
+        that cites the same target as the assignment and keeps every rule with the session's
+        other assignments; the swapped-out drill joins ``excluded_drills``. ``cited`` holds the
+        targets that have a citation (QD-PL-04). KeyError, ``SessionDone`` or ``NoAlternative``
+        change nothing."""
         n = self._session_at(week, index)
         s = self.sessions[n]
         if not 1 <= position <= len(s.assignments):
