@@ -90,7 +90,7 @@ def test_a_good_swap_body_gives_the_trimmed_reason(body: Any, reason: str | None
     [
         "a\x00b",
         "a\ud800b",
-        "a\udfffb",
+        "a\udfffb",  # noqa: PT014 (ruff reads both lone surrogates as one value)
         "a\x07b",
         "a\tb",
         "a\rb",

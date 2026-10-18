@@ -29,6 +29,7 @@ from racket.coaching.plan.domain.model import LEVELS, MIN_SESSION, NEEDS
 from racket.coaching.plan.repository import StoredPlan, StoredSession
 from racket.coaching.weakness.domain import WeaknessRanking
 from racket.platform.errors import FieldError, ValidationFailed
+from racket.platform.text import is_plain_line
 
 UNOFFICIAL_LABEL = "unofficial scoring (rules not yet verified)"  # FR-055, as GET stats
 MAX_MINUTES = 180
@@ -64,7 +65,12 @@ def parse_op_id(header: str | None) -> str:
 
 
 def parse_swap_body(body: Any) -> str | None:
-    """The trimmed "Not for me" reason, or None; the body is closed (api-sprint-04 §3.3)."""
+    """The trimmed "Not for me" reason, or None; the body is closed (api-sprint-04 §3.3).
+
+    L11 (C-01): a control, lone surrogate or line/paragraph separator is ``invalid``, so NUL
+    and surrogates never reach the driver; a line feed is kept as data (T4-PL-7; decision row
+    in ``docs/sprints/04/decisions/ST-062-part2.md``).
+    """
     if body is None:
         return None
     if not isinstance(body, dict):
@@ -75,6 +81,8 @@ def parse_swap_body(body: Any) -> str | None:
     if reason is None:
         return None
     if not isinstance(reason, str) or not reason.strip():
+        raise ValidationFailed("swap body", [FieldError("reason", "invalid")])
+    if not is_plain_line(reason.strip().replace("\n", "")):
         raise ValidationFailed("swap body", [FieldError("reason", "invalid")])
     if len(reason.strip()) > REASON_MAX:
         raise ValidationFailed("swap body", [FieldError("reason", "too_long")])

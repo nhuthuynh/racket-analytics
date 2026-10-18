@@ -1,8 +1,9 @@
 """IT-02-10 (QA-FUZZ, C-01; testing-strategy rule L11; NFR-041, NFR-058).
 
 Every JSON string field of every JSON route (auth, matches, games, rallies, corrections,
-resolutions, the plan swap reason), and every object key, gets Hypothesis-generated text holding at least one
-control (Cc) or surrogate (Cs) character, NUL and the line/paragraph separators included.
+resolutions, the plan swap reason), and every object key, gets Hypothesis-generated text
+holding at least one control (Cc) or surrogate (Cs) character, NUL and the line/paragraph
+separators included.
 The answer is a 4xx, never a 5xx, and no row is written anywhere.
 
 A second property sends any JSON value (not only strings) in each field: still never a 5xx
@@ -214,6 +215,8 @@ def limits_out_of_the_way(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _check_refused(target: Target, route: str, body: Any) -> None:
+    if route == "swap":
+        target.swap_url()  # the plan is set up before the rows are counted
     before = sb.row_counts(target.engine)
     response = target.send(route, body)
     assert 400 <= response.status_code < 500, (
