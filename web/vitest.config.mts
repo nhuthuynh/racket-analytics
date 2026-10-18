@@ -1,5 +1,5 @@
 // Vitest (ST-010; testing-strategy: frontend components and hooks >= 80% line coverage).
-// Unit tests only: no network, no timers that sleep (EP/ENG-17).
+// Unit, contract (MSW, no real network) and Gherkin-binding tests; no timers that sleep (EP/ENG-17).
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
@@ -9,7 +9,7 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   test: {
-    include: ['tests/unit/**/*.test.{ts,tsx}'],
+    include: ['tests/{unit,contract,features}/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: ['tests/unit/setup.ts'],
     restoreMocks: true,

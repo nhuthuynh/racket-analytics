@@ -91,6 +91,11 @@ export function AccountMenu({
             </Link>
           </li>
           <li>
+            <Link href="/plan" className="touch-link">
+              Training plan
+            </Link>
+          </li>
+          <li>
             <Link href="/settings/account" className="touch-link">
               Your account
             </Link>

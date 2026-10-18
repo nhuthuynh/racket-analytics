@@ -21,10 +21,12 @@ the owner's plan, find the session or assignment by its id among the owner's row
 is 404 ``not_found``, as an unknown id), run the aggregate's command and save it with the
 version check (``PlanRepository.update``). Done ops are idempotent by ``(account_id, op_id)``: a
 replay answers the stored result; the same key on another session is 409
-``idempotency_key_reused``. A lost race (``IntegrityError`` or ``PlanConflict``) is retried once,
-then 409 ``plan_conflict``. A swap needs the live citations, so a stale plan, or one the live
-data no longer cites, is 409 ``plan_conflict`` (the client reloads; ``GET`` regenerates it).
-Events (coaching-plan §7) are logged after commit with ids only, never the reason.
+``idempotency_key_reused``. Only a mark that changes the plan stores its op row; a new key on a
+session already done is a no-op that stores none (threat-notes-sprint-04 T4-PL-5). A lost
+race (``IntegrityError`` or ``PlanConflict``) is retried once, then 409 ``plan_conflict``. A swap
+needs the live citations, so a stale plan, or one the live data no longer cites, is 409
+``plan_conflict`` (the client reloads; ``GET`` regenerates it). Events (coaching-plan §7) are
+logged after commit with ids only, never the reason.
 
 Transactions: ``citations_for`` runs the stats read repair, which commits, so it runs first; then
 the account row is held ``FOR SHARE`` (SEC-S3-TM-05: a ``DELETE /me`` commits before or after,
@@ -223,15 +225,16 @@ class PlanService:
         plan, loaded = stored.plan, stored.plan.version
         s = plan.sessions[n]
         event = plan.mark_done(week=s.week, index=s.index, at=self.clock())
-        if event is not None:
-            self.plans.update(owner_id, stored.id, plan, loaded_version=loaded)
         done_at = plan.sessions[n].done_at
         if done_at is None:  # pragma: no cover - mark_done leaves it set
             raise AssertionError("session not done after mark_done")
+        if event is None:  # already done: a no-op that stores no op row (T4-PL-5)
+            self.session.rollback()
+            return DoneState(session_id, done_at, plan.version)
+        self.plans.update(owner_id, stored.id, plan, loaded_version=loaded)
         self.plans.record_done_op(owner_id, op_id, DoneOp(session_id, plan.version, done_at))
         self.session.commit()
-        if event is not None:
-            self._event("coaching.plan.session_done", stored, session_id, op_id=op_id)
+        self._event("coaching.plan.session_done", stored, session_id, op_id=op_id)
         return DoneState(session_id, done_at, plan.version)
 
     def _undo_done(self, owner_id: uuid.UUID, session_id: uuid.UUID) -> DoneState:
