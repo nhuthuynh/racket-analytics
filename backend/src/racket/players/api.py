@@ -27,6 +27,7 @@ from racket.players.service import (
     AgeConfirmation,
     IdentityService,
     MagicLinkService,
+    RetentionSettings,
 )
 
 security_log = logging.getLogger(SECURITY_LOGGER)
@@ -289,3 +290,42 @@ def confirm_age(
     if new_token is not None:  # a pending sign-in became an account: a new session
         set_session_cookie(response, settings, new_token, settings.session_absolute_seconds)
     return response
+
+
+def _retention(settings: Settings, days: int | None) -> JSONResponse:
+    body = {"review_video_days": days, "choices": list(settings.retention_choices_days)}
+    return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+
+def _retention_on(request: Request) -> Settings:
+    """api-sprint-04 §1 rule 2: 404 while ``FEATURE_RETENTION_SETTING`` is off, before the
+    session check, so the route does not exist for anyone."""
+    settings = settings_of(request)
+    if not settings.feature_retention_setting:
+        raise NotFound("retention setting off")
+    return settings
+
+
+RetentionOn = Annotated[Settings, Depends(_retention_on)]
+
+
+@router.get("/me/retention")
+def get_retention(
+    settings: RetentionOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    """FR-008 (api-sprint-04 §5): the session account's review video days and the choices."""
+    return _retention(settings, RetentionSettings(session, settings).days(account.id))
+
+
+@router.put("/me/retention")
+def put_retention(
+    settings: RetentionOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+    body: Annotated[Any, Body()] = None,
+) -> Response:
+    """FR-008: one of the choices (closed body; ``unknown_value``, ``required``); applies to
+    every match of the account from the next purge pass."""
+    return _retention(settings, RetentionSettings(session, settings).choose(account.id, body))

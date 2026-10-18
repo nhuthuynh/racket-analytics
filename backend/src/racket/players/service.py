@@ -35,6 +35,7 @@ from racket.players.domain import (
     AgeOutcome,
     LinkExpired,
     MagicLinkToken,
+    RetentionChoice,
     SessionLifetime,
     email_key,
     normalise_email,
@@ -43,6 +44,7 @@ from racket.players.domain import (
 from racket.players.models import (
     accounts,
     pending_sign_ins,
+    retention_settings,
     sessions,
     sign_in_links,
     sign_in_requests,
@@ -54,6 +56,7 @@ DEV_SESSION_LIFETIME = timedelta(hours=12)
 SEND_SIGN_IN_LINK = "send_sign_in_link"
 
 security_log = logging.getLogger(SECURITY_LOGGER)
+log = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -537,3 +540,35 @@ class AgeConfirmation:
             .returning(accounts.c.id, accounts.c.display_name, accounts.c.age_confirmed_at)
         ).one()
         return Account(row.id, row.display_name, row.age_confirmed_at)
+
+
+class RetentionSettings:
+    """``GET/PUT /me/retention`` (ST-069; FR-008; api-sprint-04 §5): the session account's
+    review video choice. Keyed by that account only (T4-RT-1); a write holds the account row
+    ``FOR SHARE`` so it never outlives ``DELETE /me`` (SEC-S3-TM-05)."""
+
+    def __init__(
+        self, session: Session, settings: Settings, clock: Callable[[], datetime] = _utcnow
+    ) -> None:
+        self.session = session
+        self.settings = settings
+        self.clock = clock
+
+    def days(self, account_id: uuid.UUID) -> int | None:
+        default = self.settings.retention_default_days
+        return players.review_video_days(self.session, [account_id], default)[account_id]
+
+    def choose(self, account_id: uuid.UUID, body: object) -> int | None:
+        choice = RetentionChoice.parse(body, self.settings.retention_choices_days)
+        if not players.lock_live_account(self.session, account_id):
+            self.session.rollback()
+            raise Unauthenticated("the account was deleted")
+        values = {"review_video_days": choice.days, "changed_at": self.clock()}
+        self.session.execute(
+            insert(retention_settings)
+            .values(account_id=account_id, **values)
+            .on_conflict_do_update(index_elements=["account_id"], set_=values)
+        )
+        self.session.commit()
+        log.info("retention chosen", extra={"event": "retention.chosen", "days": choice.days})
+        return choice.days

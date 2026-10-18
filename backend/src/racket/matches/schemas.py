@@ -56,6 +56,9 @@ class MatchOut(BaseModel):
     media: MediaOut | None
     created_at: str
     updated_at: str
+    # FR-008 (ST-069; api-sprint-04 §5): set only while FEATURE_RETENTION_SETTING is on; the
+    # match routes serialise with ``exclude_unset``, so with the flag off the key is absent.
+    review_video_delete_at: str | None = None
 
 
 class MatchList(BaseModel):

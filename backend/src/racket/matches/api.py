@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from racket.matches.domain import CreationLimits, Match, OwnerId
 from racket.matches.schemas import MatchList, MatchOut, MediaOut
-from racket.matches.service import MatchService
+from racket.matches.service import MatchService, RetentionView
 from racket.platform.db import get_session
 from racket.players.api import CurrentAccount, request_ip
 
@@ -24,7 +24,10 @@ def get_match_service(
     """ADR 0012 seam: tests override this to make the service fail."""
     s = request.app.state.settings
     limits = CreationLimits(s.match_creations_per_hour, s.match_creations_per_ip_per_hour)
-    return MatchService(session, s.api_public_path_prefix, limits if s.feature_quotas else None)
+    retention = RetentionView(s.retention_default_days) if s.feature_retention_setting else None
+    return MatchService(
+        session, s.api_public_path_prefix, limits if s.feature_quotas else None, retention
+    )
 
 
 Service = Annotated[MatchService, Depends(get_match_service)]
@@ -40,7 +43,10 @@ def owned_match(
 OwnedMatch = Annotated[Match, Depends(owned_match)]
 
 
-@router.post("/matches", status_code=201)
+# FR-008 (ST-069): ``response_model_exclude_unset`` keeps a field a flag adds absent while the
+# flag is off (api-sprint-04 §1 rule 2); every other field of ``MatchOut`` and ``MatchList`` is
+# always set explicitly.
+@router.post("/matches", status_code=201, response_model_exclude_unset=True)
 def create_match(
     body: Annotated[Any, Body()],
     account: CurrentAccount,
@@ -55,17 +61,17 @@ def create_match(
     return service.view(match)
 
 
-@router.get("/matches")
+@router.get("/matches", response_model_exclude_unset=True)
 def list_matches(
     account: CurrentAccount,
     service: Service,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> MatchList:
     matches = service.list_for_owner(OwnerId(account.id), limit)
-    return MatchList(items=[service.view(m) for m in matches])
+    return MatchList(items=[service.view(m) for m in matches], next_cursor=None)
 
 
-@router.get("/matches/{match_id}")
+@router.get("/matches/{match_id}", response_model_exclude_unset=True)
 def get_match(match: OwnedMatch, service: Service) -> MatchOut:
     return service.view(match)
 
