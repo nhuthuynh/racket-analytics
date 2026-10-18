@@ -94,8 +94,7 @@ class UploadQuotaExceeded(AppError):
 
 
 class StorageQuotaExceeded(AppError):
-    """429 ``storage_quota_exceeded``, ``retry_at: null`` and the caller's ``quota`` numbers
-    (api-sprint-04 §7 check 4a; FR-160)."""
+    """429 with ``retry_at: null`` and the caller's ``quota`` numbers (api-sprint-04 §7, 4a)."""
 
     status, code = 429, "storage_quota_exceeded"
     retry_at = None
@@ -395,8 +394,7 @@ class UploadService:
             raise UploadQuotaExceeded("too many unfinished uploads")
 
     def _check_storage_quota(self, owner_id: uuid.UUID, length: int, now: datetime) -> None:
-        """Check 4a under the owner's lock (SEC-4 T4-QT-5): live stored videos plus the declared
-        length of open uploads; a deleted match's video stops counting at the tombstone."""
+        """Check 4a under the owner's lock (T4-QT-5); a deleted match stops counting at once."""
         stored = self.uploads.stored_by_match(owner_id)
         live = matches.live_ids(self.session, list(stored))
         _, reserved = self.uploads.open_for_owner(owner_id, now)

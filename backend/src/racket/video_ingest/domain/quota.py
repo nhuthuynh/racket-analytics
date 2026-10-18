@@ -1,9 +1,6 @@
-"""``StorageQuota``: how many bytes of video one account may keep (ST-072a; FR-160; NFR-023;
-api-sprint-04 §7 check 4a). Pure Python.
-
-Used bytes are the account's stored videos plus the declared ``Upload-Length`` of its open
-uploads, so an upload is counted once, from creation, and resuming it never counts again.
-"""
+"""``StorageQuota``: bytes of video one account may keep (ST-072a; FR-160; api-sprint-04 §7
+check 4a). Pure. Used = stored videos + declared ``Upload-Length`` of open uploads, so an upload
+counts once, from creation; resuming it never counts again."""
 
 from __future__ import annotations
 

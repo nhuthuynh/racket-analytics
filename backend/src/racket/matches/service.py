@@ -68,9 +68,8 @@ class MatchService:
         return match
 
     def _spend_creation_slot(self, owner: OwnerId) -> None:
-        """FR-160 (api-sprint-04 §7): per account, counted after the body validates; over the
-        limit nothing is written. The limiter serialises the key, so a burst cannot share the
-        last slot (SEC-4 T4-QT-1)."""
+        """FR-160 (api-sprint-04 §7; SEC-4 T4-QT-1): per account, after validation; the limiter
+        serialises the key, so a burst cannot share the last slot. Refused: nothing written."""
         if self.creations_per_hour is None:
             return
         now = datetime.now(UTC)

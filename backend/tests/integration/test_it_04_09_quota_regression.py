@@ -1,12 +1,6 @@
 """IT-04-09 quota regression suite (ST-072a; FR-160; NFR-023: 0 accepted requests beyond a limit).
-
-Bursts of 50 parallel requests for one account, through the in-process ASGI client (sync routes
-on the threadpool, one DB transaction each, as IT-02-11):
-* match creations with ``FEATURE_QUOTAS`` on -> exactly 10 x 201, 40 x 429 ``rate_limited``;
-* upload creations whose declared lengths together pass ``STORAGE_QUOTA_BYTES`` -> exactly the
-  uploads that fit are accepted, the rest 429 ``storage_quota_exceeded``, nothing stored for them;
-* a resumed upload is counted once; with the flag off only today's limits apply.
-"""
+Bursts of 50 parallel requests for one account through the in-process ASGI client (one DB
+transaction each, as IT-02-11); a resumed upload counts once; flag off keeps today's limits."""
 
 from __future__ import annotations
 
@@ -50,33 +44,14 @@ def _match_burst(api: ApiDriver) -> list[httpx.Response]:
 
 
 @pytest.fixture
-def quotas(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
-    monkeypatch.setenv("FEATURE_QUOTAS", "true")
-    return monkeypatch
-
-
-@pytest.fixture
-def burst_env(quotas: pytest.MonkeyPatch) -> None:
-    """Only the storage quota binds: the other limits are out of the way."""
-    quotas.setenv("STORAGE_QUOTA_BYTES", str(10 * LENGTH))
-    for name in ("MATCH_CREATIONS_PER_HOUR", "UPLOAD_MAX_OPEN_SESSIONS"):
-        quotas.setenv(name, "1000")
-    quotas.setenv("UPLOAD_CREATE_LIMIT_PER_HOUR", "1000")
-
-
-@pytest.fixture
-def resume_env(quotas: pytest.MonkeyPatch) -> None:
-    quotas.setenv("STORAGE_QUOTA_BYTES", str(LENGTH + 1))
-
-
-@pytest.fixture
-def flag_off_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FEATURE_QUOTAS", "false")
-    monkeypatch.setenv("STORAGE_QUOTA_BYTES", "1")
+def env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``FEATURE_QUOTAS`` on unless a test's ``env`` parameter says otherwise."""
+    for name, value in {"FEATURE_QUOTAS": "true", **getattr(request, "param", {})}.items():
+        monkeypatch.setenv(name, str(value))
 
 
 def test_it_04_09_a_burst_of_50_match_creations_accepts_exactly_10(
-    quotas: pytest.MonkeyPatch, api: ApiDriver, committed_db: Any
+    env: None, api: ApiDriver, committed_db: Any
 ) -> None:
     responses = _match_burst(api)
     assert _codes(responses) == {(201, None): 10, (429, "rate_limited"): 40}
@@ -84,25 +59,23 @@ def test_it_04_09_a_burst_of_50_match_creations_accepts_exactly_10(
     assert _count(committed_db, "SELECT count(*) FROM matches") == 10
 
 
-def test_it_04_09_an_invalid_body_spends_no_slot(
-    quotas: pytest.MonkeyPatch, api: ApiDriver, committed_db: Any
+def test_it_04_09_invalid_bodies_spend_no_slot_and_the_limit_is_per_account(
+    env: None, api: ApiDriver, committed_db: Any
 ) -> None:
     for _ in range(12):
         assert api.request("ivy", "POST", contract.MATCHES, json={"format": "x"}).status_code == 422
-    responses = _match_burst(api)
-    assert _codes(responses)[(201, None)] == 10
-
-
-def test_it_04_09_the_limit_is_per_account(
-    quotas: pytest.MonkeyPatch, api: ApiDriver, committed_db: Any
-) -> None:
     assert _codes(_match_burst(api))[(201, None)] == 10
-    carlos = api.as_user("carlos")
-    assert api.run(create_match(carlos, "Carlos's own"))
+    assert api.run(create_match(api.as_user("carlos"), "Carlos's own"))
 
 
+OUT_OF_THE_WAY = {"MATCH_CREATIONS_PER_HOUR": 1000, "UPLOAD_MAX_OPEN_SESSIONS": 1000,
+                  "UPLOAD_CREATE_LIMIT_PER_HOUR": 1000}  # fmt: skip
+
+
+@pytest.mark.parametrize("env", [{"STORAGE_QUOTA_BYTES": 10 * LENGTH, **OUT_OF_THE_WAY}],
+                         indirect=True)  # fmt: skip
 def test_it_04_09_a_burst_of_50_uploads_never_passes_the_storage_quota(
-    burst_env: None, api: ApiDriver, committed_db: Any
+    env: None, api: ApiDriver, committed_db: Any
 ) -> None:
     ivy = api.as_user("ivy")
     match_ids = [api.run(create_match(ivy, f"Q {i}")) for i in range(BURST)]
@@ -119,8 +92,9 @@ def test_it_04_09_a_burst_of_50_uploads_never_passes_the_storage_quota(
     assert refused["quota"]["requested_bytes"] == LENGTH
 
 
+@pytest.mark.parametrize("env", [{"STORAGE_QUOTA_BYTES": LENGTH + 1}], indirect=True)
 def test_it_04_09_a_resumed_upload_is_counted_once(
-    resume_env: None, api: ApiDriver, committed_db: Any
+    env: None, api: ApiDriver, committed_db: Any
 ) -> None:
     ivy = api.as_user("ivy")
     upload = api.run(tus.start(ivy, api.run(create_match(ivy, "Resumed")), LENGTH))
@@ -134,8 +108,10 @@ def test_it_04_09_a_resumed_upload_is_counted_once(
     }  # fmt: skip
 
 
+@pytest.mark.parametrize("env", [{"FEATURE_QUOTAS": "false", "STORAGE_QUOTA_BYTES": 1}],
+                         indirect=True)  # fmt: skip
 def test_it_04_09_flag_off_keeps_todays_limits(
-    flag_off_env: None, api: ApiDriver, committed_db: Any
+    env: None, api: ApiDriver, committed_db: Any
 ) -> None:
     responses = _match_burst(api)
     assert _codes(responses) == {(201, None): BURST}

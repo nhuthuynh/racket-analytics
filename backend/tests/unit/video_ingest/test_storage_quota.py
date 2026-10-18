@@ -18,14 +18,12 @@ def test_one_byte_over_the_limit_is_refused_with_the_usage() -> None:
     assert refusal == QuotaUsage(used_bytes=900, limit_bytes=1000, requested_bytes=101)
 
 
-def test_open_uploads_count_like_stored_bytes() -> None:
-    assert QUOTA.refusal(stored_bytes=0, reserved_bytes=1000, requested_bytes=1) is not None
-
-
-def test_an_account_already_over_a_lowered_limit_cannot_add_a_byte() -> None:
-    refusal = QUOTA.refusal(stored_bytes=1500, reserved_bytes=0, requested_bytes=1)
-    assert refusal is not None
-    assert refusal.used_bytes == 1500
+@pytest.mark.parametrize(("stored", "reserved"), [(0, 1000), (1500, 0)])
+def test_open_uploads_count_and_an_account_over_a_lowered_limit_cannot_add_a_byte(
+    stored: int, reserved: int
+) -> None:
+    refusal = QUOTA.refusal(stored_bytes=stored, reserved_bytes=reserved, requested_bytes=1)
+    assert refusal == QuotaUsage(used_bytes=stored + reserved, limit_bytes=1000, requested_bytes=1)
 
 
 @pytest.mark.parametrize("counts", [(-1, 0, 1), (0, -1, 1), (0, 0, 0), (0, 0, -5)])
@@ -40,9 +38,11 @@ def test_a_negative_limit_is_not_a_quota() -> None:
         StorageQuota(limit_bytes=-1)
 
 
-def test_an_upload_that_reaches_the_limit_exactly_fits() -> None:
-    assert QUOTA.refusal(stored_bytes=600, reserved_bytes=300, requested_bytes=100) is None
-
-
-def test_an_empty_account_fits_an_upload_of_the_whole_quota() -> None:
-    assert QUOTA.refusal(stored_bytes=0, reserved_bytes=0, requested_bytes=1000) is None
+@pytest.mark.parametrize(("stored", "reserved", "requested"), [(600, 300, 100), (0, 0, 1000)])
+def test_an_upload_that_reaches_the_limit_exactly_fits(
+    stored: int, reserved: int, requested: int
+) -> None:
+    assert (
+        QUOTA.refusal(stored_bytes=stored, reserved_bytes=reserved, requested_bytes=requested)
+        is None
+    )
