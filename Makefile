@@ -34,7 +34,7 @@ ps: ## Show service status
 logs: ## Follow service logs
 	$(COMPOSE) logs -f --tail=100
 
-# ---------------------------------------------------------------- demo data (MVP-03, ST-064)
+# ---------------------------------------------------------------- demo data (MVP-03)
 # The stack's own dev CA (web-tls, ADR 0029): only the public root certificate is copied out.
 DEMO_URL ?= https://localhost:3000
 DEMO_CA := .local/demo/root.crt

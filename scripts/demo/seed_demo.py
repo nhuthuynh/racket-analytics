@@ -11,7 +11,7 @@ Through the public HTTP API only, as the browser does (https://localhost:3000/ap
  4. starts game 1 and tags the 12 rallies of demoplan.rally_plan (POST .../games and
     POST .../rallies with If-Match versions), then checks the stats have metrics;
  5. keeps Ivy's plan if she has one (GET /me/plan); otherwise generates it with the fixed demo
-    preferences (POST /me/plan, demoplan.DEMO_PREFERENCES; ST-064), so a re-run adds nothing;
+    preferences (POST /me/plan, demoplan.demo_preferences; ST-064), so a re-run adds nothing;
  6. prints the stats page and the plan page to open, and who to sign in as.
 
     python3 scripts/demo/seed_demo.py --base-url https://localhost:3000 --cacert root.crt
@@ -167,7 +167,7 @@ def ensure_plan(c: Client) -> DemoPlan:
         raise StepFailed(f"read the plan: {e}") from e
     if kept is not None:
         return DemoPlan(kept, generated=False)
-    made = c.request("POST", "/me/plan", json_body=plan.plan_body())
+    made = c.request("POST", "/me/plan", json_body=plan.demo_preferences())
     return DemoPlan(str(_expect(made, 201, "generate the plan")["id"]), generated=True)
 
 

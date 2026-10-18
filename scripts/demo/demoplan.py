@@ -1,13 +1,11 @@
-"""The pure plan behind `make demo` (MVP-03, ST-064): which match to seed, which rallies to tag
-and which training plan to keep or generate.
+"""The pure plan behind `make demo` (MVP-03): which match to seed and which rallies to tag.
 
 Standard library only, no I/O (seed_demo.py does the HTTP). Ubiquitous language of the Match
 and Scorebook contexts (api-sprint-02 §2): a doubles *match* gets *game* 1, and each *rally* is
 a Quick Tag: its time on the video, the *ending*, the *winning side* and, where the player said
 so, the *responsible player* and *fault kind*. The demo only says what a player would tap; the
-API decides the score and the stats (no product rule is copied here). In the Coaching context
-(api-sprint-04 §2) the demo player's *preferences* go to ``POST /me/plan`` and the API ranks the
-*weaknesses* and assembles the *plan*; the demo only keeps Ivy's current plan if she has one.
+API decides the score and the stats (no product rule is copied here). ST-064 (Coaching context):
+the demo player's *preferences* go to ``POST /me/plan``; the API ranks and assembles the *plan*.
 Tests: infra/tests/test_demo_plan.py, infra/tests/test_demo_plan_step.py.
 """
 
@@ -16,7 +14,6 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from types import MappingProxyType
 from typing import Any
 
 DEMO_USER = "ivy"  # a seeded dev user (players.service.DEV_USERS); signs in with one click
@@ -143,24 +140,14 @@ def stats_url(origin: str, match_id: str) -> str:
     return f"{origin.rstrip('/')}/matches/{match_id}/stats"
 
 
-# ST-064: the fixed demo player (sprint-04 ST-064 AC): solo, 30 min, 3 sessions a week, no ball
-# machine (a wall only, as live_plan.PREFS), intermediate. Read-only: the body is the same on
-# every run, so a re-run can never ask for a different plan.
-DEMO_PREFERENCES: Mapping[str, Any] = MappingProxyType(
-    {
-        "minutes_per_session": 30,
-        "sessions_per_week": 3,
-        "players_available": 1,
-        "equipment": ("wall",),
-        "level": "intermediate",
-    }
-)
 NO_PLAN = "no_plan"
 
 
-def plan_body() -> dict[str, Any]:
-    """The ``POST /me/plan`` JSON body for the demo preferences."""
-    return {k: list(v) if isinstance(v, tuple) else v for k, v in DEMO_PREFERENCES.items()}
+def demo_preferences() -> dict[str, Any]:
+    """The ``POST /me/plan`` body of the fixed demo player: solo, 30 min, 3 sessions a week, no
+    ball machine (a wall only, as live_plan.PREFS), intermediate; a fresh dict per call."""
+    return {"minutes_per_session": 30, "sessions_per_week": 3, "players_available": 1,
+            "equipment": ["wall"], "level": "intermediate"}  # fmt: skip
 
 
 def plan_to_keep(status: int, body: Any) -> str | None:

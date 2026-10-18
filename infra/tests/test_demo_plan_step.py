@@ -1,26 +1,15 @@
 """ST-064 unit tests: the pure plan step behind `make demo` (scripts/demo/demoplan.py).
 
-No I/O. Negative cases first. The demo preferences are the PO's fixed demo player (sprint-04
-ST-064: solo, 30 min, 3 sessions a week, no ball machine, intermediate), a body the plan API's
-closed schema accepts (api-sprint-04 §2.1).
+No I/O. Negative cases first. The demo body is the PO's fixed demo player in the plan API's
+closed schema (api-sprint-04 §2.1).
 """
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-
 import pytest
-from conftest import SCRIPTS_DIR
+from test_demo_plan import p  # demoplan, loaded from scripts/demo
 
 pytestmark = pytest.mark.unit
-
-_spec = importlib.util.spec_from_file_location("demoplan", SCRIPTS_DIR / "demo" / "demoplan.py")
-assert _spec is not None
-assert _spec.loader is not None
-p = importlib.util.module_from_spec(_spec)
-sys.modules["demoplan"] = p
-_spec.loader.exec_module(p)
 
 
 # ---------------------------------------------------------------- which plan to keep
@@ -52,28 +41,14 @@ def test_plan_to_keep_is_the_current_plan_id() -> None:
 
 
 # ---------------------------------------------------------------- the demo preferences
-def test_demo_preferences_are_the_fixed_demo_player() -> None:
-    prefs = p.DEMO_PREFERENCES
+def test_demo_preferences_are_the_fixed_demo_player_in_the_closed_plan_body() -> None:
+    prefs = p.demo_preferences()
+    assert set(prefs) <= {"minutes_per_session", "sessions_per_week", "weekly_minutes",
+                          "players_available", "equipment", "level"}  # fmt: skip
     assert prefs["players_available"] == 1  # solo
-    assert prefs["minutes_per_session"] == 30
-    assert prefs["sessions_per_week"] == 3
-    assert "ball_machine" not in prefs["equipment"]
+    assert (prefs["minutes_per_session"], prefs["sessions_per_week"]) == (30, 3)
+    assert prefs["equipment"] == ["wall"]  # no ball machine
     assert prefs["level"] == "intermediate"
-
-
-def test_demo_preferences_are_a_closed_plan_api_body() -> None:
-    fields = {"minutes_per_session", "sessions_per_week", "weekly_minutes", "players_available",
-              "equipment", "level"}  # fmt: skip
-    needs = {"wall", "half_court", "full_court", "ball_machine", "partner_feeder"}
-    prefs = p.DEMO_PREFERENCES
-    assert set(prefs) <= fields
-    assert set(prefs["equipment"]) <= needs
-    assert len(set(prefs["equipment"])) == len(prefs["equipment"])
-
-
-def test_demo_preferences_cannot_be_changed_by_a_caller() -> None:
-    with pytest.raises(TypeError):
-        p.DEMO_PREFERENCES["level"] = "advanced"  # type: ignore[index]
 
 
 # ---------------------------------------------------------------- the plan page
@@ -81,8 +56,7 @@ def test_demo_preferences_cannot_be_changed_by_a_caller() -> None:
     ("origin", "url"),
     [
         ("https://localhost:3000", "https://localhost:3000/plan"),
-        ("https://localhost:3000/", "https://localhost:3000/plan"),
-        ("http://127.0.0.1:8080", "http://127.0.0.1:8080/plan"),
+        ("http://127.0.0.1:8080/", "http://127.0.0.1:8080/plan"),
     ],
 )
 def test_plan_url_is_the_web_plan_page(origin: str, url: str) -> None:

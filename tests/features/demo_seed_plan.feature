@@ -1,10 +1,7 @@
 # Sprint 4, ticket ST-064 (sre-devops-engineer; QD §7; goal G04-06).
-# Binding: infra/tests/test_seed_demo_plan_scenarios.py, against a loopback fake of the public
-# HTTP API (infra/tests/demo_fake_api.py) that already holds a complete demo match for Ivy, so
-# the scenarios run everywhere; IT-04-11 (infra/tests/test_seed_demo_plan.py) also runs them
-# against a live Compose stack when RA_DEMO_BASE_URL names one.
-# A new file beside demo_seed.feature: protected feature files are never edited (ST-003, EP/ENG-28;
-# decisions ST-064 row 1).
+# Binding: IT-04-11 infra/tests/test_seed_demo_plan.py, against a loopback fake of the public API
+# (infra/tests/demo_fake_api.py) in which Ivy has a complete demo match. A new file beside
+# demo_seed.feature, which is protected (decisions ST-064 row 1).
 @M4 @ticket-ST-064
 Feature: `make demo` also gives the demo user a 2-week plan
 
