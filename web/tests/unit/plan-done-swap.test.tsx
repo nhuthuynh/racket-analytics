@@ -207,6 +207,14 @@ describe('P-01 offline', () => {
     expect(screen.queryByText('We could not load your plan. Try again.')).toBeNull();
   });
 
+  it('offline, "Show me" and "Change my setup" need a connection', async () => {
+    online = false;
+    await show(followApi());
+    expect(screen.getByRole('button', { name: /^Show me the rallies behind Serve faults/ })).toBeDisabled();
+    expect(screen.queryByRole('link', { name: 'Change my setup' })).toBeNull();
+    expect(screen.getAllByText('Needs a connection').length).toBeGreaterThan(1);
+  });
+
   it('the saved plan says when it is from; "Mark done" still works', async () => {
     online = false;
     const read: PlanRead = { kind: 'plan', plan: parsePlan(planBody()), offlineAsOf: '2026-10-18T09:30:00Z' };
