@@ -80,3 +80,60 @@ def test_a_bad_swap_body_is_refused_with_its_field_code(
 def test_a_good_swap_body_gives_the_trimmed_reason(body: Any, reason: str | None) -> None:
     assert REASON_MAX == 200
     assert parse_swap_body(body) == reason
+
+
+# L11 (testing-strategy rule 11(a); T4-PL-7; PE-062P2-R2-01, SQA-062P2-R2-01): a reason holding a
+# control, lone surrogate or line/paragraph separator is a 422 ``invalid``, never stored; the one
+# exception is the line feed (decision row "swap reason may hold line feeds", ST-062-part2.md).
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "a\x00b",
+        "a\ud800b",
+        "a\udfffb",
+        "a\x07b",
+        "a\tb",
+        "a\rb",
+        "a\r\nb",
+        "a\x7fb",
+        "a\x85b",
+        "a b",
+        "a b",
+        "\x00",
+        "x" * 201 + "\x00",
+    ],
+    ids=[
+        "nul",
+        "high-surrogate",
+        "low-surrogate",
+        "bell",
+        "tab",
+        "carriage-return",
+        "crlf",
+        "delete",
+        "next-line",
+        "line-separator",
+        "paragraph-separator",
+        "only-nul",
+        "too-long-with-nul",
+    ],
+)
+def test_a_swap_reason_with_a_control_surrogate_or_separator_is_invalid(reason: str) -> None:
+    with pytest.raises(ValidationFailed) as exc:
+        parse_swap_body({"reason": reason})
+    assert _fields(exc) == [FieldError("reason", "invalid")]
+    assert reason not in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    ("reason", "stored"),
+    [
+        ("<script>alert(1)</script>\nsecond line", "<script>alert(1)</script>\nsecond line"),
+        ("\nToo hard\n", "Too hard"),
+        ("Café 🎾 ça va", "Café 🎾 ça va"),
+    ],
+)
+def test_a_swap_reason_keeps_line_feeds_markup_and_letters_as_data(
+    reason: str, stored: str
+) -> None:
+    assert parse_swap_body({"reason": reason}) == stored

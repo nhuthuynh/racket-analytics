@@ -113,6 +113,12 @@ def _swap_until_refused(api: ApiDriver, assignment_id: str) -> list[str]:
         ({"reason": "x" * 201}, [("reason", "too_long")]),
         ({"reason": "   "}, [("reason", "invalid")]),
         ({"reason": 7}, [("reason", "invalid")]),
+        # L11 (rule 11(a), T4-PL-7; PE-062P2-R2-01, SQA-062P2-R2-01): never stored, never a 500
+        ({"reason": "a\x00b"}, [("reason", "invalid")]),
+        ({"reason": "a\x07b"}, [("reason", "invalid")]),
+        ({"reason": "a\rb"}, [("reason", "invalid")]),
+        ({"reason": "a\u2028b"}, [("reason", "invalid")]),
+        ({"reason": "x" * 201 + "\x00"}, [("reason", "invalid")]),
         ({"reason": "ok", "drill": "pb.serve.deep-target"}, [(None, "unknown_field")]),
         (["not", "an", "object"], [(None, "invalid")]),
     ],
@@ -124,6 +130,27 @@ def test_it_04_05_a_bad_body_is_422_and_changes_nothing(
     response = _swap(api, "ivy", plan["sessions"][0]["assignments"][1]["id"], body)
     assert st.refusal(response) == (422, "validation_failed", fields)
     assert "x" * 201 not in response.text
+    assert _read(api, "ivy") == plan
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [b'{"reason": "a\\u0000b"}', b'{"reason": "a\\ud800b"}', b'{"reason": "a\\udfffb"}'],
+    ids=["nul", "high-surrogate", "low-surrogate"],
+)
+def test_it_04_05_a_nul_or_lone_surrogate_reason_is_422_on_a_swappable_plan(
+    api: ApiDriver, committed_db: Any, raw: bytes
+) -> None:
+    """L11 on the write path itself: the target has an alternative, so a parse that let the
+    reason through would reach the driver (the 500 of PE-062P2-R2-01 / SQA-062P2-R2-01)."""
+    plan = _plan(api, "ivy", GROUP_ALL)
+    before = _stored(committed_db)
+    url = f"{PLAN}/assignments/{plan['sessions'][0]['assignments'][1]['id']}/swap"
+    headers = {"Content-Type": "application/json"}
+    response = api.request("ivy", "POST", url, content=raw, headers=headers)
+    assert st.refusal(response) == (422, "validation_failed", [("reason", "invalid")])
+    assert _stored(committed_db) == before
+    assert _reasons(committed_db) == [None] * len(_reasons(committed_db))
     assert _read(api, "ivy") == plan
 
 
@@ -349,3 +376,19 @@ def test_it_04_05_a_warm_up_is_swapped_only_for_another_warm_up(
     assert "warm-up" in library[_ref(new)]["skills"]
     assert new["citation"]["metric_id"] == warm["citation"]["metric_id"]
     assert planlib.grade(_read(api, "ivy"), library) == []
+
+
+def test_it_04_05_a_reason_with_markup_and_a_line_feed_is_stored_as_data_and_never_logged(
+    api: ApiDriver, committed_db: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    """T4-PL-7's named case: ``<script>`` and ``\\n`` give 200; the reason is stored as typed
+    (trimmed), absent from the answer and from the captured logs."""
+    caplog.set_level("DEBUG")
+    reason = "<script>alert(1)</script>\nsecond line"
+    plan = _plan(api, "ivy", GROUP_ALL)
+    response = _swap(api, "ivy", plan["sessions"][0]["assignments"][1]["id"], {"reason": reason})
+    assert response.status_code == 200, response.text
+    assert "<script>" not in response.text
+    assert reason in _reasons(committed_db)
+    assert "<script>" not in caplog.text
+    assert "second line" not in caplog.text
