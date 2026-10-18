@@ -228,6 +228,8 @@ jobs:
       - run: uv run --no-sync racket-drill-lint ../content/drills
         env:
           RACKET_DRILL_BASE_LOCK: ${{ runner.temp }}/base-library.lock
+      # ST-059 (FR-141; QD-DR-05): print the coverage matrix and fail naming each empty cell.
+      - run: uv run --no-sync racket-drill-coverage ../content/drills
 
   # ------------------------------------------------------------------ integration on Compose
   integration:
