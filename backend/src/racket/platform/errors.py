@@ -81,6 +81,14 @@ CODE_MESSAGES.update(
         "idempotency_key_reused": "This request id was already used.",
     }
 )
+# Sprint 4 age codes (api-sprint-04 §4, §9; ST-068a). ``under_age`` carries the interim text
+# from settings (``racket.players.domain.under_age_message``); this is only the fallback.
+CODE_MESSAGES.update(
+    {
+        "age_confirmation_required": "Please confirm your age to continue.",
+        "under_age": "You can't have an account yet.",
+    }
+)
 
 
 class AppError(Exception):
