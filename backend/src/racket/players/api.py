@@ -245,6 +245,18 @@ class ConfirmedMe(Me):
     age_confirmed_at: str
 
 
+def _under_age(settings: Settings) -> Response:
+    """403 ``under_age`` with the interim text for the configured minimum, signed out."""
+    payload = ErrorMapper().map(UnderAge("under age")).body()
+    payload["error"]["message"] = under_age_message(settings.age_minimum)
+    refused = JSONResponse(payload, status_code=403, headers={"Cache-Control": "no-store"})
+    return _signed_out(refused, settings)
+
+
+def _utc_z(at: datetime) -> str:
+    return at.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 @router.post("/me/age-confirmation")
 def confirm_age(
     request: Request,
@@ -261,25 +273,19 @@ def confirm_age(
     if holder is None:
         raise Unauthenticated("no valid session")
     service = AgeConfirmation(session, settings)
+    new_token: str | None = None
     if isinstance(holder, str):
-        confirmed = service.answer_pending(holder, body)
-        account = confirmed and confirmed[0]
+        account, new_token = service.answer_pending(holder, body) or (None, None)
     else:
         account = service.answer_account(holder, body)
     if account is None:
-        error = ErrorMapper().map(UnderAge("under age"))
-        payload = error.body()
-        payload["error"]["message"] = under_age_message(settings.age_minimum)
-        refused = JSONResponse(payload, status_code=403, headers={"Cache-Control": "no-store"})
-        return _signed_out(refused, settings)
+        return _under_age(settings)
     user_id_var.set(str(account.id))
-    confirmed_at = account.age_confirmed_at or datetime.now(UTC)  # always set by the answer
-    at = confirmed_at.astimezone(UTC).isoformat(timespec="seconds")
     me = ConfirmedMe(
         id=str(account.id), display_name=account.display_name,
-        age_confirmed_at=at.replace("+00:00", "Z"),
+        age_confirmed_at=_utc_z(account.age_confirmed_at or datetime.now(UTC)),
     )  # fmt: skip
     response = JSONResponse(me.model_dump(), headers={"Cache-Control": "no-store"})
-    if isinstance(holder, str) and confirmed:
-        set_session_cookie(response, settings, confirmed[1], settings.session_absolute_seconds)
+    if new_token is not None:  # a pending sign-in became an account: a new session
+        set_session_cookie(response, settings, new_token, settings.session_absolute_seconds)
     return response
