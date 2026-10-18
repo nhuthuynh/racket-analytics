@@ -239,9 +239,7 @@ function PlanBody({
       {follow.dropped ? <p className="notice notice--error">{WORDS.dropped}</p> : null}
       <p>{madeOn(plan)}</p>
       <p>
-        <Link href="/plan/new" className="touch-link">
-          Change my setup
-        </Link>
+        <SetupLink online={online} />
       </p>
       {plan.unofficial ? <p className="notice notice--warning">{plan.label}</p> : null}
       {plan.drillsVerified ? null : <p className="notice notice--warning">{COACH_NOTICE}</p>}
@@ -262,10 +260,7 @@ function PlanBody({
             <p>{splitLine(w)}</p>
             {unfitted.has(w.id) ? (
               <p>
-                No drill fits your setup for this one.{' '}
-                <Link href="/plan/new" className="touch-link">
-                  Change my setup
-                </Link>
+                No drill fits your setup for this one. <SetupLink online={online} />
               </p>
             ) : null}
           </li>
@@ -322,6 +317,16 @@ function PlanBody({
   );
 }
 
+/** "Change my setup" (→ P-02); offline it is text with "Needs a connection" (flows-sprint-04 §2). */
+function SetupLink({ online }: { online: boolean }) {
+  if (!online) return <span>{`Change my setup. ${WORDS.needsConnection}`}</span>;
+  return (
+    <Link href="/plan/new" className="touch-link">
+      Change my setup
+    </Link>
+  );
+}
+
 function DrillRow({
   assignment: a,
   open,
@@ -368,6 +373,7 @@ function DrillRow({
               aria-label={showMeName(c)}
               aria-expanded={open}
               aria-controls={open ? panelId : undefined}
+              disabled={!online}
               onClick={onToggle}
             >
               Show me
@@ -403,6 +409,7 @@ function DrillRow({
         >
           Not for me
         </button>
+        {/* One line for the row's two buttons that need the server ("Show me", "Not for me"). */}
         {online ? null : <span>{` ${WORDS.needsConnection}`}</span>}
       </p>
     </li>
