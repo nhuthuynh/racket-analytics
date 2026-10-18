@@ -59,9 +59,9 @@ def missing_safety_notes(folder: Path) -> list[str]:
     latest: dict[str, dict[str, Any]] = {}
     for p in _drills(folder):
         doc = json.loads(p.read_text())
-        if isinstance(doc, dict) and "id" in doc:
-            if doc["id"] not in latest or doc["version"] > latest[doc["id"]]["version"]:
-                latest[doc["id"]] = doc
+        newer = doc["id"] not in latest or doc["version"] > latest[doc["id"]]["version"]
+        if newer:
+            latest[doc["id"]] = doc
     found = []
     for d in latest.values():
         if d.get("review_status") not in REVIEWED or d.get("deprecated_by"):

@@ -17,7 +17,8 @@ Feature: Safety notes on reviewed drills
     Then validation passes
 
   Scenario: Every reviewed drill of the library that needs safety notes has them
+    # A safety trigger is lob, dive or diving, sprint, or footwork in the drill content.
     Given the drill library
     When the library is validated
     Then validation passes
-    And no current reviewed drill involving lobs, diving, sprints or footwork has empty safety notes
+    And no current reviewed drill with a safety trigger has empty safety notes

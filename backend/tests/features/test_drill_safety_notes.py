@@ -56,6 +56,6 @@ def passes(ctx: dict[str, Any]) -> None:
     assert ctx["rc"] == 0, ctx["out"]
 
 
-@then("no current reviewed drill involving lobs, diving, sprints or footwork has empty safety notes")
+@then("no current reviewed drill with a safety trigger has empty safety notes")
 def no_missing(ctx: dict[str, Any]) -> None:
     assert missing_safety_notes(ctx["path"]) == []

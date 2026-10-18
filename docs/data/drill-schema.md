@@ -28,7 +28,7 @@ Code: `backend/src/racket/coaching/drills/` — `schema.json` (draft 2020-12), `
 | `setup` | ≥ 1 step |
 | `success_criterion` | text containing a number (e.g. "8 of 10 drops bounce in the kitchen") |
 | `progressions`, `regressions` | drill ids of the library; neither graph may have a cycle |
-| `safety_notes` | text (QD-DR-04 content rule is the coach's) |
+| `safety_notes` | text; non-blank on a reviewed, not deprecated drill whose content mentions lob, dive/diving, sprint or footwork (lint "safety notes missing", QD-DR-04, FIX-04-1d); the rest of the content rule is the coach's |
 | `source` or `coach_rationale` | at least one non-blank; a rationale without a source says "(judgment)" |
 | `review_status` | `draft` \| `coach-reviewed` \| `verified` (lifecycle) |
 | `deprecated_by` | optional `id@version` of an existing drill version (lifecycle) |
