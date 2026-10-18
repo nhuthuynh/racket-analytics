@@ -11,7 +11,14 @@ A composition root: no domain rule lives here. One pass:
    name every object left, so there is no orphan and the next pass finishes the job);
 4. orphan snapshot rows are swept (SEC-S3-TM-02);
 5. deleted accounts with no match row left are purged (their training-plan rows, then the
-   account row; ST-061a).
+   account row; ST-061a);
+6. with ``FEATURE_RETENTION_SETTING`` on, each review video past its owner's own deletion date
+   is deleted, its object first, then its media row; tags, stats and plans stay (ST-069;
+   FR-008; ADR 0006 user rule, ADR 0042). Flag off: this step does nothing.
+
+Dev/test only (api-sprint-04 §5; SEC-4 T4-RT-3): ``--now RFC3339`` or ``--now-offset-days N``
+moves the clock of step 6 only (the other steps keep the real clock), and is refused with exit 2
+when ``APP_ENV`` is ``staging`` or ``prod``.
 
 Exit 0: every due item done; 1: an item failed and stays due; 2: usage or configuration.
 Log lines hold ids and the pseudonymous account id only (NFR-057).
@@ -44,6 +51,8 @@ from racket.video_ingest import public as video_ingest
 log = logging.getLogger("racket.purge")
 ORPHAN_PAGE = 500
 UPLOAD_PAGE = 500
+REVIEW_PAGE = 500
+CLOCK_ENVS = ("dev", "test")  # where the dev clock option is honoured (T4-RT-3)
 
 
 def _now() -> datetime:
@@ -156,12 +165,71 @@ class ContextPorts:
         coaching.purge_account(session, account_id)  # ST-061a: plan rows before the account row
         players.purge_account(session, account_id)
 
+    def _due(
+        self,
+        session: Any,
+        videos: list[video_ingest.ReviewVideo],
+        now: datetime,
+        default_days: int | None,
+    ) -> list[video_ingest.ReviewVideo]:
+        """Each video against its own owner's choice (T4-RT-1), live matches only: a deleted
+        match goes through the match purge."""  # fmt: skip
+        days = players.review_video_days(session, sorted({v.owner_id for v in videos}),
+                                         default_days)  # fmt: skip
+        live = matches.live_ids(session, [v.match_id for v in videos])
+        return [
+            v for v in videos
+            if v.match_id in live
+            and video_ingest.ReviewVideoSchedule(days[v.owner_id]).is_due(v.analysed_at, now)
+        ]  # fmt: skip
+
+    def due_review_videos(
+        self, session: Any, now: datetime, default_days: int | None, limit: int
+    ) -> list[video_ingest.ReviewVideo]:
+        """ST-069: up to ``limit`` review videos past their deletion date, unlocked."""
+        found: list[video_ingest.ReviewVideo] = []
+        after = None
+        while len(found) < limit:
+            page = video_ingest.probed_review_videos(session, after=after, limit=REVIEW_PAGE)
+            if not page:
+                break
+            found += self._due(session, page, now, default_days)
+            after = page[-1].match_id
+        return found[:limit]
+
+    def claim_review_video(
+        self, session: Any, match_id: uuid.UUID, now: datetime, default_days: int | None
+    ) -> video_ingest.ReviewVideo | None:
+        """The video locked until commit, if still due under its owner's current choice (a
+        choice changed since the listing wins, T4-RT-4)."""
+        video = video_ingest.claim_review_video(session, match_id)
+        if video is None or not self._due(session, [video], now, default_days):
+            return None
+        return video
+
+    def forget_review_video(self, session: Any, video: video_ingest.ReviewVideo) -> None:
+        video_ingest.forget_review_video(session, video)
+
+
+@dataclass(frozen=True)
+class RetentionRule:
+    """FEATURE_RETENTION_SETTING on (ST-069): the default days for an owner who chose none and
+    the dev clock of this step (``at`` or ``offset``; T4-RT-3)."""
+
+    default_days: int | None
+    at: datetime | None = None
+    offset: timedelta = timedelta(0)
+
+    def now(self, real: datetime) -> datetime:
+        return (self.at or real) + self.offset
+
 
 @dataclass
 class PassResult:
     matches: int = 0
     accounts: int = 0
     uploads: int = 0
+    review_videos: int = 0
     failed: int = 0
 
     @property
@@ -196,6 +264,7 @@ class PurgeJob:
         clock: Callable[[], datetime] = _now,
         batch: int = 100,
         alert_after: timedelta = timedelta(seconds=518_400),
+        retention: RetentionRule | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.store = store
@@ -203,6 +272,7 @@ class PurgeJob:
         self.clock = clock
         self.batch = batch
         self.alert_after = alert_after
+        self.retention = retention  # None: FEATURE_RETENTION_SETTING off, step 6 does nothing
 
     def _failed(self, kind: str, item: uuid.UUID, stage: str, exc: BaseException) -> None:
         log.error(
@@ -231,10 +301,13 @@ class PurgeJob:
             self._purge_match(item.match_id, item.owner_id, result)
         self._step("snapshot", self._sweep_orphans, result)
         self._purge_accounts(result)
+        if self.retention is not None:
+            self._purge_review_videos(self.retention, now, result)
         log.info(
             "purge pass",
             extra={"event": "purge.pass", "matches": result.matches, "accounts": result.accounts,
-                   "uploads": result.uploads, "failed": result.failed,
+                   "uploads": result.uploads, "review_videos": result.review_videos,
+                   "failed": result.failed,
                    "duration_ms": round((time.perf_counter() - started) * 1000)},
         )  # fmt: skip
         return result
@@ -348,14 +421,82 @@ class PurgeJob:
             finally:
                 user_id_var.reset(token)
 
+    def _purge_review_videos(self, rule: RetentionRule, real: datetime, result: PassResult) -> None:
+        """ST-069, one video at a time: its own transaction and asset row lock, object first,
+        then the media row (ADR 0042). A failure rolls back that video only (the row still names
+        the object, the next pass retries it) and the next video goes on."""
+        now = rule.now(real)
+        due: list[video_ingest.ReviewVideo] = []
+        self._step("review_video",
+                   lambda s: due.extend(self.ports.due_review_videos(s, now, rule.default_days,
+                                                                     self.batch)),
+                   result)  # fmt: skip
+        for item in due:
+            token = user_id_var.set(str(item.owner_id))
+            try:
+                with self.session_factory() as session:
+                    stage = "objects"
+                    try:
+                        video = self.ports.claim_review_video(
+                            session, item.match_id, now, rule.default_days
+                        )
+                        if video is None:  # another pass has it, it is gone, or no longer due
+                            session.rollback()
+                            continue
+                        _delete(self.store, video.ref)
+                        stage = "rows"
+                        self.ports.forget_review_video(session, video)
+                        session.commit()
+                    except Exception as exc:  # noqa: BLE001 - the video stays due; next one
+                        session.rollback()
+                        result.failed += 1
+                        self._failed("match", item.match_id, stage, exc)
+                        continue
+                result.review_videos += 1
+                log.info(
+                    "review video purged",
+                    extra={"event": "review_video.purged", "match_id": str(item.match_id)},
+                )
+            finally:
+                user_id_var.reset(token)
+
+
+def _dev_clock(raw_now: str | None, offset_days: str | None) -> tuple[datetime | None, timedelta]:
+    """``--now`` (RFC 3339 with a zone) and ``--now-offset-days`` (whole days); ValueError on a
+    malformed value or both at once."""
+    if raw_now is not None and offset_days is not None:
+        raise ValueError("--now and --now-offset-days are exclusive")
+    at = None
+    if raw_now is not None:
+        at = datetime.fromisoformat(raw_now.replace("Z", "+00:00"))
+        if at.tzinfo is None:
+            raise ValueError("--now needs a time zone")
+    days = 0
+    if offset_days is not None:
+        if not offset_days.lstrip("-").isascii() or not offset_days.lstrip("-").isdigit():
+            raise ValueError("--now-offset-days takes whole days")
+        days = int(offset_days)
+    return at, timedelta(days=days)
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m racket.platform.purge", exit_on_error=False)
     parser.add_argument("--once", action="store_true", required=True)
+    parser.add_argument("--now", default=None)  # dev/test only (T4-RT-3)
+    parser.add_argument("--now-offset-days", default=None)  # dev/test only (T4-RT-3)
     try:
-        parser.parse_args(sys.argv[1:] if argv is None else argv)
-    except (argparse.ArgumentError, SystemExit):
+        args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+        at, offset = _dev_clock(args.now, args.now_offset_days)
+    except (argparse.ArgumentError, SystemExit, ValueError):
         return 2
+    if (args.now is not None or args.now_offset_days is not None) and os.environ.get(
+        "APP_ENV", ""
+    ) not in CLOCK_ENVS:
+        log.error("purge dev clock refused", extra={"event": "purge.config", "error": "dev_clock"})
+        return 2
+    if at is not None or offset:
+        log.warning("purge dev clock", extra={"event": "purge.dev_clock",
+                                               "offset_days": offset.days})  # fmt: skip
     try:
         from racket.platform.db import engine_for, session_factory
         from racket.platform.settings import Settings
@@ -369,6 +510,9 @@ def main(argv: list[str] | None = None) -> int:
             ports=ContextPorts(upload_idle=timedelta(seconds=settings.upload_expiry_seconds)),
             batch=_env_int("PURGE_BATCH", 100, 1),
             alert_after=timedelta(seconds=_env_int("PURGE_ALERT_AFTER_S", 518_400, 1)),
+            retention=RetentionRule(settings.retention_default_days, at, offset)
+            if settings.feature_retention_setting
+            else None,
         )
     except Exception as exc:  # noqa: BLE001 - configuration problems are exit 2
         log.error(

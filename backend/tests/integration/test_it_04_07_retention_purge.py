@@ -92,12 +92,13 @@ def test_it_04_07_until_i_delete_and_the_default_keep_a_31_day_old_video(
     assert put.status_code == 200, put.text
     assert put.json()["review_video_days"] is None
     assert rt.match_body(on, "ivy", forever)[rt.FIELD] is None
-    assert rt.run_purge("--now-offset-days", "400") == 0
-    assert rt.stored(committed_db, forever)
     assert rt.run_purge("--now-offset-days", "31") == 0
     assert rt.stored(committed_db, default)
+    assert rt.stored(committed_db, forever)
     assert rt.run_purge("--now-offset-days", "91") == 0
     assert not rt.stored(committed_db, default)
+    assert rt.stored(committed_db, forever)
+    assert rt.run_purge("--now-offset-days", "400") == 0
     assert rt.stored(committed_db, forever)
 
 
