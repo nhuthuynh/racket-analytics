@@ -8,9 +8,10 @@ field codes) -> rate limit (429, SEC-S4-TM-01, counted after validation) -> rank
 
 Follow-through (ST-062; FR-124; api-sprint-04 §3): ``POST``/``DELETE
 /me/plan/sessions/{session_id}/done`` and ``POST /me/plan/assignments/{assignment_id}/swap``.
-Checks in order: session (401) -> Origin (403) -> ``Idempotency-Key`` or body (422) -> the id
-among the caller's own plan rows (404 ``not_found``, the same answer for another account's, an
-unknown or a malformed id; NFR-051) -> the command (409 codes).
+Checks in order: session (401) -> Origin (403) -> ``Idempotency-Key`` or body (422) -> for the
+swap, the rate limit (429, T4-PL-6 / SEC-S4-TM-01; before the id lookup, so it also caps id
+probing) -> the id among the caller's own plan rows (404 ``not_found``, the same answer for
+another account's, an unknown or a malformed id; NFR-051) -> the command (409 codes).
 """
 
 from __future__ import annotations
@@ -43,6 +44,7 @@ PLAN_PATH = "/me/plan"
 DONE_PATH = "/me/plan/sessions/{session_id}/done"
 SWAP_PATH = "/me/plan/assignments/{assignment_id}/swap"
 GENERATIONS_PER_HOUR = 30  # SEC-4 T4-PL-6 (judgment); decisions ST-061b
+SWAPS_PER_HOUR = 120  # SEC-4 T4-PL-6 (judgment); decisions ST-062-part2
 
 
 def _error(description: str) -> dict[str, Any]:
@@ -55,6 +57,17 @@ _PREFERENCES_BODY = {
         "content": {"application/json": {"schema": PreferencesIn.model_json_schema()}},
     }
 }
+
+
+def _spend_slot(session: Session, key: str, per_hour: int) -> None:
+    """Count one hit on ``key`` (after validation); 429 ``rate_limited`` over ``per_hour``."""
+    now = datetime.now(UTC)
+    retry_at = RateLimiter(session, clock=lambda: now).hit(
+        key, limit=per_hour, window=timedelta(hours=1)
+    )
+    session.commit()  # the slot counts even when the command is then refused
+    if retry_at is not None:
+        raise RateLimited(retry_at, now)
 
 
 def _service(session: Session) -> PlanService:
@@ -80,13 +93,7 @@ def generate_plan(
     body: Annotated[Any, Body(include_in_schema=False)] = None,
 ) -> JSONResponse:
     prefs = parse_preferences(body)
-    now = datetime.now(UTC)
-    retry_at = RateLimiter(session, clock=lambda: now).hit(
-        f"plan:generate:{account.id}", limit=GENERATIONS_PER_HOUR, window=timedelta(hours=1)
-    )
-    session.commit()  # the slot counts even when the generation is refused
-    if retry_at is not None:
-        raise RateLimited(retry_at, now)
+    _spend_slot(session, f"plan:generate:{account.id}", GENERATIONS_PER_HOUR)
     view = _service(session).generate(account.id, prefs)
     return JSONResponse(plan_body(view), status_code=201, headers={"Location": PLAN_PATH})
 
@@ -172,6 +179,7 @@ def undo_session_done(session_id: str, account: CurrentAccount, session: DbSessi
         404: _error("not_found: not an assignment of the caller's plan"),
         409: _error("no_alternative, session_done or plan_conflict; nothing changed"),
         422: _error("validation_failed: reason too_long or invalid, unknown_field"),
+        429: _error("rate_limited with retry_at"),
     },
 )
 def swap_drill(
@@ -181,6 +189,7 @@ def swap_drill(
     body: Annotated[Any, Body(include_in_schema=False)] = None,
 ) -> JSONResponse:
     reason = parse_swap_body(body)
+    _spend_slot(session, f"plan:swap:{account.id}", SWAPS_PER_HOUR)
     result = _service(session).swap(account.id, _owned_id(assignment_id), reason)
     n, plan = result.session, result.stored.plan
     return JSONResponse(
