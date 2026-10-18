@@ -7,7 +7,9 @@ Capture & Media's ``media_summary`` port (context map R2; api-sprint-00 §5.1).
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -34,6 +36,7 @@ from racket.platform.logs import SECURITY_LOGGER
 from racket.platform.ratelimit import RateLimited, RateLimiter
 from racket.players import public as players
 from racket.video_ingest.public import (
+    ReviewVideoSchedule,
     UploadStatus,
     close_for_deleted_match,
     lock_upload_of_match,
@@ -53,14 +56,26 @@ def _rfc3339(value: datetime) -> str:
     return value.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
+@dataclass(frozen=True)
+class RetentionView:
+    """FEATURE_RETENTION_SETTING on (ST-069): the match shows its review video deletion date."""
+
+    default_days: int | None
+
+
 class MatchService:
     def __init__(
-        self, session: Session, api_path_prefix: str = "", limits: CreationLimits | None = None
+        self,
+        session: Session,
+        api_path_prefix: str = "",
+        limits: CreationLimits | None = None,
+        retention: RetentionView | None = None,
     ) -> None:
         self.session = session
         self.matches = MatchRepository(session)
         self.api_path_prefix = api_path_prefix  # resume_url like the tus Location (§5.2)
         self.limits = limits  # None: FEATURE_QUOTAS off (ST-072a)
+        self.retention = retention  # None: FEATURE_RETENTION_SETTING off (ST-069)
 
     def create(
         self, owner: OwnerId, body: object, *, today: date | None = None, client_ip: str = ""
@@ -136,6 +151,16 @@ class MatchService:
         )  # fmt: skip
         return Tombstone(at)
 
+    def _retention_fields(self, match: Match, analysed_at: datetime | None) -> dict[str, Any]:
+        """FR-008: ``review_video_delete_at`` from the owner's own current choice and the
+        analysed time (Capture & Media's rule); no key at all while the flag is off."""
+        if self.retention is None:
+            return {}
+        owner = match.owner_id.value
+        days = players.review_video_days(self.session, [owner], self.retention.default_days)
+        at = ReviewVideoSchedule(days[owner]).delete_at(analysed_at)
+        return {"review_video_delete_at": None if at is None else _rfc3339(at)}
+
     def view(self, match: Match) -> MatchOut:
         summary = media_summary(self.session, match.id.value)
         if summary.probe_failed:
@@ -180,4 +205,5 @@ class MatchService:
             media=media,
             created_at=_rfc3339(match.created_at),
             updated_at=_rfc3339(match.updated_at),
+            **self._retention_fields(match, summary.analysed_at),
         )

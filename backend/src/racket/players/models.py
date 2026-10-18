@@ -73,3 +73,35 @@ account_roles = sa.Table(
     sa.Column("role", sa.String(32), primary_key=True),
     sa.Column("granted_at", sa.DateTime(timezone=True), nullable=False),
 )  # fmt: skip
+
+# FR-008 (0020): the player's review video choice; no row means the configured default. The
+# account row owns it (ON DELETE CASCADE), so it goes with the account.
+retention_settings = sa.Table(
+    "retention_settings",
+    metadata,
+    sa.Column("account_id", sa.Uuid(), sa.ForeignKey("accounts.id", ondelete="CASCADE"),
+              primary_key=True),
+    sa.Column("review_video_days", sa.Integer(), nullable=True),  # NULL: until I delete it
+    sa.Column("changed_at", sa.DateTime(timezone=True), nullable=False),
+)  # fmt: skip
+
+# FR-009 (0021): the player's training-data opt-in; no row means not opted in (T4-CS-1). One
+# event row per change is the audit trail (T4-CS-3). Both go with the account (ON DELETE CASCADE).
+training_consents = sa.Table(
+    "training_consents",
+    metadata,
+    sa.Column("account_id", sa.Uuid(), sa.ForeignKey("accounts.id", ondelete="CASCADE"),
+              primary_key=True),
+    sa.Column("opt_in", sa.Boolean(), nullable=False),
+    sa.Column("changed_at", sa.DateTime(timezone=True), nullable=False),
+)  # fmt: skip
+
+training_consent_events = sa.Table(
+    "training_consent_events",
+    metadata,
+    sa.Column("id", sa.BigInteger(), sa.Identity(always=True), primary_key=True),
+    sa.Column("account_id", sa.Uuid(), sa.ForeignKey("accounts.id", ondelete="CASCADE"),
+              nullable=False),
+    sa.Column("opt_in", sa.Boolean(), nullable=False),
+    sa.Column("changed_at", sa.DateTime(timezone=True), nullable=False),
+)  # fmt: skip

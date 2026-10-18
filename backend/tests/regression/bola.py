@@ -137,11 +137,9 @@ PLAN_ID_ROUTES_04 = {
     ("DELETE", "/me/plan/sessions/{session_id}/done"): lambda: {},
     ("POST", "/me/plan/assignments/{assignment_id}/swap"): lambda: {"json": {}},
 }
-# ST-062 serves the two done routes; the swap route joins with ST-062-part2 (TCR row 2026-10-18
-# in docs/sprints/04/decisions/ST-062.md).
-SERVED_04: frozenset[RouteKey] = frozenset(
-    k for k in PLAN_ID_ROUTES_04 if k[1] == "/me/plan/sessions/{session_id}/done"
-)
+# ST-062 serves the two done routes and ST-062-part2 the swap route (TCR rows 2026-10-18 in
+# docs/sprints/04/decisions/ST-062.md).
+SERVED_04: frozenset[RouteKey] = frozenset(PLAN_ID_ROUTES_04)
 
 
 def plan_resource(template: str) -> str:

@@ -101,6 +101,21 @@ describe('POST /me/plan contract (negative first)', () => {
 });
 
 describe('GET /me/plan for the last preferences (api-sprint-04 §2.2)', () => {
+  it.each([
+    ['404 no_plan', 404, envelope('no_plan')],
+    ['200', 200, { id: 'p', preferences: { minutes_per_session: 45, sessions_per_week: 2, players_available: 2, equipment: [], level: 'advanced' } }],
+  ])('a read never writes: on %s it sends one bodiless GET to the documented path', async (_, status, body) => {
+    const { api, seen } = answering(status, body);
+    await api.lastPreferences();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.url).toBe(`http://api.test/api${op.path}`);
+    expect(seen[0]!.init.method).toBe('GET');
+    expect(seen[0]!.init.body).toBeUndefined();
+    const headers = new Headers(seen[0]!.init.headers);
+    expect(headers.get('content-type')).toBeNull();
+    expect(headers.get('accept')).toBe('application/json');
+  });
+
   it('404 no_plan is a first visit; 401 is signed out; a broken body or 5xx is an error', async () => {
     expect(await answering(404, envelope('no_plan')).api.lastPreferences()).toEqual({ kind: 'none' });
     expect(await answering(401, envelope('unauthenticated')).api.lastPreferences()).toEqual({ kind: 'signed_out' });
