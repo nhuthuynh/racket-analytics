@@ -87,7 +87,5 @@ def test_a_second_key_on_a_done_session_writes_no_row(service: svc.PlanService) 
 def test_the_op_record_is_keyed_by_the_account(service: svc.PlanService) -> None:
     session_id = _plans(service).stored.sessions[1].id
     done = service.mark_done(IVY, session_id, "op-k")
-    assert _plans(service).ops == {
-        (IVY, "op-k"): DoneOp(session_id, done.plan_version, AT)
-    }
+    assert _plans(service).ops == {(IVY, "op-k"): DoneOp(session_id, done.plan_version, AT)}
     assert _plans(service).done_op(CARLOS, "op-k") is None
