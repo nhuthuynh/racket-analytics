@@ -27,6 +27,9 @@ from racket.players.service import (
     AgeConfirmation,
     IdentityService,
     MagicLinkService,
+    RetentionSettings,
+    TrainingConsentSettings,
+    TrainingConsentState,
 )
 
 security_log = logging.getLogger(SECURITY_LOGGER)
@@ -289,3 +292,88 @@ def confirm_age(
     if new_token is not None:  # a pending sign-in became an account: a new session
         set_session_cookie(response, settings, new_token, settings.session_absolute_seconds)
     return response
+
+
+def _retention(settings: Settings, days: int | None) -> JSONResponse:
+    body = {"review_video_days": days, "choices": list(settings.retention_choices_days)}
+    return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+
+def _retention_on(request: Request) -> Settings:
+    """api-sprint-04 §1 rule 2: 404 while ``FEATURE_RETENTION_SETTING`` is off, before the
+    session check, so the route does not exist for anyone."""
+    settings = settings_of(request)
+    if not settings.feature_retention_setting:
+        raise NotFound("retention setting off")
+    return settings
+
+
+RetentionOn = Annotated[Settings, Depends(_retention_on)]
+
+
+@router.get("/me/retention")
+def get_retention(
+    settings: RetentionOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    """FR-008 (api-sprint-04 §5): the session account's review video days and the choices."""
+    return _retention(settings, RetentionSettings(session, settings).days(account.id))
+
+
+@router.put("/me/retention")
+def put_retention(
+    settings: RetentionOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+    body: Annotated[Any, Body()] = None,
+) -> Response:
+    """FR-008: one of the choices (closed body; ``unknown_value``, ``required``); applies to
+    every match of the account from the next purge pass."""
+    return _retention(settings, RetentionSettings(session, settings).choose(account.id, body))
+
+
+def _training_consent(state: TrainingConsentState) -> JSONResponse:
+    changed_at = None
+    if state.changed_at is not None:
+        changed_at = (
+            state.changed_at.astimezone(UTC)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
+    body = {"opt_in": state.opt_in, "changed_at": changed_at}
+    return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+
+def _training_consent_on(request: Request) -> Settings:
+    """api-sprint-04 §1 rule 2: 404 while ``FEATURE_TRAINING_CONSENT`` is off, before the
+    session check, so the route does not exist for anyone."""
+    settings = settings_of(request)
+    if not settings.feature_training_consent:
+        raise NotFound("training consent off")
+    return settings
+
+
+TrainingConsentOn = Annotated[Settings, Depends(_training_consent_on)]
+
+
+@router.get("/me/training-consent")
+def get_training_consent(
+    _: TrainingConsentOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    """FR-009 (api-sprint-04 §6): the session account's opt-in; off until it opts in."""
+    return _training_consent(TrainingConsentSettings(session).state(account.id))
+
+
+@router.put("/me/training-consent")
+def put_training_consent(
+    _: TrainingConsentOn,
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+    body: Annotated[Any, Body()] = None,
+) -> Response:
+    """FR-009: opt in or revoke (closed body ``{"opt_in": bool}``); applies from the next
+    label-set build; one audit event per change (T4-CS-3)."""
+    return _training_consent(TrainingConsentSettings(session).choose(account.id, body))

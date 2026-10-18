@@ -35,7 +35,9 @@ from racket.players.domain import (
     AgeOutcome,
     LinkExpired,
     MagicLinkToken,
+    RetentionChoice,
     SessionLifetime,
+    TrainingConsentChoice,
     email_key,
     normalise_email,
     pending_sign_in_expiry,
@@ -43,9 +45,12 @@ from racket.players.domain import (
 from racket.players.models import (
     accounts,
     pending_sign_ins,
+    retention_settings,
     sessions,
     sign_in_links,
     sign_in_requests,
+    training_consent_events,
+    training_consents,
 )
 
 # "dana" never gets a match from any spec: the E2E empty-state check signs in as her (QA-R1-04).
@@ -54,6 +59,7 @@ DEV_SESSION_LIFETIME = timedelta(hours=12)
 SEND_SIGN_IN_LINK = "send_sign_in_link"
 
 security_log = logging.getLogger(SECURITY_LOGGER)
+log = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -537,3 +543,91 @@ class AgeConfirmation:
             .returning(accounts.c.id, accounts.c.display_name, accounts.c.age_confirmed_at)
         ).one()
         return Account(row.id, row.display_name, row.age_confirmed_at)
+
+
+class RetentionSettings:
+    """``GET/PUT /me/retention`` (ST-069; FR-008; api-sprint-04 §5): the session account's
+    review video choice. Keyed by that account only (T4-RT-1); a write holds the account row
+    ``FOR SHARE`` so it never outlives ``DELETE /me`` (SEC-S3-TM-05)."""
+
+    def __init__(
+        self, session: Session, settings: Settings, clock: Callable[[], datetime] = _utcnow
+    ) -> None:
+        self.session = session
+        self.settings = settings
+        self.clock = clock
+
+    def days(self, account_id: uuid.UUID) -> int | None:
+        default = self.settings.retention_default_days
+        return players.review_video_days(self.session, [account_id], default)[account_id]
+
+    def choose(self, account_id: uuid.UUID, body: object) -> int | None:
+        choice = RetentionChoice.parse(body, self.settings.retention_choices_days)
+        if not players.lock_live_account(self.session, account_id):
+            self.session.rollback()
+            raise Unauthenticated("the account was deleted")
+        values = {"review_video_days": choice.days, "changed_at": self.clock()}
+        self.session.execute(
+            insert(retention_settings)
+            .values(account_id=account_id, **values)
+            .on_conflict_do_update(index_elements=["account_id"], set_=values)
+        )
+        self.session.commit()
+        log.info("retention chosen", extra={"event": "retention.chosen", "days": choice.days})
+        return choice.days
+
+
+@dataclass(frozen=True)
+class TrainingConsentState:
+    opt_in: bool
+    changed_at: datetime | None
+
+
+class TrainingConsentSettings:
+    """``GET/PUT /me/training-consent`` (ST-070; FR-009; api-sprint-04 §6): the session
+    account's opt-in. No row means not opted in (T4-CS-1). Each change writes one
+    ``training_consent_events`` row; a PUT with the current value writes nothing (T4-CS-3). A
+    write holds the account row ``FOR SHARE`` so it never outlives ``DELETE /me``
+    (SEC-S3-TM-05), and the consent row ``FOR UPDATE`` so two PUTs never log one change twice."""
+
+    def __init__(self, session: Session, clock: Callable[[], datetime] = _utcnow) -> None:
+        self.session = session
+        self.clock = clock
+
+    def _read(self, account_id: uuid.UUID, *, lock: bool = False) -> TrainingConsentState:
+        query = sa.select(training_consents.c.opt_in, training_consents.c.changed_at).where(
+            training_consents.c.account_id == account_id
+        )
+        row = self.session.execute(query.with_for_update() if lock else query).one_or_none()
+        if row is None:
+            return TrainingConsentState(False, None)
+        return TrainingConsentState(bool(row.opt_in), row.changed_at)
+
+    def state(self, account_id: uuid.UUID) -> TrainingConsentState:
+        return self._read(account_id)
+
+    def choose(self, account_id: uuid.UUID, body: object) -> TrainingConsentState:
+        choice = TrainingConsentChoice.parse(body)
+        if not players.lock_live_account(self.session, account_id):
+            self.session.rollback()
+            raise Unauthenticated("the account was deleted")
+        current = self._read(account_id, lock=True)
+        if current.opt_in == choice.opt_in:
+            self.session.commit()
+            return current
+        now = self.clock()
+        values = {"opt_in": choice.opt_in, "changed_at": now}
+        self.session.execute(
+            insert(training_consents)
+            .values(account_id=account_id, **values)
+            .on_conflict_do_update(index_elements=["account_id"], set_=values)
+        )
+        self.session.execute(
+            sa.insert(training_consent_events).values(account_id=account_id, **values)
+        )
+        self.session.commit()
+        log.info(
+            "training consent changed",
+            extra={"event": "training_consent.changed", "opt_in": choice.opt_in},
+        )
+        return TrainingConsentState(choice.opt_in, now)

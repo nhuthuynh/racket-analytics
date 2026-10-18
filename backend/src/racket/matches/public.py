@@ -27,7 +27,7 @@ from racket.matches.scorebook.domain import (
     Scorebook,
     project,
 )
-from racket.matches.scorebook.repository import ScorebookRepository
+from racket.matches.scorebook.repository import ScorebookRepository, match_rallies
 from racket.platform.errors import NotFound
 from racket.sports.pickleball.rules import Side
 from racket.video_ingest.public import close_for_deleted_match, lock_upload_of_match
@@ -212,6 +212,40 @@ def owner_has_matches(session: Session, owner_id: uuid.UUID) -> bool:
     every one of its matches (deletion-and-purge.md §4.2)."""
     found = session.execute(sa.select(matches.c.id).where(matches.c.owner_id == owner_id).limit(1))
     return found.first() is not None
+
+
+@dataclass(frozen=True)
+class TaggedMatch:
+    """A live match with its owner and its count of standing (not withdrawn) rallies."""
+
+    match_id: uuid.UUID
+    owner_id: uuid.UUID
+    rallies: int
+
+
+def live_matches_with_rallies(
+    session: Session, extra_ids: Iterable[uuid.UUID] = ()
+) -> list[TaggedMatch]:
+    """FR-009 (ST-070; context map R9): every live match that has a standing rally, plus each
+    live match of ``extra_ids`` (e.g. one with Full Tag labels only), for the label-set build.
+    Ids and counts only; ordered by match id. A tombstoned match is never listed."""
+    standing = (
+        sa.select(match_rallies.c.match_id, sa.func.count().label("rallies"))
+        .where(match_rallies.c.withdrawn.is_(False))
+        .group_by(match_rallies.c.match_id)
+        .subquery()
+    )
+    extra = list(extra_ids)
+    rows = session.execute(
+        sa.select(matches.c.id, matches.c.owner_id, sa.func.coalesce(standing.c.rallies, 0))
+        .select_from(matches.outerjoin(standing, standing.c.match_id == matches.c.id))
+        .where(
+            matches.c.deleted_at.is_(None),
+            sa.or_(standing.c.rallies.is_not(None), matches.c.id.in_(extra)),
+        )
+        .order_by(matches.c.id)
+    ).all()
+    return [TaggedMatch(uuid.UUID(str(r[0])), uuid.UUID(str(r[1])), int(r[2])) for r in rows]
 
 
 def owned_format(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> str | None:
