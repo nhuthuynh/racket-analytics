@@ -128,6 +128,17 @@ describe('POST /me/plan/assignments/{id}/swap contract (negative first)', () => 
     expect(await api.swap(ASSIGNMENT, '')).toEqual({ kind: 'not_found' });
   });
 
+  it('429 rate_limited is documented and read with its retry_at', async () => {
+    expect(Object.keys(openapi.paths[SWAP]!.post!.responses)).toContain('429');
+    answer('post', SWAP_URL, 429, envelope('rate_limited', { retry_at: '2026-10-18T14:05:00Z' }));
+    expect(await api.swap(ASSIGNMENT, '')).toEqual({ kind: 'rate_limited', retryAt: '2026-10-18T14:05:00Z' });
+  });
+
+  it('429 without a readable retry_at is rate_limited with no time', async () => {
+    answer('post', SWAP_URL, 429, envelope('rate_limited', { retry_at: 'soon' }));
+    expect(await api.swap(ASSIGNMENT, '')).toEqual({ kind: 'rate_limited', retryAt: null });
+  });
+
   it('200 is the updated session (§2.3 session object) and the plan version', async () => {
     const s = session();
     (s.assignments as Record<string, unknown>[])[0]!.drill = {

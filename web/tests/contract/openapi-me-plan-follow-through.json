@@ -1,186 +1,192 @@
 {
- "source": "backend create_app().openapi(): done at origin/main 34752f2 (ST-062), swap at origin/s04/st-062-part2 405ccf8 (PR not yet merged); regenerate with the command in docs/sprints/04/decisions/ST-063c.md",
- "openapi": "3.1.0",
- "paths": {
-  "/me/plan/sessions/{session_id}/done": {
-   "post": {
-    "summary": "Mark a session done (idempotent by the Idempotency-Key op id)",
-    "operationId": "mark_session_done_me_plan_sessions__session_id__done_post",
-    "parameters": [
-     {
-      "name": "session_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Session Id"
-      }
-     },
-     {
-      "name": "Idempotency-Key",
-      "in": "header",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string"
+  "source": "backend create_app().openapi() at origin/main d7bce34 (ST-062 done/undo, ST-062-part2 swap incl. 429 rate_limited); regenerate with the command in docs/sprints/04/decisions/ST-063c.md",
+  "openapi": "3.1.0",
+  "paths": {
+    "/me/plan/assignments/{assignment_id}/swap": {
+      "post": {
+        "operationId": "swap_drill_me_plan_assignments__assignment_id__swap_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "title": "Body"
+              }
+            }
+          }
         },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Idempotency-Key"
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "plan_version and the updated session (api-sprint-04 \u00a72.3)"
+          },
+          "401": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "unauthenticated"
+          },
+          "404": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "not_found: not an assignment of the caller's plan"
+          },
+          "409": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "no_alternative, session_done or plan_conflict; nothing changed"
+          },
+          "422": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "validation_failed: reason too_long or invalid, unknown_field"
+          },
+          "429": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "rate_limited with retry_at"
+          }
+        },
+        "summary": "\"Not for me\": swap a drill for another that trains the same metric"
       }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "session_id, done, done_at, plan_version, replayed",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "401": {
-      "description": "unauthenticated",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "404": {
-      "description": "not_found: not a session of the caller's plan",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "409": {
-      "description": "idempotency_key_reused or plan_conflict",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "422": {
-      "description": "validation_failed: Idempotency-Key required or invalid",
-      "content": {
-       "application/json": {}
-      }
-     }
-    }
-   },
-   "delete": {
-    "summary": "Undo a session's done mark",
-    "operationId": "undo_session_done_me_plan_sessions__session_id__done_delete",
-    "parameters": [
-     {
-      "name": "session_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Session Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "session_id, done (false), done_at (null), plan_version",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "401": {
-      "description": "unauthenticated",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "404": {
-      "description": "not_found: not a session of the caller's plan",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "409": {
-      "description": "plan_conflict",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/me/plan/assignments/{assignment_id}/swap": {
-   "post": {
-    "summary": "\"Not for me\": swap a drill for another that trains the same metric",
-    "operationId": "swap_drill_me_plan_assignments__assignment_id__swap_post",
-    "parameters": [
-     {
-      "name": "assignment_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Assignment Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "title": "Body"
-       }
-      }
-     }
     },
-    "responses": {
-     "200": {
-      "description": "plan_version and the updated session (api-sprint-04 §2.3)",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
+    "/me/plan/sessions/{session_id}/done": {
+      "delete": {
+        "operationId": "undo_session_done_me_plan_sessions__session_id__done_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "session_id, done (false), done_at (null), plan_version"
+          },
+          "401": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "unauthenticated"
+          },
+          "404": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "not_found: not a session of the caller's plan"
+          },
+          "409": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "plan_conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo a session's done mark"
+      },
+      "post": {
+        "operationId": "mark_session_done_me_plan_sessions__session_id__done_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "session_id, done, done_at, plan_version, replayed"
+          },
+          "401": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "unauthenticated"
+          },
+          "404": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "not_found: not a session of the caller's plan"
+          },
+          "409": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "idempotency_key_reused or plan_conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "validation_failed: Idempotency-Key required or invalid"
+          }
+        },
+        "summary": "Mark a session done (idempotent by the Idempotency-Key op id)"
       }
-     },
-     "401": {
-      "description": "unauthenticated",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "404": {
-      "description": "not_found: not an assignment of the caller's plan",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "409": {
-      "description": "no_alternative, session_done or plan_conflict; nothing changed",
-      "content": {
-       "application/json": {}
-      }
-     },
-     "422": {
-      "description": "validation_failed: reason too_long or invalid, unknown_field",
-      "content": {
-       "application/json": {}
-      }
-     }
     }
-   }
   }
- }
 }

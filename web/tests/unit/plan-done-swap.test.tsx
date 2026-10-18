@@ -11,6 +11,7 @@ import { parsePlan, type PlanRead } from '@/lib/api/plan';
 import { createOutbox, type Outbox } from '@/lib/plan-outbox';
 import { idbOutboxStore } from '@/lib/plan-outbox-idb';
 import type { FollowThroughApi } from '@/lib/plan-outbox-api';
+import { swapRateLimitMessage } from '@/components/plan/PlanViewWords';
 import { planBody } from './fixtures/plan';
 
 const S1 = '00000000-0000-4000-8000-000000000010';
@@ -138,6 +139,29 @@ describe('Not for me (negative first)', () => {
     expect(alert).toHaveTextContent('We could not swap the drill. Try again.');
     expect(alert).toHaveTextContent('Reference: ref_0123456789abcdef');
     expect(within(dialog).getByLabelText('Why not? (optional)')).toHaveValue('too hard');
+  });
+
+  it('429 rate_limited keeps the dialog and the reason and says when to try again', async () => {
+    const api = followApi({ swap: vi.fn(async () => ({ kind: 'rate_limited' as const, retryAt: null })) });
+    await show(api);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Not for me, Serve to a target' }));
+    const dialog = screen.getByRole('dialog', { name: 'Swap Serve to a target?' });
+    await user.type(within(dialog).getByLabelText('Why not? (optional)'), 'too hard');
+    await user.click(within(dialog).getByRole('button', { name: 'Swap drill' }));
+    const alert = await within(dialog).findByRole('alert');
+    expect(alert).toHaveTextContent('You have swapped many drills in a short time. Try again in an hour.');
+    expect(alert).not.toHaveTextContent('rate_limited');
+    expect(within(dialog).getByLabelText('Why not? (optional)')).toHaveValue('too hard');
+  });
+
+  it('the 429 text gives the retry time in local 24-hour time, never a raw code', () => {
+    expect(swapRateLimitMessage('2026-10-18T14:05:00Z', 'UTC')).toBe(
+      'You have swapped many drills in a short time. You can swap again at 14:05. Your reason is kept.',
+    );
+    expect(swapRateLimitMessage('not a time', 'UTC')).toBe(
+      'You have swapped many drills in a short time. Try again in an hour. Your reason is kept.',
+    );
   });
 
   it('the dialog opens with Cancel focused, a 200-character reason and a counter', async () => {
