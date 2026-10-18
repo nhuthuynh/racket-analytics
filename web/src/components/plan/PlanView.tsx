@@ -6,9 +6,10 @@
 // reference), empty (no tagged match / no plan yet), not found (a cited match is gone: the plan is
 // read again), and the plan: notices once before the first card, the weaknesses, the sessions and
 // each drill's "why" with "Show me" (the E-01 EvidencePanel for that metric and side, HAX G11).
-// P-03 (ST-063c): each drill's "Not for me" (swap), which needs a connection.
+// P-03 (ST-063c): each session's "Mark done" through the device outbox, each drill's "Not for me",
+// and the offline state (the service worker's kept plan, or none on this device).
 import Link from 'next/link';
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { browserApi } from '@/lib/api/browser';
 import {
   planApi,
@@ -20,9 +21,18 @@ import {
 } from '@/lib/api/plan';
 import { EvidencePanel } from '@/components/stats/EvidencePanel';
 import type { StatsApi } from '@/components/stats/StatsDashboard';
+import type { Outbox } from '@/lib/plan-outbox';
 import { followThroughApi, type FollowThroughApi } from '@/lib/plan-outbox-api';
-import { NotForMeDialog, WORDS, useOnline } from './PlanFollowThrough';
-import { factsLine, madeOn, showMeName, splitLine, weaknessRate, whyParts } from './PlanViewWords';
+import {
+  NotForMeDialog,
+  SessionDone,
+  WORDS,
+  browserOutbox,
+  useOnline,
+  usePlanFollowThrough,
+  type FollowThrough,
+} from './PlanFollowThrough';
+import { factsLine, madeOn, offlineAsOf, showMeName, splitLine, weaknessRate, whyParts } from './PlanViewWords';
 
 const COACH_NOTICE =
   'These drills have not yet been checked by a human coach. Warm up first, and stop any drill that hurts.';
@@ -41,14 +51,20 @@ export function PlanView({
   evidenceApi = browserApi,
   onSignedOut = signIn,
   followApi = followThroughApi,
+  outbox,
 }: {
   api?: Pick<PlanApi, 'getPlan'>;
   evidenceApi?: StatsApi;
   onSignedOut?: () => void;
   followApi?: FollowThroughApi;
+  /** The device's "Mark done" outbox (default: IndexedDB). */
+  outbox?: Outbox;
 }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const [box] = useState(() => outbox ?? browserOutbox());
   const online = useOnline();
+  const plan = useRef<TrainingPlan | null>(null);
+  plan.current = state.kind === 'read' && state.read.kind === 'plan' ? state.read.plan : null;
 
   const load = useCallback(
     async (changed = false) => {
@@ -61,6 +77,14 @@ export function PlanView({
   useEffect(() => {
     void load();
   }, [load]);
+
+  const follow = usePlanFollowThrough({
+    outbox: box,
+    api: followApi,
+    sessionIndex: (id) => plan.current?.sessions.find((s) => s.id === id)?.index ?? null,
+    reload: load,
+    onSignedOut,
+  });
 
   /** A swap's answer: the whole updated session replaces the old one (api-sprint-04 §3.3). */
   const replaceSession = useCallback((session: Session) => {
@@ -95,6 +119,15 @@ export function PlanView({
   }
   const r = state.read;
   if (r.kind === 'signed_out') return null;
+  if (r.kind === 'error' && !online) {
+    return (
+      <div className="stack">
+        <p role="status" className="notice notice--info">
+          You are offline and this plan is not saved on this device yet.
+        </p>
+      </div>
+    );
+  }
   if (r.kind === 'error') {
     return (
       <div className="stack">
@@ -137,9 +170,11 @@ export function PlanView({
   return (
     <PlanBody
       plan={r.plan}
+      offlineAsOf={r.offlineAsOf ?? null}
       changed={state.changed}
       evidenceApi={evidenceApi}
       onPlanChanged={() => void load(true)}
+      follow={follow}
       followApi={followApi}
       online={online}
       onSwapped={replaceSession}
@@ -150,18 +185,22 @@ export function PlanView({
 
 function PlanBody({
   plan,
+  offlineAsOf: keptAt,
   changed,
   evidenceApi,
   onPlanChanged,
+  follow,
   followApi,
   online,
   onSwapped,
   onSignedOut,
 }: {
   plan: TrainingPlan;
+  offlineAsOf: string | null;
   changed: boolean;
   evidenceApi: StatsApi;
   onPlanChanged: () => void;
+  follow: FollowThrough;
   followApi: FollowThroughApi;
   online: boolean;
   onSwapped: (session: Session) => void;
@@ -170,7 +209,6 @@ function PlanBody({
   const [open, setOpen] = useState<string | null>(null);
   const [swapping, setSwapping] = useState<DrillAssignment | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
   useEffect(() => {
     if (focusId) document.getElementById(`drill-${focusId}`)?.focus();
   }, [focusId, plan]);
@@ -181,7 +219,7 @@ function PlanBody({
       setSwapping(null);
       onSwapped(r.session);
       const name = r.session.assignments.find((x) => x.id === a.id)?.drill.name ?? a.drill.name;
-      setStatus(WORDS.swapped(name));
+      follow.say(WORDS.swapped(name));
       setFocusId(a.id);
     } else if (r.kind === 'not_found') {
       setSwapping(null);
@@ -194,12 +232,14 @@ function PlanBody({
   const weeks = [...new Set(plan.sessions.map((s) => s.week))].sort((a, b) => a - b);
   return (
     <div className="stack plan">
-      <p role="status">{status ?? (changed ? CHANGED : '')}</p>
+      {keptAt && !online ? (
+        <p className="notice notice--info">{`You are offline. This is your plan as of ${offlineAsOf(keptAt)}.`}</p>
+      ) : null}
+      <p role="status">{follow.status ?? (changed ? CHANGED : '')}</p>
+      {follow.dropped ? <p className="notice notice--error">{WORDS.dropped}</p> : null}
       <p>{madeOn(plan)}</p>
       <p>
-        <Link href="/plan/new" className="touch-link">
-          Change my setup
-        </Link>
+        <SetupLink online={online} />
       </p>
       {plan.unofficial ? <p className="notice notice--warning">{plan.label}</p> : null}
       {plan.drillsVerified ? null : <p className="notice notice--warning">{COACH_NOTICE}</p>}
@@ -220,10 +260,7 @@ function PlanBody({
             <p>{splitLine(w)}</p>
             {unfitted.has(w.id) ? (
               <p>
-                No drill fits your setup for this one.{' '}
-                <Link href="/plan/new" className="touch-link">
-                  Change my setup
-                </Link>
+                No drill fits your setup for this one. <SetupLink online={online} />
               </p>
             ) : null}
           </li>
@@ -243,6 +280,7 @@ function PlanBody({
               return (
                 <section key={s.id} aria-labelledby={`session-${s.id}`} className="stack">
                   <h4 id={`session-${s.id}`}>{title}</h4>
+                  <SessionDone session={s} follow={follow} online={online} />
                   <ol aria-labelledby={`session-${s.id}`} className="stack">
                     {s.assignments.map((a) => (
                       <DrillRow
@@ -276,6 +314,16 @@ function PlanBody({
         />
       ) : null}
     </div>
+  );
+}
+
+/** "Change my setup" (→ P-02); offline it is text with "Needs a connection" (flows-sprint-04 §2). */
+function SetupLink({ online }: { online: boolean }) {
+  if (!online) return <span>{`Change my setup. ${WORDS.needsConnection}`}</span>;
+  return (
+    <Link href="/plan/new" className="touch-link">
+      Change my setup
+    </Link>
   );
 }
 
@@ -325,6 +373,7 @@ function DrillRow({
               aria-label={showMeName(c)}
               aria-expanded={open}
               aria-controls={open ? panelId : undefined}
+              disabled={!online}
               onClick={onToggle}
             >
               Show me
@@ -360,7 +409,7 @@ function DrillRow({
         >
           Not for me
         </button>
-        {/* "Not for me" needs the server (flows-sprint-04 §2). */}
+        {/* One line for the row's two buttons that need the server ("Show me", "Not for me"). */}
         {online ? null : <span>{` ${WORDS.needsConnection}`}</span>}
       </p>
     </li>
