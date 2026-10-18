@@ -7,7 +7,7 @@
 // `NotForMeDialog` is the swap dialog (native modal <dialog>, Cancel focused on open).
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Session } from '@/lib/api/plan';
-import { createOutbox, memoryOutboxStore, type Outbox } from '@/lib/plan-outbox';
+import { createOutbox, memoryOutboxStore, type Outbox, type OutboxStore } from '@/lib/plan-outbox';
 import type { FollowThroughApi, SwapResult } from '@/lib/plan-outbox-api';
 import { idbOutboxStore } from '@/lib/plan-outbox-idb';
 import { swapRateLimitMessage } from './PlanViewWords';
@@ -36,14 +36,35 @@ export function useOnline(): boolean {
   return useSyncExternalStore(subscribe, () => navigator.onLine, () => true);
 }
 
-/** The device's outbox: IndexedDB when the browser has it, else memory (lost with the page). */
-export function browserOutbox(): Outbox {
-  try {
-    if (typeof indexedDB !== 'undefined') return createOutbox(idbOutboxStore(indexedDB));
-  } catch {
-    // A blocked IndexedDB (private mode): fall through.
+/**
+ * `primary` until one of its calls fails, then `fallback` for the rest of the page, the failed call
+ * included. IndexedDB opens lazily, so a blocked, disabled or broken one only fails here.
+ */
+function failOver(primary: OutboxStore, fallback: OutboxStore): OutboxStore {
+  let failed = false;
+  async function attempt<T>(act: (s: OutboxStore) => Promise<T>): Promise<T> {
+    if (!failed) {
+      try {
+        return await act(primary);
+      } catch {
+        failed = true;
+      }
+    }
+    return act(fallback);
   }
-  return createOutbox(memoryOutboxStore());
+  return {
+    get: (id) => attempt((s) => s.get(id)),
+    put: (op) => attempt((s) => s.put(op)),
+    delete: (id) => attempt((s) => s.delete(id)),
+    all: () => attempt((s) => s.all()),
+  };
+}
+
+/** The device's outbox: IndexedDB while it works, else memory (lost with the page). */
+export function browserOutbox(): Outbox {
+  const memory = memoryOutboxStore();
+  const idb = typeof indexedDB !== 'undefined' && indexedDB ? idbOutboxStore(indexedDB) : null;
+  return createOutbox(idb ? failOver(idb, memory) : memory);
 }
 
 const without = (set: ReadonlySet<string>, ids: readonly string[]) => new Set([...set].filter((x) => !ids.includes(x)));
