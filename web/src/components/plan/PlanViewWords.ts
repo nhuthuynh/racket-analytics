@@ -20,6 +20,11 @@ export function perGame(value: number, unit: string): string {
   return count(value, one, many);
 }
 
+/** ": 2 rallies lost per game, from 1 game" (after the weakness name). */
+export function weaknessRate(value: number, unit: string, games: number): string {
+  return `: ${perGame(value, unit)}, from ${count(games, 'game', 'games')}`;
+}
+
 export function splitLine(w: { onServePerGame: number; onReceivePerGame: number; concededPerGame: number }): string {
   const f = NUMBER.format;
   return `On serve: ${f(w.onServePerGame)} · On receive: ${f(w.onReceivePerGame)} · Points given away: ${f(w.concededPerGame)} per game`;

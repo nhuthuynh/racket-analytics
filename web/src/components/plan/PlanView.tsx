@@ -12,7 +12,7 @@ import { browserApi } from '@/lib/api/browser';
 import { planApi, type DrillAssignment, type PlanApi, type PlanRead, type TrainingPlan } from '@/lib/api/plan';
 import { EvidencePanel } from '@/components/stats/EvidencePanel';
 import type { StatsApi } from '@/components/stats/StatsDashboard';
-import { factsLine, madeOn, perGame, showMeName, splitLine, whyParts } from './PlanViewWords';
+import { factsLine, madeOn, showMeName, splitLine, weaknessRate, whyParts } from './PlanViewWords';
 
 const COACH_NOTICE =
   'These drills have not yet been checked by a human coach. Warm up first, and stop any drill that hurts.';
@@ -152,7 +152,7 @@ function PlanBody({
           <li key={w.id}>
             <p>
               <strong>{w.name}</strong>
-              {`: ${perGame(w.perGame, plan.ranking.unit)}, from ${plan.ranking.games === 1 ? '1 game' : `${plan.ranking.games} games`}`}
+              {weaknessRate(w.perGame, plan.ranking.unit, plan.ranking.games)}
             </p>
             <p>{splitLine(w)}</p>
             {unfitted.has(w.id) ? (
