@@ -64,6 +64,7 @@ def walkthrough_problems(section: str) -> list[str]:
     text = walkthrough_section(section)
     if not text:
         return [f"README 'Run it locally' has no '{WALKTHROUGH}' walkthrough"]
+    lead = "the 'Try the prototype' walkthrough"
     out: list[str] = []
     at, previous = 0, ""
     for step, shown in WALKTHROUGH_STEPS:
@@ -71,9 +72,9 @@ def walkthrough_problems(section: str) -> list[str]:
         if found >= 0:
             at, previous = found + len(shown), step
         elif shown in text:
-            out.append(f"the 'Try the prototype' walkthrough names {step} (`{shown}`) before {previous}")
+            out.append(f"{lead} names {step} (`{shown}`) before {previous}")
         else:
-            out.append(f"the 'Try the prototype' walkthrough does not name step: {step} (`{shown}`)")
+            out.append(f"{lead} does not name step: {step} (`{shown}`)")
     return out
 
 
