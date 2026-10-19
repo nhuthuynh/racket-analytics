@@ -34,3 +34,9 @@ Feature: Following the plan through, on the plan page
       When the player marks "Session 1 of 3" done
       Then the server got one "done"
       And the session says "Done"
+
+    Scenario: Undo of a done session fails
+      Given "Session 1 of 3" is done
+      When the player presses "Undo" and the server cannot undo it
+      Then the session says "We could not undo 'done'. Try again."
+      And the session still says "Done"

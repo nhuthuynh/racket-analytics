@@ -118,6 +118,58 @@ describe('Mark done (negative first)', () => {
   });
 });
 
+// Undo of a synced session refused by the server (review #146 M1): never shown as undone.
+describe('Undo refused (negative first)', () => {
+  async function undoWith(result: Awaited<ReturnType<FollowThroughApi['undoDone']>>) {
+    const body = planBody();
+    (body.sessions as Record<string, unknown>[])[0]!.done = true;
+    const api = followApi({ undoDone: vi.fn(async () => result) });
+    const getPlan = vi.fn(async (): Promise<PlanRead> => ({ kind: 'plan', plan: parsePlan(body) }));
+    const onSignedOut = vi.fn();
+    render(
+      <PlanView
+        api={{ getPlan }}
+        followApi={api}
+        outbox={outbox}
+        onSignedOut={onSignedOut}
+        evidenceApi={{ stats: vi.fn(), evidence: vi.fn() }}
+      />,
+    );
+    await screen.findByText('Serve to a target');
+    await userEvent.setup().click(within(session1()).getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(api.undoDone).toHaveBeenCalledWith(S1));
+    return { getPlan, onSignedOut };
+  }
+
+  it('failed: says it could not undo and the session stays done', async () => {
+    await undoWith({ kind: 'failed', supportRef: null });
+    expect(await within(session1()).findByRole('alert')).toHaveTextContent("We could not undo 'done'. Try again.");
+    expect(within(session1()).getByText('Done')).toBeVisible();
+    expect(within(session1()).queryByRole('button', { name: 'Mark done' })).toBeNull();
+  });
+
+  it('signed out: hands over to sign-in, no error shown', async () => {
+    const { onSignedOut } = await undoWith({ kind: 'signed_out' });
+    await waitFor(() => expect(onSignedOut).toHaveBeenCalledTimes(1));
+    expect(within(session1()).queryByRole('alert')).toBeNull();
+  });
+
+  it('session gone: says so and reads the plan again', async () => {
+    const { getPlan } = await undoWith({ kind: 'not_found' });
+    expect(
+      await screen.findByText("We could not save 'done' for a session that is no longer in your plan."),
+    ).toBeVisible();
+    await waitFor(() => expect(getPlan).toHaveBeenCalledTimes(2));
+  });
+
+  it('plan changed: reads the plan again and says it changed', async () => {
+    const { getPlan } = await undoWith({ kind: 'plan_conflict' });
+    expect(await screen.findByText('Your plan changed on another device. Showing your current plan.')).toBeVisible();
+    expect(getPlan).toHaveBeenCalledTimes(2);
+    expect(within(session1()).queryByRole('alert')).toBeNull();
+  });
+});
+
 // IndexedDB fails late: the store opens lazily, so a blocked store (open throws SecurityError), a
 // failing open request or a disabled one (null) only shows on the first operation (review M1/F1).
 const throwingOpen = {

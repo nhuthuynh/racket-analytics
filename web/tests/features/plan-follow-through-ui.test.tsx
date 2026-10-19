@@ -26,6 +26,7 @@ const SCENARIOS = {
   syncFails: 'Mark done offline, and the sync fails',
   twice: 'Mark done offline twice',
   blocked: 'Mark done when the browser blocks IndexedDB',
+  undoFails: 'Undo of a done session fails',
 };
 const SESSION_1 = '00000000-0000-4000-8000-000000000010';
 
@@ -49,8 +50,8 @@ function followApi(over: Partial<FollowThroughApi> = {}): FollowThroughApi {
 }
 
 // Given a plan whose first session is "Session 1 of 3" with the drill "Serve to a target"
-async function givenPlan(api: FollowThroughApi) {
-  const getPlan = vi.fn(async () => ({ kind: 'plan' as const, plan: parsePlan(planBody()) }));
+async function givenPlan(api: FollowThroughApi, body = planBody()) {
+  const getPlan = vi.fn(async () => ({ kind: 'plan' as const, plan: parsePlan(body) }));
   render(<PlanView api={{ getPlan }} followApi={api} outbox={outbox} evidenceApi={{ stats: vi.fn(), evidence: vi.fn() }} />);
   await screen.findByText('Serve to a target');
 }
@@ -118,5 +119,17 @@ describe('Feature: Following the plan through, on the plan page', () => {
     expect(await within(session1()).findByText('Done')).toBeVisible();
     expect(api.markDone).toHaveBeenCalledTimes(1);
     expect(api.markDone).toHaveBeenCalledWith({ op_id: expect.any(String), session_id: SESSION_1 });
+  });
+
+  it(`Scenario: ${SCENARIOS.undoFails}`, async () => {
+    // Given "Session 1 of 3" is done
+    const body = planBody();
+    (body.sessions as Record<string, unknown>[])[0]!.done = true;
+    const api = followApi({ undoDone: vi.fn(async () => ({ kind: 'failed' as const, supportRef: null })) });
+    await givenPlan(api, body);
+    await userEvent.setup().click(within(session1()).getByRole('button', { name: 'Undo' }));
+    expect(await within(session1()).findByRole('alert')).toHaveTextContent("We could not undo 'done'. Try again.");
+    expect(within(session1()).getByText('Done')).toBeVisible();
+    expect(api.undoDone).toHaveBeenCalledWith(SESSION_1);
   });
 });
