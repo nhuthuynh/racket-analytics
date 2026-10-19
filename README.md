@@ -29,7 +29,25 @@ The first `make up` builds the images, which takes several minutes on a cold mac
    "Show me" to jump to the rallies behind a number, correct a rally (stats update), and
    delete a match. `make demo` prints the link to the sample match's stats page.
 
-**Troubleshooting**
+### Try the prototype
+
+The whole R1 journey on the demo data, in about five minutes:
+
+1. `make up`, then `make demo`. The demo signs in as Ivy, seeds a tagged sample match and
+   generates her 2-week plan; running it again adds nothing.
+2. Open the stats URL that `make demo` prints (`https://localhost:3000/matches/<id>/stats`)
+   and sign in with **Sign in as Ivy**: the stats with their uncertainty.
+3. Open the plan URL it prints, **https://localhost:3000/plan**: the weaknesses ranked by
+   rallies lost per game and two weeks of sessions, each starting with a warm-up.
+4. On a drill, read its **Why** (the metric, its value and n) and press **Show me** to see
+   the rallies behind it.
+5. Press **Mark done** on a session. It also works offline ("Saved on this device, will
+   sync") and syncs once you are back online; **Undo** takes it back.
+6. Press **Not for me** on a drill, optionally say why, then **Swap drill**: you get another
+   drill for the same weakness that still fits the session.
+7. `make down` when you are finished (it deletes the stack's volumes, so the demo data too).
+
+### Troubleshooting
 
 - Docker Hub `toomanyrequests` (pull rate limit): use a mirror,
   `DOCKERHUB_REGISTRY=mirror.gcr.io make up` (or set it in `infra/.env`).

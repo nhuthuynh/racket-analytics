@@ -20,6 +20,21 @@ _MAKE = re.compile(r"(?:^|[\s$;&|])make((?:[ \t]+[a-z][\w-]*)+)", re.M)
 _ASSIGN = re.compile(r"(?:^|[\s$])([A-Z][A-Z0-9_]*)=\S*[ \t]+make\b", re.M)
 _TARGET = re.compile(r"^([A-Za-z0-9_-]+):[^=\n]*?##", re.M)
 
+WALKTHROUGH = "### Try the prototype"
+# (step, text the README must show for it), in walkthrough order; the labels are the UI's own
+# words (PlanView "Why:", "Show me", "Not for me"; PlanFollowThrough "Mark done").
+WALKTHROUGH_STEPS = (
+    ("make up", "make up"),
+    ("make demo", "make demo"),
+    ("the stats URL", "/stats"),
+    ("the plan page", "/plan"),
+    ("a drill's Why", "Why"),
+    ("Show me", "Show me"),
+    ("Mark done", "Mark done"),
+    ("Not for me", "Not for me"),
+    ("make down", "make down"),
+)
+
 
 def quick_start_section(readme: str) -> str:
     """The text from the section heading up to the next heading of the same or higher level."""
@@ -31,6 +46,35 @@ def quick_start_section(readme: str) -> str:
     after = range(start + 1, len(lines))
     end = next((i for i in after if re.match(r"#{1,2} ", lines[i])), len(lines))
     return "\n".join(lines[start:end]) + "\n"
+
+
+def walkthrough_section(section: str) -> str:
+    """The walkthrough subsection of the quick start, up to its next heading of level 1-3."""
+    lines = section.splitlines()
+    if WALKTHROUGH not in lines:
+        return ""
+    start = lines.index(WALKTHROUGH)
+    after = range(start + 1, len(lines))
+    end = next((i for i in after if re.match(r"#{1,3} ", lines[i])), len(lines))
+    return "\n".join(lines[start:end]) + "\n"
+
+
+def walkthrough_problems(section: str) -> list[str]:
+    """Each prototype step the walkthrough omits, or names before the step it follows."""
+    text = walkthrough_section(section)
+    if not text:
+        return [f"README 'Run it locally' has no '{WALKTHROUGH}' walkthrough"]
+    out: list[str] = []
+    at, previous = 0, ""
+    for step, shown in WALKTHROUGH_STEPS:
+        found = text.find(shown, at)
+        if found >= 0:
+            at, previous = found + len(shown), step
+        elif shown in text:
+            out.append(f"the 'Try the prototype' walkthrough names {step} (`{shown}`) before {previous}")
+        else:
+            out.append(f"the 'Try the prototype' walkthrough does not name step: {step} (`{shown}`)")
+    return out
 
 
 def _code(section: str) -> str:
@@ -73,6 +117,8 @@ def main(argv: list[str] | None = None) -> int:
     readme = (a.readme or a.repo / "README.md").read_text()
     makefile = (a.repo / "Makefile").read_text()
     found = problems(readme, makefile, (a.repo / "infra/compose.yaml").read_text())
+    if section := quick_start_section(readme):
+        found += walkthrough_problems(section)
     for p in found:
         print(f"readme-quickstart: {p}")
     if not found:
