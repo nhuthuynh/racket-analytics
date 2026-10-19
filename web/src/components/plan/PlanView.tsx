@@ -6,12 +6,22 @@
 // reference), empty (no tagged match / no plan yet), not found (a cited match is gone: the plan is
 // read again), and the plan: notices once before the first card, the weaknesses, the sessions and
 // each drill's "why" with "Show me" (the E-01 EvidencePanel for that metric and side, HAX G11).
+// P-03 (ST-063c): each drill's "Not for me" (swap), which needs a connection.
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { browserApi } from '@/lib/api/browser';
-import { planApi, type DrillAssignment, type PlanApi, type PlanRead, type TrainingPlan } from '@/lib/api/plan';
+import {
+  planApi,
+  type DrillAssignment,
+  type PlanApi,
+  type PlanRead,
+  type Session,
+  type TrainingPlan,
+} from '@/lib/api/plan';
 import { EvidencePanel } from '@/components/stats/EvidencePanel';
 import type { StatsApi } from '@/components/stats/StatsDashboard';
+import { followThroughApi, type FollowThroughApi } from '@/lib/plan-outbox-api';
+import { NotForMeDialog, WORDS, useOnline } from './PlanFollowThrough';
 import { factsLine, madeOn, showMeName, splitLine, weaknessRate, whyParts } from './PlanViewWords';
 
 const COACH_NOTICE =
@@ -30,12 +40,15 @@ export function PlanView({
   api = planApi,
   evidenceApi = browserApi,
   onSignedOut = signIn,
+  followApi = followThroughApi,
 }: {
   api?: Pick<PlanApi, 'getPlan'>;
   evidenceApi?: StatsApi;
   onSignedOut?: () => void;
+  followApi?: FollowThroughApi;
 }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const online = useOnline();
 
   const load = useCallback(
     async (changed = false) => {
@@ -48,6 +61,22 @@ export function PlanView({
   useEffect(() => {
     void load();
   }, [load]);
+
+  /** A swap's answer: the whole updated session replaces the old one (api-sprint-04 §3.3). */
+  const replaceSession = useCallback((session: Session) => {
+    setState((now) =>
+      now.kind === 'read' && now.read.kind === 'plan'
+        ? {
+            ...now,
+            changed: false,
+            read: {
+              ...now.read,
+              plan: { ...now.read.plan, sessions: now.read.plan.sessions.map((s) => (s.id === session.id ? session : s)) },
+            },
+          }
+        : now,
+    );
+  }, []);
 
   const read = state.kind === 'read' ? state.read : null;
   useEffect(() => {
@@ -111,6 +140,10 @@ export function PlanView({
       changed={state.changed}
       evidenceApi={evidenceApi}
       onPlanChanged={() => void load(true)}
+      followApi={followApi}
+      online={online}
+      onSwapped={replaceSession}
+      onSignedOut={onSignedOut}
     />
   );
 }
@@ -120,18 +153,48 @@ function PlanBody({
   changed,
   evidenceApi,
   onPlanChanged,
+  followApi,
+  online,
+  onSwapped,
+  onSignedOut,
 }: {
   plan: TrainingPlan;
   changed: boolean;
   evidenceApi: StatsApi;
   onPlanChanged: () => void;
+  followApi: FollowThroughApi;
+  online: boolean;
+  onSwapped: (session: Session) => void;
+  onSignedOut: () => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [swapping, setSwapping] = useState<DrillAssignment | null>(null);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  useEffect(() => {
+    if (focusId) document.getElementById(`drill-${focusId}`)?.focus();
+  }, [focusId, plan]);
+
+  async function swap(a: DrillAssignment, reason: string) {
+    const r = await followApi.swap(a.id, reason);
+    if (r.kind === 'swapped') {
+      setSwapping(null);
+      onSwapped(r.session);
+      const name = r.session.assignments.find((x) => x.id === a.id)?.drill.name ?? a.drill.name;
+      setStatus(WORDS.swapped(name));
+      setFocusId(a.id);
+    } else if (r.kind === 'not_found') {
+      setSwapping(null);
+      onPlanChanged();
+    } else if (r.kind === 'signed_out') onSignedOut();
+    return r;
+  }
+
   const unfitted = new Set(plan.unfitted.map((u) => u.weaknessId));
   const weeks = [...new Set(plan.sessions.map((s) => s.week))].sort((a, b) => a - b);
   return (
     <div className="stack plan">
-      {changed ? <p role="status">{CHANGED}</p> : null}
+      <p role="status">{status ?? (changed ? CHANGED : '')}</p>
       <p>{madeOn(plan)}</p>
       <p>
         <Link href="/plan/new" className="touch-link">
@@ -189,6 +252,14 @@ function PlanBody({
                         onToggle={() => setOpen((now) => (now === a.id ? null : a.id))}
                         evidenceApi={evidenceApi}
                         onPlanChanged={onPlanChanged}
+                        online={online}
+                        onNotForMe={() => {
+                          // A new swap starts clean: the last "Swapped for ..." is not left to hide
+                          // the next one, and focus is not pulled back to the last swapped row.
+                          setStatus(null);
+                          setFocusId(null);
+                          setSwapping(a);
+                        }}
                       />
                     ))}
                   </ol>
@@ -197,6 +268,19 @@ function PlanBody({
             })}
         </Fragment>
       ))}
+      {swapping ? (
+        <NotForMeDialog
+          id={`swap-${swapping.id}`}
+          drillName={swapping.drill.name}
+          onSwap={(reason) => swap(swapping, reason)}
+          onClose={(reload) => {
+            const id = swapping.id;
+            setSwapping(null);
+            if (reload) onPlanChanged();
+            else document.getElementById(`not-for-me-${id}`)?.focus();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -207,17 +291,21 @@ function DrillRow({
   onToggle,
   evidenceApi,
   onPlanChanged,
+  online,
+  onNotForMe,
 }: {
   assignment: DrillAssignment;
   open: boolean;
   onToggle: () => void;
   evidenceApi: StatsApi;
   onPlanChanged: () => void;
+  online: boolean;
+  onNotForMe: () => void;
 }) {
   const c = a.citation;
   const panelId = `evidence-${a.id}`;
   return (
-    <li className="stack">
+    <li className="stack" id={`drill-${a.id}`} tabIndex={-1}>
       <p>
         <strong>{a.drill.name}</strong>
         {a.warmUp ? ' · Warm-up' : null}
@@ -267,6 +355,20 @@ function DrillRow({
           ) : null}
         </>
       )}
+      <p>
+        <button
+          id={`not-for-me-${a.id}`}
+          type="button"
+          className="button button--secondary"
+          aria-label={`Not for me, ${a.drill.name}`}
+          disabled={!online}
+          onClick={onNotForMe}
+        >
+          Not for me
+        </button>
+        {/* "Not for me" needs the server (flows-sprint-04 §2). */}
+        {online ? null : <span>{` ${WORDS.needsConnection}`}</span>}
+      </p>
     </li>
   );
 }
