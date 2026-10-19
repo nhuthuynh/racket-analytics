@@ -253,7 +253,13 @@ function PlanBody({
                         evidenceApi={evidenceApi}
                         onPlanChanged={onPlanChanged}
                         online={online}
-                        onNotForMe={() => setSwapping(a)}
+                        onNotForMe={() => {
+                          // A new swap starts clean: the last "Swapped for ..." is not left to hide
+                          // the next one, and focus is not pulled back to the last swapped row.
+                          setStatus(null);
+                          setFocusId(null);
+                          setSwapping(a);
+                        }}
                       />
                     ))}
                   </ol>

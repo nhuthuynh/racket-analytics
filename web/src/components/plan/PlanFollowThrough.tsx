@@ -62,6 +62,7 @@ export function NotForMeDialog({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
+  const online = useOnline();
 
   useEffect(() => {
     const d = dialog.current;
@@ -132,10 +133,18 @@ export function NotForMeDialog({
               <button ref={cancel} type="button" className="button button--secondary" onClick={() => onClose(false)}>
                 Cancel
               </button>
-              <button type="button" className="button" aria-busy={busy} disabled={busy} onClick={() => void swap()}>
+              <button
+                type="button"
+                className="button"
+                aria-busy={busy}
+                aria-describedby={online ? undefined : `${id}-offline`}
+                disabled={busy || !online}
+                onClick={() => void swap()}
+              >
                 {busy ? 'Swapping…' : 'Swap drill'}
               </button>
             </div>
+            {online ? null : <p id={`${id}-offline`}>{WORDS.needsConnection}</p>}
           </>
         )}
       </div>
