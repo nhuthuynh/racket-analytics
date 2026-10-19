@@ -41,6 +41,7 @@ async function givenPlan(api: FollowThroughApi) {
   const getPlan = vi.fn(async () => ({ kind: 'plan' as const, plan: parsePlan(planBody()) }));
   render(<PlanView api={{ getPlan }} followApi={api} evidenceApi={{ stats: vi.fn(), evidence: vi.fn() }} />);
   await screen.findByText('Serve to a target');
+  return { getPlan };
 }
 
 async function notForMe(reason = '') {
@@ -60,13 +61,16 @@ describe('Feature: Swapping a drill, on the plan page', () => {
 
   it(`Scenario: ${SCENARIOS.noAlternative}`, async () => {
     const api = followApi();
-    await givenPlan(api);
+    const { getPlan } = await givenPlan(api);
     const dialog = await notForMe('too hard');
     expect(
       await within(dialog).findByText('No other drill fits your setup for this. Your plan is unchanged.'),
     ).toBeVisible();
     expect(api.swap).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000102', 'too hard');
-    expect(screen.getAllByText('Serve to a target').length).toBeGreaterThan(0);
+    // And the plan still has "Serve to a target": its row is unchanged and the plan was not read again
+    const row = screen.getByRole('button', { name: 'Not for me, Serve to a target' }).closest('li')!;
+    expect(within(row).getByText('Serve to a target', { selector: 'strong' })).toBeVisible();
+    expect(getPlan).toHaveBeenCalledTimes(1);
   });
 
   it(`Scenario: ${SCENARIOS.swap}`, async () => {
@@ -81,5 +85,7 @@ describe('Feature: Swapping a drill, on the plan page', () => {
     await waitFor(() => expect(item).toHaveFocus());
     expect(screen.getByText('Swapped for Deep serves.')).toBeVisible();
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(within(item).queryByText('Serve to a target')).toBeNull();
+    expect(api.swap).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000102', '');
   });
 });

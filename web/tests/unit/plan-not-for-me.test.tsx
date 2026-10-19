@@ -1,6 +1,6 @@
 // P-03 on P-01 (ST-063c; FR-124; flows-sprint-04 §4): the "Not for me" dialog. Negative first: offline
 // it is disabled; a failed or limited swap keeps the dialog and the reason.
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlanView } from '@/components/plan/PlanView';
@@ -28,8 +28,14 @@ function followApi(over: Partial<FollowThroughApi> = {}): FollowThroughApi {
 
 const planRead = (): PlanRead => ({ kind: 'plan', plan: parsePlan(planBody()) });
 
-async function show(api: FollowThroughApi, getPlan = vi.fn(async (): Promise<PlanRead> => planRead())) {
-  render(<PlanView api={{ getPlan }} followApi={api} evidenceApi={{ stats: vi.fn(), evidence: vi.fn() }} />);
+async function show(
+  api: FollowThroughApi,
+  getPlan = vi.fn(async (): Promise<PlanRead> => planRead()),
+  onSignedOut = vi.fn(),
+) {
+  render(
+    <PlanView api={{ getPlan }} followApi={api} onSignedOut={onSignedOut} evidenceApi={{ stats: vi.fn(), evidence: vi.fn() }} />,
+  );
   await screen.findByText('Serve to a target');
   return { getPlan };
 }
@@ -130,5 +136,83 @@ describe('Not for me (negative first)', () => {
     await user.click(screen.getByRole('button', { name: 'Reload plan' }));
     await waitFor(() => expect(getPlan).toHaveBeenCalledTimes(2));
     expect(api.swap).toHaveBeenCalledWith(A1, '');
+  });
+});
+
+// Review findings on PR #142 (principal-engineer F1-F3, senior-backend-engineer S1/S2/N1, nits).
+describe('Not for me: the remaining swap answers and states (review of #142)', () => {
+  async function openAndSwap(reason = '') {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Not for me, Serve to a target' }));
+    const dialog = screen.getByRole('dialog', { name: 'Swap Serve to a target?' });
+    if (reason) await user.type(within(dialog).getByLabelText('Why not? (optional)'), reason);
+    await user.click(within(dialog).getByRole('button', { name: 'Swap drill' }));
+    return { user, dialog };
+  }
+
+  it('going offline while the dialog is open disables "Swap drill" and says it needs a connection', async () => {
+    await show(followApi());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Not for me, Serve to a target' }));
+    const dialog = screen.getByRole('dialog', { name: 'Swap Serve to a target?' });
+    online = false;
+    act(() => {
+      window.dispatchEvent(new Event('offline'));
+    });
+    expect(within(dialog).getByRole('button', { name: 'Swap drill' })).toBeDisabled();
+    expect(within(dialog).getByText('Needs a connection')).toBeVisible();
+  });
+
+  it('opening the dialog again clears the last "Swapped for ..." status, so a repeat swap is announced', async () => {
+    const swapped = parsePlan(planBody()).sessions[0]!;
+    const api = followApi({ swap: vi.fn(async () => ({ kind: 'swapped' as const, session: swapped, planVersion: 2 })) });
+    await show(api);
+    await openAndSwap();
+    expect(await screen.findByText('Swapped for Serve to a target.')).toBeVisible();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Not for me, Serve to a target' }));
+    expect(screen.queryByText('Swapped for Serve to a target.')).toBeNull();
+  });
+
+  it('404 not_found closes the dialog and reads the plan again', async () => {
+    const api = followApi({ swap: vi.fn(async () => ({ kind: 'not_found' as const })) });
+    const { getPlan } = await show(api);
+    await openAndSwap();
+    await waitFor(() => expect(getPlan).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('401 signed_out sends the player to sign in once', async () => {
+    const api = followApi({ swap: vi.fn(async () => ({ kind: 'signed_out' as const })) });
+    const onSignedOut = vi.fn();
+    await show(api, undefined, onSignedOut);
+    await openAndSwap();
+    await waitFor(() => expect(onSignedOut).toHaveBeenCalledTimes(1));
+  });
+
+  it('Escape after 409 session_done closes the dialog and reads the plan again', async () => {
+    const api = followApi({ swap: vi.fn(async () => ({ kind: 'session_done' as const })) });
+    const { getPlan } = await show(api);
+    const { dialog } = await openAndSwap();
+    await screen.findByRole('alert');
+    fireEvent(dialog, new Event('cancel', { cancelable: true }));
+    await waitFor(() => expect(getPlan).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('Escape before any answer closes the dialog without reading the plan again', async () => {
+    const { getPlan } = await show(followApi());
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Not for me, Serve to a target' }));
+    fireEvent(screen.getByRole('dialog', { name: 'Swap Serve to a target?' }), new Event('cancel', { cancelable: true }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(getPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it('a 429 with a retry time shows that time in the dialog and keeps the reason', async () => {
+    const retryAt = '2026-10-18T14:05:00Z';
+    const api = followApi({ swap: vi.fn(async () => ({ kind: 'rate_limited' as const, retryAt })) });
+    await show(api);
+    const { dialog } = await openAndSwap('too hard');
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(swapRateLimitMessage(retryAt));
+    expect(within(dialog).getByLabelText('Why not? (optional)')).toHaveValue('too hard');
   });
 });
