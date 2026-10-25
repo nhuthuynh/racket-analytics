@@ -1037,15 +1037,15 @@
   },
   "goal_met_note": "not met at close 2026-10-15: VERIFY-03-r3 11/12 at 6c666b9; G03-12 open 2 (PD-R1S3-01 group: chair's Held flip; EM-PR27-01: senior verdict on PR #27) (sprint-report section 1)",
   "nightly": {
-    "run_date": "2026-10-24",
-    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/40074725937",
-    "commit": "e6b1ce967fb08f61d686b320b434a90289f1d420",
+    "run_date": "2026-10-25",
+    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/40174152553",
+    "commit": "ef2b040cedf50f0e54c9ac8ceaa42e0f2b050717",
     "oracle": {
       "status": "passed",
       "sequences": 100000,
       "disagreements": 0,
-      "seed": 20261024,
-      "seconds": 57.95,
+      "seed": 20261025,
+      "seconds": 64.227,
       "shortest": null,
       "passed": true,
       "job": "success"
