@@ -321,6 +321,29 @@ def test_between_100_and_400_lines_warns_but_passes(size_repo: Path) -> None:
     assert "::warning" in res.stdout
 
 
+def test_production_code_over_400_lines_fails_even_with_tests_beside_it(size_repo: Path) -> None:
+    """CI-SIZE-PROD-ONLY (PO 2026-10-28): excluded lines never hide oversize production code."""
+    add_lines(size_repo, "backend/src/big.py", 401)
+    add_lines(size_repo, "backend/tests/unit/test_big.py", 500)
+    res = run("check_pr_size.py", "--base", "main", cwd=size_repo, env={"PR_LABELS": "[]"})
+    assert res.returncode == 1, res.stdout
+    assert "pr-size: 401 changed lines of production code" in res.stdout
+    assert "500 excluded lines" in res.stdout
+
+
+def test_tests_and_docs_do_not_count_but_are_reported(size_repo: Path) -> None:
+    """CI-SIZE-PROD-ONLY (PO 2026-10-28): tests and docs are excluded, and their total printed."""
+    add_lines(size_repo, "infra/tests/test_big.py", 450)
+    add_lines(size_repo, "web/tests/unit/a.test.ts", 100)
+    add_lines(size_repo, "docs/process/notes.md", 200)
+    add_lines(size_repo, "backend/src/small.py", 20)
+    res = run("check_pr_size.py", "--base", "main", cwd=size_repo, env={"PR_LABELS": "[]"})
+    assert res.returncode == 0, res.stdout
+    assert "pr-size: 20 changed lines of production code" in res.stdout
+    assert "750 excluded lines (tests, docs, lockfiles, fixtures)" in res.stdout
+    assert "::warning" not in res.stdout
+
+
 # ================================================================ check_first_route_js (NFR-015)
 def next_build(tmp: Path, page_bytes: int) -> Path:
     nxt = tmp / ".next"
