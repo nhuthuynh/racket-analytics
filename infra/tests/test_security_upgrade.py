@@ -8,6 +8,7 @@ import importlib.util
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -24,6 +25,7 @@ def load() -> ModuleType:
     assert spec
     assert spec.loader
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod  # dataclasses resolve annotations through sys.modules
     spec.loader.exec_module(mod)
     return mod
 
@@ -316,9 +318,11 @@ def test_workflow_runs_one_audit_at_a_time_and_never_cancels_a_push() -> None:
 @pytest.mark.unit
 def test_workflow_never_force_pushes_the_upgrade_branch() -> None:
     text = "\n".join(s.get("run", "") for s in next(iter(wf()["jobs"].values()))["steps"])
-    assert "git push" in text
-    for flag in ("--force", " -f ", "+refs"):
-        assert flag not in text
+    pushes = [line for line in text.splitlines() if "git push" in line]
+    assert pushes
+    for line in pushes:
+        for flag in ("--force", " -f", "+refs", " +"):
+            assert flag not in line, line
 
 
 @pytest.mark.unit
