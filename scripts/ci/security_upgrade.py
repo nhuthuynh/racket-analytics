@@ -146,6 +146,24 @@ def run_uv(argv: list[str], cwd: Path) -> None:
     subprocess.run(argv, cwd=cwd, check=True)
 
 
+def upgrade(plan: dict[str, list[str]], root: Path, uv: list[str]) -> dict[tuple[str, str], str]:
+    """Run one `uv lock --upgrade-package ...` per project; return (project, package) -> the
+    newly locked version, for the packages whose locked version really moved."""
+    upgraded: dict[tuple[str, str], str] = {}
+    for project, packages in plan.items():
+        lock = root / project / "uv.lock"
+        before = {p: locked_version(lock, p) for p in packages}
+        argv = [*uv, "lock"]
+        for p in packages:
+            argv += ["--upgrade-package", p]
+        run_uv(argv, root / project)
+        for p in packages:
+            after = locked_version(lock, p)
+            if after and after != before[p]:
+                upgraded[(project, p)] = after
+    return upgraded
+
+
 def pr_title(date: str) -> str:
     return PR_TITLE.format(date=date)
 
@@ -236,20 +254,7 @@ def run(args: argparse.Namespace) -> dict[str, int]:
         findings += parse_pip_audit(_read(path, project), project)
     web = parse_pnpm_audit(_read(Path(args.web_audit), "web")) if args.web_audit else []
 
-    plan = plan_upgrades(findings)
-    upgraded: dict[tuple[str, str], str] = {}
-    for project, packages in plan.items():
-        lock = root / project / "uv.lock"
-        before = {p: locked_version(lock, p) for p in packages}
-        argv = [*shlex.split(args.uv), "lock"]
-        for p in packages:
-            argv += ["--upgrade-package", p]
-        run_uv(argv, root / project)
-        for p in packages:
-            after = locked_version(lock, p)
-            if after and after != before[p]:
-                upgraded[(project, p)] = after
-
+    upgraded = upgrade(plan_upgrades(findings), root, shlex.split(args.uv))
     fixable = [f for f in findings if f.fixable]
     stuck = [f for f in fixable if (f.project, f.package) not in upgraded]
     unfixed = [f for f in findings if not f.fixable]
