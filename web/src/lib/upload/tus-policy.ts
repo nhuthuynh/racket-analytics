@@ -1,5 +1,6 @@
 // tus 1.0.0 client policy (api-sprint-00 §6, §8; AQS/STACK-06). Pure: no tus-js-client import,
 // so the rules are unit-testable without a network.
+import { parseStorageQuota, type StorageQuota } from '@/lib/api/storage-quota';
 import { isPublicId } from '@/lib/api/types';
 
 /** api-sprint-00 §6: `chunkSize: 8 * 1024 * 1024`. Since Sprint 1 only the fallback when
@@ -26,6 +27,7 @@ export type UploadProblem =
   | 'expired'
   | 'conflict'
   | 'quota'
+  | 'storage_full'
   | 'rate_limited'
   | 'not_found'
   | 'server';
@@ -36,6 +38,8 @@ export interface UploadErrorDetail {
   /** RFC 3339; only on 429, null when waiting does not help (quota). */
   retryAt: string | null;
   supportRef: string | null;
+  /** api-sprint-04 §7: storage used and limit on a 429 `storage_quota_exceeded` (ST-072b). */
+  quota?: StorageQuota | null;
 }
 
 const CODE_RE = /^[a-z][a-z_]{0,63}$/;
@@ -52,6 +56,7 @@ export function uploadErrorDetail(body: string | null | undefined): UploadErrorD
     if (typeof error?.support_ref === 'string' && SUPPORT_REF_RE.test(error.support_ref)) {
       detail.supportRef = error.support_ref;
     }
+    if (detail.code === 'storage_quota_exceeded') detail.quota = parseStorageQuota(error?.quota);
   } catch {
     // Not JSON (a proxy page, an empty body): nothing is known beyond the status.
   }
@@ -71,6 +76,7 @@ export function uploadProblemFor(status: number, detail?: Partial<UploadErrorDet
   if (status === 409) return 'conflict';
   if (status === 429) {
     if (detail?.code === 'rate_limited') return 'rate_limited';
+    if (detail?.code === 'storage_quota_exceeded') return 'storage_full';
     if (detail?.code !== 'upload_quota_exceeded' && detail?.retryAt) return 'rate_limited';
     return 'quota';
   }
