@@ -59,13 +59,13 @@ function SaveResult({ message }: { message: Message }) {
   );
 }
 
-/** Runs a save; on any refusal the caller's old value is shown again (ST-071 negative test). */
-async function saving<T>(save: Promise<Outcome<T>>, props: SectionProps, onSaved: (v: T) => Promise<void> | void, onFailed: () => void): Promise<Message> {
+/**
+ * Runs a save: the stored value and its confirmation on success; on any refusal the caller's old
+ * value is shown again with one alert (ST-071 negative test).
+ */
+async function saving<T>(save: Promise<Outcome<T>>, props: SectionProps, onSaved: (v: T) => Promise<string> | string, onFailed: () => void): Promise<Message> {
   const r = await save;
-  if (r.kind === 'ok') {
-    await onSaved(r.value);
-    return null;
-  }
+  if (r.kind === 'ok') return { ok: true, text: await onSaved(r.value) };
   onFailed();
   if (r.kind === 'signed_out') props.onSignedOut();
   return { ok: false, supportRef: r.kind === 'error' ? r.supportRef : null };
@@ -83,13 +83,13 @@ function RetentionSection({ initial, videos, timeZone, ...props }: SectionProps 
     e.preventDefault();
     setBusy(true);
     setMessage(null);
-    const failed = await saving(props.api.saveRetention(draft), props, async (v) => {
+    setMessage(await saving(props.api.saveRetention(draft), props, async (v) => {
       setSaved(v.days);
       setDraft(v.days);
       const dates = await props.api.reviewVideos();
       if (dates.kind === 'ok') setList(dates.value);
-    }, () => setDraft(saved));
-    setMessage(failed ?? { ok: true, text: WORDS.retentionSaved });
+      return WORDS.retentionSaved;
+    }, () => setDraft(saved)));
     setBusy(false);
   }
 
@@ -149,13 +149,11 @@ function ConsentSection({ initial, ...props }: SectionProps & { initial: Trainin
     e.preventDefault();
     setBusy(true);
     setMessage(null);
-    let now = saved;
-    const failed = await saving(props.api.saveConsent(draft), props, (v) => {
-      now = v.optIn;
+    setMessage(await saving(props.api.saveConsent(draft), props, (v) => {
       setSaved(v.optIn);
       setDraft(v.optIn);
-    }, () => setDraft(saved));
-    setMessage(failed ?? { ok: true, text: now ? WORDS.consentOn : WORDS.consentOff });
+      return v.optIn ? WORDS.consentOn : WORDS.consentOff;
+    }, () => setDraft(saved)));
     setBusy(false);
   }
 
