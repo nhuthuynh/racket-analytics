@@ -55,6 +55,7 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 
 - `dev-postgres.sh` uses `/usr/lib/postgresql/16/bin` (override with `PG_BIN`). When run as root it runs the server as the `postgres` OS user, because initdb refuses root. TCP auth is scram-sha-256.
 - `dev-objectstore.sh` downloads the pinned SeaweedFS release, checks its sha256 (the script refuses a mismatch) and caches it in `.local/bin/`. Set `WEED_BIN` to use another binary.
+- `dev-objectstore.sh` picks all 8 weed ports in one allocation (`scripts/dev-objectstore.sh ports 8`; every socket stays bound until all are chosen, so no port repeats). If weed still dies with `address already in use` (another process took a port before weed bound it, e.g. a parallel test's weed), `start` retries on fresh ports up to 3 times and logs `port collision, retry n/3 with fresh ports`; every other startup failure fails at once (CI-OBJSTORE-PORT-RACE, main run 40874800467).
 - State lives in `.local/` (gitignored). Data directories are temp dirs, and `stop` deletes them.
 
 ## 2. CI pipeline and merge gates (ST-002)
