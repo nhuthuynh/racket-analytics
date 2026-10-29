@@ -21,6 +21,21 @@ x-required-app-env: &app-env
   # when OTEL_EXPORTER_OTLP_METRICS_ENDPOINT names a collector (docs/ops/sli-metrics.md).
   OTEL_METRICS_EXPORTER: none
   OTEL_LOGS_EXPORTER: none
+  # Sprint 4 coaching and R1 privacy/quota settings (ST-067; api-sprint-04 §11). Every service
+  # that builds Settings gets the same values: the API gates the routes, purge applies the
+  # retention, the label-set build the consent (SRE-VERIFY04R3-02). Fallbacks = env.example;
+  # flags stay off until the legal review (P16, ADR 0051 rule 4).
+  COACHING_WEAKNESS_UNIT: ${COACHING_WEAKNESS_UNIT:-rallies_lost_per_game}
+  FEATURE_AGE_GATE: ${FEATURE_AGE_GATE:-false}
+  FEATURE_RETENTION_SETTING: ${FEATURE_RETENTION_SETTING:-false}
+  FEATURE_TRAINING_CONSENT: ${FEATURE_TRAINING_CONSENT:-false}
+  FEATURE_QUOTAS: ${FEATURE_QUOTAS:-false}
+  AGE_MINIMUM: ${AGE_MINIMUM:-18}
+  RETENTION_CHOICES_DAYS: ${RETENTION_CHOICES_DAYS:-30,90,365,none}
+  RETENTION_DEFAULT_DAYS: ${RETENTION_DEFAULT_DAYS:-90}
+  MATCH_CREATIONS_PER_HOUR: ${MATCH_CREATIONS_PER_HOUR:-10}
+  MATCH_CREATIONS_PER_IP_PER_HOUR: ${MATCH_CREATIONS_PER_IP_PER_HOUR:-60}
+  STORAGE_QUOTA_BYTES: ${STORAGE_QUOTA_BYTES:-21474836480}
 
 # Object-store key of the app: only the API reads and writes media with it. The mailer never
 # touches media, so it has no key (SEC-R5-S1-01, threat model S1-F3); the sandboxed worker has
