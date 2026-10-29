@@ -273,6 +273,45 @@ def player_sides(session: Session, owner_id: uuid.UUID) -> list[tuple[uuid.UUID,
     return [(uuid.UUID(str(r.id)), None if r.slot is None else str(r.slot)[0]) for r in rows]
 
 
+def lock_scope_versions(
+    session: Session, owner_id: uuid.UUID
+) -> tuple[tuple[uuid.UUID, str | None, int, str, str, int], ...]:
+    """The owner's live matches as ``(id, is_me side or None, scorebook version, rules version,
+    format, best of)`` in match id order, each match row ``FOR SHARE`` to the caller's commit,
+    as ``lock_live_sheet`` holds it (SRE-VERIFY04R3-01: Coaching's scope key). Every scorebook
+    command bumps ``version``, so an equal key means equal sheets."""
+    me = (
+        sa.select(match_participants.c.match_id, match_participants.c.slot)
+        .where(match_participants.c.is_me.is_(True))
+        .subquery()
+    )
+    rows = session.execute(
+        sa.select(
+            matches.c.id,
+            me.c.slot,
+            matches.c.version,
+            matches.c.rules_version,
+            matches.c.format,
+            matches.c.best_of,
+        )
+        .select_from(matches.outerjoin(me, me.c.match_id == matches.c.id))
+        .where(matches.c.owner_id == owner_id, matches.c.deleted_at.is_(None))
+        .order_by(matches.c.id)
+        .with_for_update(read=True, of=matches)
+    ).all()
+    return tuple(
+        (
+            uuid.UUID(str(r.id)),
+            None if r.slot is None else str(r.slot)[0],
+            int(r.version),
+            str(r.rules_version),
+            str(getattr(r.format, "value", r.format)),
+            int(r.best_of),
+        )
+        for r in rows
+    )
+
+
 def sheet_of_tags(
     games: Iterable[Mapping[str, Any]],
     *,
