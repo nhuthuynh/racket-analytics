@@ -420,8 +420,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       # The runner image ships PostgreSQL 16 server binaries; dev-postgres.sh uses them.
       # CI-INFRA-BUDGET: the suite mostly waits on services, so it runs on every core; loadfile
-      # keeps a file's tests (and its module-scoped service fixtures) on one worker.
-      - run: uv run pytest -q -n auto --dist loadfile -m "unit or integration"
+      # keeps a file's tests (and its module-scoped service fixtures) on one worker. A short
+      # basetemp keeps xdist's deeper tmp paths under the 107-byte AF_UNIX socket path limit.
+      - run: uv run pytest -q -n auto --dist loadfile --basetemp=/tmp/pt -m "unit or integration"
 
   # ------------------------------------------------------------------ web
   web-checks:
