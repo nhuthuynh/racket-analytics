@@ -4,13 +4,13 @@
 // "chromium" project launches Google Chrome, which decodes the H.264 match video (QA-RV1-07,
 // SRE-S2-05; e2e/helpers/browser-channel.ts). "flags-on" (api-sprint-04 §10) runs only
 // e2e/sprint-04/flags-on/ against a stack with every FEATURE_* on; the others skip that folder.
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 import { chromiumChannel } from './e2e/helpers/browser-channel';
+import { e2eProjects, projectNames } from './e2e/helpers/projects';
 import { chromiumDevCertificateArgs, trustsDevCertificate } from './src/lib/security/dev-tls';
 
 // https: the Compose stack is served by the web-tls proxy (ADR 0029).
 const baseURL = process.env.BASE_URL ?? 'https://localhost:3000';
-const projects = (process.env.PW_PROJECTS ?? 'chromium,webkit').split(',').map((p) => p.trim());
 const channel = chromiumChannel(process.env);
 
 export default defineConfig({
@@ -28,26 +28,5 @@ export default defineConfig({
     // Caddy's internal dev CA only: loopback https origins (ADR 0029).
     ignoreHTTPSErrors: trustsDevCertificate(baseURL),
   },
-  testIgnore: '**/flags-on/**',
-  projects: [
-    {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        ...(channel ? { channel } : {}),
-        launchOptions: { args: chromiumDevCertificateArgs(baseURL) },
-      },
-    },
-    { name: 'webkit', use: { ...devices['iPhone 13'] } },
-    {
-      name: 'flags-on',
-      testMatch: 'sprint-04/flags-on/**/*.spec.ts',
-      testIgnore: [],
-      use: {
-        ...devices['Desktop Chrome'],
-        ...(channel ? { channel } : {}),
-        launchOptions: { args: chromiumDevCertificateArgs(baseURL) },
-      },
-    },
-  ].filter((p) => projects.includes(p.name)),
+  projects: e2eProjects({ names: projectNames(process.env), channel, chromiumArgs: chromiumDevCertificateArgs(baseURL) }),
 });
