@@ -96,7 +96,7 @@ describe('R-01 loaded and saved', () => {
     await shown(fakeApi());
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Privacy settings');
     expect(screen.getByRole('radio', { name: '90 days (default)' })).toBeChecked();
-    expect(screen.getAllByRole('radio').map((r) => r.getAttribute('aria-label') ?? r.labels?.[0]?.textContent))
+    expect(screen.getAllByRole('radio').map((r) => (r as HTMLInputElement).labels?.[0]?.textContent))
       .toEqual(['30 days', '90 days (default)', '365 days', 'Until I delete it']);
     expect(screen.getByText(/We delete the file you uploaded 30 days after it is ready/)).toBeInTheDocument();
     const list = screen.getByRole('list', { name: 'When each video is deleted' });
