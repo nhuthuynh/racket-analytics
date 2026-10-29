@@ -38,9 +38,16 @@ vi.mock('next/navigation', () => ({
 const { AgeQuestion } = await import('@/components/age/AgeQuestion');
 const AgeQuestionPage = (await import('@/app/welcome/age/page')).default;
 const NewMatchPage = (await import('@/app/matches/(list)/new/page')).default;
+const SignInPage = (await import('@/app/page')).default;
+const MatchesPage = (await import('@/app/matches/(list)/page')).default;
 
 const FEATURE = readFileSync(path.join(HERE, 'age_question_ui.feature'), 'utf8');
-const SCENARIOS = { under: 'Under-age applicant', adult: 'Adult confirms', off: 'Flag off, no question' };
+const SCENARIOS = {
+  under: 'Under-age applicant',
+  adult: 'Adult confirms',
+  off: 'Flag off, no question',
+  existing: 'Existing account still signed in',
+};
 const NOTICE = "Don't upload matches with anyone under 18. Film only people who agree to be filmed.";
 
 beforeEach(() => {
@@ -48,7 +55,7 @@ beforeEach(() => {
     const path = new URL(url, 'http://web.test').pathname.replace(/^\/api/, '');
     const key =
       path === '/config/public' ? wire.gate
-      : path === '/me' ? wire.me
+      : path === '/me' || path === '/matches' ? wire.me
       : path === '/me/age-confirmation' && init.method === 'POST' ? wire.answer
       : 'route_off';
     const live = LIVE[key]!;
@@ -126,5 +133,11 @@ describe('Feature: The age question after sign-in', () => {
     await openUploadPage();
     expect(screen.queryByText(NOTICE)).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Before you upload' })).toBeNull();
+  });
+
+  it(`Scenario: ${SCENARIOS.existing}`, async () => {
+    givenGate(true);
+    wire.me = 'me_unconfirmed';
+    for (const page of [SignInPage, MatchesPage, NewMatchPage]) await expect(page()).rejects.toThrow('redirect /welcome/age');
   });
 });

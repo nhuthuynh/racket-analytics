@@ -24,3 +24,9 @@ Feature: The age question after sign-in
     Given the age gate is off
     Then the age question page is not found
     And the upload page shows no footage notice
+
+  Scenario: Existing account still signed in
+    Given the age gate is on
+    And an existing account that has not answered the question is still signed in
+    When it opens the sign-in page, its matches or a new match
+    Then each page sends it to the age question
