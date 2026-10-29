@@ -264,21 +264,19 @@ def least_privilege(ctx: dict[str, Any]) -> None:
 
 
 TOKEN_STEPS = {  # the only steps that may see GH_TOKEN (review PE-1, PR #150)
-    "Start from the upgrade branch merged with main (or from main)",
     "Commit and push the upgrade branch",
     "Open or update the draft upgrade pull request",
     "Open or update the advisory issue",
 }
-ADMIN_SETTING = "Allow GitHub Actions to create and approve pull requests"
 
 
 @then("the dependency audit checks out without persisting the token")
 def no_persisted_token(ctx: dict[str, Any]) -> None:
     checkouts = [s for s in job()["steps"] if s.get("uses", "").startswith("actions/checkout@")]
-    assert checkouts and all(s["with"]["persist-credentials"] is False for s in checkouts)
+    assert [s["with"]["persist-credentials"] for s in checkouts] == [False]
 
 
-@then("only the steps that fetch, push or call GitHub get the token")
+@then("only the steps that push or call GitHub get the token")
 def token_only_where_needed(ctx: dict[str, Any]) -> None:
     assert "GH_TOKEN" not in job().get("env", {})
     with_token = {s["name"] for s in job()["steps"] if "GH_TOKEN" in s.get("env", {})}
@@ -298,15 +296,16 @@ def no_git_hook(ctx: dict[str, Any]) -> None:
 
 @then(parsers.parse('ci-cd.md lists "{setting}" for a human admin'))
 def admin_setting_documented(ctx: dict[str, Any], setting: str) -> None:
+    ctx["admin_setting"] = setting
     text = (REPO_ROOT / "docs" / "process" / "ci-cd.md").read_text()
-    section = text.split("### 2.1 Repository settings a human admin must apply")[1].split("\n## ")[0]
+    section = text.split("### 2.1 Repository settings a human admin")[1].split("\n## ")[0]
     assert setting in section
 
 
 @then("a failed pull request creation names that setting")
 def create_failure_names_setting(ctx: dict[str, Any]) -> None:
     create = next(line for line in run_scripts().splitlines() if "gh pr create" in line)
-    assert ADMIN_SETTING in create
+    assert ctx["admin_setting"] in create
 
 
 @then("the dependency audit workflow never merges a pull request")

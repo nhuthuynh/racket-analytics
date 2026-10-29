@@ -39,9 +39,8 @@ jobs:
       issues: write # open or update the advisory issue
     env:
       BRANCH: deps/security-audit
-    # The write token is never in the job env nor persisted by checkout: uv, pip-audit, pnpm and
-    # corepack run code of newly published packages (sdist builds). Only the four steps that fetch,
-    # push or call gh get GH_TOKEN, and git runs no hook there (review PE-1, PR #150).
+    # No job-level token, none persisted: uv, pip-audit and pnpm may run new packages' code (sdist
+    # builds). Only the push and gh steps get GH_TOKEN; the repo is public, so fetch needs none.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,11 +55,7 @@ jobs:
       - name: Install uv and pip-audit (the versions ci.yml uses)
         run: pip install "uv==${UV_VERSION}" "pip-audit==2.10.1"
       - name: Start from the upgrade branch merged with main (or from main)
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          B64="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" && echo "::add-mask::$B64"
-          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $B64"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then

@@ -54,7 +54,7 @@ Feature: A daily dependency audit opens an upgrade pull request before main goes
 
     Scenario: Only the steps that push or call GitHub get the write token
       Then the dependency audit checks out without persisting the token
-      And only the steps that fetch, push or call GitHub get the token
+      And only the steps that push or call GitHub get the token
       And the commit and the push run no git hook
 
     Scenario: The repository setting that lets the job open a pull request is documented
