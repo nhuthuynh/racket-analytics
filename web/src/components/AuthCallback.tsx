@@ -8,10 +8,11 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { PageTitle } from '@/components/PageTitle';
 import { SignInForm } from '@/components/SignInForm';
-import { ApiError, type ApiClient } from '@/lib/api/client';
+import { ApiError, needsAgeAnswer, type ApiClient } from '@/lib/api/client';
+import { AGE_QUESTION_PATH } from '@/lib/identity/age';
 import { browserApi } from '@/lib/api/browser';
 
-type Api = Pick<ApiClient, 'exchangeLink' | 'requestLink'>;
+type Api = Pick<ApiClient, 'exchangeLink' | 'requestLink'> & Partial<Pick<ApiClient, 'me'>>;
 
 type State =
   | { kind: 'signing-in'; slow: boolean }
@@ -57,7 +58,12 @@ export function AuthCallback({
     const slow = setTimeout(() => setState((s) => (s.kind === 'signing-in' ? { ...s, slow: true } : s)), SLOW_AFTER_MS);
     api
       .exchangeLink(token)
-      .then(({ newAccount }) => navigate(newAccount ? '/welcome' : '/matches'))
+      .then(async ({ newAccount }) => {
+        const next = newAccount ? '/welcome' : '/matches';
+        // FR-003: with the age gate on, a new address or an unconfirmed account answers A-10 first.
+        const gated = api.me ? await api.me().then(() => false, needsAgeAnswer) : false;
+        navigate(gated ? AGE_QUESTION_PATH : next);
+      })
       .catch((e: unknown) => {
         const error = e instanceof ApiError ? e : new ApiError(0, 'network_error');
         if (error.status === 401 || error.status === 422) setState({ kind: 'expired' });

@@ -8,6 +8,7 @@ import {
   parseMatch,
   parseMatchList,
   parseMe,
+  parsePublicConfig,
   parseUploadPolicy,
   ResponseShapeError,
 } from './parse';
@@ -21,6 +22,7 @@ import {
 import { parseLabelDocument, parseLabelSaved, parseLabelSession } from '@/lib/label/parse';
 import type { EventLabel, LabelDocument, LabelSaved, LabelSession, RallyLabel } from '@/lib/label/types';
 import { parseEvidence, parseStats } from '@/lib/stats/parse';
+import type { AgeOutcome } from '@/lib/identity/age';
 import type { Evidence, Stats } from '@/lib/stats/types';
 import type {
   CorrectableField,
@@ -85,6 +87,11 @@ function fieldErrorsFrom(raw: unknown): ApiFieldError[] {
     out.push({ field, code: f.code as FieldErrorCode });
   }
   return out;
+}
+
+/** FR-003: the API refused because the holder has not answered the age question yet. */
+export function needsAgeAnswer(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 403 && e.code === 'age_confirmation_required';
 }
 
 /** A decision on a rally marked "needs your decision" (api-sprint-02 §3 resolution). */
@@ -216,6 +223,21 @@ export function createApiClient(options: ApiClientOptions) {
     },
     async me(): Promise<Me> {
       return parsed(await request('GET', '/me'), parseMe);
+    },
+    /** ST-067: the feature flags, readable before sign-in. */
+    async publicConfig(): Promise<{ ageGate: boolean }> {
+      return parsed(await request('GET', '/config/public'), parsePublicConfig);
+    },
+    /** A-10 (api-sprint-04 §4): never sends `confirm`, so an existing account is never deleted here. */
+    async confirmAge(isAdult: boolean): Promise<AgeOutcome> {
+      try {
+        await request('POST', '/me/age-confirmation', { is_adult: isAdult });
+        return 'adult';
+      } catch (e) {
+        if (!isAdult && e instanceof ApiError && e.status === 403 && e.code === 'under_age') return 'under_age';
+        if (!isAdult && e instanceof ApiError && e.status === 422) return 'confirmation_required';
+        throw e;
+      }
     },
     async listMatches(): Promise<Match[]> {
       return parsed(await request('GET', '/matches?limit=50'), parseMatchList);

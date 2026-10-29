@@ -30,6 +30,7 @@ import {
   type StepError,
 } from '@/lib/setup/flow';
 import { handOff } from '@/lib/upload/handoff';
+import { FootageNotice } from '@/components/age/FootageNotice';
 
 type Api = Pick<ApiClient, 'createMatch'>;
 
@@ -90,11 +91,14 @@ export function MatchSetup({
   today = todayParts(),
   policy,
   navigate = defaultNavigate,
+  footageNotice = false,
 }: {
   api?: Api;
   today?: DateParts;
   policy: UploadPolicy;
   navigate?: (path: string) => void;
+  /** FR-003: "Before you upload" above "Choose video" while the age gate is on. */
+  footageNotice?: boolean;
 }) {
   const [state, dispatch] = useReducer(setupReducer, today, initialSetup);
   const [file, setFile] = useState<File | null>(null);
@@ -279,6 +283,7 @@ export function MatchSetup({
           <VideoQuestion
             heading={h1}
             policy={policy}
+            footageNotice={footageNotice}
             error={errorFor('video')}
             chosen={answers.file}
             onFile={(f) => {
@@ -496,12 +501,14 @@ function DateQuestion({
 function VideoQuestion({
   heading,
   policy,
+  footageNotice,
   error,
   chosen,
   onFile,
 }: {
   heading: ReactNode;
   policy: UploadPolicy;
+  footageNotice: boolean;
   error?: StepError;
   chosen: Answers['file'];
   onFile: (file: File | null) => void;
@@ -509,6 +516,7 @@ function VideoQuestion({
   return (
     <div className="stack">
       {heading}
+      <FootageNotice show={footageNotice} />
       <div className={`field${error ? ' field--error' : ''}`}>
         <label htmlFor="video" className="field__label">
           Choose video
