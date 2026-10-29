@@ -138,7 +138,8 @@ def locked_version(lock: Path, package: str) -> str | None:
     want = normalise(package)
     for p in doc.get("package", []):
         if normalise(p.get("name", "")) == want:
-            return p.get("version")
+            version = p.get("version")
+            return str(version) if version is not None else None
     return None
 
 
