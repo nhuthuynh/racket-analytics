@@ -64,6 +64,16 @@ def psql(cmd: str, sql: str) -> str:
     return out
 
 
+def error_of(body: Any) -> dict[str, Any]:
+    """The ``error`` object of an API error body (api-sprint-01 §1.1), else ``{}``.
+
+    Every refusal is ``{"error": {"code", "message", "support_ref", ...}}``; ``retry_at`` (429)
+    and ``quota`` (storage refusal) sit inside it. A code at the top level is not read.
+    """
+    error = body.get("error") if isinstance(body, dict) else None
+    return error if isinstance(error, dict) else {}
+
+
 def burst_problems(replies: list[tuple[int, Any]], *, flags_on: bool) -> list[str]:
     want = PER_HOUR if flags_on else BURST
     accepted = [i for i, (st, _) in enumerate(replies) if st == 201]
@@ -72,9 +82,10 @@ def burst_problems(replies: list[tuple[int, Any]], *, flags_on: bool) -> list[st
     if refused and accepted and accepted[-1] > refused[0]:
         problems.append(f"request {accepted[-1] + 1} accepted after a refusal")
     for st, body in (replies[i] for i in refused):
-        if st != 429 or (body or {}).get("code") != "rate_limited":
-            problems.append(f"status {st} {(body or {}).get('code')}")
-        elif not body.get("retry_at"):
+        error = error_of(body)
+        if st != 429 or error.get("code") != "rate_limited":
+            problems.append(f"status {st} {error.get('code')}")
+        elif not error.get("retry_at"):
             problems.append("429 without retry_at")
     return problems[:10]
 
@@ -82,18 +93,19 @@ def burst_problems(replies: list[tuple[int, Any]], *, flags_on: bool) -> list[st
 def quota_problems(
     status: int, body: Any, location: str | None, stored: Stored, *, flags_on: bool
 ) -> list[str]:
-    body = body if isinstance(body, dict) else {}
+    error = error_of(body)
     if not flags_on:  # only an accepted upload session counts (ADR 0014: no vacuous pass)
-        refused = body.get("code") == "storage_quota_exceeded" or "quota" in body
+        refused = error.get("code") == "storage_quota_exceeded" or "quota" in error
         problems = ["refused by the quota with the flag off"] if refused else []
-        sessions_cap = status == 429 and body.get("code") == "upload_quota_exceeded"
+        sessions_cap = status == 429 and error.get("code") == "upload_quota_exceeded"
         if (status != 201 or not location) and not sessions_cap:  # api-sprint-01 §6.3 check 5
             problems.append(f"status {status}, Location {location!r} with the flag off")
         return problems
     if status != 429 or location:
         return [f"status {status}, Location {location!r}"]
-    problems = [] if body.get("code") == "storage_quota_exceeded" else [f"code {body.get('code')}"]
-    if not {"used_bytes", "limit_bytes"} <= set(body.get("quota") or {}):
+    code = error.get("code")
+    problems = [] if code == "storage_quota_exceeded" else [f"code {code}"]
+    if not {"used_bytes", "limit_bytes"} <= set(error.get("quota") or {}):
         problems.append("body lacks quota usage and limit")
     if None in stored:
         problems.append("stored bytes unreadable")
@@ -159,13 +171,13 @@ def age_step(args: argparse.Namespace) -> tuple[dict[str, Any], Client | None]:
         minor = _client(args)
         signed = sign_in(minor, args.mailpit)["ok"]
         r = minor.request("POST", "/me/age-confirmation", json_body={"is_adult": False})
-        body, after_me = r.json() or {}, minor.request("GET", "/me").status
+        error, after_me = error_of(r.json()), minor.request("GET", "/me").status
         new_rows = (first_int(psql(args.psql, "SELECT count(*) FROM accounts")) or 0) - (
             before or 0
         )
         problems = [] if signed else ["under-18 sign-in failed"]
-        if r.status != 403 or body.get("code") != "under_age" or not body.get("message"):
-            problems.append(f"under-18 answer status {r.status} {body.get('code')}")
+        if r.status != 403 or error.get("code") != "under_age" or not error.get("message"):
+            problems.append(f"under-18 answer status {r.status} {error.get('code')}")
         problems += [f"{new_rows} new account rows"] if new_rows or before is None else []
         problems += [] if after_me == 401 else [f"GET /me after refusal {after_me}"]
         adult = _account(args)

@@ -26,7 +26,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 from test_livehttp_mailpit import FakeMailpit
 
 pytestmark = pytest.mark.integration
-scenarios("live_privacy_harness.feature")
+scenarios("live_privacy_harness.feature", "live_privacy_error_envelope.feature")
 sys.path.insert(0, str(SCRIPTS_DIR / "measure"))
 import live_privacy as lp  # noqa: E402
 from livehttp import Client, ssl_context  # noqa: E402
@@ -61,6 +61,7 @@ class Stack:
         self.flags_on, self.still_served = True, set()
         self.refuse_matches = self.over_500 = self.me_leaks = False
         self.features_on: set[str] = set()
+        self.flat_errors = self.no_retry_at = False
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -90,6 +91,11 @@ class Stack:
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
 
+    def _err(self, code: str, **extra: Any) -> dict[str, Any]:
+        """The API's error body (api-sprint-01 §1.1, platform/errors.py); flat when asked to."""
+        error = {"code": code, "message": "m", "support_ref": "ref_0123456789abcdef", **extra}
+        return error if self.flat_errors else {"error": error}
+
     def _account_row(self) -> None:
         if self.psql:  # only the age scenarios have a database
             lp.psql(self.psql, f"INSERT INTO accounts VALUES ('{uuid.uuid4()}')")  # noqa: S608
@@ -97,7 +103,7 @@ class Stack:
     def answer(self, method: str, path: str, body: Any, cookie: str, length: int) -> tuple:
         route = f"{method} {re.sub(r'/[0-9a-f-]{36}', '/{id}', path)}"
         if not self.flags_on and route in FLAG_ROUTES - self.still_served:
-            return 404, {"code": "not_found"}
+            return 404, self._err("not_found")
         if route == "GET /config/public":
             names = ("age_gate", "retention", "training_consent", "quotas")
             return 200, {"features": {n: self.flags_on or n in self.features_on for n in names}}
@@ -114,17 +120,18 @@ class Stack:
             if body["is_adult"]:
                 return 200, {"age_confirmed_at": "2026-10-17T00:00:00Z"}
             self.sessions.discard(cookie)
-            return 403, {"code": "under_age", "message": "You must be 18 or over."}
+            return 403, self._err("under_age", message="You must be 18 or over.")
         if route == "GET /me":
             me = {"id": cookie, **({"age_confirmed_at": "2026-10-17"} if self.me_leaks else {})}
             return (200, me) if cookie in self.sessions else (401, {})
         if route == "POST /matches":
             if self.refuse_matches:
-                return 503, {"code": "unavailable"}
+                return 503, self._err("unavailable")
             self.created[cookie] = self.created.get(cookie, 0) + 1
             if self.created[cookie] <= self.per_hour:
                 return 201, {"id": str(uuid.uuid4())}
-            return 429, {"code": "rate_limited", "retry_at": "2026-10-17T01:00:00Z"}
+            retry_at = None if self.no_retry_at else "2026-10-17T01:00:00Z"
+            return 429, self._err("rate_limited", retry_at=retry_at)
         if route == "GET /me/quota":
             return 200, {"storage": {"used_bytes": 0, "limit_bytes": LIMIT}}
         if route == "GET /upload-policy":
@@ -134,12 +141,12 @@ class Stack:
     def _privacy(self, route: str, body: Any, n: int) -> tuple:
         if route == "POST /matches/{id}/uploads":
             if self.declared + n > LIMIT and self.over_500:
-                return 500, {"code": "internal"}
+                return 500, self._err("internal_error")
             if self.declared + n > LIMIT and self.flags_on:
                 if self.store_refused:
                     self.stored.write_text(f"{n}\n")
                 quota = {"used_bytes": self.declared, "limit_bytes": LIMIT, "requested_bytes": n}
-                return 429, {"code": "storage_quota_exceeded", "retry_at": None, "quota": quota}
+                return 429, self._err("storage_quota_exceeded", retry_at=None, quota=quota)
             self.declared += n
             return 201, None, {"Location": f"/uploads/{uuid.uuid4()}"}
         if route == "PUT /me/training-consent":
@@ -252,6 +259,16 @@ def exact(stack: Stack) -> None:
     stack.per_hour = 10
 
 
+@given("a stack that puts refusal codes at the top level of the body")
+def flat_errors(stack: Stack) -> None:
+    stack.flat_errors = True
+
+
+@given("a stack whose rate-limit refusal carries no retry_at")
+def no_retry_at(stack: Stack) -> None:
+    stack.no_retry_at = True
+
+
 @given("a flags-off stack")
 def flags_off(stack: Stack, world: dict[str, Any]) -> None:
     stack.flags_on, stack.per_hour = False, 10**6
@@ -307,6 +324,7 @@ def _run(world: dict[str, Any], stack: Stack, names: str) -> None:
         "retention": lambda: lp.retention_step(c, args, m),
         "burst": lambda: lp.burst_step(args),
         "quota": lambda: lp.quota_step(args),
+        "age": lambda: lp.age_step(args)[0],
         "flags-off": lambda: lp.flags_off_step(args),
     }
     world["steps"] = [steps[n]() for n in names.split()]
