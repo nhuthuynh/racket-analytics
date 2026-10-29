@@ -1,11 +1,10 @@
 # Sprint 4 ST-072b (FR-160; NFR-023; flows-sprint-04 §7 Q-10; interim-wording-sprint-04 §5).
-# Bound in web/tests/features/over-limit-messages.test.tsx: the real Q-07 (MatchSetup) and U-01
-# (MatchUpload) components with the API refusals of api-sprint-04 §7. Flag-on E2E: E2E-04-08.
+# Bound in web/tests/features/over-limit-messages.test.tsx: the real Q-07 (MatchSetup) with the
+# API refusal of api-sprint-04 §7. Flag-on E2E: E2E-04-08. The storage half is ST-072b-part2.
 @M5 @story-ST-072b @matches @web
-Feature: The player is told when they can continue and how much storage they use
-  With quotas on, the API refuses a match over the hourly limit and a video that does not fit in
-  the player's storage. The player sees when they can start a new match, or how much storage is
-  used, in plain words. With quotas off, nothing new is shown.
+Feature: The player is told when they can start a new match
+  With quotas on, the API refuses a match over the hourly limit. The player sees when they can
+  start a new match, in plain words, and keeps their answers.
 
   Rule: A refused match says when the player can start a new one
 
@@ -20,25 +19,3 @@ Feature: The player is told when they can continue and how much storage they use
       Given the API refuses "Create match and upload" with "rate_limited" until "2026-10-29T14:05:00Z"
       When the player creates the match on "Check your answers"
       Then the alert says "You can start a new match at" and that time in the player's local 24-hour "HH:MM"
-
-  Rule: A video that does not fit says how much storage is used
-
-    Scenario: A storage refusal without usage numbers still gets a safe message
-      Given the API refuses the upload with "storage_quota_exceeded" and no usage
-      When the upload starts
-      Then the alert says "This video won't fit in your storage."
-      And the alert links to "/matches"
-
-    Scenario: A storage refusal says how much of the storage is used
-      Given the API refuses the upload with "storage_quota_exceeded", 18.2 of 20 GB used
-      When the upload starts
-      Then the alert says "You have used 18.2 of 20 GB."
-      And the alert says "Nothing from this file was saved."
-
-  Rule: With quotas off, today's messages stay
-
-    Scenario: Quotas off: today's unfinished-upload refusal is unchanged
-      Given the API refuses the upload with "upload_quota_exceeded" and no usage
-      When the upload starts
-      Then the alert says "You have too many unfinished uploads."
-      And the alert does not say "storage"
