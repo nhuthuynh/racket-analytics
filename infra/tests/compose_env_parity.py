@@ -78,7 +78,7 @@ def check(env_path: Path, compose_path: Path, settings_path: Path) -> list[str]:
                 problems.append(f"{name}: in HOST_ONLY but the backend Settings reads it")
         elif "${" + name not in text:
             problems.append(f"{name}: in env.example but not forwarded to any Compose service")
-    for name in sorted(read & example.keys()):
+    for name in sorted((read & example.keys()) - HOST_ONLY.keys()):  # reported once above
         for service in SCOPED.get(name, SETTINGS_READERS):
             value = service_env(compose, service).get(name, "")
             if "${" + name not in value:
