@@ -44,3 +44,9 @@ ADR 0037 rule 1 and ADR 0050 rule 5: one row per finding that SMOKE-04 (#159) an
 | QA-VERIFY04R3-10 | minor | **Open.** Demo script step 3 says "limited data from 12 rallies"; the product says 11 (Ivy's side of the 12-rally sheet). Script wording, not a product defect | product-manager | VERIFY-04-r3 demo row, step 3 |
 | EM-RETRO04-01 | minor | **Open.** PR #144 (`[ST-063c-part2-part2-part2]`, draft) is still open although #145 merged the same "Not for me" UI on 2026-10-19 | orchestrator (close with a pointer to #145) | `list_pull_requests state=open` → #144 draft, head `6746ab9` |
 | G04-12 | — (goal row) | **Not met.** After this section: **open 13** = Sprint 3: 1 (EM-PR27-01; PD-R1S3-01 group Fixed in the Sprint 3 ledger today) + Sprint 4: 12 majors above. These are the carry-over of `sprint-report.md` §9 | engineering-manager | `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 1, `open 13` |
+
+## Ticket QA-VERIFY04R3-03 (fix wave, retro action C2; senior-qa-engineer, 2026-10-29)
+
+| Finding | Severity | Disposition | Owner | Evidence |
+|---|---|---|---|---|
+| QA-VERIFY04R3-03 (alias QA-SMOKE04-03) | major | **Fixed (closed on merge of this ticket's PR).** `live_privacy.py` reads `code`, `message`, `retry_at` and `quota` from the `error` object (`error_of`); a top-level code is not read (fail closed). Red first, then green (`decisions/QA-VERIFY04R3-03.md`) | senior-qa-engineer | Live dry-run, flags on, local-process stack: `live_privacy.py --flags on --runs 3 --quotas …` → **rc 0** (age, consent, retention 3 of 3; burst 10× 201 then 40× 429 `rate_limited` with `retry_at`; quota 429 `storage_quota_exceeded`, stored bytes 0 → 0; alerts 6 rules). Flags off: rc 0; `origin/main` harness on the same stack rc 1 (`status 429, Location None with the flag off`) |
