@@ -127,3 +127,59 @@ def test_it_04_18_a_solo_wall_plan_swaps_its_weakness_drill_for_the_same_target(
         assert target in new.drill.plan_targets
         assert plan.sessions[n].total_minutes <= G04_01.minutes_budget
         plan = assemble(weaknesses, G04_01, library)
+
+
+# ---------------------------------------------------------------- PE-R1-1: every pair of targets
+NEW_SERVE_DRILL = "pb.serve.wall-serve-and-ready"
+
+
+def test_it_04_18_two_serve_targets_sharing_their_only_two_drills_fail_naming_the_pair(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PE-R1-1 negative first: AN-01 and AN-05 cited by the same two solo wall drills (the
+    library before the third serve drill) leave a two-weakness session nothing to swap to."""
+    copy = tmp_path / "drills"
+    shutil.copytree(LIBRARY, copy)
+    shutil.rmtree(copy / NEW_SERVE_DRILL, ignore_errors=True)
+    rc, out = run(capsys, copy)
+    assert rc == 1, out
+    assert "FAIL AN-01 with AN-05 × intermediate × solo+wall: drills: 1" in fails(out), out
+    assert "FAIL AN-05 with AN-01 × intermediate × solo+wall: drills: 1" in fails(out), out
+
+
+def _pair_cases() -> list[tuple[str, str, int]]:
+    """(rank 1, rank 2, session number) for every ordered pair of distinct targets."""
+    pairs = [(t, u) for t in TARGETS for u in TARGETS if t != u]
+    return [(t, u, n) for t, u in pairs for n in range(G04_01.sessions_per_week * 2)]
+
+
+@pytest.mark.parametrize(("target", "other", "n"), _pair_cases())
+def test_it_04_18_every_weakness_drill_of_any_two_weakness_solo_wall_plan_swaps(
+    target: str, other: str, n: int
+) -> None:
+    """PE-R1-1: for every ordered pair of targets, each weakness drill of each session swaps
+    for another drill citing the same target, each on a fresh plan."""
+    library = [Drill.from_document(doc) for _, doc in _documents(LIBRARY)]
+    weaknesses = [PlanWeakness("w-1", target, 1), PlanWeakness("w-2", other, 2)]
+    plan = assemble(weaknesses, G04_01, library)
+    assert isinstance(plan, TrainingPlan), plan
+    assert plan.unfitted == (), plan.unfitted
+    session = plan.sessions[n]
+    assert sum(x.weakness_id is not None for x in session.assignments) <= 2
+    for x in session.assignments:
+        if x.weakness_id is None:
+            continue
+        plan = assemble(weaknesses, G04_01, library)
+        swapped = plan.swap(
+            week=session.week,
+            index=session.index,
+            position=x.position,
+            library=library,
+            cited=set(TARGETS),
+        )
+        assert isinstance(swapped, DrillSwapped)
+        assert swapped.to_drill != x.drill.ref
+        new = plan.sessions[n].assignments[x.position - 1]
+        assert new.drill.fits(G04_01)
+        assert swapped.target in new.drill.plan_targets
+        assert plan.sessions[n].total_minutes <= G04_01.minutes_budget

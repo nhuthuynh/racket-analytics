@@ -10,7 +10,13 @@ Feature: Drill coverage for a player alone with a wall
     When the coverage check runs
     Then it fails and names the cell "AN-04 × intermediate × solo+wall: drills: 1"
 
+  Scenario: Two serve metrics share their only two solo wall drills
+    Given a drill library without pb.serve.wall-serve-and-ready
+    When the coverage check runs
+    Then it fails and names the cell "AN-01 with AN-05 × intermediate × solo+wall: drills: 1"
+
   Scenario: Starter library for a solo wall player
     Given the starter drill library
     When the coverage check runs
     Then every target has at least 2 solo wall drills at intermediate
+    And every pair of targets leaves a solo wall drill to swap to

@@ -38,6 +38,14 @@ def one_solo_wall_drill(ctx: dict[str, Any], tmp_path: Path, kept: str, metric: 
     ctx["path"] = copy
 
 
+@given(parsers.parse("a drill library without {removed}"))
+def library_without(ctx: dict[str, Any], tmp_path: Path, removed: str) -> None:
+    copy = tmp_path / "drills"
+    shutil.copytree(LIBRARY, copy)
+    shutil.rmtree(copy / removed, ignore_errors=True)
+    ctx["path"] = copy
+
+
 @given("the starter drill library")
 def starter_library(ctx: dict[str, Any]) -> None:
     ctx["path"] = LIBRARY
@@ -60,3 +68,9 @@ def two_per_target(ctx: dict[str, Any]) -> None:
     rows = solo_wall_rows(ctx["out"])
     assert sorted(rows) == sorted(TARGETS), ctx["out"]
     assert all(n >= 2 for n in rows.values()), rows
+
+
+@then("every pair of targets leaves a solo wall drill to swap to")
+def every_pair(ctx: dict[str, Any]) -> None:
+    assert ctx["rc"] == 0, ctx["out"]
+    assert not [f for f in fails(ctx["out"]) if " with " in f], ctx["out"]

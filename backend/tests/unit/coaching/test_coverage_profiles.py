@@ -21,6 +21,7 @@ from racket.coaching.drills.coverage import (
     PROFILES,
     SOLO_WALL,
     TARGETS,
+    check_profile_pairs,
     check_profiles,
     render_profiles,
 )
@@ -150,3 +151,47 @@ def test_two_solo_wall_drills_per_target_pass_and_render_one_row_per_cell() -> N
     assert len(lines) == 1 + len(TARGETS)
     assert lines[1].split() == ["AN-01", "intermediate", "solo+wall", "2"]
     assert lines[-1].split() == ["AN-07:forced-error", "intermediate", "solo+wall", "2"]
+
+
+# --------------------------------------------------------------- PE-R1-1: pairs of targets
+def serve(drill_id: str, *targets: str) -> dict[str, Any]:
+    return wall(drill_id, skills=["serve"], target_metrics=list(targets))
+
+
+def pair_gaps(docs: list[dict[str, Any]]) -> list[str]:
+    return list(check_profile_pairs(Drill.from_document(d) for d in docs))
+
+
+def pair(t: str, u: str, n: int = 1) -> str:
+    return f"{t} with {u} × intermediate × solo+wall: drills: {n}"
+
+
+def test_two_targets_sharing_their_only_two_drills_are_named_both_ways() -> None:
+    """A plan training AN-01 and AN-05 puts both shared drills in one session: no swap left."""
+    lib = [serve("pb.test.s-a", "AN-01", "AN-05"), serve("pb.test.s-b", "AN-01", "AN-05")]
+    assert pair_gaps(lib) == [pair("AN-01", "AN-05"), pair("AN-05", "AN-01")]
+
+
+def test_one_shared_drill_leaves_the_other_target_one_drill_to_swap_to() -> None:
+    lib = [
+        serve("pb.test.s-a", "AN-01", "AN-05"),
+        serve("pb.test.s-b", "AN-01"),
+        serve("pb.test.s-c", "AN-05"),
+    ]
+    assert pair_gaps(lib) == [pair("AN-01", "AN-05"), pair("AN-05", "AN-01")]
+
+
+def test_two_drills_on_every_target_fail_every_ordered_pair() -> None:
+    expected = [pair(t, u) for t in TARGETS for u in TARGETS if t != u]
+    assert pair_gaps(two_per_target()) == expected
+
+
+def test_a_target_short_on_its_own_is_not_named_again_as_a_pair() -> None:
+    assert pair_gaps([serve("pb.test.s-a", "AN-01", "AN-05")]) == []
+
+
+def test_a_third_shared_drill_or_disjoint_drills_pass() -> None:
+    shared = [serve(f"pb.test.s-{n}", "AN-01", "AN-05") for n in "abc"]
+    disjoint = [serve(f"pb.test.s-{n}-{t[-1]}", t) for n in "ab" for t in ("AN-01", "AN-05")]
+    assert pair_gaps(shared) == []
+    assert pair_gaps(disjoint) == []
