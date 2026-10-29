@@ -31,6 +31,10 @@ logged after commit with ids only, never the reason.
 Transactions: ``citations_for`` runs the stats read repair, which commits, so it runs first; then
 the account row is held ``FOR SHARE`` (SEC-S3-TM-05: a ``DELETE /me`` commits before or after,
 never across) and ``ranking_for`` holds the owner's match rows ``FOR SHARE`` to the commit.
+
+Read cost (SRE-VERIFY04R3-01; G04-02 c): ``current`` first reads the scope key (account, then
+the owner's match rows ``FOR SHARE``, as above) and reuses the ranking and citations memoised for
+an equal key (``plan/scope.py``), so a read of an unchanged scope replays no scorebook.
 """
 
 from __future__ import annotations
@@ -68,6 +72,7 @@ from racket.coaching.plan.domain import (
     source_matches,
 )
 from racket.coaching.plan.repository import DoneOp, PlanConflict, PlanRepository, StoredPlan
+from racket.coaching.plan.scope import ScopeKey, ScopeMemo
 from racket.coaching.schemas import PlanView
 from racket.coaching.weakness import acl as weakness_acl
 from racket.coaching.weakness.domain import NO_TAGGED_MATCH, WeaknessRanking
@@ -78,7 +83,10 @@ log = logging.getLogger(__name__)
 LIBRARY_ENV = "RACKET_DRILL_LIBRARY"  # the content/drills directory; found from here if unset
 SOURCE_MATCH_DELETED = "source_match_deleted"
 SAVE_ATTEMPTS = 2  # the first try and one internal retry (api-sprint-04 §3.4)
+SCOPE_MEMO_OWNERS = 4096  # owners whose scope facts one API process keeps (judgment)
 _T = TypeVar("_T")
+ScopeFacts = tuple[citation_acl.CitationFacts, WeaknessRanking]
+SCOPE_MEMO: ScopeMemo[ScopeFacts] = ScopeMemo(capacity=SCOPE_MEMO_OWNERS)
 
 
 class NoPlan(NotFound):
@@ -164,9 +172,15 @@ def _now() -> datetime:
 
 class PlanService:
     def __init__(
-        self, session: Session, library: Library, *, clock: Callable[[], datetime] = _now
+        self,
+        session: Session,
+        library: Library,
+        *,
+        clock: Callable[[], datetime] = _now,
+        memo: ScopeMemo[ScopeFacts] | None = None,
     ) -> None:
         self.session = session
+        self.memo = SCOPE_MEMO if memo is None else memo
         self.library = library
         self.plans = PlanRepository(session, library.drills, clock=clock)
         self.clock = clock
@@ -200,8 +214,7 @@ class PlanService:
         return self._retrying(lambda: self._swap(owner_id, assignment_id, reason))
 
     def _owned(self, owner_id: uuid.UUID) -> StoredPlan:
-        if not players.lock_live_account(self.session, owner_id):
-            raise Unauthenticated("the account was deleted")
+        self._lock_account(owner_id)
         stored = self.plans.get(owner_id)
         if stored is None:
             raise NotFound("no such session or assignment")
@@ -351,8 +364,7 @@ class PlanService:
 
     def _current(self, owner_id: uuid.UUID) -> tuple[PlanView, bool]:
         """The saved plan and False, or the regenerated plan and True (committed)."""
-        facts = citation_acl.citations_for(self.session, owner_id)
-        ranking = self._ranking(owner_id)
+        facts, ranking = self._scope_facts(owner_id)
         stored = self.plans.get(owner_id)
         if stored is None:
             raise NoPlan("no plan")
@@ -374,10 +386,34 @@ class PlanService:
         self.session.commit()
         return view, True
 
+    def _scope_facts(
+        self, owner_id: uuid.UUID
+    ) -> tuple[citation_acl.CitationFacts, WeaknessRanking]:
+        """The citations and ranking of the owner's scope; reused while its key is unchanged
+        (SRE-VERIFY04R3-01). The key is read with the account and match rows share-locked,
+        as the live read holds them; a miss reads live and keeps the facts only when the key
+        read after them is the key read before (no command landed between the two reads)."""
+        before = self._scope_key(owner_id)
+        if (hit := self.memo.get(owner_id, before)) is not None:
+            return hit
+        facts = citation_acl.citations_for(self.session, owner_id)
+        ranking = self._ranking(owner_id)
+        if self._scope_key(owner_id) == before:
+            self.memo.put(owner_id, before, (facts, ranking))
+        return facts, ranking
+
+    def _scope_key(self, owner_id: uuid.UUID) -> ScopeKey:
+        self._lock_account(owner_id)
+        return citation_acl.scope_key(self.session, owner_id)
+
     def _ranking(self, owner_id: uuid.UUID) -> WeaknessRanking:
+        self._lock_account(owner_id)
+        return weakness_acl.ranking_for(self.session, owner_id)
+
+    def _lock_account(self, owner_id: uuid.UUID) -> None:
+        """The account row ``FOR SHARE`` to the commit (SEC-S3-TM-05); 401 once deleted."""
         if not players.lock_live_account(self.session, owner_id):
             raise Unauthenticated("the account was deleted")
-        return weakness_acl.ranking_for(self.session, owner_id)
 
     def _drop(self, owner_id: uuid.UUID) -> NoReturn:
         """No tagged match or no fitting plan left: the old plan goes, 404 ``no_plan``."""

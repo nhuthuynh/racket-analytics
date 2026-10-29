@@ -5,6 +5,7 @@
 ``racket.analytics.public``, and returns domain ``Citation`` values. With one match in scope the
 numbers equal ``GET /matches/{id}/stats`` for that side, and every rally is in its evidence.
 ``live_matches`` says which of a plan's source matches are still live (coaching-plan §8).
+``scope_key`` is the scope the ranking and citations are a function of (SRE-VERIFY04R3-01).
 """
 
 from __future__ import annotations
@@ -73,3 +74,9 @@ def _k(target: str, fact: analytics.MetricFact) -> int:
 def live_matches(session: Session, ids: Iterable[uuid.UUID]) -> set[uuid.UUID]:
     """Which of ``ids`` are live (not deleted) matches: a plan built from any other is stale."""
     return matches.live_ids(session, sorted(set(ids)))
+
+
+def scope_key(session: Session, owner_id: uuid.UUID) -> tuple[object, ...]:
+    """The owner's live matches with side and scorebook version, each match row ``FOR SHARE``
+    to the caller's commit: equal keys give equal ranking and citations (SRE-VERIFY04R3-01)."""
+    return matches.lock_scope_versions(session, owner_id)
