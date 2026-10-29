@@ -1,0 +1,42 @@
+{
+  "id": "pb.third-shot.wall-let-it-bounce",
+  "version": 1,
+  "name": "Let it bounce at the wall",
+  "summary": "Alone at a wall, play each serve-and-return pattern with the bounces the two-bounce rule asks for and count early volleys as own faults.",
+  "skills": [
+    "AN-07",
+    "share:fault",
+    "third-shot",
+    "serve"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 0.9 m above the floor (the net) and a floor line about 6 m from the wall",
+    "Serve against the wall from behind the floor line; the rebound is the return: let it bounce, then play a soft third shot above the line",
+    "Let the next rebound bounce too, then you may volley or play off the bounce",
+    "Count an own fault each time you volley a ball that had to bounce (the first two rebounds) or the ball goes below the line. Sets of 10 patterns"
+  ],
+  "success_criterion": "In each of 3 sets of 10 patterns, at most 1 own fault",
+  "progressions": [
+    "pb.third-shot.let-it-bounce-drops"
+  ],
+  "regressions": [],
+  "safety_notes": "Soft pace. Let rebounds come to you; do not lunge or run for them. Stop if in pain.",
+  "coach_rationale": "(judgment) Volleying a ball that had to bounce is an own fault that ends rallies (the AN-07 fault share); rehearsing the serve, bounce, bounce rhythm alone builds the habit of waiting. A wall gives many repetitions with no partner. The fault rules are UNVERIFIED in this app (P7): count them as your rules allow. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

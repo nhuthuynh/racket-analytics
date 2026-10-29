@@ -1,0 +1,44 @@
+{
+  "id": "pb.volley.wall-hands-battle",
+  "version": 1,
+  "name": "Wall hands battle",
+  "summary": "Alone close to a wall, keep a quick volley exchange going with a compact paddle and count balls you keep in play under pace.",
+  "skills": [
+    "AN-07",
+    "share:forced-error",
+    "volley",
+    "speed-up"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "intermediate",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 12,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 0.9 m above the floor (the net) and stand about 2.5 m from the wall",
+    "Volley continuously above the line with a short, compact stroke, paddle up in front of the chest, mixing forehand and backhand",
+    "Raise the pace for 5 volleys, then soften for 5, and repeat",
+    "Count the volleys in a row before an error (below the line, a mis-hit or a ball that gets past you). Sets of 60 s, rest 60 s"
+  ],
+  "success_criterion": "In 3 sets of 60 s, a best run of at least 20 volleys in a row in each set",
+  "progressions": [
+    "pb.reset.speed-up-defence-game"
+  ],
+  "regressions": [
+    "pb.volley.wall-line-volleys"
+  ],
+  "safety_notes": "Wear eye protection. High-intensity hands work: warm up first, stay at a pace you control, keep the ball below head height, and rest between sets. Stop if your wrist, elbow or shoulder hurts or if dizzy.",
+  "coach_rationale": "(judgment) Errors under pressure at the kitchen line come from slow hands against fast balls (the AN-07 forced-error share); short, fast wall exchanges train a compact paddle and quick recovery. Intermediate only: pace is the point of this drill (checklist C6). Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
