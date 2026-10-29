@@ -15,7 +15,12 @@ pytestmark = pytest.mark.unit
 sys.path.insert(0, str(SCRIPTS_DIR / "measure"))
 import live_privacy as lp  # noqa: E402
 
-LIMITED = (429, {"code": "rate_limited", "retry_at": "2026-10-17T01:00:00Z"})
+def err(code: str, **extra: object) -> dict[str, object]:
+    """The API's error body (api-sprint-01 §1.1; backend/src/racket/platform/errors.py)."""
+    return {"error": {"code": code, "message": "m", "support_ref": "ref_0123456789abcdef", **extra}}
+
+
+LIMITED = (429, err("rate_limited", retry_at="2026-10-17T01:00:00Z"))
 OK = (201, {"id": "m"})
 
 
@@ -25,7 +30,7 @@ OK = (201, {"id": "m"})
         ([], True, "0 accepted, want 10"),
         ([OK] * 11 + [LIMITED] * 39, True, "11 accepted, want 10"),
         ([OK] * 9 + [LIMITED, OK] + [LIMITED] * 39, True, "accepted after a refusal"),
-        ([OK] * 10 + [(429, {"code": "rate_limited", "retry_at": None})] * 40, True, "retry_at"),
+        ([OK] * 10 + [(429, err("rate_limited", retry_at=None))] * 40, True, "retry_at"),
         ([OK] * 10 + [(500, {})] * 40, True, "status 500"),
         ([OK] * 10 + [LIMITED] * 40, False, "10 accepted, want 50"),
     ],
@@ -40,19 +45,20 @@ def test_burst_exact_limit_passes(replies, flags_on) -> None:
     assert lp.burst_problems(replies, flags_on=flags_on) == []
 
 
-REFUSED = {"code": "storage_quota_exceeded", "quota": {"used_bytes": 10, "limit_bytes": 10}}
+REFUSED = err("storage_quota_exceeded", retry_at=None,
+              quota={"used_bytes": 10, "limit_bytes": 10, "requested_bytes": 1})  # fmt: skip
 
 
 @pytest.mark.parametrize(
     ("status", "body", "location", "stored", "flags_on", "named"),
     [
         (201, {}, "/u/1", (0, 0), True, "status 201"),
-        (429, {"code": "upload_quota_exceeded"}, None, (0, 0), True, "code upload_quota_exceeded"),
-        (429, {"code": "storage_quota_exceeded"}, None, (0, 0), True, "quota usage and limit"),
+        (429, err("upload_quota_exceeded"), None, (0, 0), True, "code upload_quota_exceeded"),
+        (429, err("storage_quota_exceeded"), None, (0, 0), True, "quota usage and limit"),
         (429, REFUSED, None, (0, 7), True, "stored bytes changed: 0 -> 7"),
         (429, REFUSED, None, (None, 0), True, "stored bytes unreadable"),
         (429, REFUSED, None, (0, 0), False, "refused by the quota with the flag off"),
-        (500, {"code": "internal"}, None, (None, None), False, "status 500"),
+        (500, err("internal_error"), None, (None, None), False, "status 500"),
         (404, None, None, (None, None), False, "status 404"),
         (201, {}, None, (None, None), False, "Location None"),
     ],
@@ -69,9 +75,32 @@ def test_quota_refusal_before_bytes_passes() -> None:
 
 def test_flags_off_open_session_cap_is_todays_behaviour_not_a_failure() -> None:
     # api-sprint-01 §6.3 check 5: a 4th open upload session is 429 upload_quota_exceeded
-    sessions = {"code": "upload_quota_exceeded"}
+    sessions = err("upload_quota_exceeded", retry_at=None)
     assert lp.quota_problems(429, sessions, None, (None, None), flags_on=False) == []
-    found = lp.quota_problems(429, {"code": "rate_limited"}, None, (None, None), flags_on=False)
+    found = lp.quota_problems(429, err("rate_limited"), None, (None, None), flags_on=False)
+    assert any("status 429" in p for p in found), found
+
+
+FLAT = dict(REFUSED["error"])  # the pre-fix reading: no envelope
+
+
+@pytest.mark.parametrize("body", [None, {}, {"error": None}, {"error": "rate_limited"}, FLAT])
+def test_error_of_reads_only_the_error_envelope(body) -> None:
+    # QA-VERIFY04R3-03: a code at the top level is not the API's body; it reads as absent
+    assert lp.error_of(body) == {}
+
+
+def test_error_of_returns_the_error_object() -> None:
+    assert lp.error_of(REFUSED) == REFUSED["error"]
+
+
+def test_refusals_outside_the_envelope_are_not_read_as_refusals() -> None:
+    flat_limited = (429, {"code": "rate_limited", "retry_at": "2026-10-17T01:00:00Z"})
+    assert "status 429 None" in lp.burst_problems([OK] * 10 + [flat_limited] * 40, flags_on=True)
+    found = lp.quota_problems(429, FLAT, None, (0, 0), flags_on=True)
+    assert "code None" in found and "body lacks quota usage and limit" in found, found
+    flat_cap = {"code": "upload_quota_exceeded"}
+    found = lp.quota_problems(429, flat_cap, None, (None, None), flags_on=False)
     assert any("status 429" in p for p in found), found
 
 
