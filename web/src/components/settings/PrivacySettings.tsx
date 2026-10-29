@@ -19,7 +19,9 @@ import {
 
 type Loaded = { retention: RetentionSetting | null; videos: ReviewVideo[]; consent: TrainingConsent | null };
 type State = { kind: 'loading' } | { kind: 'error'; supportRef: string | null } | { kind: 'loaded'; data: Loaded };
-type Message = { ok: true; text: string } | { ok: false; supportRef: string | null } | null;
+type Notice = { text: string; supportRef: string | null };
+/** A save outcome: a confirmation, or an alert (the save failed, or it worked but a follow-up read did not). */
+type Message = { ok: true; text: string } | { ok: false; alert: Notice } | null;
 interface SectionProps {
   api: PrivacySettingsApi;
   online: boolean;
@@ -51,8 +53,8 @@ function SaveResult({ message }: { message: Message }) {
       <p role="status">{message?.ok ? message.text : ''}</p>
       {message && !message.ok ? (
         <div role="alert" className="notice notice--error">
-          <p>{WORDS.saveFailed}</p>
-          {message.supportRef ? <p>{`Reference: ${message.supportRef}`}</p> : null}
+          <p>{message.alert.text}</p>
+          {message.alert.supportRef ? <p>{`Reference: ${message.alert.supportRef}`}</p> : null}
         </div>
       ) : null}
     </>
@@ -60,22 +62,23 @@ function SaveResult({ message }: { message: Message }) {
 }
 
 /**
- * Runs a save: the stored value and its confirmation on success; on any refusal the caller's old
- * value is shown again with one alert (ST-071 negative test).
+ * Runs a save: the stored value and what the section says about it on success; on any refusal the
+ * caller's old value is shown again with one alert (ST-071 negative test).
  */
-async function saving<T>(save: Promise<Outcome<T>>, props: SectionProps, onSaved: (v: T) => Promise<string> | string, onFailed: () => void): Promise<Message> {
+async function saving<T>(save: Promise<Outcome<T>>, props: SectionProps, onSaved: (v: T) => Promise<Message> | Message, onFailed: () => void): Promise<Message> {
   const r = await save;
-  if (r.kind === 'ok') return { ok: true, text: await onSaved(r.value) };
+  if (r.kind === 'ok') return onSaved(r.value);
   onFailed();
   if (r.kind === 'signed_out') props.onSignedOut();
-  return { ok: false, supportRef: r.kind === 'error' ? r.supportRef : null };
+  return { ok: false, alert: { text: WORDS.saveFailed, supportRef: r.kind === 'error' ? r.supportRef : null } };
 }
 
 function RetentionSection({ initial, videos, timeZone, ...props }: SectionProps & { initial: RetentionSetting; videos: ReviewVideo[]; timeZone?: string }) {
   const id = useId();
   const [saved, setSaved] = useState(initial.days);
   const [draft, setDraft] = useState(initial.days);
-  const [list, setList] = useState(videos);
+  // null: the dates after a save could not be read, so none is shown (an old one would be wrong).
+  const [list, setList] = useState<ReviewVideo[] | null>(videos);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
 
@@ -87,8 +90,13 @@ function RetentionSection({ initial, videos, timeZone, ...props }: SectionProps 
       setSaved(v.days);
       setDraft(v.days);
       const dates = await props.api.reviewVideos();
-      if (dates.kind === 'ok') setList(dates.value);
-      return WORDS.retentionSaved;
+      if (dates.kind === 'ok') {
+        setList(dates.value);
+        return { ok: true, text: WORDS.retentionSaved };
+      }
+      setList(null);
+      if (dates.kind === 'signed_out') props.onSignedOut();
+      return { ok: false, alert: { text: WORDS.datesUnread, supportRef: dates.kind === 'error' ? dates.supportRef : null } };
     }, () => setDraft(saved)));
     setBusy(false);
   }
@@ -119,7 +127,7 @@ function RetentionSection({ initial, videos, timeZone, ...props }: SectionProps 
       </form>
       <SaveResult message={message} />
       <h3 id={`${id}-dates`}>{WORDS.datesHeading}</h3>
-      {list.length === 0 ? (
+      {list === null ? null : list.length === 0 ? (
         <p>{WORDS.noVideos}</p>
       ) : (
         <ul className="stack" aria-labelledby={`${id}-dates`}>
@@ -152,7 +160,7 @@ function ConsentSection({ initial, ...props }: SectionProps & { initial: Trainin
     setMessage(await saving(props.api.saveConsent(draft), props, (v) => {
       setSaved(v.optIn);
       setDraft(v.optIn);
-      return v.optIn ? WORDS.consentOn : WORDS.consentOff;
+      return { ok: true, text: v.optIn ? WORDS.consentOn : WORDS.consentOff };
     }, () => setDraft(saved)));
     setBusy(false);
   }

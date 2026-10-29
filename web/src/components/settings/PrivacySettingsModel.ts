@@ -44,6 +44,7 @@ export const WORDS = {
   systemRule: `We delete the file you uploaded ${ORIGINAL_VIDEO_DAYS} days after it is ready. The copy you watch is kept for the time you choose here.`, // W-R03
   saveRetention: 'Save video setting',
   retentionSaved: 'Saved. The new deletion dates are shown below.', // W-R10
+  datesUnread: 'Your video setting is saved, but we could not load the new deletion dates. Reload the page to see them.', // no PM-4 row yet; decisions ST-071
   datesHeading: 'When each video is deleted',
   noVideos: 'You have no match videos yet.',
   consentHeading: 'Help improve the app', // W-C01
