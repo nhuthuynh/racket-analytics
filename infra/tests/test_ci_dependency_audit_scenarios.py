@@ -284,17 +284,16 @@ def token_only_where_needed(ctx: dict[str, Any]) -> None:
     with_token = {s["name"] for s in job()["steps"] if "GH_TOKEN" in s.get("env", {})}
     assert with_token == TOKEN_STEPS
     for step in job()["steps"]:  # uv, pip-audit, pnpm and corepack run untrusted package code
-        if re.search(r"\b(uv|pip-audit|pnpm|corepack|security_upgrade\.py)\b", step.get("run", "")):
+        if re.search(r"(^|\s)(uv|pip-audit|pnpm|corepack|python3) ", step.get("run", ""), re.M):
             assert "GH_TOKEN" not in step.get("env", {}), step["name"]
 
 
 @then("the commit and the push run no git hook")
 def no_git_hook(ctx: dict[str, Any]) -> None:
     step = next(s for s in job()["steps"] if s.get("name") == "Commit and push the upgrade branch")
+    assert "GIT_CONFIG_KEY_1=core.hooksPath GIT_CONFIG_VALUE_1=/dev/null" in step["run"]
     for verb in ("commit", "push"):
-        line = next(ln for ln in step["run"].splitlines() if re.search(rf"git .*\b{verb}\b", ln))
-        assert "core.hooksPath=/dev/null" in line, line
-        assert "--no-verify" in line, line
+        assert re.search(rf"^\s*git {verb} --no-verify ", step["run"], re.M), verb
 
 
 @then(parsers.parse('ci-cd.md lists "{setting}" for a human admin'))

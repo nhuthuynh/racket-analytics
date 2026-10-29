@@ -39,11 +39,14 @@ jobs:
       issues: write # open or update the advisory issue
     env:
       BRANCH: deps/security-audit
-      GH_TOKEN: ${{ github.token }}
+    # The write token is never in the job env nor persisted by checkout: uv, pip-audit, pnpm and
+    # corepack run code of newly published packages (sdist builds). Only the four steps that fetch,
+    # push or call gh get GH_TOKEN, and git runs no hook there (review PE-1, PR #150).
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # the upgrade branch is merged with main, never force-pushed
+          persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -53,7 +56,11 @@ jobs:
       - name: Install uv and pip-audit (the versions ci.yml uses)
         run: pip install "uv==${UV_VERSION}" "pip-audit==2.10.1"
       - name: Start from the upgrade branch merged with main (or from main)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          B64="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" && echo "::add-mask::$B64"
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $B64"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
@@ -97,18 +104,25 @@ jobs:
           git diff --stat -- backend/uv.lock infra/uv.lock
       - name: Commit and push the upgrade branch
         id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if git diff --quiet -- backend/uv.lock infra/uv.lock; then
             echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          B64="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" && echo "::add-mask::$B64"
+          export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $B64"
+          export GIT_CONFIG_KEY_1=core.hooksPath GIT_CONFIG_VALUE_1=/dev/null # no hook sees the token
           git add backend/uv.lock infra/uv.lock
-          git commit -q -m "fix(deps): $(cat "$OUT/result/pr-title.txt")" \
+          git commit --no-verify -q -m "fix(deps): $(cat "$OUT/result/pr-title.txt")" \
             -m "Upgraded by .github/workflows/dependency-audit.yml (CI-DAILY-AUDIT, ADR 0053)."
-          git push origin "HEAD:refs/heads/$BRANCH"
+          git push --no-verify origin "HEAD:refs/heads/$BRANCH"
           echo "pushed=true" >> "$GITHUB_OUTPUT"
       - name: Open or update the draft upgrade pull request
         if: steps.push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           title="$(cat "$OUT/result/pr-title.txt")"
           PR="$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')"
@@ -116,9 +130,11 @@ jobs:
             gh pr edit "$PR" --title "$title" --body-file "$OUT/result/pr-body.md"
             gh pr ready "$PR" --undo || echo "PR #$PR is already a draft"
           else
-            gh pr create --draft --base main --head "$BRANCH" --title "$title" --body-file "$OUT/result/pr-body.md"
+            gh pr create --draft --base main --head "$BRANCH" --title "$title" --body-file "$OUT/result/pr-body.md" || { echo "::error::gh pr create failed; an admin must enable 'Allow GitHub Actions to create and approve pull requests' (docs/process/ci-cd.md 2.1)"; exit 1; }
           fi
       - name: Open or update the advisory issue
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ ! -f "$OUT/result/issue-body.md" ]; then
             echo "no advisory without an automatic fix"

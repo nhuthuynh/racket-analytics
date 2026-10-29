@@ -72,6 +72,14 @@ Chosen option 1, because it is the only option that runs the PR's own `pull_requ
 - The branch is never force-pushed: it is merged with `origin/main` and the locks re-upgraded on top.
 - Web is audited (`pnpm audit --prod --audit-level critical`) but never upgraded automatically;
   critical web advisories go into the issue (scope: upgrades are for Python packages).
+- Token exposure: checkout uses `persist-credentials: false` and `GH_TOKEN` is set only on the
+  fetch, push and `gh` steps, which run git with no hook; uv, pip-audit, pnpm and corepack (which
+  may build newly published sdists) never see it (review PE-1). Residual: such code could alter
+  the runner for later steps; a separate read-only audit job would close that, at the cost of
+  passing the locks between jobs.
+- Repository setting: option 1 needs "Allow GitHub Actions to create and approve pull requests"
+  (Actions → General, off by default) for `gh pr create` with `GITHUB_TOKEN`; it is item 6 of
+  `docs/process/ci-cd.md` §2.1. Without it the job fails at PR creation, naming the setting.
 - Follow-up: if a branch rule requires PRs from bots to be approved by a code owner, nothing changes.
 
 ## Evidence
