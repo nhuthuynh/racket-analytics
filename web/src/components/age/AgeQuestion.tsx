@@ -27,7 +27,9 @@ export function AgeQuestion({
   const [missing, setMissing] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [offline, setOffline] = useState(false);
+  // null until hydrated: a tap before React attached onSubmit would be a native submit
+  // (CI-SIGNIN-HYDRATION), so Continue waits for the first effect.
+  const [offline, setOffline] = useState<boolean | null>(null);
 
   useEffect(() => {
     const update = () => setOffline(!navigator.onLine);
@@ -120,7 +122,7 @@ export function AgeQuestion({
         </div>
         {offline ? <p role="status">You are offline. Connect to continue.</p> : <p role="status">{saving ? 'Checking…' : ''}</p>}
         <p>
-          <button type="submit" className="button" disabled={saving || offline} aria-busy={saving || undefined}>
+          <button type="submit" className="button" disabled={saving || offline !== false} aria-busy={saving || undefined}>
             {saving ? 'Checking…' : 'Continue'}
           </button>
         </p>

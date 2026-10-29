@@ -15,6 +15,7 @@ async function newAddressSignsIn(page: Page): Promise<void> {
   await page.goto(`${link.pathname}${link.hash}`);
   await expect(page).toHaveURL(/\/welcome\/age$/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { level: 1, name: 'Are you 18 or over?' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled(); // hydrated
 }
 
 test.describe('E2E-04-06 The age question after sign-in (flag on)', () => {
