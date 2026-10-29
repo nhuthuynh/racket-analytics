@@ -165,10 +165,9 @@ def test_it_04_18_every_weakness_drill_of_any_two_weakness_solo_wall_plan_swaps(
     assert isinstance(plan, TrainingPlan), plan
     assert plan.unfitted == (), plan.unfitted
     session = plan.sessions[n]
-    assert sum(x.weakness_id is not None for x in session.assignments) <= 2
-    for x in session.assignments:
-        if x.weakness_id is None:
-            continue
+    held = [x for x in session.assignments if x.weakness_id is not None]
+    assert 1 <= len(held) <= 2, session.assignments  # never a vacuous pass
+    for x in held:
         plan = assemble(weaknesses, G04_01, library)
         swapped = plan.swap(
             week=session.week,
