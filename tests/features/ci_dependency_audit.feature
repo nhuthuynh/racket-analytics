@@ -52,6 +52,15 @@ Feature: A daily dependency audit opens an upgrade pull request before main goes
     Scenario: The workflow token can only push a branch, edit a pull request and an issue
       Then the dependency audit job may only write contents, pull requests and issues
 
+    Scenario: Only the steps that push or call GitHub get the write token
+      Then the dependency audit checks out without persisting the token
+      And only the steps that fetch, push or call GitHub get the token
+      And the commit and the push run no git hook
+
+    Scenario: The repository setting that lets the job open a pull request is documented
+      Then ci-cd.md lists "Allow GitHub Actions to create and approve pull requests" for a human admin
+      And a failed pull request creation names that setting
+
     Scenario: The workflow never merges and never applies a policy label
       Then the dependency audit workflow never merges a pull request
       And it never applies the "size-waiver" or "qa-approved-test-change" labels
