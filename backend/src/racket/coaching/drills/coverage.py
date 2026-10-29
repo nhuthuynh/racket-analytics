@@ -13,7 +13,9 @@ the plan must serve on its own (``PROFILES``: ``solo+wall``, the G04-01 step 3 p
 target x profile level needs >= 2 counted drills that ``Drill.fits`` the profile's preferences
 and fit its session's drill cap, so "Not for me" has a second drill to offer. Gaps read
 ``AN-04 x intermediate x solo+wall: drills: 1``, with the checklist's sign for x.
-``check_profiles`` is pure.
+``check_profiles`` is pure. ``check_profile_pairs`` (PE-R1-1) adds: a plan training targets t
+and u can hold one shared drill for u beside t's drill, so t needs >= 2 drills apart from it;
+gaps read ``AN-01 with AN-05 x intermediate x solo+wall: drills: 1``.
 """
 
 from __future__ import annotations
@@ -177,6 +179,26 @@ def check_profiles(
     return ProfileReport(tuple(cells), tuple(g for c in cells for g in c.gaps()))
 
 
+def check_profile_pairs(
+    drills: Iterable[Drill], profiles: Iterable[Profile] = PROFILES
+) -> tuple[str, ...]:
+    """Per profile, level and ordered pair (t, u): the drills of t left to swap among when the
+    session's drill for u is one of them. Targets short on their own are not repeated here."""
+    in_cells = [d for d in _counted(drills) if not d.is_warm_up]
+    gaps = []
+    for profile in profiles:
+        for level in profile.levels:
+            prefs = profile.preferences(level)
+            fit = [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+            by = {t: {d.ref for d in fit if t in d.plan_targets} for t in TARGETS}
+            for t in (t for t in TARGETS if len(by[t]) >= MIN_DRILLS):
+                for u in (u for u in TARGETS if u != t and by[t] & by[u]):
+                    if (n := len(by[t]) - 1) < MIN_DRILLS:
+                        cell = f"{t} with {u} {TIMES} {level} {TIMES} {profile.name}"
+                        gaps.append(f"{cell}: drills: {n}")
+    return tuple(gaps)
+
+
 def render(report: CoverageReport) -> list[str]:
     """A header, then one row per cell in target x level order."""
     head = ("target", "level", "drills", f"players{AT_MOST}{SMALL_GROUP}", "no_ball_machine")
@@ -219,7 +241,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     drills, broken = load_library(root)
     report = check_coverage(drills)
     profiles = check_profiles(drills)
-    problems = [*broken, *report.gaps, *profiles.gaps]
+    problems = [*broken, *report.gaps, *profiles.gaps, *check_profile_pairs(drills)]
     print("\n".join(render(report)))
     print("\n".join(render_profiles(profiles)))
     print(f"library: {report.counted} reviewed drill(s), {report.warm_ups} warm-up(s)")
