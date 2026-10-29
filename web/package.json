@@ -21,7 +21,7 @@
     "tokens": "node scripts/generate-tokens.mts"
   },
   "dependencies": {
-    "next": "15.5.27",
+    "next": "15.5.28",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tus-js-client": "4.3.1"
@@ -38,7 +38,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9.39.5",
-    "eslint-config-next": "15.5.27",
+    "eslint-config-next": "15.5.28",
     "fake-indexeddb": "6.0.1",
     "jsdom": "^26.1.0",
     "msw": "2.14.7",
