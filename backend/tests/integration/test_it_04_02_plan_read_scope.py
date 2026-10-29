@@ -1,11 +1,11 @@
-"""IT-04-02 read cost (SRE-VERIFY04R3-01; G04-02 c: ``GET /me/plan`` at 50 RPS, p95 <= 300 ms; NFR-019
-read side; coaching-plan §3 scope, §8). Root cause of the missed G04-02 (c): every ``GET``
-replayed each scope match's scorebook twice (ranking and citations) and ran the stats read
-repair, ~19 statements and ~28 ms of one worker's CPU per read (decisions/SRE-VERIFY04R3-01.md), so one
-API process served < 40 reads/s. A read of an unchanged scope reuses the ranking and citation
-facts; any change of the scope (a tag or correction bumps the match's scorebook version, a
-deleted match leaves it) is read live. HTTP on Postgres, matches tagged through the API.
-Negative cases first.
+"""IT-04-02 read cost (SRE-VERIFY04R3-01; G04-02 c: ``GET /me/plan`` at 50 RPS, p95 <= 300 ms;
+NFR-019 read side; coaching-plan §3 scope, §8). Root cause of the missed G04-02 (c): every
+``GET`` replayed each scope match's scorebook twice (ranking and citations) and ran the stats
+read repair, 20 statements and ~21 ms of one worker's CPU per read (decisions/SRE-VERIFY04R3-01.md),
+so one API process served < 40 reads/s. A read of an unchanged scope reuses
+the ranking and citation facts; any change of the scope (a tag or correction bumps the match's
+scorebook version, a deleted match leaves it) is read live. HTTP on Postgres, matches tagged
+through the API. Negative cases first.
 """
 
 from __future__ import annotations

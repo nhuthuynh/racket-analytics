@@ -1,4 +1,5 @@
-"""Unit tests: the scope memo (SRE-VERIFY04R3-01; G04-02 c; coaching-plan §3 scope). ``GET /me/plan``
+"""Unit tests: the scope memo (SRE-VERIFY04R3-01; G04-02 c; coaching-plan §3 scope).
+``GET /me/plan``
 reuses the owner's ranking and citation facts only while the scope key it read (the owner's
 live matches with their ``is_me`` side and scorebook version) is the one they were computed
 for. Pure; negative cases first."""

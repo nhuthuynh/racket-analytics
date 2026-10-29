@@ -630,6 +630,24 @@ jobs:
             --state reports/perf/perf_state.json --rps 50 --json reports/perf/verdict.json \
             --history reports/perf/perf_stats_history.csv --users 51 \
             --dashboard-reads stats,evidence --summary "$GITHUB_STEP_SUMMARY"
+      - name: Locust, GET /me/plan by 50 readers at 1 RPS (G04-02 c; SRE-VERIFY04R3-01)
+        if: ${{ !cancelled() }}
+        env:
+          RA_ORIGIN: https://localhost:3000
+          RA_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
+          MAILPIT_API_URL: http://127.0.0.1:8025
+          RA_PERF_STATE: reports/perf/plan_state.json
+        run: |
+          # -t 100 s: seeding (tag the worked example, POST /me/plan) + spawn + a >= 60 s window.
+          uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_plan.py \
+            --headless --host http://127.0.0.1:8000 -u 50 -r 50 -t 100s \
+            --csv reports/perf/plan --only-summary || echo "locust rc=$?"
+      - name: Verdict, GET /me/plan p95 <= 300 ms, p99 <= 800 ms, >= 47.5 RPS (G04-02 c)
+        if: ${{ !cancelled() }}
+        run: |
+          python3 scripts/ci/plan_load_verdict.py --stats reports/perf/plan_stats.csv \
+            --history reports/perf/plan_stats_history.csv --state reports/perf/plan_state.json \
+            --rps 50 --users 50 --json reports/perf/plan_verdict.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Service logs on failure
         if: failure()
         run: $COMPOSE logs --no-color --tail=200
