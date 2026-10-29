@@ -510,3 +510,28 @@ Backend paths are relative to `backend/tests/`; feature files are under `tests/f
 | NFR-066 (a-d) Deletion windows | ST-050, ST-051, SRE-PURGE | #45, #47, #53, #25, #54 | Yes (hidden 24.0 ms p95; purge daily, 0 rows, 0 objects) | Legal adequacy (OQ-05, NFR-070) |
 | NFR-072 Mutation | — | #39 | Yes (0.8635; 0.8977) | — |
 | NFR-073 Fast tests, NFR-074 flaky rate | — | #15, #48, #10 | Yes (6.2 / 14.7 / 478.0 s; 0 flaky ×3) | ADR 0049 Proposed |
+
+## 16. Sprint 4 outcome per requirement at the sprint close (engineering-manager, 2026-10-29, ticket RETRO-04)
+
+"Live" means measured by VERIFY-04-r3 on a fresh HTTPS Compose stack built from `main` at `b9d0dc3` (goal-scorecard §2). Feature files are in `tests/features/`; "On `main` by" names the merged ticket PRs (`docs/sprints/04/sprint-report.md` §2).
+
+| Requirement | Stories | On `main` by | Feature file(s) | Shown live (goal metric) | Open at close |
+|---|---|---|---|---|---|
+| FR-120 Weaknesses by rallies lost per game, serve/receive | ST-055, ST-061b | #100, #111 | `weakness_ranking.feature` | Yes (G04-01 ranking step 5/5; golden 9/9) | Side-out part `@needs-verification` (P7); G04-03 method (QA-VERIFY04R3-02) |
+| FR-121 Rules-only 2-week plan within constraints | ST-056, ST-061a/b, ST-063b | #102, #109, #111, #125, #129, #132 | `training_plan.feature`, `rules_only_plan_api.feature` | Yes (G04-01 plan rules 5/5; determinism 3/3; G04-04 32/32) | Mutation `coaching/plan` 0.6753 (QA-VERIFY04R3-07) |
+| FR-122 Every drill explains why | ST-057, ST-063a | #108, #123 | `drill_rationale.feature` | Yes (citations 5/5; E2E-04-01) | — |
+| FR-123 Limited-data plan says so | ST-057, ST-063a | #108, #123 | `limited_data_plan.feature` | Yes (limited-data step 5/5) | Demo script says 12 rallies, product 11 (QA-VERIFY04R3-10, minor) |
+| FR-124 Mark done offline, "Not for me" | ST-062, ST-063c | #124, #128, #139-#141, #145, #146 | `plan_follow_through.feature` | Done offline yes (E2E-04-03; G04-01 done step 5/5). **Swap no** for the solo-wall player (409 `no_alternative`) | QA-VERIFY04R3-01 |
+| FR-141 Starter library by coverage | ST-058a..c, ST-059 | #101, #107, #110, #112 | `drill_coverage.feature` | Partly (23 reviewed; lint and coverage pass; one safety note missing) | QA-VERIFY04R3-09; `verified` needs P15 |
+| NFR-005 (a) Code-grader eval | ST-060 | #113 | `plan_eval.feature` | Yes (G04-04 pass^3 32/32; CI step green) | — |
+| NFR-019 Plan generation time (rules-only) | ST-061b | #111 | `rules_only_plan_api.feature` | (a) yes 59.5 ms; (c) read at 50 RPS **no** (34.4 RPS) | SRE-VERIFY04R3-01 |
+| FR-003 Age confirmation, footage notice | ST-068a/b | #127, #153 | `age_confirmation.feature` | Product yes with flags on (403 `under_age`, 0 rows); harness no | QA-VERIFY04R3-03, -05; SRE-VERIFY04R3-02; legal review P16 |
+| FR-008 Video retention setting; NFR-066 (c) | ST-069, ST-071 | #131, #154 | `video_retention.feature` | Yes (retention 3/3, flags on) | Settings E2E stops at the age gate (QA-VERIFY04R3-05) |
+| FR-009 Training-data consent | ST-070, ST-071 | #133, #154 | `training_consent.feature` | Yes (consent 3/3, flags on) | as FR-008 |
+| FR-160, NFR-023 Rate limit and storage quota | ST-072a/b | #130, #156, #157 | `rate_limits.feature` | Product yes (10 × 201, 40 × 429; quota 0 bytes); harness no | QA-VERIFY04R3-03, -04 (`GET /me/quota`); quota size P8 |
+| NFR-022 (R1) Billing alerts | ST-073 | #104 | `billing_alerts.feature` | Yes (promtool SUCCESS, 6 rules) | Budgets P8 |
+| QD §7 Journey, demo, README | ST-064, ST-065, ST-066 | #126, #152, #147 | `e2e_journey.feature`, `demo_seed.feature`, `demo_seed_plan.feature` | Yes (G04-06; E2E-04-01..05 12/12) | Flag-on demo step 9 needs a Compose override (SRE-VERIFY04R3-02) |
+| NFR-010, NFR-041 Stats reads in CI | C4-LOCUST | #96 | `ci_perf_gates.feature`, `ci_perf_stats_gates.feature` | Yes (Locust gate green in CI) | — |
+| Process: red-first check; build behind a TLS proxy | C4-RED, C4-CA | #97, #95 | `red_first_check.feature`, `compose_extra_ca.feature` | Yes (CI `pr-policy`; G04-06 built with `EXTRA_CA_FILE`) | — |
+| NFR-027 (a), NFR-028, NFR-034 Sprint 4 screens | ST-063a..c, ST-068b, ST-071, ST-072b | as above | (E2E) | P and A yes; R and Q over-limit not reached | QA-VERIFY04R3-06; NFR-027 (b) P6 |
+| NFR-072 Mutation | — | — | — | rules 0.8635 yes; coaching/plan 0.6753 no | QA-VERIFY04R3-07; nightly lacks coaching (retro C5) |

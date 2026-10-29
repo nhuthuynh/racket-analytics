@@ -156,5 +156,6 @@ Chosen option: "<Option X>", because <justification tied to drivers>.
 | 0052 | [CI skips draft pull requests; policy decisions are made while draft; a PR is marked ready only when its local checks pass](0052-ci-skips-draft-pull-requests-policy-decisions-are-made-while-draft.md) | Accepted | 2026-10-18 |
 | 0053 | [The daily dependency audit opens a draft upgrade PR; a reviewer marking it ready starts CI](0053-daily-dependency-audit-opens-a-draft-upgrade-pr-that-a-reviewer-marks-ready-to-start-ci.md) | Proposed | 2026-10-28 |
 | 0054 | [The PR size gate counts production code only; tests, docs and lockfiles are excluded](0054-pr-size-gate-counts-production-code-only.md) | Accepted (PO 2026-10-28) | 2026-10-28 |
+| 0055 | [Goal verification starts only after the last build ticket merges; every method is dry-run live in its own configuration first; evidence PRs are merged, never closed unmerged](0055-verification-starts-after-the-build-methods-dry-run-live-evidence-prs-never-closed-unmerged.md) | Accepted (engineering-manager; PO may veto at the 2026-12-11 review) | 2026-10-29 |
 
 Adversarial review findings and their fixes are logged in [review-log.md](review-log.md). An index with evidence summaries is in [decision-log.md](decision-log.md). Index rows 0016 and 0017 were added by the engineering-manager on 2026-10-03; they had been missing.

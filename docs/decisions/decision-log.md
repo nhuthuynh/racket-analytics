@@ -62,6 +62,11 @@ ADR dates are 2026-10-03 unless the row says otherwise. "PO" means the human pro
 | [0048](0048-integration-suite-runs-in-parallel-workers-with-the-base-database-migrated-first.md) | The integration suite runs in parallel workers on one cluster, with the base database migrated first (2026-10-08) | Accepted (principal-engineer, PR #15 review r1) | CI-INTEG-BUDGET #15: integration back inside the 600 s NFR-073 budget; G03-11 478.0 s at `6c666b9` | — |
 | [0049](0049-domain-unit-suite-runs-in-parallel-workers-inside-its-10-s-budget.md) | The domain unit suite runs in parallel workers inside its 10 s budget (2026-10-09) | Proposed | CI-DOMAIN-BUDGET #48: `main` runs 37882972340 and 37918385248 killed at 10 s; G03-11 6.2 s at `6c666b9` | principal-engineer accepts |
 | [0050](0050-merges-go-through-merge-ready-one-pr-at-a-time-verification-results-merge-before-the-next-round.md) | Merges go through `merge_ready.py` one PR at a time and are audited after merge; each verification round's PR merges before the next; finding ids in the ledger's format (2026-10-15) | Accepted (EM, sprint process; PO may veto 2026-11-27) | #24, #26, #27 merged 20:12-20:14Z on 2026-10-08 without the rule on their head (`merged_verdict.py` rc=1 for #26, #27); #69/#76/#81 never merged; `V03R1-01` ids made `open_defects.py` exit 2 | — |
+| [0051](0051-sprint-4-lands-a-runnable-prototype-first-privacy-and-quotas-behind-default-off-flags.md) | Sprint 4 lands a runnable prototype first; privacy and quotas behind default-off flags (2026-10-17) | Accepted (PLAN-04 #87) | `docs/sprints/sprint-04.md` §0 |
+| [0052](0052-ci-skips-draft-pull-requests-policy-decisions-are-made-while-draft.md) | CI skips draft PRs; policy decisions are made while draft (2026-10-18) | Accepted (sre-devops-engineer) | CI-DRAFT-SKIP #122 |
+| [0053](0053-daily-dependency-audit-opens-a-draft-upgrade-pr-that-a-reviewer-marks-ready-to-start-ci.md) | The daily dependency audit opens a draft upgrade PR (2026-10-28) | Proposed | CI-DAILY-AUDIT #150; `main` scheduled CI red 2026-10-21..28 |
+| [0054](0054-pr-size-gate-counts-production-code-only.md) | The PR size gate counts production code only (2026-10-28) | Accepted (PO 2026-10-28) | CI-SIZE-PROD-ONLY #151 |
+| [0055](0055-verification-starts-after-the-build-methods-dry-run-live-evidence-prs-never-closed-unmerged.md) | Verification only after the build merges; live dry-run per method in its own configuration; evidence PRs never closed unmerged; env-to-Compose parity (2026-10-29) | Accepted (engineering-manager) | closed PRs #115-#121, #134-#138; `docs/sprints/04/decisions/VERIFY-04-r3.md`; retro 4 M1, M2 |
 
 ## Gaps found in this pass (2026-10-03)
 
@@ -106,3 +111,7 @@ ADR dates are 2026-10-03 unless the row says otherwise. "PO" means the human pro
 ## Changes in this pass (2026-10-15, Sprint 3 close, engineering-manager, ticket RETRO-03)
 
 - ADRs 0048 and 0049 indexed (they were in `README.md` only). ADR 0050 added and accepted (retro 3 M9, M10, M13). ADR 0043 is now Accepted (DR-HELD-03 #65); still Proposed from the last pass: 0005 (PM-1), 0049 (principal-engineer), and the peer-review list above. Checked with `ls docs/decisions | grep -c "^00"` and the README index rows 0048-0050.
+
+## Changes in this pass (2026-10-29, Sprint 4 close, engineering-manager, ticket RETRO-04)
+
+- ADRs 0051-0054 indexed here (they were in `README.md` only). ADR 0055 added and accepted (retro 4 M1, M2). Still Proposed: 0049 (principal-engineer), 0053 (retro 4 action C4). Checked with `ls docs/decisions | grep -c "^00"` and the README index rows 0051-0055.
