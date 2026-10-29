@@ -26,6 +26,12 @@ Feature: Privacy settings
       Then the page says "Saved. The new deletion dates are shown below."
       And "Demo match" says "Video will be deleted on 28 Nov 2026"
 
+    Scenario: The new deletion dates cannot be read after saving
+      Given reading the deletion dates again will fail
+      When the player chooses "30 days" and saves the video setting
+      Then the page says "Your video setting is saved, but we could not load the new deletion dates. Reload the page to see them."
+      And no deletion date is shown
+
   Rule: Training use is off unless the player turns it on (FR-009)
 
     Scenario: Training use is off by default

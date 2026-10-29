@@ -58,6 +58,24 @@ describe('R-01 save errors (negative first)', () => {
     expect(screen.getByRole('checkbox', { name: 'Use my matches to improve the app' })).not.toBeChecked();
   });
 
+  it('a saved retention whose new dates cannot be read says so and shows no old date (PE-ST071-01)', async () => {
+    const reviewVideos = vi.fn()
+      .mockResolvedValueOnce({ kind: 'ok', value: [DEMO] })
+      .mockResolvedValue({ kind: 'error', supportRef: 'ref_00000000000000bb' });
+    const api = fakeApi({ reviewVideos });
+    await shown(api);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('radio', { name: '30 days' }));
+    await user.click(screen.getByRole('button', { name: 'Save video setting' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Your video setting is saved, but we could not load the new deletion dates. Reload the page to see them.');
+    expect(alert).toHaveTextContent('Reference: ref_00000000000000bb');
+    expect(screen.queryByText('Saved. The new deletion dates are shown below.')).toBeNull();
+    expect(screen.queryByText('Video will be deleted on 27 Jan 2027')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'When each video is deleted' })).toBeNull();
+    expect(screen.getByRole('radio', { name: '30 days' })).toBeChecked();
+  });
+
   it('a load error shows "Try again" and the reference, and no controls', async () => {
     const api = fakeApi({ retention: vi.fn(async () => ({ kind: 'error' as const, supportRef: 'ref_00000000000000aa' })) });
     render(<PrivacySettings features={BOTH} api={api} onSignedOut={vi.fn()} />);

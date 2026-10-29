@@ -18,6 +18,7 @@ const FEATURE = readFileSync(
 const SCENARIOS = {
   saveFails: 'Saving the video setting fails',
   shorter: 'Choosing a shorter time shows the new deletion date',
+  datesUnread: 'The new deletion dates cannot be read after saving',
   offByDefault: 'Training use is off by default',
   turnOn: 'Turning training use on',
   flagsOff: 'Both settings turned off',
@@ -86,6 +87,17 @@ describe('Feature: Privacy settings', () => {
     await chooseAndSave('30 days');
     expect(await screen.findByText('Saved. The new deletion dates are shown below.')).toBeInTheDocument();
     expect(await screen.findByText('Video will be deleted on 28 Nov 2026')).toBeInTheDocument();
+  });
+
+  it(SCENARIOS.datesUnread, async () => {
+    const api = fakeApi();
+    const read = api.reviewVideos;
+    let reads = 0;
+    api.reviewVideos = vi.fn(async () => (++reads === 1 ? read() : { kind: 'error' as const, supportRef: null }));
+    await opened(api);
+    await chooseAndSave('30 days');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your video setting is saved, but we could not load the new deletion dates. Reload the page to see them.');
+    expect(screen.queryByText(/^Video will be deleted on /)).toBeNull();
   });
 
   it(SCENARIOS.offByDefault, async () => {
