@@ -54,7 +54,7 @@ def check(repo: Path, base: str = "main", head: str = "HEAD") -> subprocess.Comp
         ([], 0, "red-first: ok, 0 commit(s) checked"),
     ],
 )  # fmt: skip
-def test_planted_commits(repo: Path, commits: list, rc: int, says: str) -> None:
+def test_it_04_15_planted_commits(repo: Path, commits: list, rc: int, says: str) -> None:
     shas = [plant(repo, subject, paths, body) for subject, paths, body in commits]
     out = check(repo)
     assert out.returncode == rc, out.stdout + out.stderr
@@ -63,19 +63,19 @@ def test_planted_commits(repo: Path, commits: list, rc: int, says: str) -> None:
         assert f"  {shas[0]} " in out.stdout
 
 
-def test_unknown_ref_fails_closed(repo: Path) -> None:
+def test_it_04_15_unknown_ref_fails_closed(repo: Path) -> None:
     out = check(repo, base="no-such-ref")
     assert out.returncode == 2
     assert "failing closed" in out.stdout
 
 
-def test_deleting_production_code_alone_is_not_a_code_commit(repo: Path) -> None:
+def test_it_04_15_deleting_production_code_alone_is_not_a_code_commit(repo: Path) -> None:
     git(repo, "rm", "-q", "backend/src/racket/app.py")
     git(repo, "commit", "-q", "-m", "chore: drop dead code")
     assert check(repo).returncode == 0
 
 
-def test_merge_commits_and_mains_commits_are_not_judged(repo: Path) -> None:
+def test_it_04_15_merge_commits_and_mains_commits_are_not_judged(repo: Path) -> None:
     git(repo, "checkout", "-q", "main")
     plant(repo, "feat: on main", ["backend/src/racket/main_only.py"])
     git(repo, "checkout", "-q", "pr")
