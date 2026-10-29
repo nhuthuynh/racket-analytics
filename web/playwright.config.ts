@@ -2,8 +2,8 @@
 // The stack must already be running: CI uses Compose, locally see web/README.md.
 // Projects: Chromium and WebKit, the skeleton of the NFR-024 browser matrix. On CI the
 // "chromium" project launches Google Chrome, which decodes the H.264 match video (QA-RV1-07,
-// SRE-S2-05; e2e/helpers/browser-channel.ts). "flags-on" (ST-065, PE-4 §10) runs only the
-// e2e/sprint-04/flags-on/ specs, only when PW_PROJECTS names it (e2e/helpers/projects.ts).
+// SRE-S2-05; e2e/helpers/browser-channel.ts). "flags-on" (api-sprint-04 §10) runs only
+// e2e/sprint-04/flags-on/ against a stack with every FEATURE_* on; the others skip that folder.
 import { defineConfig } from '@playwright/test';
 import { chromiumChannel } from './e2e/helpers/browser-channel';
 import { e2eProjects, projectNames } from './e2e/helpers/projects';

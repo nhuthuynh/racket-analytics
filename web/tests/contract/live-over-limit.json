@@ -1,0 +1,15 @@
+{
+  "source": "Captured 2026-10-29 from the backend at origin/main 0415be6 (in-process ASGI app over real Postgres 16 + SeaweedFS, FEATURE_QUOTAS=true, STORAGE_QUOTA_BYTES=21474836480, MATCH_CREATIONS_PER_HOUR=1; command in docs/sprints/04/decisions/ST-072b.md)",
+  "rate_limited": {
+    "status": 429,
+    "retry_after": "3600",
+    "body": {
+      "error": {
+        "code": "rate_limited",
+        "message": "Too many requests. Please wait and try again.",
+        "support_ref": "ref_23392439af469e16",
+        "retry_at": "2026-10-29T14:23:41Z"
+      }
+    }
+  }
+}

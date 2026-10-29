@@ -7,6 +7,7 @@ import { DeletedNotice } from '@/components/DeletedNotice';
 import { ResumeBanner } from '@/components/ResumeBanner';
 import { ApiError } from '@/lib/api/client';
 import { serverApi } from '@/lib/api/server';
+import { askAgeIfNeeded } from '@/lib/api/age-gate';
 import { LocalDateLine } from '@/components/LocalDate';
 import { FORMAT_LABELS, type Match } from '@/lib/api/types';
 import { matchStatusLine } from '@/lib/format';
@@ -15,6 +16,7 @@ async function loadMatches(): Promise<Match[]> {
   try {
     return await (await serverApi()).listMatches();
   } catch (e) {
+    askAgeIfNeeded(e);
     if (e instanceof ApiError && e.status === 401) redirect('/');
     // The error page shows the API's support reference (C-30): Next keeps an existing digest.
     if (e instanceof ApiError && e.supportRef) Object.assign(e, { digest: e.supportRef });

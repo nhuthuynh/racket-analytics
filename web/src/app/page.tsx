@@ -6,13 +6,15 @@ import { SignInForm } from '@/components/SignInForm';
 import { SignInPicker } from '@/components/SignInPicker';
 import { ApiError } from '@/lib/api/client';
 import { serverApi } from '@/lib/api/server';
+import { askAgeIfNeeded } from '@/lib/api/age-gate';
 import type { DevUser } from '@/lib/api/types';
 
 async function signedIn(): Promise<boolean> {
   try {
     await (await serverApi()).me();
     return true;
-  } catch {
+  } catch (e) {
+    askAgeIfNeeded(e); // FR-003: signed in, but the age question is not answered yet
     // 401, or the API is unreachable: show the form; sending a link reports any problem.
     return false;
   }

@@ -1,0 +1,11 @@
+{
+ "config_on": {"status": 200, "body": {"features": {"age_gate": true, "retention_setting": false, "training_consent": false, "quotas": false}, "coaching": {"weakness_unit": "rallies_lost_per_game"}}},
+ "config_off": {"status": 200, "body": {"features": {"age_gate": false, "retention_setting": false, "training_consent": false, "quotas": false}, "coaching": {"weakness_unit": "rallies_lost_per_game"}}},
+ "me_pending": {"status": 403, "body": {"error": {"code": "age_confirmation_required", "message": "Please confirm your age to continue.", "support_ref": "ref_6df011aa569a8df9"}}},
+ "under_age": {"status": 403, "body": {"error": {"code": "under_age", "message": "You need to be 18 or over to use this app. We did not make an account for you.", "support_ref": "ref_4cb406d3ec1ee51c"}}},
+ "after_under_age": {"status": 401, "body": {"error": {"code": "unauthenticated", "message": "Please sign in.", "support_ref": "ref_e903ca70222ba9fe"}}},
+ "me_unconfirmed": {"status": 403, "body": {"error": {"code": "age_confirmation_required", "message": "Please confirm your age to continue.", "support_ref": "ref_70f669636d737668"}}},
+ "existing_no": {"status": 422, "body": {"error": {"code": "validation_failed", "message": "Some of the information is not valid.", "support_ref": "ref_bdb5b325cd68e9dc", "fields": [{"field": "confirm", "code": "confirmation_required"}]}}},
+ "adult": {"status": 200, "body": {"id": "c02da610-03f9-43c7-adc8-72ecdaf4e45e", "display_name": null, "age_confirmed_at": "2026-10-29T12:55:40Z"}},
+ "route_off": {"status": 404, "body": {"error": {"code": "not_found", "message": "We could not find that.", "support_ref": "ref_a16b5e16b8c0954f"}}}
+}

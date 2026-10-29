@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { MatchSetupRoute } from '@/components/MatchSetupRoute';
 import { ApiError } from '@/lib/api/client';
 import { serverApi } from '@/lib/api/server';
+import { ageGateOn, askAgeIfNeeded } from '@/lib/api/age-gate';
 import { FALLBACK_UPLOAD_POLICY, type UploadPolicy } from '@/lib/api/types';
 
 async function loadPolicy(): Promise<UploadPolicy> {
@@ -12,6 +13,7 @@ async function loadPolicy(): Promise<UploadPolicy> {
   try {
     await api.me();
   } catch (e) {
+    askAgeIfNeeded(e);
     if (e instanceof ApiError && e.status === 401) redirect('/');
     throw e;
   }
@@ -23,6 +25,6 @@ async function loadPolicy(): Promise<UploadPolicy> {
 }
 
 export default async function NewMatchPage() {
-  const policy = await loadPolicy();
-  return <MatchSetupRoute policy={policy} />;
+  const [policy, footageNotice] = await Promise.all([loadPolicy(), ageGateOn()]);
+  return <MatchSetupRoute policy={policy} footageNotice={footageNotice} />;
 }

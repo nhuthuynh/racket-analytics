@@ -9,10 +9,10 @@ import { MatchSetup, todayParts } from '@/components/MatchSetup';
 import type { DateParts } from '@/lib/setup/flow';
 import type { UploadPolicy } from '@/lib/api/types';
 
-export function MatchSetupRoute({ policy }: { policy: UploadPolicy }) {
+export function MatchSetupRoute({ policy, footageNotice }: { policy: UploadPolicy; footageNotice?: boolean }) {
   const router = useRouter();
   const [today, setToday] = useState<DateParts | null>(null);
   useEffect(() => setToday(todayParts()), []);
   if (!today) return <p className="loading">Loading…</p>;
-  return <MatchSetup policy={policy} today={today} navigate={(path) => router.push(path)} />;
+  return <MatchSetup policy={policy} today={today} footageNotice={footageNotice} navigate={(path) => router.push(path)} />;
 }

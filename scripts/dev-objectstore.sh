@@ -3,10 +3,13 @@
 #
 #   eval "$(scripts/dev-objectstore.sh start)"   # exports S3_* variables
 #   scripts/dev-objectstore.sh env | status | stop
+#   scripts/dev-objectstore.sh ports N           # N distinct free ports (what start uses)
 #
 # Downloads a pinned SeaweedFS release (sha256-verified) into <repo>/.local/bin unless
 # WEED_BIN or `weed` on PATH is available. Binds 127.0.0.1 only, on free ports, with
 # random per-instance credentials, and creates the media bucket. `stop` deletes the data.
+# A start that dies of a port collision ("address already in use") is retried on fresh ports
+# up to 3 times; any other startup failure fails at once.
 #
 # Env: WEED_BIN, RA_DEV_STATE (default <repo>/.local), S3_BUCKET_MEDIA (default racket-media).
 set -euo pipefail
@@ -24,8 +27,32 @@ REGION="us-east-1"
 
 die() { echo "dev-objectstore: $*" >&2; exit 1; }
 
-free_port() {
-  python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'
+# weed exits with this log line when another process holds one of its ports (main run
+# 40874800467). Only this failure is retried, on fresh ports; anything else fails closed.
+BIND_COLLISION="address already in use"
+MAX_PORT_RETRIES=3
+WEED_PORTS=8 # master, volume, filer, s3; each with its gRPC port
+
+# Prints N distinct free 127.0.0.1 ports. All sockets stay bound until every port is chosen,
+# so one allocation can never repeat a port (CI-OBJSTORE-PORT-RACE). Another process can
+# still take one before weed binds it; start_weed_once reports that as a collision.
+alloc_ports() {
+  [[ "${1:-}" =~ ^[1-9][0-9]*$ ]] || { echo "dev-objectstore: ports needs a positive count" >&2; return 2; }
+  python3 - "$1" <<'PY'
+import socket
+import sys
+
+socks = []
+try:
+    for _ in range(int(sys.argv[1])):
+        s = socket.socket()
+        socks.append(s)
+        s.bind(("127.0.0.1", 0))
+    print(" ".join(str(s.getsockname()[1]) for s in socks))
+finally:
+    for s in socks:
+        s.close()
+PY
 }
 
 weed_bin() {
@@ -73,36 +100,35 @@ s3_put_bucket() {
     --aws-sigv4 "aws:amz:$REGION:s3" --user "$ACCESS_KEY:$SECRET_KEY" "$ENDPOINT/$BUCKET" || true
 }
 
-cmd_start() {
-  if is_running; then print_env; return 0; fi
-  [[ -f "$STATE_FILE" ]] && cmd_stop >/dev/null 2>&1 || true
-  local bin
-  bin="$(weed_bin)"
+# Starts weed once on freshly allocated ports and waits for S3. Returns 0 when the bucket
+# exists and 75 when weed died of a port collision; every other failure dies (fail closed).
+start_weed_once() {
+  local bin="$1" ports m_port m_grpc v_port v_grpc f_port f_grpc s3_port s3_grpc
+  ports="$(alloc_ports "$WEED_PORTS")" || die "could not allocate $WEED_PORTS free ports"
+  read -r m_port m_grpc v_port v_grpc f_port f_grpc s3_port s3_grpc <<<"$ports"
+  [[ -n "$s3_grpc" ]] || die "port allocation returned '$ports'"
 
-  DATA="$(mktemp -d "${TMPDIR:-/tmp}/racket-s3.XXXXXX")"
-  ACCESS_KEY="dev$(python3 -c 'import secrets; print(secrets.token_hex(8))')"
-  SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(20))')"
-  local s3_port
-  s3_port="$(free_port)"
+  # Called from an `||` list, so set -e is off in here: every step that can fail says so.
+  DATA="$(mktemp -d "${TMPDIR:-/tmp}/racket-s3.XXXXXX")" || die "mktemp failed"
   ENDPOINT="http://127.0.0.1:$s3_port"
   cat > "$DATA/s3.json" <<JSON
 {"identities": [{"name": "racket-dev",
   "credentials": [{"accessKey": "$ACCESS_KEY", "secretKey": "$SECRET_KEY"}],
   "actions": ["Admin", "Read", "Write", "List", "Tagging"]}]}
 JSON
-  chmod 600 "$DATA/s3.json"
+  chmod 600 "$DATA/s3.json" || die "could not write $DATA/s3.json"
 
   nohup "$bin" server -ip=127.0.0.1 -ip.bind=127.0.0.1 -dir="$DATA" \
-    -master.port="$(free_port)" -master.port.grpc="$(free_port)" -master.volumeSizeLimitMB=64 \
-    -volume.port="$(free_port)" -volume.port.grpc="$(free_port)" -volume.max=0 \
-    -filer -filer.port="$(free_port)" -filer.port.grpc="$(free_port)" \
-    -s3 -s3.port="$s3_port" -s3.port.grpc="$(free_port)" -s3.config="$DATA/s3.json" \
+    -master.port="$m_port" -master.port.grpc="$m_grpc" -master.volumeSizeLimitMB=64 \
+    -volume.port="$v_port" -volume.port.grpc="$v_grpc" -volume.max=0 \
+    -filer -filer.port="$f_port" -filer.port.grpc="$f_grpc" \
+    -s3 -s3.port="$s3_port" -s3.port.grpc="$s3_grpc" -s3.config="$DATA/s3.json" \
     > "$DATA/weed.log" 2>&1 &
   PID=$!
 
-  mkdir -p "$STATE_DIR"
+  mkdir -p "$STATE_DIR" || die "could not create $STATE_DIR"
   umask 077
-  cat > "$STATE_FILE" <<STATE
+  cat > "$STATE_FILE" <<STATE || die "could not write $STATE_FILE"
 PID='$PID'
 DATA='$DATA'
 ENDPOINT='$ENDPOINT'
@@ -113,14 +139,39 @@ STATE
 
   local code="" i
   for i in $(seq 1 120); do
-    kill -0 "$PID" 2>/dev/null || { tail -20 "$DATA/weed.log" >&2; die "weed exited during startup"; }
+    if ! kill -0 "$PID" 2>/dev/null; then
+      tail -20 "$DATA/weed.log" >&2
+      grep -q "$BIND_COLLISION" "$DATA/weed.log" && return 75
+      die "weed exited during startup"
+    fi
     code="$(s3_put_bucket)"
-    [[ "$code" == "200" || "$code" == "409" ]] && break
+    [[ "$code" == "200" || "$code" == "409" ]] && return 0
     sleep 0.5
   done
-  [[ "$code" == "200" || "$code" == "409" ]] || { tail -20 "$DATA/weed.log" >&2; die "S3 not ready (last HTTP $code)"; }
   : "$i"
-  print_env
+  tail -20 "$DATA/weed.log" >&2
+  die "S3 not ready (last HTTP $code)"
+}
+
+cmd_start() {
+  if is_running; then print_env; return 0; fi
+  [[ -f "$STATE_FILE" ]] && cmd_stop >/dev/null 2>&1 || true
+  local bin attempt rc
+  bin="$(weed_bin)"
+  ACCESS_KEY="dev$(python3 -c 'import secrets; print(secrets.token_hex(8))')"
+  SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(20))')"
+
+  for attempt in $(seq 0 "$MAX_PORT_RETRIES"); do
+    rc=0
+    start_weed_once "$bin" || rc=$?
+    [[ "$rc" == 0 ]] && { print_env; return 0; }
+    [[ "$rc" == 75 ]] || die "weed exited during startup"
+    rm -rf "$DATA"
+    rm -f "$STATE_FILE"
+    (( attempt < MAX_PORT_RETRIES )) \
+      || die "weed exited during startup ($BIND_COLLISION on every try, $MAX_PORT_RETRIES retries)"
+    echo "dev-objectstore: port collision, retry $((attempt + 1))/$MAX_PORT_RETRIES with fresh ports" >&2
+  done
 }
 
 cmd_stop() {
@@ -140,6 +191,7 @@ case "${1:-}" in
   start) cmd_start ;;
   stop) cmd_stop ;;
   env) is_running || die "not running"; print_env ;;
+  ports) alloc_ports "${2:-}" ;;
   status) if is_running; then echo "running at $ENDPOINT (pid $PID)"; else echo "not running"; exit 1; fi ;;
-  *) echo "usage: $0 start|stop|env|status" >&2; exit 2 ;;
+  *) echo "usage: $0 start|stop|env|status|ports N" >&2; exit 2 ;;
 esac
