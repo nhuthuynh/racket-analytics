@@ -47,7 +47,9 @@ def storage(ctx: dict[str, Any], used: int, limit: int) -> None:
     assert ctx["response"].json()["storage"] == {"used_bytes": used, "limit_bytes": limit}
 
 
-@then(parsers.parse("she has used {used:d} of {limit:d} match creations this hour and need not wait"))
+@then(
+    parsers.parse("she has used {used:d} of {limit:d} match creations this hour and need not wait")
+)
 def creations(ctx: dict[str, Any], used: int, limit: int) -> None:
     assert ctx["response"].json()["match_creations"] == {
         "limit": limit, "window_s": 3600, "used": used, "next_slot_at": None

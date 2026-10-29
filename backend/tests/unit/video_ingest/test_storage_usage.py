@@ -19,7 +19,9 @@ def test_impossible_byte_counts_are_refused_loudly(stored: int, reserved: int) -
         QUOTA.usage(stored_bytes=stored, reserved_bytes=reserved)
 
 
-@pytest.mark.parametrize(("stored", "reserved", "used"), [(0, 0, 0), (600, 300, 900), (1500, 0, 1500)])
+@pytest.mark.parametrize(
+    ("stored", "reserved", "used"), [(0, 0, 0), (600, 300, 900), (1500, 0, 1500)]
+)
 def test_used_is_stored_plus_open_uploads_even_over_a_lowered_limit(
     stored: int, reserved: int, used: int
 ) -> None:

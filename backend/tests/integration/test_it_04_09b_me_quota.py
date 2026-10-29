@@ -81,7 +81,9 @@ def test_it_04_09b_at_the_limit_next_slot_at_is_the_refusals_retry_at(
     for i in range(10):
         api.run(create_match(ivy, f"Hour {i}"))
     usage = api.request("ivy", "GET", QUOTA).json()["match_creations"]
-    refused = api.request("ivy", "POST", contract.MATCHES, json={"title": "11", "format": "doubles"})
+    refused = api.request(
+        "ivy", "POST", contract.MATCHES, json={"title": "11", "format": "doubles"}
+    )
     assert refused.status_code == 429
     assert (usage["used"], usage["limit"]) == (10, 10)
     assert usage["next_slot_at"] == refused.json()["error"]["retry_at"]
@@ -98,6 +100,7 @@ def test_it_04_09b_a_stored_video_counts_until_its_match_is_deleted(
     upload = api.run(tus.start(ivy, match_id, LENGTH))
     api.run(tus.send_all(ivy, upload, tus.video_bytes(LENGTH)))
     assert api.request("ivy", "GET", QUOTA).json()["storage"]["used_bytes"] == LENGTH
-    deleted = api.request("ivy", "DELETE", f"{contract.MATCHES}/{match_id}")
+    confirm = {"confirm": "delete"}  # api-sprint-03 §4.1
+    deleted = api.request("ivy", "DELETE", f"{contract.MATCHES}/{match_id}", json=confirm)
     assert deleted.status_code in (202, 204), deleted.text[:300]
     assert api.request("ivy", "GET", QUOTA).json()["storage"]["used_bytes"] == 0

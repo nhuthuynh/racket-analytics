@@ -11,14 +11,20 @@ import itertools
 import uuid
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from racket.matches.deletion import Tombstone, confirm_deletion
-from racket.matches.domain import DEFAULT_RULES_VERSION, MatchId, OwnerId
+from racket.matches.domain import (
+    DEFAULT_RULES_VERSION,
+    CreationUsage,
+    MatchId,
+    OwnerId,
+    account_creation_key,
+)
 from racket.matches.repository import MatchRepository, match_participants, matches
 from racket.matches.scorebook.domain import (
     CommandContext,
@@ -29,6 +35,7 @@ from racket.matches.scorebook.domain import (
 )
 from racket.matches.scorebook.repository import ScorebookRepository, match_rallies
 from racket.platform.errors import NotFound
+from racket.platform.ratelimit import RateLimiter
 from racket.sports.pickleball.rules import Side
 from racket.video_ingest.public import close_for_deleted_match, lock_upload_of_match
 
@@ -166,6 +173,15 @@ def existing_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:
         return set()
     found = session.execute(sa.select(matches.c.id).where(matches.c.id.in_(ids))).scalars()
     return {uuid.UUID(str(i)) for i in found}
+
+
+def creation_usage(
+    session: Session, owner_id: uuid.UUID, *, limit: int, window: timedelta
+) -> CreationUsage:
+    """The account's match creations in the window (``GET /me/quota``, QA-VERIFY04R3-04)."""
+    key = account_creation_key(OwnerId(owner_id))
+    used, oldest = RateLimiter(session).usage(key, window=window)
+    return CreationUsage.in_window(limit=limit, window=window, used=used, oldest=oldest)
 
 
 def live_ids(session: Session, ids: list[uuid.UUID]) -> set[uuid.UUID]:

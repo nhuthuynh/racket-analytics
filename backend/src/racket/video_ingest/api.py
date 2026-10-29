@@ -9,18 +9,21 @@ header check passed, and only up to ``Content-Length`` bytes; a short body store
 from __future__ import annotations
 
 import email.utils
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import ClientDisconnect
 
+from racket.matches import public as matches
 from racket.platform.db import get_session
 from racket.platform.errors import (
     BadRequest,
     ClientClosedRequest,
+    NotFound,
     PayloadTooLarge,
     TusVersionUnsupported,
     UnsupportedMediaType,
@@ -38,6 +41,7 @@ from racket.video_ingest.service import (
     UploadService,
     parse_content_length,
     parse_upload_offset,
+    storage_usage,
 )
 
 TUS_VERSION = "1.0.0"
@@ -96,6 +100,45 @@ def upload_policy(request: Request, account: CurrentAccount) -> dict[str, Any]:
         "checksum_algorithms": ["sha256", "sha1"],
         "expires_after_s": s.upload_expiry_seconds,
     }
+
+
+def _quotas_on(request: Request) -> Settings:
+    """api-sprint-04 §1 rule 2: 404 while ``FEATURE_QUOTAS`` is off, before the session check,
+    so the route does not exist for anyone."""
+    settings: Settings = request.app.state.settings
+    if not settings.feature_quotas:
+        raise NotFound("quotas off")
+    return settings
+
+
+@policy_router.get("/me/quota")
+def my_quota(
+    settings: Annotated[Settings, Depends(_quotas_on)],
+    account: CurrentAccount,
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    """FR-160 (api-sprint-04 §7; Q-01; QA-VERIFY04R3-04): the caller's own stored bytes and
+    match creations against the limits, counted as the limits count them."""
+    storage = storage_usage(session, account.id, settings)
+    creations = matches.creation_usage(
+        session, account.id, limit=settings.match_creations_per_hour, window=timedelta(hours=1)
+    )
+    next_slot = creations.next_slot_at
+    body = {
+        "storage": {"used_bytes": storage.used_bytes, "limit_bytes": storage.limit_bytes},
+        "match_creations": {
+            "limit": creations.limit,
+            "window_s": creations.window_s,
+            "used": creations.used,
+            "next_slot_at": None if next_slot is None else _rfc3339(next_slot),
+        },
+    }
+    return JSONResponse(body, headers={"Cache-Control": "no-store"})
+
+
+def _rfc3339(value: datetime) -> str:
+    """As ``retry_at`` (api-sprint-01 §1.1): UTC, whole seconds, ``Z``."""
+    return value.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 @router.options("/uploads", status_code=204)

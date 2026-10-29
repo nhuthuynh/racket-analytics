@@ -48,6 +48,7 @@ from racket.video_ingest.domain import (
     QuotaUsage,
     Rejection,
     StorageQuota,
+    StorageUsage,
     UploadChecksum,
     UploadExpired,
     UploadFile,
@@ -106,6 +107,24 @@ class StorageQuotaExceeded(AppError):
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+def storage_counts(session: Session, owner_id: uuid.UUID, now: datetime) -> tuple[int, int]:
+    """(bytes of the owner's stored videos of live matches, declared bytes of open uploads):
+    what check 4a and ``GET /me/quota`` count (ST-072a; QA-VERIFY04R3-04). Reserved is read
+    before stored, so a completion committing between the reads is counted twice, never missed
+    (PE-072a-02); a deleted match stops counting at once."""
+    uploads = UploadRepository(session)
+    _, reserved = uploads.open_for_owner(owner_id, now)
+    stored = uploads.stored_by_match(owner_id)
+    live = matches.live_ids(session, list(stored))
+    return sum(stored[m] for m in live), reserved
+
+
+def storage_usage(session: Session, owner_id: uuid.UUID, settings: Settings) -> StorageUsage:
+    stored, reserved = storage_counts(session, owner_id, _utcnow())
+    quota = StorageQuota(settings.storage_quota_bytes)
+    return quota.usage(stored_bytes=stored, reserved_bytes=reserved)
 
 
 SLI = SLIRecorder()  # NFR-042 upload-completion SLI (api-sprint-01 §10); no user data
@@ -394,16 +413,11 @@ class UploadService:
             raise UploadQuotaExceeded("too many unfinished uploads")
 
     def _check_storage_quota(self, owner_id: uuid.UUID, length: int, now: datetime) -> None:
-        """Check 4a under the owner's lock (T4-QT-5); a deleted match stops counting at once.
-        Reserved before stored: a completion committing between the two reads is then counted
-        twice (fail closed), never missed (PE-072a-02; it does not take the owner's lock)."""
-        _, reserved = self.uploads.open_for_owner(owner_id, now)
-        stored = self.uploads.stored_by_match(owner_id)
-        live = matches.live_ids(self.session, list(stored))
+        """Check 4a under the owner's lock (T4-QT-5), counted by ``storage_counts``."""
+        stored, reserved = storage_counts(self.session, owner_id, now)
         refusal = StorageQuota(self.settings.storage_quota_bytes).refusal(
-            stored_bytes=sum(stored[m] for m in live), reserved_bytes=reserved,
-            requested_bytes=length,
-        )  # fmt: skip
+            stored_bytes=stored, reserved_bytes=reserved, requested_bytes=length
+        )
         if refusal is not None:
             self.session.rollback()
             raise StorageQuotaExceeded(refusal)

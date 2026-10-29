@@ -71,3 +71,13 @@ class RateLimiter:
             return retry_at
         self.session.execute(sa.insert(rate_limit_events).values(key=key, at=now))
         return None
+
+    def usage(self, key: str, *, window: timedelta) -> tuple[int, datetime | None]:
+        """Read only: (hits counted in the window, the oldest of them) for ``key``; what ``hit``
+        would count now, without spending a slot (``GET /me/quota``, QA-VERIFY04R3-04)."""
+        count, oldest = self.session.execute(
+            sa.select(sa.func.count(), sa.func.min(rate_limit_events.c.at)).where(
+                rate_limit_events.c.key == key, rate_limit_events.c.at > self.clock() - window
+            )
+        ).one()
+        return int(count), oldest
