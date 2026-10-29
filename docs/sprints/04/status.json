@@ -1,0 +1,1473 @@
+{
+  "sprint": "04",
+  "goal": "Runnable R1 prototype on a local stack (upload -> Quick Tag -> score sheet -> stats -> rules-only, deterministic, cited 2-week plan; >= 20 drills; mark done offline and Not for me); R1 privacy and quotas behind default-off flags; Sprint 3 carry-over closed first; CI green; no blocker or major open (docs/sprints/sprint-04.md \u00a71)",
+  "goal_scorecard": "docs/sprints/04/goal-scorecard.md",
+  "dates": {
+    "planned_start": "2026-11-30",
+    "planned_review": "2026-12-11",
+    "work_started": "2026-10-17",
+    "status_written": "2026-10-29 (sprint close, engineering-manager, RETRO-04, at origin/main b9d0dc3; VERIFY-04-r3 and SMOKE-04 measured b9d0dc3)",
+    "closed": "2026-10-29"
+  },
+  "owner": "engineering-manager",
+  "branch": "main (one PR per ticket, ADR 0039; no sprint branch)",
+  "based_on": "main@c170ef0",
+  "schema_note": "ADR 0010 units: XS 0.5, S 1, M 2. dod_done counts a ticket only when no open major of the RETRO-04 reconciliation is traced to it. Status: done | partial.",
+  "capacity": {
+    "load_factor": 0.8,
+    "capacity_units_per_lane": 12.8,
+    "committed_units_per_lane": {
+      "BE": 17,
+      "FE": 10,
+      "QA": 8.5,
+      "SRE": 5.5,
+      "ML": 4,
+      "COACH": 3
+    },
+    "committed_units": 48
+  },
+  "goal_metrics": {
+    "G04-01": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "0 of 5; steps 1-8 and 10 pass; step 9 swap 409 no_alternative"
+    },
+    "G04-02": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "(a) p95 59.5 ms n 20; (b) 82.1 ms n 5; (c) p95 3229 ms, p99 4322 ms, 34.4 RPS"
+    },
+    "G04-03": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "product passes (golden 9/9, scenarios 39/39, property 1000, determinism 3/3); junit_rate --require fails closed"
+    },
+    "G04-04": {
+      "met": true,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "32/32 cases pass^3; CI plan-eval green"
+    },
+    "G04-05": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "23 reviewed, lint ok, coverage rc 0, gap fixture rc 1; safety grep 6 lines"
+    },
+    "G04-06": {
+      "met": true,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "fresh checkout make up/demo x2/README/down rc 0; plan 6 sessions, 12 cited assignments; idempotent"
+    },
+    "G04-07": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "flags off 145 passed, 6 named skips, 0 flaky; flag-on project 3 of 6"
+    },
+    "G04-08": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "axe 0 over 75, targets 0; no R checks, no Q over-limit targets"
+    },
+    "G04-09": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "product passes; live_privacy.py reads the error code at the top level"
+    },
+    "G04-10": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "product passes (10 x 201, 40 x 429, over-quota 0 bytes, 6 rules); same harness defect; GET /me/quota 404"
+    },
+    "G04-11": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "IT-04 224/224 (IT-04-11/-15 not found by name); coverage 98/98/94.15%; mutation coaching/plan 0.6753; domain budget and DOMAIN_TEST_PATHS"
+    },
+    "G04-12": {
+      "met": false,
+      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "(a) CI green; (b) 57/57 verdicts; (c) open 13 after RETRO-04"
+    }
+  },
+  "goal_met": false,
+  "goal_met_note": "2 of 12 met live (G04-04, G04-06); see sprint-report.md \u00a71",
+  "open_defects": {
+    "count": 13,
+    "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md",
+    "at": "b9d0dc3 + RETRO-04 reconciliation",
+    "ids": [
+      "EM-PR27-01",
+      "QA-VERIFY04R3-01",
+      "SRE-VERIFY04R3-01",
+      "QA-VERIFY04R3-02",
+      "QA-VERIFY04R3-03",
+      "SRE-VERIFY04R3-02",
+      "QA-VERIFY04R3-04",
+      "QA-VERIFY04R3-05",
+      "QA-VERIFY04R3-06",
+      "QA-VERIFY04R3-07",
+      "QA-VERIFY04R3-08",
+      "SRE-VERIFY04R3-03",
+      "QA-VERIFY04R3-09"
+    ],
+    "closed_this_close": [
+      "PD-R1S3-01 group (Fixed by C4-G12 #92; EM row written in RETRO-04)"
+    ]
+  },
+  "po_items_open": [
+    "P6",
+    "P7",
+    "P8",
+    "P10",
+    "P11",
+    "P15",
+    "P16"
+  ],
+  "stories": [
+    {
+      "id": "ST-055",
+      "lane": "BE",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        100
+      ]
+    },
+    {
+      "id": "ST-056",
+      "lane": "BE",
+      "units": 2,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "open": [
+        "QA-VERIFY04R3-07"
+      ],
+      "ticket_prs": [
+        102
+      ]
+    },
+    {
+      "id": "ST-057",
+      "lane": "BE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        108
+      ]
+    },
+    {
+      "id": "ST-061a",
+      "lane": "BE",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        109
+      ]
+    },
+    {
+      "id": "ST-061b",
+      "lane": "BE",
+      "units": 2,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "open": [
+        "SRE-VERIFY04R3-01"
+      ],
+      "ticket_prs": [
+        111
+      ]
+    },
+    {
+      "id": "ST-062",
+      "lane": "BE",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        124,
+        128
+      ]
+    },
+    {
+      "id": "ST-067",
+      "lane": "BE",
+      "units": 1,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "open": [
+        "SRE-VERIFY04R3-02"
+      ],
+      "ticket_prs": [
+        99
+      ]
+    },
+    {
+      "id": "ST-068a",
+      "lane": "BE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        127
+      ]
+    },
+    {
+      "id": "ST-069",
+      "lane": "BE",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        131
+      ]
+    },
+    {
+      "id": "ST-072a",
+      "lane": "BE",
+      "units": 2,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "open": [
+        "QA-VERIFY04R3-04"
+      ],
+      "ticket_prs": [
+        130
+      ]
+    },
+    {
+      "id": "ST-063a",
+      "lane": "FE",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        123
+      ]
+    },
+    {
+      "id": "ST-063b",
+      "lane": "FE",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        125,
+        129,
+        132
+      ]
+    },
+    {
+      "id": "ST-063c",
+      "lane": "FE",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        139,
+        140,
+        141,
+        145,
+        146
+      ]
+    },
+    {
+      "id": "ST-068b",
+      "lane": "FE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        153
+      ]
+    },
+    {
+      "id": "ST-071",
+      "lane": "FE",
+      "units": 2,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 2,
+      "dod_done_units": 0,
+      "open": [
+        "QA-VERIFY04R3-05"
+      ],
+      "ticket_prs": [
+        154
+      ]
+    },
+    {
+      "id": "ST-072b",
+      "lane": "FE",
+      "units": 1,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "open": [
+        "QA-VERIFY04R3-05"
+      ],
+      "ticket_prs": [
+        156,
+        157
+      ]
+    },
+    {
+      "id": "C4-TAC5",
+      "lane": "QA",
+      "units": 0.5,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 0.5,
+      "dod_done_units": 0.5,
+      "open": [],
+      "ticket_prs": [
+        94
+      ]
+    },
+    {
+      "id": "C4-RECON",
+      "lane": "QA",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        98
+      ]
+    },
+    {
+      "id": "ST-059",
+      "lane": "QA",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        112
+      ]
+    },
+    {
+      "id": "ST-065",
+      "lane": "QA",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        152
+      ]
+    },
+    {
+      "id": "QA-HARNESS-4a",
+      "lane": "QA",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        103
+      ]
+    },
+    {
+      "id": "QA-HARNESS-4b",
+      "lane": "QA",
+      "units": 1,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "open": [
+        "QA-VERIFY04R3-03"
+      ],
+      "ticket_prs": [
+        105
+      ]
+    },
+    {
+      "id": "VERIFY-04",
+      "lane": "QA",
+      "units": 1,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "open": [
+        "rounds 1-2 closed unmerged; r3 merges with RETRO-04"
+      ],
+      "ticket_prs": [
+        116,
+        135,
+        160
+      ]
+    },
+    {
+      "id": "C4-CA",
+      "lane": "SRE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        95
+      ]
+    },
+    {
+      "id": "C4-LOCUST",
+      "lane": "SRE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        96
+      ]
+    },
+    {
+      "id": "C4-RED",
+      "lane": "SRE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        97
+      ]
+    },
+    {
+      "id": "ST-064",
+      "lane": "SRE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        126
+      ]
+    },
+    {
+      "id": "ST-066",
+      "lane": "SRE",
+      "units": 0.5,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 0.5,
+      "dod_done_units": 0.5,
+      "open": [],
+      "ticket_prs": [
+        147
+      ]
+    },
+    {
+      "id": "ST-073",
+      "lane": "SRE",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        104
+      ]
+    },
+    {
+      "id": "ST-060",
+      "lane": "ML",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        113
+      ]
+    },
+    {
+      "id": "ST-070",
+      "lane": "ML",
+      "units": 2,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 2,
+      "dod_done_units": 2,
+      "open": [],
+      "ticket_prs": [
+        133
+      ]
+    },
+    {
+      "id": "ST-058a",
+      "lane": "COACH",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        101
+      ]
+    },
+    {
+      "id": "ST-058b",
+      "lane": "COACH",
+      "units": 1,
+      "committed": true,
+      "status": "done",
+      "implemented_units": 1,
+      "dod_done_units": 1,
+      "open": [],
+      "ticket_prs": [
+        107
+      ]
+    },
+    {
+      "id": "ST-058c",
+      "lane": "COACH",
+      "units": 1,
+      "committed": true,
+      "status": "partial",
+      "implemented_units": 1,
+      "dod_done_units": 0,
+      "open": [
+        "QA-VERIFY04R3-01, QA-VERIFY04R3-09"
+      ],
+      "ticket_prs": [
+        110
+      ]
+    }
+  ],
+  "totals": {
+    "planned_units": 48,
+    "implemented_units": 48.0,
+    "dod_done_units": 35.0,
+    "implemented_ratio": 1.0,
+    "dod_done_ratio": 0.729,
+    "by_lane": {
+      "BE": {
+        "planned": 17,
+        "implemented": 17,
+        "dod_done": 10
+      },
+      "FE": {
+        "planned": 10,
+        "implemented": 10,
+        "dod_done": 7
+      },
+      "QA": {
+        "planned": 8.5,
+        "implemented": 8.5,
+        "dod_done": 6.5
+      },
+      "SRE": {
+        "planned": 5.5,
+        "implemented": 5.5,
+        "dod_done": 5.5
+      },
+      "ML": {
+        "planned": 4,
+        "implemented": 4,
+        "dod_done": 4
+      },
+      "COACH": {
+        "planned": 3,
+        "implemented": 3,
+        "dod_done": 2
+      }
+    }
+  },
+  "ticket_prs": {
+    "rule": "one PR per ticket into main; merge only through merge_ready.py by the gated merge step (ADR 0050)",
+    "merged": 57,
+    "merged_range": "#87 (2026-10-17T11:22Z) .. #152 (2026-10-29T17:48Z)",
+    "review_rule_met_on_merged_head": "57/57 (merged_verdict.py rc 0)",
+    "ci_gate_green_on_head": "57/57",
+    "size_waiver": "32/57",
+    "map": [
+      {
+        "id": "PLAN-04",
+        "pr": 87,
+        "merged": true,
+        "merged_at": "2026-10-17T11:22:03Z",
+        "head": "8bdbd53",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1118,
+        "production_lines": 0,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 3
+      },
+      {
+        "id": "PD-4",
+        "pr": 88,
+        "merged": true,
+        "merged_at": "2026-10-18T00:47:56Z",
+        "head": "ef33530",
+        "senior": "senior-frontend-engineer",
+        "changed_lines": 314,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 3
+      },
+      {
+        "id": "PE-4",
+        "pr": 89,
+        "merged": true,
+        "merged_at": "2026-10-17T14:15:58Z",
+        "head": "2b00882",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 322,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "SEC-4",
+        "pr": 90,
+        "merged": true,
+        "merged_at": "2026-10-17T13:51:24Z",
+        "head": "4ac1764",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 251,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "COACH-4",
+        "pr": 91,
+        "merged": true,
+        "merged_at": "2026-10-17T14:16:05Z",
+        "head": "8de6ada",
+        "senior": "senior-ml-cv-engineer",
+        "changed_lines": 314,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "C4-G12",
+        "pr": 92,
+        "merged": true,
+        "merged_at": "2026-10-17T13:51:58Z",
+        "head": "7ac5575",
+        "senior": "senior-frontend-engineer",
+        "changed_lines": 44,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "PM-4",
+        "pr": 93,
+        "merged": true,
+        "merged_at": "2026-10-17T14:21:35Z",
+        "head": "fddf131",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 170,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "C4-TAC5",
+        "pr": 94,
+        "merged": true,
+        "merged_at": "2026-10-17T14:52:44Z",
+        "head": "8c24618",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 247,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "C4-CA",
+        "pr": 95,
+        "merged": true,
+        "merged_at": "2026-10-17T14:26:29Z",
+        "head": "e30b53a",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 400,
+        "production_lines": 19,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "C4-LOCUST",
+        "pr": 96,
+        "merged": true,
+        "merged_at": "2026-10-17T14:27:12Z",
+        "head": "6fa4c88",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 745,
+        "production_lines": 116,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "C4-RED",
+        "pr": 97,
+        "merged": true,
+        "merged_at": "2026-10-17T13:57:45Z",
+        "head": "16a55eb",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 396,
+        "production_lines": 114,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "C4-RECON",
+        "pr": 98,
+        "merged": true,
+        "merged_at": "2026-10-17T14:20:03Z",
+        "head": "04fffbb",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 796,
+        "production_lines": 266,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-067",
+        "pr": 99,
+        "merged": true,
+        "merged_at": "2026-10-17T17:26:36Z",
+        "head": "4337bcc",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 394,
+        "production_lines": 112,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-055",
+        "pr": 100,
+        "merged": true,
+        "merged_at": "2026-10-17T19:21:39Z",
+        "head": "1b2c59b",
+        "senior": "senior-ml-cv-engineer",
+        "changed_lines": 1307,
+        "production_lines": 440,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-058a",
+        "pr": 101,
+        "merged": true,
+        "merged_at": "2026-10-17T17:29:10Z",
+        "head": "c861255",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 365,
+        "production_lines": 283,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-056",
+        "pr": 102,
+        "merged": true,
+        "merged_at": "2026-10-17T18:14:57Z",
+        "head": "049edd4",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1755,
+        "production_lines": 544,
+        "size_waiver": true,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "QA-HARNESS-4a",
+        "pr": 103,
+        "merged": true,
+        "merged_at": "2026-10-17T18:33:43Z",
+        "head": "db4fc33",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 1099,
+        "production_lines": 569,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "ST-073",
+        "pr": 104,
+        "merged": true,
+        "merged_at": "2026-10-17T18:27:34Z",
+        "head": "62444a8",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 1205,
+        "production_lines": 445,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "QA-HARNESS-4b",
+        "pr": 105,
+        "merged": true,
+        "merged_at": "2026-10-17T19:04:51Z",
+        "head": "f829703",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 1077,
+        "production_lines": 378,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 4
+      },
+      {
+        "id": "CI-SIGNIN-HYDRATION",
+        "pr": 106,
+        "merged": true,
+        "merged_at": "2026-10-17T23:20:43Z",
+        "head": "f535075",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 138,
+        "production_lines": 7,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-058b",
+        "pr": 107,
+        "merged": true,
+        "merged_at": "2026-10-17T20:04:24Z",
+        "head": "6d7a9ec",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 379,
+        "production_lines": 290,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-057",
+        "pr": 108,
+        "merged": true,
+        "merged_at": "2026-10-17T20:58:31Z",
+        "head": "05ca724",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1154,
+        "production_lines": 380,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-061a",
+        "pr": 109,
+        "merged": true,
+        "merged_at": "2026-10-17T20:47:28Z",
+        "head": "a00b146",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1023,
+        "production_lines": 496,
+        "size_waiver": true,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-058c",
+        "pr": 110,
+        "merged": true,
+        "merged_at": "2026-10-17T21:49:28Z",
+        "head": "e6e1fc7",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 509,
+        "production_lines": 388,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-061b",
+        "pr": 111,
+        "merged": true,
+        "merged_at": "2026-10-18T06:32:31Z",
+        "head": "6fdfc4d",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 2206,
+        "production_lines": 798,
+        "size_waiver": true,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "ST-059",
+        "pr": 112,
+        "merged": true,
+        "merged_at": "2026-10-18T01:16:22Z",
+        "head": "8181cac",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 508,
+        "production_lines": 147,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-060",
+        "pr": 113,
+        "merged": true,
+        "merged_at": "2026-10-18T00:56:10Z",
+        "head": "b305901",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 2224,
+        "production_lines": 689,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "PD-4b",
+        "pr": 114,
+        "merged": true,
+        "merged_at": "2026-10-18T02:27:44Z",
+        "head": "d6f1c6b",
+        "senior": "senior-frontend-engineer",
+        "changed_lines": 476,
+        "production_lines": 0,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "CI-DRAFT-SKIP",
+        "pr": 122,
+        "merged": true,
+        "merged_at": "2026-10-18T05:26:16Z",
+        "head": "0b477d6",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 358,
+        "production_lines": 22,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-063a",
+        "pr": 123,
+        "merged": true,
+        "merged_at": "2026-10-18T09:26:38Z",
+        "head": "8542a63",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 1635,
+        "production_lines": 665,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-062",
+        "pr": 124,
+        "merged": true,
+        "merged_at": "2026-10-18T10:06:22Z",
+        "head": "5cfad39",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 945,
+        "production_lines": 298,
+        "size_waiver": true,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-063b",
+        "pr": 125,
+        "merged": true,
+        "merged_at": "2026-10-18T10:07:35Z",
+        "head": "8c5bc34",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 275,
+        "production_lines": 140,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-064",
+        "pr": 126,
+        "merged": true,
+        "merged_at": "2026-10-18T09:20:42Z",
+        "head": "397c38c",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 397,
+        "production_lines": 65,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-068a",
+        "pr": 127,
+        "merged": true,
+        "merged_at": "2026-10-18T10:13:31Z",
+        "head": "c7cd0eb",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 920,
+        "production_lines": 395,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "ST-062-part2",
+        "pr": 128,
+        "merged": true,
+        "merged_at": "2026-10-18T18:02:46Z",
+        "head": "9877bb4",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1556,
+        "production_lines": 489,
+        "size_waiver": true,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 9
+      },
+      {
+        "id": "ST-063b-part2",
+        "pr": 129,
+        "merged": true,
+        "merged_at": "2026-10-18T17:00:29Z",
+        "head": "a6ada53",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 251,
+        "production_lines": 104,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-072a",
+        "pr": 130,
+        "merged": true,
+        "merged_at": "2026-10-18T10:39:22Z",
+        "head": "3d2e5fa",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 551,
+        "production_lines": 158,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "ST-069",
+        "pr": 131,
+        "merged": true,
+        "merged_at": "2026-10-18T12:34:50Z",
+        "head": "b7c1dd8",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1196,
+        "production_lines": 505,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-063b-part2-part2",
+        "pr": 132,
+        "merged": true,
+        "merged_at": "2026-10-18T18:28:42Z",
+        "head": "751289b",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 657,
+        "production_lines": 308,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-070",
+        "pr": 133,
+        "merged": true,
+        "merged_at": "2026-10-18T16:59:27Z",
+        "head": "6c7f8b4",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 1173,
+        "production_lines": 520,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-063c",
+        "pr": 139,
+        "merged": true,
+        "merged_at": "2026-10-18T19:40:52Z",
+        "head": "eeb3634",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 376,
+        "production_lines": 12,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-063c-part2",
+        "pr": 140,
+        "merged": true,
+        "merged_at": "2026-10-18T19:40:50Z",
+        "head": "9b795d1",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 930,
+        "production_lines": 329,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "ST-063c-part2-part2",
+        "pr": 141,
+        "merged": true,
+        "merged_at": "2026-10-18T20:30:41Z",
+        "head": "2670844",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 445,
+        "production_lines": 79,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "ST-063c-swap-ui",
+        "pr": 145,
+        "merged": true,
+        "merged_at": "2026-10-19T01:08:13Z",
+        "head": "63cd80b",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 624,
+        "production_lines": 278,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-063c-outbox-ui",
+        "pr": 146,
+        "merged": true,
+        "merged_at": "2026-10-19T01:46:08Z",
+        "head": "28abf71",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 772,
+        "production_lines": 335,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-066",
+        "pr": 147,
+        "merged": true,
+        "merged_at": "2026-10-29T14:12:03Z",
+        "head": "ea8d419",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 270,
+        "production_lines": 47,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "CI-CERTIFI-ADVISORY",
+        "pr": 148,
+        "merged": true,
+        "merged_at": "2026-10-22T09:28:49Z",
+        "head": "16f5e38",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 18,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "CI-OTEL-ADVISORY",
+        "pr": 149,
+        "merged": true,
+        "merged_at": "2026-10-29T08:52:30Z",
+        "head": "26ed6cb",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 129,
+        "production_lines": 4,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "CI-DAILY-AUDIT",
+        "pr": 150,
+        "merged": true,
+        "merged_at": "2026-10-29T12:37:29Z",
+        "head": "a360feb",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1360,
+        "production_lines": 443,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 2
+      },
+      {
+        "id": "CI-SIZE-PROD-ONLY",
+        "pr": 151,
+        "merged": true,
+        "merged_at": "2026-10-29T16:09:11Z",
+        "head": "ab66bdd",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 435,
+        "production_lines": 79,
+        "size_waiver": false,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-065",
+        "pr": 152,
+        "merged": true,
+        "merged_at": "2026-10-29T17:48:38Z",
+        "head": "e979f17",
+        "senior": "senior-frontend-engineer",
+        "changed_lines": 915,
+        "production_lines": 36,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-068b",
+        "pr": 153,
+        "merged": true,
+        "merged_at": "2026-10-29T14:59:50Z",
+        "head": "a6e0f94",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 859,
+        "production_lines": 309,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "ST-071",
+        "pr": 154,
+        "merged": true,
+        "merged_at": "2026-10-29T15:06:58Z",
+        "head": "2a22967",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 1033,
+        "production_lines": 463,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1
+      },
+      {
+        "id": "CI-OBJSTORE-PORT-RACE",
+        "pr": 155,
+        "merged": true,
+        "merged_at": "2026-10-29T13:58:16Z",
+        "head": "69031aa",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 559,
+        "production_lines": 100,
+        "size_waiver": true,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-072b",
+        "pr": 156,
+        "merged": true,
+        "merged_at": "2026-10-29T14:59:15Z",
+        "head": "58946de",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 269,
+        "production_lines": 29,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "ST-072b-part2",
+        "pr": 157,
+        "merged": true,
+        "merged_at": "2026-10-29T15:33:18Z",
+        "head": "4d35d3a",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 319,
+        "production_lines": 55,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      },
+      {
+        "id": "CI-INFRA-BUDGET",
+        "pr": 158,
+        "merged": true,
+        "merged_at": "2026-10-29T17:09:25Z",
+        "head": "5a038ee",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 341,
+        "production_lines": 34,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0
+      }
+    ],
+    "not_merged": [
+      {
+        "pr": 115,
+        "state": "closed"
+      },
+      {
+        "pr": 116,
+        "state": "closed"
+      },
+      {
+        "pr": 117,
+        "state": "closed"
+      },
+      {
+        "pr": 118,
+        "state": "closed"
+      },
+      {
+        "pr": 119,
+        "state": "closed"
+      },
+      {
+        "pr": 120,
+        "state": "closed"
+      },
+      {
+        "pr": 121,
+        "state": "closed"
+      },
+      {
+        "pr": 134,
+        "state": "closed"
+      },
+      {
+        "pr": 135,
+        "state": "closed"
+      },
+      {
+        "pr": 136,
+        "state": "closed"
+      },
+      {
+        "pr": 137,
+        "state": "closed"
+      },
+      {
+        "pr": 138,
+        "state": "closed"
+      },
+      {
+        "pr": 142,
+        "state": "closed"
+      },
+      {
+        "pr": 143,
+        "state": "closed"
+      },
+      {
+        "pr": 144,
+        "state": "open draft (superseded by #145; EM-RETRO04-01)"
+      },
+      {
+        "pr": 159,
+        "state": "folded into RETRO-04, closed with a pointer"
+      },
+      {
+        "pr": 160,
+        "state": "folded into RETRO-04, closed with a pointer"
+      }
+    ]
+  },
+  "ci": {
+    "main_head": "b9d0dc3",
+    "run": 40924867330,
+    "conclusion": "success"
+  },
+  "retro": {
+    "file": "docs/retros/2026-12-11-sprint-04.md",
+    "actions": [
+      "C1",
+      "C2",
+      "C3",
+      "C4",
+      "C5"
+    ],
+    "adr": "0055"
+  }
+}
