@@ -59,9 +59,7 @@ def env_copy(tmp_path: Path) -> dict:
 @given(parsers.parse('the env file sets "{settings}" to "{value}"'))
 def env_sets(ctx: dict, settings: str, value: str) -> None:
     wanted = names(settings)
-    kept = [
-        ln for ln in ctx["env"].read_text().splitlines() if ln.split("=", 1)[0] not in wanted
-    ]
+    kept = [ln for ln in ctx["env"].read_text().splitlines() if ln.split("=", 1)[0] not in wanted]
     ctx["env"].write_text("\n".join([*kept, *(f"{n}={value}" for n in wanted)]) + "\n")
 
 
