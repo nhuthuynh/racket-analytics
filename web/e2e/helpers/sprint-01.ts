@@ -47,11 +47,37 @@ export async function requestLink(page: Page, email: string): Promise<void> {
 // Where A-03 sends a visitor once the exchange has set the session cookie (flows A-03).
 export const SIGNED_IN_URL = /\/(welcome|matches)(\?|#|$)/;
 
+// A-10 "Are you 18 or over?" (flows-sprint-04 §5): where A-03 sends a NEW account while the age
+// question is on (FEATURE_AGE_GATE). The account exists only once the question is answered.
+export const AGE_QUESTION_URL = /\/welcome\/age(\?|#|$)/;
+
+/** Where sign-in stands for the browser's current URL: still pending, at A-10, or finished. */
+export function signInStep(url: string): 'pending' | 'age-question' | 'signed-in' {
+  const { pathname, search, hash } = new URL(url);
+  const at = `${pathname}${search}${hash}`;
+  if (AGE_QUESTION_URL.test(at)) return 'age-question';
+  return SIGNED_IN_URL.test(at) ? 'signed-in' : 'pending';
+}
+
+// A-10 answered as an adult by pointer, the way a player taps the label (E2E-04-06 covers the
+// question itself: keyboard, the error summary and the under-18 path).
+async function answerAgeQuestionAsAdult(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { level: 1, name: 'Are you 18 or over?' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled(); // hydrated
+  await page.getByText('Yes, I am 18 or over').click();
+  await expect(page.getByRole('radio', { name: 'Yes, I am 18 or over' })).toBeChecked();
+  await page.getByRole('button', { name: 'Continue' }).click();
+}
+
 // Opens a sign-in link and returns once sign-in has FINISHED. A-03 removes the token from the
 // address bar before it calls the exchange, so "no token in the URL" is not enough: the helper
-// waits for the navigation the exchange triggers, i.e. after Set-Cookie (QA-R1-01).
+// waits for the navigation the exchange triggers, i.e. after Set-Cookie (QA-R1-01). With the age
+// question on, a new account lands on A-10 first; the helper answers it as an adult so every
+// flag-on spec reaches its own screen (QA-VERIFY04R3-05). With the flag off A-10 never shows.
 export async function openSignInLink(page: Page, link: URL): Promise<void> {
   await page.goto(`${link.pathname}${link.hash}`);
+  await expect.poll(() => signInStep(page.url()), { timeout: 15_000 }).not.toBe('pending');
+  if (signInStep(page.url()) === 'age-question') await answerAgeQuestionAsAdult(page);
   await expect(page).toHaveURL(SIGNED_IN_URL, { timeout: 15_000 });
   await expect(page).not.toHaveURL(/token=/);
 }
