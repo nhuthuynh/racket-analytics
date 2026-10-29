@@ -180,3 +180,8 @@ export function parseExchange(value: unknown): { newAccount: boolean } {
   const o = obj(value, 'exchange');
   return { newAccount: bool(o, 'new_account', 'exchange') };
 }
+
+/** `GET /config/public` (ST-067): only the flags the web reads; anything but a boolean is refused. */
+export function parsePublicConfig(value: unknown): { ageGate: boolean } {
+  return { ageGate: bool(obj(obj(value, 'config').features, 'config.features'), 'age_gate', 'config.features') };
+}
