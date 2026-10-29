@@ -56,6 +56,18 @@ def test_weed_download_is_taken_under_a_lock() -> None:
     assert "flock" in text
 
 
+def test_parallel_temp_dirs_leave_room_for_unix_sockets() -> None:
+    # Found by the first parallel run: xdist adds "popen-gwN/" to every tmp_path, and
+    # test_parallel_migrations.py's helper opens a multiprocessing socket under its tmp_path:
+    # "/tmp/pytest-of-runner/pytest-0/popen-gw3/test_the_helper_leaves_no_copy0/scratch/
+    # pymp-xxxxxxxx/listener-xxxxxxxx" is 112 bytes, over Linux's 107-byte AF_UNIX limit
+    # ("OSError: AF_UNIX path too long"). A short --basetemp keeps the deepest one at 88.
+    basetemp = option(pytest_argv(), "--basetemp")
+    assert basetemp is not None, pytest_argv()
+    deepest = f"{basetemp}/popen-gw99/{'t' * 31}/scratch/pymp-xxxxxxxx/listener-xxxxxxxx"
+    assert len(deepest) <= 107, (len(deepest), deepest)
+
+
 # ---------------------------------------------------------------- positive case
 def test_parallel_run_keeps_the_marker_expression() -> None:
     assert option(pytest_argv(), "-m") == "unit or integration"
