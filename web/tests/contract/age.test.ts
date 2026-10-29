@@ -13,7 +13,8 @@ type Live = Record<string, { status: number; body: JsonBodyType }>;
 const LIVE = JSON.parse(readFileSync(new URL('./live-age.json', import.meta.url), 'utf8')) as Live;
 const BASE = 'http://api.test/api';
 const server = setupServer();
-const api = createApiClient({ baseUrl: BASE });
+// `fetch` is looked up per call, so MSW (patched in beforeAll) answers.
+const api = createApiClient({ baseUrl: BASE, fetch: (input, init) => fetch(input, init) });
 const sent: { method: string; path: string; body: string }[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

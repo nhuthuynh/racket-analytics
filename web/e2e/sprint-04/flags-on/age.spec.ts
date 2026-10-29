@@ -39,7 +39,8 @@ test.describe('E2E-04-06 The age question after sign-in (flag on)', () => {
     await page.setViewportSize({ width: 360, height: 740 });
     await newAddressSignsIn(page);
     await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(page.getByRole('link', { name: 'Choose yes or no' })).toBeFocused();
+    await expect(page.getByRole('alert').filter({ hasText: 'There is a problem' })).toBeFocused();
+    await expect(page.getByRole('link', { name: 'Choose yes or no' })).toBeVisible();
     await page.getByText('Yes, I am 18 or over').click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page).toHaveURL(/\/welcome$/);

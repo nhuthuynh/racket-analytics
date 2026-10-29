@@ -2,7 +2,7 @@
 // flows-sprint-04 §5; PM-4 W-A01..W-A09). Negative first: the under-18 path.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgeQuestion } from '@/components/age/AgeQuestion';
 import { FootageNotice } from '@/components/age/FootageNotice';
 import { AuthCallback } from '@/components/AuthCallback';
@@ -10,9 +10,9 @@ import { ApiError } from '@/lib/api/client';
 import type { AgeOutcome } from '@/lib/identity/age';
 
 let online = true;
-vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
-afterEach(() => {
-  online = true;
+beforeEach(() => {
+  online = true; // restoreMocks resets spies before each test, so the spy is set here
+  vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
 });
 
 function setup(confirmAge: (isAdult: boolean) => Promise<AgeOutcome>) {

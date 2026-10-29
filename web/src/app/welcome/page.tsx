@@ -4,6 +4,7 @@
 // verified (FR-055, ADR 0009).
 import Link from 'next/link';
 import { PageTitle } from '@/components/PageTitle';
+import { FootageNoticeFromConfig } from '@/components/age/FootageNotice';
 
 export default function WelcomePage() {
   return (
@@ -20,6 +21,7 @@ export default function WelcomePage() {
         they are marked &lsquo;unofficial&rsquo;.
       </p>
       <p>Only you can see your videos.</p>
+      <FootageNoticeFromConfig />
       <p>
         <Link href="/guide" className="button">
           Show me how to film

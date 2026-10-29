@@ -3,6 +3,8 @@
 // captured from the real backend on Postgres (web/tests/contract/live-age.json), through the real
 // client (server pages and browser alike); only `fetch` is a fake.
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cloneElement, type ReactElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,7 +12,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Live = Record<string, { status: number; body: unknown }>;
 const wire = vi.hoisted(() => ({ gate: 'config_off', me: 'me_pending', answer: 'under_age' }));
-const LIVE = JSON.parse(readFileSync(new URL('../contract/live-age.json', import.meta.url), 'utf8')) as Live;
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const LIVE = JSON.parse(readFileSync(path.join(HERE, '../contract/live-age.json'), 'utf8')) as Live;
 
 const fakeFetch = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/api/server', async () => {
@@ -36,7 +39,7 @@ const { AgeQuestion } = await import('@/components/age/AgeQuestion');
 const AgeQuestionPage = (await import('@/app/welcome/age/page')).default;
 const NewMatchPage = (await import('@/app/matches/(list)/new/page')).default;
 
-const FEATURE = readFileSync(new URL('./age_question_ui.feature', import.meta.url), 'utf8');
+const FEATURE = readFileSync(path.join(HERE, 'age_question_ui.feature'), 'utf8');
 const SCENARIOS = { under: 'Under-age applicant', adult: 'Adult confirms', off: 'Flag off, no question' };
 const NOTICE = "Don't upload matches with anyone under 18. Film only people who agree to be filmed.";
 
