@@ -18,7 +18,7 @@ test.beforeEach(({}, testInfo) => {
 });
 
 test.describe('E2E-04-08 Over-limit messages Q-10, match limit (flag on)', () => {
-  test('Match limit: Q-07 says when a new match can start and keeps the answers, at 360 px', async ({ page }, testInfo) => {
+  test('E2E-04-08 Match limit: Q-07 says when a new match can start and keeps the answers, at 320 and 360 px', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 360, height: 740 });
     await signInByLink(page);
     let refused = false;
@@ -37,5 +37,12 @@ test.describe('E2E-04-08 Over-limit messages Q-10, match limit (flag on)', () =>
     await expect(page.getByRole('heading', { level: 1, name: 'Check your answers' })).toBeVisible();
     await expectNoBlockingA11yViolations(page, testInfo, 'Q-10-match-limit');
     await expectTargetsAtLeast24(page, testInfo, 'Q-10-match-limit');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    // The same message at 320 px (G04-08 (a), (b), (d); QA-VERIFY04R3-06).
+    await page.setViewportSize({ width: 320, height: 640 });
+    await expect(alert).toContainText('Your answers are kept.');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    await expectNoBlockingA11yViolations(page, testInfo, 'Q-10-match-limit-320');
+    await expectTargetsAtLeast24(page, testInfo, 'Q-10-match-limit-320');
   });
 });
