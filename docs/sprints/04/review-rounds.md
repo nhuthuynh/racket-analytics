@@ -53,6 +53,12 @@ ADR 0037 rule 1 and ADR 0050 rule 5: one row per finding that SMOKE-04 (#159) an
 |---|---|---|---|---|
 | QA-VERIFY04R3-03 (alias QA-SMOKE04-03) | major | **Fixed (closed on merge of this ticket's PR).** `live_privacy.py` reads `code`, `message`, `retry_at` and `quota` from the `error` object (`error_of`); a top-level code is not read (fail closed). Red first, then green (`decisions/QA-VERIFY04R3-03.md`) | senior-qa-engineer | Live dry-run, flags on, local-process stack: `live_privacy.py --flags on --runs 3 --quotas …` → **rc 0** (age, consent, retention 3 of 3; burst 10× 201 then 40× 429 `rate_limited` with `retry_at`; quota 429 `storage_quota_exceeded`, stored bytes 0 → 0; alerts 6 rules). Flags off: rc 0; `origin/main` harness on the same stack rc 1 (`status 429, Location None with the flag off`) |
 
+## Ticket SRE-VERIFY04R3-01 (fix wave, retro action C2; senior-backend-engineer, 2026-10-29)
+
+| Finding | Severity | Disposition | Owner | Evidence |
+|---|---|---|---|---|
+| SRE-VERIFY04R3-01 | major | **Fixed (closed on merge of this ticket's PR).** `GET /me/plan` reuses the scope's ranking and citations while its scope key (live matches, side, scorebook version) is unchanged: 20 → 8 statements, 6 → 0 scorebook reads per read. The CI Locust job gates `GET /me/plan` at 50 RPS (`plan_load_verdict.py`). Red first, then green (`decisions/SRE-VERIFY04R3-01.md`) | senior-backend-engineer | Live dry-run, own Compose stack `racket-sv01`, one uvicorn process: `live_plan.py --load --rps 50 --duration 60` → **rc 0**, p95 35.7 ms, p99 91.2 ms, 50.0 RPS (before the fix on the same stack: rc 1, p95 2,548 ms, 43.3 RPS); Locust `locustfile_plan.py -u 50` + `plan_load_verdict.py` → rc 0, p95 35 ms, p99 97 ms, 49.7 RPS (before: rc 1, p95 600 ms) |
+
 ## Ticket QA-VERIFY04R3-01 (fix wave, retro action C2; pickleball-domain-coach, 2026-10-29)
 
 | Finding | Severity | Disposition | Owner | Evidence |
