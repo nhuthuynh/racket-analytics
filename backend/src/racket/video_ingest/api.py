@@ -29,6 +29,7 @@ from racket.platform.errors import (
     UnsupportedMediaType,
 )
 from racket.platform.http import ERROR_HEADERS_STATE
+from racket.platform.ratelimit import rfc3339_seconds
 from racket.platform.settings import Settings
 from racket.players.api import CurrentAccount
 from racket.video_ingest.domain import (
@@ -130,15 +131,10 @@ def my_quota(
             "limit": creations.limit,
             "window_s": creations.window_s,
             "used": creations.used,
-            "next_slot_at": None if next_slot is None else _rfc3339(next_slot),
+            "next_slot_at": None if next_slot is None else rfc3339_seconds(next_slot),
         },
     }
     return JSONResponse(body, headers={"Cache-Control": "no-store"})
-
-
-def _rfc3339(value: datetime) -> str:
-    """As ``retry_at`` (api-sprint-01 §1.1): UTC, whole seconds, ``Z``."""
-    return value.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 @router.options("/uploads", status_code=204)

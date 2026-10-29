@@ -28,6 +28,12 @@ rate_limit_events = sa.Table(
 )
 
 
+def rfc3339_seconds(value: datetime) -> str:
+    """``retry_at`` and ``next_slot_at``: UTC, whole seconds, ``Z`` (api-sprint-01 §1.1). The DB
+    session's zone may not be UTC (C-08)."""
+    return value.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 class RateLimited(AppError):
     """429 with ``retry_at`` and ``Retry-After`` (api-sprint-01 §1.1, §2.4)."""
 
@@ -35,8 +41,7 @@ class RateLimited(AppError):
 
     def __init__(self, retry_at: datetime, now: datetime) -> None:
         super().__init__("rate limited")
-        utc = retry_at.astimezone(UTC)  # the DB session's zone may not be UTC (C-08)
-        self.retry_at: str | None = utc.isoformat(timespec="seconds").replace("+00:00", "Z")
+        self.retry_at: str | None = rfc3339_seconds(retry_at)
         wait = max(1, int((retry_at - now).total_seconds() + 0.999))
         self.response_headers = {"Retry-After": str(wait)}
 
