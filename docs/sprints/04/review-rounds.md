@@ -52,3 +52,9 @@ ADR 0037 rule 1 and ADR 0050 rule 5: one row per finding that SMOKE-04 (#159) an
 | Finding | Severity | Disposition | Owner | Evidence |
 |---|---|---|---|---|
 | QA-VERIFY04R3-03 (alias QA-SMOKE04-03) | major | **Fixed (closed on merge of this ticket's PR).** `live_privacy.py` reads `code`, `message`, `retry_at` and `quota` from the `error` object (`error_of`); a top-level code is not read (fail closed). Red first, then green (`decisions/QA-VERIFY04R3-03.md`) | senior-qa-engineer | Live dry-run, flags on, local-process stack: `live_privacy.py --flags on --runs 3 --quotas …` → **rc 0** (age, consent, retention 3 of 3; burst 10× 201 then 40× 429 `rate_limited` with `retry_at`; quota 429 `storage_quota_exceeded`, stored bytes 0 → 0; alerts 6 rules). Flags off: rc 0; `origin/main` harness on the same stack rc 1 (`status 429, Location None with the flag off`) |
+
+## Ticket QA-VERIFY04R3-01 (fix wave, retro action C2; pickleball-domain-coach, 2026-10-29)
+
+| Finding | Severity | Disposition | Owner | Evidence |
+|---|---|---|---|---|
+| QA-VERIFY04R3-01 (alias QA-SMOKE04-01) | major | **Fixed (closed on merge of this ticket's PR).** Seven coach-reviewed solo-wall drills give every plan target 2 drills for {1 player, wall, intermediate}. `racket-drill-coverage` gains the `solo+wall` profile axis, which fails naming each cell under 2 drills. Red first, then green (`decisions/QA-VERIFY04R3-01.md`). Known limit: a single-weakness plan can still place both drills of a target in one session (Sprint 5 backlog, minor) | pickleball-domain-coach | Live dry-run on Compose over HTTPS at `338d7d22`: `live_plan.py --runs 5 --determinism 3` → rc 0, `runs_passed 5`, `swap` ok in 5 of 5 |
