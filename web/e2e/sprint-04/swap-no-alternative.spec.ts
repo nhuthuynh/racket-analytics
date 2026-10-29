@@ -1,7 +1,9 @@
 // E2E-04-04 "Not for me" with no alternative (ST-065; FR-124; flows-sprint-04 §4, 409
 // `no_alternative`): inside the dialog an alert says no other drill fits and the plan is
-// unchanged, focus moves to it, "Close" returns focus to the row's "Not for me", and the plan the
-// API holds is the same version with the same drill. Words: e2e/helpers/sprint-04.ts.
+// unchanged, focus moves to it, "Close" closes the dialog, and the plan the API holds is the same
+// version with the same drill. Then the dialog rule of flows-sprint-03 §0 (P-03 row of
+// flows-sprint-04 §9: "focus trapped, returned"): Close, Cancel and Esc give focus back to the
+// row's "Not for me". Words: e2e/helpers/sprint-04.ts.
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpers/axe';
 import { CITED, PLAN_COPY, PLAN_PATH, SCREEN_P, drillRow, planRead, planReadyAccount } from '../helpers/sprint-04';
@@ -23,10 +25,30 @@ test.describe('@M0 @story-ST-065 Swap with no alternative', () => {
 
     await dialog.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(row.getByRole('button', { name: `Not for me, ${CITED}` })).toBeFocused();
     await expect(row).toBeVisible();
     const after = await planRead(page);
     expect(after.version).toBe(plan.version);
     expect(JSON.stringify(after.sessions)).toBe(JSON.stringify(plan.sessions));
+  });
+
+  // Red first, waiting on defect QA-ST065-01 (decisions/ST-065.md): in Chromium focus lands on
+  // <body> after each of the three, because the opener is focused while the modal <dialog> is
+  // still open (inert page) and the dialog is then removed without restoring focus.
+  test('E2E-04-04 focus returns to "Not for me" after Close, Cancel and Esc', { tag: '@red-until-QA-ST065-01' }, async ({ page }) => {
+    await planReadyAccount(page);
+    await page.goto(PLAN_PATH);
+    const opener = drillRow(page, CITED).getByRole('button', { name: `Not for me, ${CITED}` });
+    const dialog = page.getByRole('dialog', { name: `Swap ${CITED}?` });
+    for (const close of ['Close', 'Cancel', 'Escape'] as const) {
+      await opener.click();
+      if (close === 'Close') {
+        await dialog.getByRole('button', { name: 'Swap drill' }).click();
+        await expect(dialog.getByRole('alert')).toHaveText(PLAN_COPY.noAlternative);
+        await dialog.getByRole('button', { name: 'Close' }).click();
+      } else if (close === 'Cancel') await dialog.getByRole('button', { name: 'Cancel' }).click();
+      else await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(opener, `focus after ${close}`).toBeFocused();
+    }
   });
 });

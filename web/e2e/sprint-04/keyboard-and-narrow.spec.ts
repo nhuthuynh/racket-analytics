@@ -1,6 +1,6 @@
 // E2E-04-05 keyboard-only plan journey and P-01/P-02 at 320 and 360 px (ST-065; WCAG 2.1.1,
 // 2.4.3, 1.4.10; NFR-028, NFR-030; flows-sprint-04 §2-§4). Only the keyboard: P-02 answered with
-// Tab, arrows and Space and sent with Enter; on P-01 Enter opens "Show me", marks a session done
+// Tab, arrows and Space and sent with Enter; on P-01 Enter marks a session done, opens "Show me"
 // and opens "Not for me", whose Cancel has focus; Tab, Enter swap the drill and the new one has
 // focus. Narrow: no sideways scrolling and 24x24 targets on P-01, the swap dialog and P-02.
 import { expect, test, type Locator, type Page } from '@playwright/test';
@@ -20,7 +20,7 @@ async function tabTo(page: Page, target: Locator, name: string): Promise<void> {
 }
 
 test.describe('@M0 @story-ST-065 @nfr-034 Plan by keyboard and on narrow screens', () => {
-  test('E2E-04-05 keyboard-only: P-02 answered and sent, then Show me, Mark done and Not for me', async ({ page }, testInfo) => {
+  test('E2E-04-05 keyboard-only: P-02 answered and sent, then Mark done, Show me and Not for me', async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     const matchId = await receivedMatch(page, 'E2E-04-05 keyboard');
     await tagWorkedExampleByApi(page, matchId);
@@ -46,15 +46,15 @@ test.describe('@M0 @story-ST-065 @nfr-034 Plan by keyboard and on narrow screens
     await expect(page).toHaveURL(/\/plan(\?|#|$)/);
     await expect(page.getByRole('heading', { level: 2, name: 'Your sessions' })).toBeVisible();
 
+    await tabTo(page, sessionOf(page, 1).getByRole('button', { name: 'Mark done' }), 'Mark done');
+    await page.keyboard.press('Enter');
+    await expect(sessionOf(page, 1).getByText('Done', { exact: true })).toBeVisible();
+
     const show = drillRow(page, CITED).getByRole('button', { name: /^Show me the rallies behind/ });
     await tabTo(page, show, 'Show me');
     await page.keyboard.press('Enter');
     await expect(show).toHaveAttribute('aria-expanded', 'true');
     await expect(drillRow(page, CITED).getByRole('list').first().getByRole('listitem').first()).toBeVisible();
-
-    await tabTo(page, sessionOf(page, 2).getByRole('button', { name: 'Mark done' }), 'Mark done');
-    await page.keyboard.press('Enter');
-    await expect(sessionOf(page, 2).getByText('Done', { exact: true })).toBeVisible();
 
     await tabTo(page, drillRow(page, SWAPPABLE).getByRole('button', { name: `Not for me, ${SWAPPABLE}` }), 'Not for me');
     await page.keyboard.press('Enter');

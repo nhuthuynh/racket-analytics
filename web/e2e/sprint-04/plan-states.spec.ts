@@ -75,14 +75,14 @@ test.describe('@M0 @story-ST-065 Plan states', () => {
         : route.continue(),
     );
     await page.goto(PLAN_PATH);
-    const alert = page.getByRole('alert');
+    const alert = page.getByRole('main').getByRole('alert'); // not Next's route announcer
     await expect(alert).toContainText(PLAN_COPY.error);
     await expect(alert).toContainText(`Reference: ${ref}`);
     await checked(page, testInfo, `${SCREEN_P.plan}-error`);
     await page.unroute(PLAN_API);
     await page.getByRole('button', { name: 'Try again' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Your sessions' })).toBeVisible();
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
   });
 
   test('E2E-04-02 not found: a drill gone on another device re-reads the plan; an unknown sub-route is not found', async ({ page }, testInfo) => {
