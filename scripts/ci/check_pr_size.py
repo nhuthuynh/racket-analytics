@@ -54,15 +54,27 @@ def is_excluded(path: str) -> bool:
     return any(fnmatch(path, pat) for pat in EXCLUDED)
 
 
+def destination(path: str) -> str:
+    """The new path of a numstat rename record (`a => b`, `x/{a => b}/y`), else `path`."""
+    if " => " not in path:
+        return path
+    if "{" not in path:
+        return path.split(" => ", 1)[1]
+    head, rest = path.split("{", 1)
+    inner, tail = rest.split("}", 1)
+    return (head + inner.split(" => ", 1)[1] + tail).replace("//", "/")
+
+
 def measure(numstat: str) -> Size:
-    """Split `git diff --numstat` output; binary files (`-`) count on neither side."""
+    """Split `git diff --numstat` output; binary files (`-`) count on neither side.
+    A rename record is classified by its destination (PE-SIZEPROD-R1-01)."""
     counted = excluded = 0
     for line in numstat.splitlines():
         added, deleted, path = line.split("\t", 2)
         if added == "-":
             continue
         n = int(added) + int(deleted)
-        if is_excluded(path):
+        if is_excluded(destination(path)):
             excluded += n
         else:
             counted += n
@@ -81,7 +93,9 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError:
             labels = []
     res = subprocess.run(
-        ["git", "diff", "--numstat", f"{args.base}...{args.head}"],
+        # --no-renames: a move counts as a deletion plus an addition, so a file moved out
+        # of tests/ or docs/ into production code counts in full (PE-SIZEPROD-R1-01).
+        ["git", "diff", "--numstat", "--no-renames", f"{args.base}...{args.head}"],
         capture_output=True,
         text=True,
         check=False,
