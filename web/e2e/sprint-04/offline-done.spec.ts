@@ -1,15 +1,9 @@
-// E2E-04-03 offline "Mark done" survives a reload (ST-065; flows-sprint-04 §2 P-01 Offline, §4).
-// The op waits in the device outbox (IndexedDB): after a reload while offline the session still
-// says "Saved on this device, will sync"; back online it syncs once. No page.route here: the
-// service worker must see every request (e2e_route_isolation.feature). "Mark done" is pressed
-// under context.setOffline; the reload cannot be (decisions/ST-065.md: WebKit's emulation fails
-// every load before the service worker, Chromium's skips it), so for the reload the device
-// reports itself offline (navigator.onLine false) while the page loads, in every browser.
+// E2E-04-03 offline "Mark done" survives a reload and syncs once (ST-065; flows-sprint-04 §2, §4). No page.route: the
+// service worker sees every request. Why the reload uses navigator.onLine, not setOffline: decisions/ST-065.md.
 import { expect, test, type Page } from '@playwright/test';
 import { PLAN_COPY, PLAN_PATH, planRead, planReadyAccount, sessionOf, untilPlanKeptOffline } from '../helpers/sprint-04';
 
 const OFFLINE_FLAG = 'e2e-device-offline';
-
 /** navigator.onLine is false while sessionStorage holds the flag; otherwise the browser's own. */
 function deviceReportsOffline(flag: string): void {
   const own = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine')!.get!;
