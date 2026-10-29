@@ -81,7 +81,8 @@ def burst_problems(replies: list[tuple[int, Any]], *, flags_on: bool) -> list[st
     refused = [i for i, (st, _) in enumerate(replies) if st != 201]
     if refused and accepted and accepted[-1] > refused[0]:
         problems.append(f"request {accepted[-1] + 1} accepted after a refusal")
-    for st, error in ((replies[i][0], error_of(replies[i][1])) for i in refused):
+    for st, body in (replies[i] for i in refused):
+        error = error_of(body)
         if st != 429 or error.get("code") != "rate_limited":
             problems.append(f"status {st} {error.get('code')}")
         elif not error.get("retry_at"):

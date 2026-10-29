@@ -15,6 +15,7 @@ pytestmark = pytest.mark.unit
 sys.path.insert(0, str(SCRIPTS_DIR / "measure"))
 import live_privacy as lp  # noqa: E402
 
+
 def err(code: str, **extra: object) -> dict[str, object]:
     """The API's error body (api-sprint-01 §1.1; backend/src/racket/platform/errors.py)."""
     return {"error": {"code": code, "message": "m", "support_ref": "ref_0123456789abcdef", **extra}}
@@ -98,7 +99,8 @@ def test_refusals_outside_the_envelope_are_not_read_as_refusals() -> None:
     flat_limited = (429, {"code": "rate_limited", "retry_at": "2026-10-17T01:00:00Z"})
     assert "status 429 None" in lp.burst_problems([OK] * 10 + [flat_limited] * 40, flags_on=True)
     found = lp.quota_problems(429, FLAT, None, (0, 0), flags_on=True)
-    assert "code None" in found and "body lacks quota usage and limit" in found, found
+    assert "code None" in found, found
+    assert "body lacks quota usage and limit" in found, found
     flat_cap = {"code": "upload_quota_exceeded"}
     found = lp.quota_problems(429, flat_cap, None, (None, None), flags_on=False)
     assert any("status 429" in p for p in found), found
