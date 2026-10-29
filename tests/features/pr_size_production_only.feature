@@ -32,3 +32,11 @@ Feature: The PR size check counts production code only
       And the pull request adds 500 lines to "web/pnpm-lock.yaml"
       When the PR policy checks run on the merge ref
       Then the PR size check passes, counting 10 production lines and excluding 950 lines
+
+  Rule: A move cannot hide production code
+
+    Scenario: A test file moved into production code counts in full
+      Given main has 1000 lines in "tests/helper.py"
+      And the pull request moves "tests/helper.py" to "app/service.py" and changes 450 lines
+      When the PR policy checks run on the merge ref
+      Then the PR size check fails, counting 1000 production lines and excluding 1000 lines

@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from pr_checkout import SIZE_STEP, PullRequest, lines
+from pr_checkout import SIZE_STEP, PullRequest, commit, git, lines
 from pytest_bdd import given, parsers, scenarios, then, when
 
 pytestmark = [pytest.mark.scenario, pytest.mark.integration]
@@ -26,6 +26,24 @@ def pull_request(tmp_path: Path) -> PullRequest:
 @given(parsers.parse('the pull request adds {n:d} lines to "{path}"'))
 def pr_adds(pr: PullRequest, n: int, path: str) -> None:
     pr.open_event(path, lines(n))
+
+
+@given(parsers.parse('main has {n:d} lines in "{path}"'))
+def main_has(pr: PullRequest, n: int, path: str) -> None:
+    pr.push("main", path, lines(n))
+    git(pr.dev, "merge", "-q", "--ff-only", "origin/main")
+
+
+@given(parsers.parse('the pull request moves "{src}" to "{dst}" and changes {k:d} lines'))
+def pr_moves(pr: PullRequest, src: str, dst: str, k: int) -> None:
+    (pr.dev / dst).parent.mkdir(parents=True, exist_ok=True)
+    git(pr.dev, "mv", src, dst)
+    body = (pr.dev / dst).read_text().splitlines(keepends=True)
+    body[:k] = [f"edited {i}\n" for i in range(k)]
+    commit(pr.dev, dst, "".join(body))
+    git(pr.dev, "push", "-q", "origin", "pr")
+    pr.base_sha = git(pr.dev, "rev-parse", "origin/main")
+    pr.head_sha = git(pr.dev, "rev-parse", "pr")
 
 
 @when("the PR policy checks run on the merge ref", target_fixture="results")

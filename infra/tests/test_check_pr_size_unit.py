@@ -76,5 +76,37 @@ def test_measure_splits_counted_and_excluded_lines_and_skips_binaries() -> None:
     assert size.measure(numstat) == size.Size(counted=15, excluded=310)
 
 
+@pytest.mark.parametrize(
+    ("record", "counted", "excluded"),
+    [  # PE-SIZEPROD-R1-01: a rename is classified by its destination, never the "a => b" text
+        ("450\t450\ttests/helper.py => app/service.py", 900, 0),
+        ("450\t450\t{tests => app}/helper.py", 900, 0),
+        ("3\t1\tbackend/{tests/unit => src/app}/x.py", 4, 0),
+        ("5\t5\tbackend/src/{app => }/y.py", 10, 0),
+        ("8\t2\tbackend/src/app.py => docs/app.md", 0, 10),
+        ("8\t2\t{backend/src => backend/tests}/a.py", 0, 10),
+    ],
+)
+def test_measure_classifies_a_rename_by_its_destination(
+    record: str, counted: int, excluded: int
+) -> None:
+    assert size.measure(record) == size.Size(counted=counted, excluded=excluded)
+
+
+@pytest.mark.parametrize(
+    ("record", "path"),
+    [
+        ("tests/helper.py => app/service.py", "app/service.py"),
+        ("{tests => app}/helper.py", "app/helper.py"),
+        ("backend/{tests/unit => src/app}/x.py", "backend/src/app/x.py"),
+        ("backend/src/{app => }/y.py", "backend/src/y.py"),
+        ("backend/src/{ => app}/y.py", "backend/src/app/y.py"),
+        ("backend/src/a.py", "backend/src/a.py"),
+    ],
+)
+def test_destination_of_a_numstat_path(record: str, path: str) -> None:
+    assert size.destination(record) == path
+
+
 def test_measure_of_an_empty_diff_is_zero() -> None:
     assert size.measure("") == size.Size(counted=0, excluded=0)
