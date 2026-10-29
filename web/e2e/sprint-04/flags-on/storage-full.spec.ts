@@ -21,7 +21,7 @@ test.beforeEach(({}, testInfo) => {
 });
 
 test.describe('E2E-04-08 Over-limit messages Q-10, storage full (flag on)', () => {
-  test('Storage full: U-01 says how much is used of the limit, at 320 px', async ({ page }, testInfo) => {
+  test('E2E-04-08 Storage full: U-01 says how much is used of the limit, at 320 and 360 px', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await signInByLink(page);
     // Declared, never-sent upload sessions fill the storage to just under the limit.
@@ -51,5 +51,11 @@ test.describe('E2E-04-08 Over-limit messages Q-10, storage full (flag on)', () =
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
     await expectNoBlockingA11yViolations(page, testInfo, 'Q-10-storage');
     await expectTargetsAtLeast24(page, testInfo, 'Q-10-storage');
+    // The same message at 360 px (G04-08 (a), (b), (d); QA-VERIFY04R3-06).
+    await page.setViewportSize({ width: 360, height: 740 });
+    await expect(alert).toContainText('Nothing from this file was saved.');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    await expectNoBlockingA11yViolations(page, testInfo, 'Q-10-storage-360');
+    await expectTargetsAtLeast24(page, testInfo, 'Q-10-storage-360');
   });
 });

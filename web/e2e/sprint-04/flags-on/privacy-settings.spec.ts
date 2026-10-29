@@ -42,6 +42,8 @@ test.describe('@M5 @story-ST-071 Privacy settings (flags on)', () => {
       await page.reload();
       await expect(page.getByRole('radio', { name: '30 days' })).toBeChecked();
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      await expectNoBlockingA11yViolations(page, testInfo, `R-01-${width}`); // G04-08 (a), (d)
+      await expectTargetsAtLeast24(page, testInfo, `R-01-${width}`); // G04-08 (b)
     }
   });
 });
