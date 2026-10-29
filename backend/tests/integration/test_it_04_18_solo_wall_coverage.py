@@ -8,8 +8,9 @@ a solo+wall cell with fewer than 2 drills) and files -> plan domain (``Drill.fro
 Negative first: a copy of the library with only ``pb.drive.wall-margin`` left as the solo+wall
 AN-04 drill (the VERIFY-04-r3 library) fails naming that cell. Then the library passes with >= 2
 drills in every solo+wall row, and for each plan target a plan for {1 player, 30 min, 3
-sessions/week, wall, intermediate} swaps its weakness drill for another drill citing the same
-target (VERIFY-04-r3 got ``409 no_alternative`` there). Written red first.
+sessions/week, wall, intermediate} that trains it with a second weakness swaps each of its drills
+for another drill citing the same target (VERIFY-04-r3 got ``409 no_alternative`` there).
+Written red first.
 """
 
 from __future__ import annotations
@@ -67,9 +68,9 @@ def test_it_04_18_a_library_with_one_solo_wall_an04_drill_fails_naming_the_cell(
     for path, doc in _documents(copy):
         solo_wall = doc["players"] == 1 and set(doc["needs"]) <= {"wall"}
         warm_up = "warm-up" in doc["skills"]
-        if solo_wall and not warm_up and "AN-04" in doc["target_metrics"]:
-            if doc["id"] != "pb.drive.wall-margin":
-                path.unlink()
+        an04 = "AN-04" in doc["target_metrics"]
+        if solo_wall and not warm_up and an04 and doc["id"] != "pb.drive.wall-margin":
+            path.unlink()
     rc, out = run(capsys, copy)
     assert rc == 1, out
     assert "FAIL AN-04 × intermediate × solo+wall: drills: 1" in fails(out), out
@@ -88,24 +89,41 @@ def test_it_04_18_the_library_has_two_solo_wall_drills_per_target(
     assert all(n >= 2 for n in rows.values()), rows
 
 
-@pytest.mark.parametrize("target", TARGETS)
+def _swap_cases() -> list[tuple[str, int]]:
+    """(target, session number) for every session of a two-weakness plan (see the test)."""
+    return [(t, n) for t in TARGETS for n in range(G04_01.sessions_per_week * 2)]
+
+
+@pytest.mark.parametrize(("target", "n"), _swap_cases())
 def test_it_04_18_a_solo_wall_plan_swaps_its_weakness_drill_for_the_same_target(
-    target: str,
+    target: str, n: int
 ) -> None:
+    """G04-01 shape: the plan trains more than one weakness (rank 1 ``target``, rank 2 the next
+    target), so each session holds one drill of ``target`` at most; every one of them swaps,
+    each on a fresh plan (a swapped-out drill is never offered again in its plan)."""
     library = [Drill.from_document(doc) for _, doc in _documents(LIBRARY)]
-    weakness = PlanWeakness(f"w-{target}", target, 1)
-    plan = assemble([weakness], G04_01, library)
+    other = TARGETS[(TARGETS.index(target) + 1) % len(TARGETS)]
+    weaknesses = [PlanWeakness("w-1", target, 1), PlanWeakness("w-2", other, 2)]
+    plan = assemble(weaknesses, G04_01, library)
     assert isinstance(plan, TrainingPlan), plan
-    first = plan.sessions[0]
-    old = first.assignments[1]
-    assert old.weakness_id == weakness.id
-    swapped = plan.swap(
-        week=first.week, index=first.index, position=2, library=library, cited=set(TARGETS)
-    )
-    assert isinstance(swapped, DrillSwapped)
-    assert (swapped.from_drill, swapped.target) == (old.drill.ref, target)
-    assert swapped.to_drill != old.drill.ref
-    new = plan.sessions[0].assignments[1]
-    assert new.drill.ref == swapped.to_drill
-    assert new.drill.fits(G04_01) and target in new.drill.plan_targets
-    assert plan.sessions[0].total_minutes <= 30
+    assert plan.unfitted == (), plan.unfitted
+    session = plan.sessions[n]
+    for x in session.assignments:
+        if x.weakness_id != "w-1":
+            continue
+        swapped = plan.swap(
+            week=session.week,
+            index=session.index,
+            position=x.position,
+            library=library,
+            cited=set(TARGETS),
+        )
+        assert isinstance(swapped, DrillSwapped)
+        assert (swapped.from_drill, swapped.target) == (x.drill.ref, target)
+        assert swapped.to_drill != x.drill.ref
+        new = plan.sessions[n].assignments[x.position - 1]
+        assert new.drill.ref == swapped.to_drill
+        assert new.drill.fits(G04_01)
+        assert target in new.drill.plan_targets
+        assert plan.sessions[n].total_minutes <= G04_01.minutes_budget
+        plan = assemble(weaknesses, G04_01, library)

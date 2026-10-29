@@ -32,9 +32,9 @@ def one_solo_wall_drill(ctx: dict[str, Any], tmp_path: Path, kept: str, metric: 
     for path in sorted(p for p in copy.rglob("*.json") if p.name != "schema.json"):
         doc = json.loads(path.read_text(encoding="utf-8"))
         solo_wall = doc["players"] == 1 and set(doc["needs"]) <= {"wall"}
-        if solo_wall and "warm-up" not in doc["skills"] and metric in doc["target_metrics"]:
-            if doc["id"] != kept:
-                path.unlink()
+        trains = "warm-up" not in doc["skills"] and metric in doc["target_metrics"]
+        if solo_wall and trains and doc["id"] != kept:
+            path.unlink()
     ctx["path"] = copy
 
 
