@@ -53,7 +53,7 @@ def stack(tmp_path: Path) -> Iterator[Stack]:
 
 
 # ---------------------------------------------------------------- IT-04-11 (fake API)
-def test_a_stack_without_the_plan_api_fails_reading_the_plan_and_generates_none(
+def test_it_04_11_a_stack_without_the_plan_api_fails_reading_the_plan_and_generates_none(
     stack: Stack,
 ) -> None:
     stack.fake.plan_api = False
@@ -62,7 +62,7 @@ def test_a_stack_without_the_plan_api_fails_reading_the_plan_and_generates_none(
     assert stack.fake.plan_posts() == [], stack.paths()
 
 
-def test_an_existing_plan_is_kept_and_no_plan_is_generated(stack: Stack) -> None:
+def test_it_04_11_an_existing_plan_is_kept_and_no_plan_is_generated(stack: Stack) -> None:
     stack.fake.plans.append({"id": "plan-kept", "preferences": {"players_available": 4}})
     res = stack.demo()
     assert res.returncode == 0, (res.stdout, res.stderr)
@@ -70,7 +70,7 @@ def test_an_existing_plan_is_kept_and_no_plan_is_generated(stack: Stack) -> None
     assert plan_id_in(res.stdout) == "plan-kept", res.stdout
 
 
-def test_the_plan_is_generated_after_the_match_and_its_stats(stack: Stack) -> None:
+def test_it_04_11_the_plan_is_generated_after_the_match_and_its_stats(stack: Stack) -> None:
     res = stack.demo()
     assert res.returncode == 0, res.stderr
     paths = stack.paths()
@@ -79,7 +79,7 @@ def test_the_plan_is_generated_after_the_match_and_its_stats(stack: Stack) -> No
 
 
 # ---------------------------------------------------------------- IT-04-11 (live stack)
-def test_live_stack_one_plan_and_a_rerun_keeps_its_id() -> None:
+def test_it_04_11_live_stack_one_plan_and_a_rerun_keeps_its_id() -> None:
     live = live_stack()
     first, again = run_demo(*live.demo_args()), run_demo(*live.demo_args())
     assert (first.returncode, again.returncode) == (0, 0), (first.stderr[-2000:], again.stderr)

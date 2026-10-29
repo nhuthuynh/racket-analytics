@@ -59,3 +59,12 @@ def pytest_bdd_apply_tag(tag: str, function: object) -> bool:
     """Gherkin tags become `bdd_tag(name=...)` markers, so `--strict-markers` stays on."""
     pytest.mark.bdd_tag(name=tag)(function)
     return True
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Each test's marker names become its `markers` JUnit property, as in backend/conftest.py,
+    so `junit_rate.py --require <marker>` sees them (QA-VERIFY04R3-02-08)."""
+    for item in items:
+        names = sorted({mark.name for mark in item.iter_markers()})
+        item.user_properties.append(("markers", " ".join(names)))
