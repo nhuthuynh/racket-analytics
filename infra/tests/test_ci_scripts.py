@@ -321,6 +321,67 @@ def test_between_100_and_400_lines_warns_but_passes(size_repo: Path) -> None:
     assert "::warning" in res.stdout
 
 
+def test_production_code_over_400_lines_fails_even_with_tests_beside_it(size_repo: Path) -> None:
+    """CI-SIZE-PROD-ONLY (PO 2026-10-28): excluded lines never hide oversize production code."""
+    add_lines(size_repo, "backend/src/big.py", 401)
+    add_lines(size_repo, "backend/tests/unit/test_big.py", 500)
+    res = run("check_pr_size.py", "--base", "main", cwd=size_repo, env={"PR_LABELS": "[]"})
+    assert res.returncode == 1, res.stdout
+    assert "pr-size: 401 changed lines of production code" in res.stdout
+    assert "500 excluded lines" in res.stdout
+
+
+def test_tests_and_docs_do_not_count_but_are_reported(size_repo: Path) -> None:
+    """CI-SIZE-PROD-ONLY (PO 2026-10-28): tests and docs are excluded, and their total printed."""
+    add_lines(size_repo, "infra/tests/test_big.py", 450)
+    add_lines(size_repo, "web/tests/unit/a.test.ts", 100)
+    add_lines(size_repo, "docs/process/notes.md", 200)
+    add_lines(size_repo, "backend/src/small.py", 20)
+    res = run("check_pr_size.py", "--base", "main", cwd=size_repo, env={"PR_LABELS": "[]"})
+    assert res.returncode == 0, res.stdout
+    assert "pr-size: 20 changed lines of production code" in res.stdout
+    assert "750 excluded lines (tests, docs, lockfiles, fixtures)" in res.stdout
+    assert "::warning" not in res.stdout
+
+
+def on_main(repo: Path, rel: str, n: int) -> None:
+    """`rel` with `n` lines lands on main before the PR branch, which then catches up."""
+    git(repo, "checkout", "-q", "main")
+    add_lines(repo, rel, n)
+    git(repo, "checkout", "-q", "pr")
+    git(repo, "merge", "-q", "--ff-only", "main")
+
+
+def move_and_edit(repo: Path, src: str, dst: str, edited: int) -> None:
+    (repo / dst).parent.mkdir(parents=True, exist_ok=True)
+    git(repo, "mv", src, dst)
+    body = (repo / dst).read_text().splitlines(keepends=True)
+    body[:edited] = [f"edited {i}\n" for i in range(edited)]
+    (repo / dst).write_text("".join(body))
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "move")
+
+
+@pytest.mark.parametrize("dst", ["app/service.py", "app/helper.py"])
+def test_a_test_file_moved_into_production_code_counts_in_full(size_repo: Path, dst: str) -> None:
+    """PE-SIZEPROD-R1-01: a rename out of tests/ cannot hide the production lines it adds."""
+    on_main(size_repo, "tests/helper.py", 1000)
+    move_and_edit(size_repo, "tests/helper.py", dst, 450)
+    res = run("check_pr_size.py", "--base", "main", cwd=size_repo, env={"PR_LABELS": "[]"})
+    assert res.returncode == 1, res.stdout
+    assert "pr-size: 1000 changed lines of production code" in res.stdout
+    assert "1000 excluded lines" in res.stdout
+
+
+def test_a_moved_production_file_counts_as_deleted_plus_added(size_repo: Path) -> None:
+    """PE-SIZEPROD-R1-01: renames are not detected, so a move counts both sides (ADR 0054)."""
+    on_main(size_repo, "backend/src/old.py", 150)
+    move_and_edit(size_repo, "backend/src/old.py", "backend/src/new.py", 0)
+    res = run("check_pr_size.py", "--base", "main", cwd=size_repo, env={"PR_LABELS": "[]"})
+    assert res.returncode == 0, res.stdout
+    assert "pr-size: 300 changed lines of production code" in res.stdout
+
+
 # ================================================================ check_first_route_js (NFR-015)
 def next_build(tmp: Path, page_bytes: int) -> Path:
     nxt = tmp / ".next"

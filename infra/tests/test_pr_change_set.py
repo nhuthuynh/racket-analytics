@@ -57,4 +57,6 @@ def test_changes_that_reached_the_base_branch_later_are_not_judged(repo: Path, s
 
 
 def test_the_size_counts_only_the_pr_change_set(repo: Path) -> None:
-    assert "pr-size: 1 changed lines" in run("check_pr_size.py", repo, "main").stdout
+    out = run("check_pr_size.py", repo, "main").stdout  # the PR: 1 docs line, excluded
+    assert "pr-size: 0 changed lines of production code" in out
+    assert "1 excluded lines" in out
