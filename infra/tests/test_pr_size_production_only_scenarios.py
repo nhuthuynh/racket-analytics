@@ -1,7 +1,7 @@
 """Binds tests/features/pr_size_production_only.feature (CI-SIZE-PROD-ONLY; ST-003; NFR-077).
 
 Real git, the real `PR size (EP/ENG-04)` step of ci.yml (pr_checkout.py). PO decision
-2026-10-28: the 400-line limit counts production code only (ADR 0053).
+2026-10-28: the 400-line limit counts production code only (ADR 0054).
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PR size gate (EP/ENG-04, NFR-077): aim for ~100 changed lines; > 400 needs the EM's
-`size-waiver` label. Only production code counts (PO 2026-10-28, ADR 0053): tests, docs,
+`size-waiver` label. Only production code counts (PO 2026-10-28, ADR 0054): tests, docs,
 lockfiles, fixtures and snapshots are excluded, and their total is printed beside the count.
 Usage: PR_LABELS='[...]' check_pr_size.py --base origin/main [--head HEAD]
 Labels: the PR's current labels from the GitHub API when GITHUB_TOKEN, GITHUB_REPOSITORY and

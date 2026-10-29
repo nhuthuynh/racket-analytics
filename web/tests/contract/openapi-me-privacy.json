@@ -1,0 +1,9 @@
+{
+ "source": "backend create_app().openapi() at origin/main 0415be6: the R-01 operations, status codes only (bodies: live-privacy.json); regenerate with the command in docs/sprints/04/decisions/ST-071.md",
+ "paths": {
+  "/config/public": {"get": {"operationId": "public_config_config_public_get", "responses": ["200"]}},
+  "/me/retention": {"get": {"operationId": "get_retention_me_retention_get", "responses": ["200"]}, "put": {"operationId": "put_retention_me_retention_put", "responses": ["200", "422"]}},
+  "/me/training-consent": {"get": {"operationId": "get_training_consent_me_training_consent_get", "responses": ["200"]}, "put": {"operationId": "put_training_consent_me_training_consent_put", "responses": ["200", "422"]}},
+  "/matches": {"get": {"operationId": "list_matches_matches_get", "responses": ["200", "422"]}}
+ }
+}

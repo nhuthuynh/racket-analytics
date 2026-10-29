@@ -1,6 +1,6 @@
 """CI-SIZE-PROD-ONLY unit tests: which paths count toward the PR size limit (no git, no I/O).
 
-PO decision 2026-10-28 (ADR 0053): the 400-line limit counts production code only; tests,
+PO decision 2026-10-28 (ADR 0054): the 400-line limit counts production code only; tests,
 docs, lockfiles and fixtures are excluded but still reported.
 """
 

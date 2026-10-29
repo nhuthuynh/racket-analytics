@@ -161,6 +161,9 @@ export const API_ERROR_CODES = [
   // api-sprint-03 §6.1
   'no_consent',
   'invalid_label',
+  // api-sprint-04 §4 (FR-003)
+  'age_confirmation_required',
+  'under_age',
 ] as const;
 export type ServerErrorCode = (typeof API_ERROR_CODES)[number];
 export type ApiErrorCode = ServerErrorCode | 'network_error' | 'invalid_response' | 'unknown';

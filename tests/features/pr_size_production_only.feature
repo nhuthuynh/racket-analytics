@@ -1,7 +1,7 @@
 # Sprint 4, ticket CI-SIZE-PROD-ONLY (sre-devops-engineer). Written before the change.
 # Binding: infra/tests/test_pr_size_production_only_scenarios.py (runs the pr-policy steps of
 # .github/workflows/ci.yml against a real git checkout of the PR merge ref).
-# PO decision 2026-10-28: keep the 400-line limit, count only production code (ADR 0053).
+# PO decision 2026-10-28: keep the 400-line limit, count only production code (ADR 0054).
 @M0 @story-ST-003 @nfr-077 @ticket-CI-SIZE-PROD-ONLY
 Feature: The PR size check counts production code only
 

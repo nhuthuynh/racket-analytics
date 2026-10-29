@@ -1,0 +1,145 @@
+# Daily dependency audit (CI-DAILY-AUDIT; NFR-062; PO 2026-10-28; ADR 0053).
+# On 2026-10-21 main's CI went red overnight with no code change: advisory PYSEC-2026-4320 was
+# published against the locked certifi (fixed by #148). This job runs the same audits as the
+# `secrets-and-audit` job of ci.yml every day, before CI's nightly run, and
+# * upgrades each vulnerable Python package that has a fix version (`uv lock --upgrade-package`)
+#   and opens or updates ONE draft pull request from deps/security-audit;
+# * reports advisories without a fix version (and critical web advisories, which it never
+#   upgrades) in ONE issue.
+# It never merges and never applies a PR-policy label: the PR goes through the normal review and
+# merge gates. A PR pushed with GITHUB_TOKEN starts no other workflow, so the PR is a draft and CI
+# starts when a reviewer marks it ready for review (ADR 0053); every update makes it a draft again.
+name: Dependency audit
+
+on:
+  schedule:
+    - cron: "11 2 * * *" # 02:11 UTC, before nightly quality (02:43) and CI's nightly (03:17)
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: dependency-audit
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "22"
+  UV_VERSION: "0.8.17"
+  FORCE_COLOR: "0"
+
+jobs:
+  audit:
+    name: Audit dependencies, open the upgrade PR or the advisory issue
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write # push the deps/security-audit branch
+      pull-requests: write # open or update the draft pull request
+      issues: write # open or update the advisory issue
+    env:
+      BRANCH: deps/security-audit
+    # No job-level token, none persisted: uv, pip-audit and pnpm may run new packages' code (sdist
+    # builds). Only the push and gh steps get GH_TOKEN; the repo is public, so fetch needs none.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the upgrade branch is merged with main, never force-pushed
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install uv and pip-audit (the versions ci.yml uses)
+        run: pip install "uv==${UV_VERSION}" "pip-audit==2.10.1"
+      - name: Start from the upgrade branch merged with main (or from main)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git fetch origin "$BRANCH"
+            git checkout -B "$BRANCH" FETCH_HEAD
+            if ! git merge --no-edit origin/main; then
+              # The locks are re-upgraded below: take main's and redo the upgrade on top.
+              # Any other conflict fails the merge commit, so the job goes red for a human.
+              git checkout --theirs -- backend/uv.lock infra/uv.lock
+              git add backend/uv.lock infra/uv.lock
+              git -c core.editor=true merge --continue
+            fi
+          else
+            git checkout -B "$BRANCH"
+          fi
+          echo "OUT=$RUNNER_TEMP/deps-audit" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/deps-audit"
+      # Same export and pip-audit as ci.yml's `pip-audit (NFR-062)` step, written as JSON.
+      # pip-audit exits 1 when it finds a vulnerability; security_upgrade.py fails closed when
+      # a report is missing or unreadable, so any other failure still turns the job red.
+      - name: pip-audit backend (NFR-062)
+        working-directory: backend
+        run: |
+          uv export --color never --locked --no-dev --no-emit-project --format requirements-txt -o /tmp/req-backend.txt
+          pip-audit --requirement /tmp/req-backend.txt --strict --disable-pip --format json -o "$OUT/backend.json" || echo "pip-audit exit $?"
+      - name: pip-audit infra (CI-script and hook test tools)
+        working-directory: infra
+        run: |
+          uv export --color never --locked --no-emit-project --format requirements-txt -o /tmp/req-infra.txt
+          pip-audit --requirement /tmp/req-infra.txt --strict --disable-pip --format json -o "$OUT/infra.json" || echo "pip-audit exit $?"
+      - name: pnpm audit, critical (NFR-062)
+        working-directory: web
+        run: |
+          corepack enable
+          pnpm audit --prod --audit-level critical --json > "$OUT/web.json" || echo "pnpm audit exit $?"
+      - name: Upgrade vulnerable Python packages (scripts/ci/security_upgrade.py)
+        run: |
+          python3 scripts/ci/security_upgrade.py --root . \
+            --audit "backend=$OUT/backend.json" --audit "infra=$OUT/infra.json" \
+            --web-audit "$OUT/web.json" --date "$(date -u +%F)" --out-dir "$OUT/result"
+          git diff --stat -- backend/uv.lock infra/uv.lock
+      - name: Commit and push the upgrade branch
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- backend/uv.lock infra/uv.lock; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          B64="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" && echo "::add-mask::$B64"
+          export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $B64"
+          export GIT_CONFIG_KEY_1=core.hooksPath GIT_CONFIG_VALUE_1=/dev/null # no hook sees the token
+          git add backend/uv.lock infra/uv.lock
+          git commit --no-verify -q -m "fix(deps): $(cat "$OUT/result/pr-title.txt")" \
+            -m "Upgraded by .github/workflows/dependency-audit.yml (CI-DAILY-AUDIT, ADR 0053)."
+          git push --no-verify origin "HEAD:refs/heads/$BRANCH"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+      - name: Open or update the draft upgrade pull request
+        if: steps.push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="$(cat "$OUT/result/pr-title.txt")"
+          PR="$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$PR" ]; then
+            gh pr edit "$PR" --title "$title" --body-file "$OUT/result/pr-body.md"
+            gh pr ready "$PR" --undo || echo "PR #$PR is already a draft"
+          else
+            gh pr create --draft --base main --head "$BRANCH" --title "$title" --body-file "$OUT/result/pr-body.md" || { echo "::error::gh pr create failed; an admin must enable 'Allow GitHub Actions to create and approve pull requests' (docs/process/ci-cd.md 2.1)"; exit 1; }
+          fi
+      - name: Open or update the advisory issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f "$OUT/result/issue-body.md" ]; then
+            echo "no advisory without an automatic fix"
+            exit 0
+          fi
+          TITLE="$(cat "$OUT/result/issue-title.txt")"
+          export TITLE
+          N="$(gh issue list --state open --search "in:title DEPS-AUDIT" --json number,title --jq 'map(select(.title == env.TITLE)) | .[0].number // empty')"
+          if [ -n "$N" ]; then
+            gh issue edit "$N" --body-file "$OUT/result/issue-body.md"
+          else
+            gh issue create --title "$TITLE" --body-file "$OUT/result/issue-body.md"
+          fi

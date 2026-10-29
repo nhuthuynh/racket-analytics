@@ -8,6 +8,7 @@
 // A file button is the only way to choose a video: no dragging needed (SC 2.5.7, NFR-030).
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { ErrorSummary } from '@/components/ErrorSummary';
+import { storageFullMessage } from '@/lib/api/storage-quota';
 import type { Match, UploadPolicy } from '@/lib/api/types';
 import { formatBytes, formatDurationCap, formatProgressAmount, formatSizeCap } from '@/lib/format';
 import { setActiveUpload } from '@/lib/upload/activity';
@@ -183,13 +184,14 @@ export function MatchUpload({
               return;
             }
             stopTracking();
+            // C-35 (PD-R3-04): every refusal that carries a support reference shows it.
+            const ref = detail?.supportRef ? ` Reference: ${detail.supportRef}` : '';
             // C-03 (PD-R3V-01): a server error or a dropped connection can be retried. The
             // transfer is kept, so "Try again" continues it from the server's offset (HEAD, then
             // PATCH; tus [AQS/STACK-06]) instead of starting a new upload, and the panel shows the
             // stopped progress rather than "No video yet" (flows-sprint-01 §6 "Upload states").
             if (reason === 'server' || reason === 'network') {
               setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'stopped' } : v));
-              const ref = detail?.supportRef ? ` Reference: ${detail.supportRef}` : '';
               setProblem({
                 nothingSaved: false,
                 field: TRY_AGAIN,
@@ -208,6 +210,12 @@ export function MatchUpload({
               setProblem({ message: reason === 'too_large' ? rejectionMessage('too_large', policy) : NOT_A_VIDEO, nothingSaved: true });
               return;
             }
+            // Q-10 (ST-072b): the video does not fit in the player's storage; nothing was stored.
+            if (reason === 'storage_full') {
+              setView({ kind: 'idle' });
+              setProblem({ nothingSaved: true, href: '/matches', message: `${storageFullMessage(detail?.quota ?? null)}${ref}` });
+              return;
+            }
             // Refused before any byte was sent (quota, creation rate, or another upload already
             // open): nothing was started, so no progress or "leaving" copy, just the chooser
             // (PD-R2-02).
@@ -216,8 +224,6 @@ export function MatchUpload({
             } else {
               setView((v) => (v.kind === 'transfer' ? { ...v, mode: 'stopped' } : v));
             }
-            // C-35 (PD-R3-04): every refusal that carries a support reference shows it.
-            const ref = detail?.supportRef ? ` Reference: ${detail.supportRef}` : '';
             setProblem({
               nothingSaved: false,
               ...(reason === 'quota' ? { href: '/matches' } : {}),

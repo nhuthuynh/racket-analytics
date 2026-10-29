@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 
 import pytest
-from conftest import SCRIPTS_DIR
+from conftest import REPO_ROOT, SCRIPTS_DIR
 
 sys.path.insert(0, str(SCRIPTS_DIR / "ci"))
 import check_readme_quickstart as c
@@ -68,3 +69,75 @@ def test_section_stops_at_the_next_heading_of_the_same_level() -> None:
     section = c.quick_start_section(text)
     assert "Troubleshooting" in section
     assert "make elsewhere" not in section
+
+
+# ST-066: the "Try the prototype" walkthrough (QD §7; goal G04-06).
+
+WALKTHROUGH = """\
+### Try the prototype
+
+1. `make up`, then `make demo`.
+2. Open the stats URL it prints (`https://localhost:3000/matches/<id>/stats`).
+3. Open `https://localhost:3000/plan`.
+4. Read a drill's **Why** and press **Show me**.
+5. Press **Mark done** on a session.
+6. Press **Not for me** on a drill.
+7. `make down`.
+"""
+
+
+def test_a_walkthrough_missing_a_step_names_that_step() -> None:
+    section = c.quick_start_section(readme(WALKTHROUGH.replace("**Not for me**", "Swap")))
+    assert c.walkthrough_problems(section) == [
+        "the 'Try the prototype' walkthrough does not name step: Not for me (`Not for me`)"
+    ]
+
+
+def test_a_section_without_the_walkthrough_is_reported_once() -> None:
+    assert c.walkthrough_problems(c.quick_start_section(readme("`make up`"))) == [
+        "README 'Run it locally' has no '### Try the prototype' walkthrough"
+    ]
+
+
+def test_a_step_out_of_order_is_reported() -> None:
+    swapped = WALKTHROUGH.replace("5. Press **Mark done** on a session.\n", "").replace(
+        "2. Open", "2. Press **Mark done** on a session. Open"
+    )
+    assert c.walkthrough_problems(c.quick_start_section(readme(swapped))) == [
+        "the 'Try the prototype' walkthrough names Mark done (`Mark done`) before Show me"
+    ]
+
+
+def test_a_complete_walkthrough_has_no_problems() -> None:
+    assert c.walkthrough_problems(c.quick_start_section(readme(WALKTHROUGH))) == []
+
+
+def test_the_walkthrough_stops_at_the_next_subsection() -> None:
+    text = readme(WALKTHROUGH.replace("7. `make down`.", "### Later\n\n`make down`"))
+    assert c.walkthrough_problems(c.quick_start_section(text)) == [
+        "the 'Try the prototype' walkthrough does not name step: make down (`make down`)"
+    ]
+
+
+def test_main_reports_walkthrough_problems_with_rc_1(tmp_path, capsys) -> None:
+    (tmp_path / "Makefile").write_text(MAKEFILE)
+    (tmp_path / "infra").mkdir()
+    (tmp_path / "infra" / "compose.yaml").write_text(COMPOSE)
+    (tmp_path / "README.md").write_text(readme("`make up`"))
+    assert c.main(["--repo", str(tmp_path)]) == 1
+    assert "no '### Try the prototype' walkthrough" in capsys.readouterr().out
+
+
+@pytest.mark.integration
+def test_the_repository_readme_passes_the_checker_with_its_walkthrough() -> None:
+    res = subprocess.run(
+        [sys.executable, str(SCRIPTS_DIR / "ci" / "check_readme_quickstart.py"), "--repo", "."],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert (res.returncode, res.stdout) == (0, "readme-quickstart: ok\n"), res.stdout + res.stderr
+    section = c.quick_start_section((REPO_ROOT / "README.md").read_text())
+    assert c.walkthrough_problems(section) == []

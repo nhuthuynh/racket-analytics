@@ -1,4 +1,4 @@
-# 0053. The PR size gate counts production code only; tests, docs and lockfiles are excluded
+# 0054. The PR size gate counts production code only; tests, docs and lockfiles are excluded
 
 - **Status:** Accepted (PO decision 2026-10-28, in chat; the sre-devops-engineer owns the CI contract, ADR 0014).
 - **Date:** 2026-10-28 (Sprint 4, ticket CI-SIZE-PROD-ONLY)

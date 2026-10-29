@@ -374,7 +374,7 @@ def test_a_test_file_moved_into_production_code_counts_in_full(size_repo: Path, 
 
 
 def test_a_moved_production_file_counts_as_deleted_plus_added(size_repo: Path) -> None:
-    """PE-SIZEPROD-R1-01: renames are not detected, so a move counts both sides (ADR 0053)."""
+    """PE-SIZEPROD-R1-01: renames are not detected, so a move counts both sides (ADR 0054)."""
     on_main(size_repo, "backend/src/old.py", 150)
     move_and_edit(size_repo, "backend/src/old.py", "backend/src/new.py", 0)
     res = run("check_pr_size.py", "--base", "main", cwd=size_repo, env={"PR_LABELS": "[]"})
