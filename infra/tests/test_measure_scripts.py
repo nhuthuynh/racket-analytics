@@ -223,6 +223,53 @@ def test_junit_rate_cli_exit_code_follows_ok(tmp_path: Path) -> None:
     assert json.loads(good.stdout)["rate"] == 1.0
 
 
+MARKED = """<?xml version="1.0"?>
+<testsuites><testsuite name="pytest">
+ <testcase classname="tests.unit.coaching.test_weakness" name="test_golden_a">
+  <properties><property name="markers" value="unit weakness_golden" /></properties>
+ </testcase>
+ <testcase classname="tests.unit.coaching.test_weakness" name="test_ranking">
+  <properties><property name="markers" value="unit" /><property name="note" value="plan_property" />
+  </properties>
+ </testcase>
+ <testcase classname="tests.unit.coaching.test_training_plan" name="test_property">
+  <properties><property name="markers" value="plan_property unit" /></properties>
+  <failure message="falsified" />
+ </testcase>
+</testsuite></testsuites>
+"""
+
+
+# QA-VERIFY04R3-02-08 (G04-03): `--require <marker>` reads the `markers` property; negative first.
+def test_junit_rate_a_marker_no_selected_case_carries_is_missing(tmp_path: Path) -> None:
+    result = m.junit_rate([_xml(tmp_path, MARKED)], include=r"test_ranking", require=["golden"])
+    assert result["missing"] == ["golden"]
+    assert result["ok"] is False
+
+
+def test_junit_rate_reads_only_the_markers_property(tmp_path: Path) -> None:
+    result = m.junit_rate([_xml(tmp_path, MARKED)], include=r"test_ranking", require=["note"])
+    assert result["missing"] == ["note"]
+    result = m.junit_rate([_xml(tmp_path, MARKED)], include=r"test_ranking",
+                          require=["plan_property"])  # fmt: skip
+    assert result["missing"] == ["plan_property"]
+
+
+def test_junit_rate_require_matches_a_marker_of_a_selected_case(tmp_path: Path) -> None:
+    result = m.junit_rate([_xml(tmp_path, MARKED)], include=r"test_weakness",
+                          require=["weakness_golden"])  # fmt: skip
+    assert (result["selected"], result["passed"], result["missing"]) == (2, 2, [])
+    assert result["ok"] is True
+
+
+def test_junit_rate_include_selects_by_marker_and_keeps_failures(tmp_path: Path) -> None:
+    result = m.junit_rate([_xml(tmp_path, MARKED)], include=r"plan_property",
+                          require=["plan_property"])  # fmt: skip
+    assert (result["selected"], result["failed"], result["missing"]) == (1, 1, [])
+    assert result["failures"] == ["|tests.unit.coaching.test_training_plan::test_property"]
+    assert result["ok"] is False
+
+
 def test_live_scripts_print_help_without_a_stack() -> None:
     for script in ("live_goal.py", "api_latency.py"):
         res = subprocess.run(
