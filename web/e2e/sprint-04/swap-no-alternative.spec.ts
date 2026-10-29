@@ -31,10 +31,8 @@ test.describe('@M0 @story-ST-065 Swap with no alternative', () => {
     expect(JSON.stringify(after.sessions)).toBe(JSON.stringify(plan.sessions));
   });
 
-  // Red first, waiting on defect QA-ST065-01 (decisions/ST-065.md): in Chromium focus lands on
-  // <body> after each of the three, because the opener is focused while the modal <dialog> is
-  // still open (inert page) and the dialog is then removed without restoring focus.
-  test('E2E-04-04 focus returns to "Not for me" after Close, Cancel and Esc', { tag: '@red-until-QA-ST065-01' }, async ({ page }) => {
+  // Defect QA-ST065-01 (decisions/ST-065.md), red first in Chromium: focus landed on <body>.
+  test('E2E-04-04 focus returns to "Not for me" after Close, Cancel and Esc', async ({ page }) => {
     await planReadyAccount(page);
     await page.goto(PLAN_PATH);
     const opener = drillRow(page, CITED).getByRole('button', { name: `Not for me, ${CITED}` });

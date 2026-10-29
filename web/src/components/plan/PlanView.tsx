@@ -212,6 +212,12 @@ function PlanBody({
   useEffect(() => {
     if (focusId) document.getElementById(`drill-${focusId}`)?.focus();
   }, [focusId, plan]);
+  // Back to "Not for me" once the dialog has left the page: while a modal <dialog> is open the
+  // page is inert and Chromium refuses the focus (QA-ST065-01; flows-sprint-04 §9).
+  const [returnTo, setReturnTo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!swapping && returnTo) document.getElementById(`not-for-me-${returnTo}`)?.focus();
+  }, [swapping, returnTo]);
 
   async function swap(a: DrillAssignment, reason: string) {
     const r = await followApi.swap(a.id, reason);
@@ -296,6 +302,7 @@ function PlanBody({
                           // the next one, and focus is not pulled back to the last swapped row.
                           follow.say(null);
                           setFocusId(null);
+                          setReturnTo(null);
                           setSwapping(a);
                         }}
                       />
@@ -315,7 +322,7 @@ function PlanBody({
             const id = swapping.id;
             setSwapping(null);
             if (reload) onPlanChanged();
-            else document.getElementById(`not-for-me-${id}`)?.focus();
+            else setReturnTo(id);
           }}
         />
       ) : null}
