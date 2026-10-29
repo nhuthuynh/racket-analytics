@@ -63,16 +63,24 @@ weed_bin() {
     [[ "$(uname -s)-$(uname -m)" == "Linux-x86_64" ]] \
       || die "no pinned download for $(uname -s)-$(uname -m); install SeaweedFS $WEED_VERSION and set WEED_BIN"
     mkdir -p "$CACHE_BIN"
-    local tgz="$CACHE_BIN/weed-$WEED_VERSION.tgz"
-    echo "dev-objectstore: downloading SeaweedFS $WEED_VERSION" >&2
-    curl -fsSL -o "$tgz" \
-      "https://github.com/seaweedfs/seaweedfs/releases/download/$WEED_VERSION/linux_amd64.tar.gz" \
-      || die "download failed (see docs/process/ci-cd.md, 'Local services without Docker')"
-    echo "$WEED_SHA256_LINUX_AMD64  $tgz" | sha256sum -c --quiet - \
-      || { rm -f "$tgz"; die "sha256 mismatch for SeaweedFS download; refusing to run it"; }
-    tar -xzf "$tgz" -C "$CACHE_BIN" weed
-    mv "$CACHE_BIN/weed" "$bin"
-    rm -f "$tgz"
+    # Parallel test workers (pytest-xdist, CI-INFRA-BUDGET) share this cache: download one at a
+    # time, and re-check under the lock so only the first worker fetches. The lock is released
+    # when this function's subshell exits, also on die.
+    exec 9>"$CACHE_BIN/.weed-download.lock"
+    flock 9
+    if [[ ! -x "$bin" ]]; then
+      local tgz="$CACHE_BIN/weed-$WEED_VERSION.tgz"
+      echo "dev-objectstore: downloading SeaweedFS $WEED_VERSION" >&2
+      curl -fsSL -o "$tgz" \
+        "https://github.com/seaweedfs/seaweedfs/releases/download/$WEED_VERSION/linux_amd64.tar.gz" \
+        || { rm -f "$tgz"; die "download failed (see docs/process/ci-cd.md, 'Local services without Docker')"; }
+      echo "$WEED_SHA256_LINUX_AMD64  $tgz" | sha256sum -c --quiet - \
+        || { rm -f "$tgz"; die "sha256 mismatch for SeaweedFS download; refusing to run it"; }
+      tar -xzf "$tgz" -C "$CACHE_BIN" weed
+      mv "$CACHE_BIN/weed" "$bin"
+      rm -f "$tgz"
+    fi
+    exec 9>&-
   fi
   echo "$bin"
 }
