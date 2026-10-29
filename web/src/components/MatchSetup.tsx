@@ -10,6 +10,7 @@ import { ErrorSummary } from '@/components/ErrorSummary';
 import { PageTitle } from '@/components/PageTitle';
 import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
+import { matchLimitMessage } from '@/lib/api/quota';
 import type { ApiFieldError, UploadPolicy } from '@/lib/api/types';
 import { formatBytes, formatDurationCap, formatSizeCap } from '@/lib/format';
 import { looksLikeContactDetails } from '@/lib/setup/contact';
@@ -170,6 +171,8 @@ export function MatchSetup({
         dispatch({ type: 'errors', errors: fromServerFields(error.fields, answers) });
       } else if (error.status === 401) {
         navigate('/');
+      } else if (error.status === 429 && error.code === 'rate_limited') {
+        setGeneral(matchLimitMessage(error.retryAt)); // Q-10 (ST-072b); answers kept, no auto-retry
       } else {
         setGeneral(
           error.status === 0

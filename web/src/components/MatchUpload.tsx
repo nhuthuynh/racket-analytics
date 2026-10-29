@@ -8,6 +8,7 @@
 // A file button is the only way to choose a video: no dragging needed (SC 2.5.7, NFR-030).
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { ErrorSummary } from '@/components/ErrorSummary';
+import { storageFullMessage } from '@/lib/api/quota';
 import type { Match, UploadPolicy } from '@/lib/api/types';
 import { formatBytes, formatDurationCap, formatProgressAmount, formatSizeCap } from '@/lib/format';
 import { setActiveUpload } from '@/lib/upload/activity';
@@ -206,6 +207,13 @@ export function MatchUpload({
             if (reason === 'not_a_video' || reason === 'too_large') {
               setView({ kind: 'idle' });
               setProblem({ message: reason === 'too_large' ? rejectionMessage('too_large', policy) : NOT_A_VIDEO, nothingSaved: true });
+              return;
+            }
+            // Q-10 (ST-072b): the video does not fit in the player's storage; nothing was stored.
+            if (reason === 'storage_full') {
+              setView({ kind: 'idle' });
+              const ref = detail?.supportRef ? ` Reference: ${detail.supportRef}` : '';
+              setProblem({ nothingSaved: true, href: '/matches', message: `${storageFullMessage(detail?.quota ?? null)}${ref}` });
               return;
             }
             // Refused before any byte was sent (quota, creation rate, or another upload already

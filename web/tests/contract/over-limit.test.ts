@@ -19,7 +19,8 @@ const live = JSON.parse(readFileSync(new URL('./live-over-limit.json', import.me
 };
 const BASE = 'http://api.test/api';
 const server = setupServer();
-const api = createApiClient({ baseUrl: BASE });
+// Late-bound fetch: MSW patches globalThis.fetch in beforeAll, after this module loads.
+const api = createApiClient({ baseUrl: BASE, fetch: (input, init) => fetch(input, init) });
 const NEW = { format: 'singles', scoring_system: 'side_out', played_on: '2026-10-29', participants: [] } as const;
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
