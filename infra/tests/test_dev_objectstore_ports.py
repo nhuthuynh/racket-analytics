@@ -127,12 +127,14 @@ def real_weed(tmp_path: Path) -> str:
 HOLDER_WRAPPER = textwrap.dedent(
     """\
     #!/usr/bin/env bash
-    # First start only: occupy the filer port (as a parallel weed would), then run real weed.
+    # First start only: occupy the master port (as a parallel weed would), then run real weed.
+    # The master binds first, so weed dies within ~0.1 s (the filer port, as in run 40874800467,
+    # fails the same way but only after ~20 s, which the 10-minute infra job cannot spare).
     set -euo pipefail
     if [[ ! -e "$WRAP_DIR/held" ]]; then
       touch "$WRAP_DIR/held"
       port=""
-      for a in "$@"; do [[ "$a" == -filer.port=* ]] && port="${a#-filer.port=}"; done
+      for a in "$@"; do [[ "$a" == -master.port=* ]] && port="${a#-master.port=}"; done
       "$WRAP_PY" -c '
     import socket, sys, time
     s = socket.socket(); s.bind(("127.0.0.1", int(sys.argv[1]))); s.listen()
@@ -170,7 +172,7 @@ def test_real_weed_survives_a_port_taken_by_another_process(tmp_path: Path) -> N
             timeout=240,
             check=False,
         )
-        assert (wrap_dir / "bound").exists(), "the holder never took the filer port"
+        assert (wrap_dir / "bound").exists(), "the holder never took the master port"
         assert res.returncode == 0, res.stderr
         assert "address already in use" in res.stderr  # real SeaweedFS log line was seen
         assert "port collision, retry 1/3 with fresh ports" in res.stderr
