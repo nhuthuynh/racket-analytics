@@ -55,3 +55,18 @@
 | Open blocker/major | **0** (QA-VERIFY04R4-01 Open then Fixed in this PR) | `open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 0, `open 0` |
 | CI on `main` | green at `c83145c` (run 41009129548); run 41028026459 at `22ca756c` still running at writing time; #179's merge gate green | GitHub `actions/runs` |
 | Next | VERIFY-04-r5 (G04-11, E1) and TCR rows 11 and 14 (E2), both due 2026-11-02 | retro §11 |
+
+## Fourth close status (2026-10-30, `4095937e`)
+
+| Date | Done | PRs |
+|---|---|---|
+| 2026-10-30 | RETRO-04 third close (#180, 09:47). VERIFY-04-r5 at `4095937`: **12 of 12**. RETRO-04 fourth close (this PR) folds #181 in | #180, #181 (folded), this PR |
+
+| Item | Result | Evidence |
+|---|---|---|
+| Goal | **Met: 12 of 12** (VERIFY-04-r5 at `4095937`, live, flags off and on). Human-gated rows still wait on P15, P16, P7, P8, P6, P10 and P11 (not goal metrics) | `sprint-report.md` §1.0, §14 |
+| Units | 48 committed / 48 implemented / 48 DoD-done | `status.json` totals |
+| PRs | 74 merged, all with both verdicts on the merged head and `ci-gate` green | `merged_verdict.py` rc 0 ×74 (VERIFY-04-r5 G04-12 (b); #180 and #139 re-run at this close) |
+| Open blocker/major | **0**; one Open minor, QA-VERIFY04R5-01 (`make demo` on a flag-on stack, carried) | `open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 0, `open 0` |
+| CI on `main` | green at `4095937` (push run 41035984548, `ci-gate` success) | VERIFY-04-r5 G04-12 (a) |
+| Next | Sprint 5 planning (2026-12-11) with the carry-over in report §14.3; TCR rows 11 and 14 (F2, due 2026-11-02); QA-VERIFY04R5-01 (F4, due 2026-11-13) | retro §12 |

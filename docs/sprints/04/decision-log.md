@@ -4,7 +4,7 @@ Small decisions, one dated row each (who, decision, evidence, reasoning). Append
 
 In Sprint 4 each ticket wrote its own small decisions in `decisions/<TICKET-ID>.md`, so that parallel PRs did not conflict (sprint-04 header). Only RETRO-04 consolidates them. To keep each decision in one place, this file does not copy their rows. It gives (1) an index of the per-ticket files and (2) the sprint-level decisions of the engineering-manager at the close.
 
-## 1. Index of the per-ticket decision files (77 files; rows = dated rows in the file)
+## 1. Index of the per-ticket decision files (78 files; rows = dated rows in the file)
 
 | File | PR | Rows |
 |---|---|---|
@@ -41,7 +41,7 @@ In Sprint 4 each ticket wrote its own small decisions in `decisions/<TICKET-ID>.
 | [QA-VERIFY04R3-05-06](decisions/QA-VERIFY04R3-05-06.md) | #164 | 6 |
 | [QA-VERIFY04R3-07](decisions/QA-VERIFY04R3-07.md) | #172 | 7 |
 | [QA-VERIFY04R3-09](decisions/QA-VERIFY04R3-09.md) | #169 | 11 |
-| [RETRO-04](decisions/RETRO-04.md) | #161, #175 and this PR (third close) | 29 |
+| [RETRO-04](decisions/RETRO-04.md) | #161, #175, #180 and this PR (fourth close) | 39 |
 | [SEC-4](decisions/SEC-4.md) | #90 | 7 |
 | [SMOKE-04](decisions/SMOKE-04.md) | #159 (folded into RETRO-04) | 4 |
 | [SMOKE-04-r2](decisions/SMOKE-04-r2.md) | #174 (folded into RETRO-04, second close) | 5 |
@@ -85,8 +85,9 @@ In Sprint 4 each ticket wrote its own small decisions in `decisions/<TICKET-ID>.
 | [ST-073](decisions/ST-073.md) | #104 | 11 |
 | [VERIFY-04-r3](decisions/VERIFY-04-r3.md) | #160 (folded into RETRO-04) | 15 |
 | [VERIFY-04-r4](decisions/VERIFY-04-r4.md) | #178 (folded into RETRO-04, third close) | 15 |
+| [VERIFY-04-r5](decisions/VERIFY-04-r5.md) | #181 (folded into RETRO-04, fourth close) | 17 |
 
-Count: `ls docs/sprints/04/decisions | wc -l` → 60 with `RETRO-04.md` at the first close; **73** at the second close (2026-10-30), after the 12 fix-wave files and `SMOKE-04-r2.md`. **77** at the third close (2026-10-30), after `EM-RETRO04-02.md`, `FIX-04-4a.md`, `SMOKE-04-r3.md` and `VERIFY-04-r4.md`. ST-063c-part2-part2-part2 (#142, #144) has no file on `main` (its branches were never merged); its rebuild, #145, refers to it in `ST-063c-swap-ui.md`.
+Count: `ls docs/sprints/04/decisions | wc -l` → 60 with `RETRO-04.md` at the first close; **73** at the second close (2026-10-30), after the 12 fix-wave files and `SMOKE-04-r2.md`. **77** at the third close (2026-10-30), after `EM-RETRO04-02.md`, `FIX-04-4a.md`, `SMOKE-04-r3.md` and `VERIFY-04-r4.md`. **78** at the fourth close (2026-10-30), after `VERIFY-04-r5.md`. ST-063c-part2-part2-part2 (#142, #144) has no file on `main` (its branches were never merged); its rebuild, #145, refers to it in `ST-063c-swap-ui.md`.
 
 ## 2. Sprint-level decisions at the close (engineering-manager, RETRO-04)
 
@@ -124,3 +125,12 @@ Count: `ls docs/sprints/04/decisions | wc -l` → 60 with `RETRO-04.md` at the f
 | 2026-10-30 | engineering-manager | **TCR row 21's scoped G04-05 (e) method applied to `goal-scorecard.md` §4** (accepted in #176; VERIFY-04-r4 asked the consolidation to apply it) | scoped command at `22ca756c` → empty, rc 0 | Same as TCR row 23 at the second close: the consolidation applies accepted method rows |
 | 2026-10-30 | engineering-manager | **No new ADR** for E3-E5 (tooling for ADR 0037/0033 rules, ADR 0055 rule 2, Sprint 5 order). E5 becomes an ADR if a sprint needs more than one close again | retro §11 "Process changes" | Judgment: the rules exist, the gap is enforcement |
 
+## 5. Sprint-level decisions at the fourth close (engineering-manager, RETRO-04, 2026-10-30, at `origin/main` `4095937e`)
+
+| Date | Who | Decision | Evidence | Reasoning |
+|---|---|---|---|---|
+| 2026-10-30 | engineering-manager | **Fourth close: VERIFY-04-r5 (#181) is the measurement of record. It met 12 of 12, so the Sprint 4 goal is met.** VERIFY-04-r4 moves to report §1.0a | `decisions/VERIFY-04-r5.md` (folded in unchanged); report §1.0; `status.json` `goal_met: true` | PO standing rule: the goal was measured live on the local stack, with flags off and flags on |
+| 2026-10-30 | engineering-manager | **VERIFY-04-r5 folded into RETRO-04** by merging its branch unchanged (`545b3861`); #181 closed with a pointer | `git merge-base --is-ancestor origin/s04/verify-04-r5-sprint-4-goal-verification-round-5 HEAD` → rc 0 | ADR 0055 rule 3 |
+| 2026-10-30 | engineering-manager | **Ledger: QA-VERIFY04R5-01 written as an Open minor** (senior-backend-engineer). The four findings from #180 are Fixed. Open blocker/major stays 0 | `open_defects.py` both ledgers → rc 0, `open 0` | ADR 0037 rule 1 |
+| 2026-10-30 | engineering-manager | **Blockers row 2026-10-29 (flag-on `make up`) closed** after VERIFY-04-r5's live check | `blockers.md` | Retro M18 |
+| 2026-10-30 | engineering-manager | **No new ADR. Retro F1-F4. The close checklist is now committed** (`docs/sprints/04/close-checks/retro04_r4_check.py`). F1 becomes an ADR if Sprint 5 needs more than one close | retro §12 "Process changes" | Judgment: the rule exists; what was missing is the trigger |
