@@ -1,6 +1,6 @@
 {
   "sprint": "04",
-  "goal": "Runnable R1 prototype on a local stack (upload -> Quick Tag -> score sheet -> stats -> rules-only, deterministic, cited 2-week plan; >= 20 drills; mark done offline and Not for me); R1 privacy and quotas behind default-off flags; Sprint 3 carry-over closed first; CI green; no blocker or major open (docs/sprints/sprint-04.md \u00a71)",
+  "goal": "Runnable R1 prototype on a local stack (upload -> Quick Tag -> score sheet -> stats -> rules-only, deterministic, cited 2-week plan; >= 20 drills; mark done offline and Not for me); R1 privacy and quotas behind default-off flags; Sprint 3 carry-over closed first; CI green; no blocker or major open (docs/sprints/sprint-04.md §1)",
   "goal_scorecard": "docs/sprints/04/goal-scorecard.md",
   "dates": {
     "planned_start": "2026-11-30",
@@ -91,7 +91,7 @@
     }
   },
   "goal_met": false,
-  "goal_met_note": "2 of 12 met live of record (VERIFY-04-r3 at b9d0dc3: G04-04, G04-06). After the fix wave SMOKE-04-r2 is green at d48f19a3, but no VERIFY round has run there; VERIFY-04-r4 is carry-over D1. See sprint-report.md \u00a71, \u00a71.4, \u00a711",
+  "goal_met_note": "2 of 12 met live of record (VERIFY-04-r3 at b9d0dc3: G04-04, G04-06). After the fix wave SMOKE-04-r2 is green at d48f19a3, but no VERIFY round has run there; VERIFY-04-r4 is carry-over D1. See sprint-report.md §1, §1.4, §11",
   "open_defects": {
     "count": 1,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md",
@@ -1872,6 +1872,72 @@
             "QA-VERIFY04R3-01, QA-VERIFY04R3-09"
           ]
         }
+      }
+    }
+  },
+  "nightly": {
+    "run_date": "2026-10-30",
+    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/41030020901",
+    "commit": "22ca756cdc05062881d1797139512a0f41d77618",
+    "oracle": {
+      "status": "passed",
+      "sequences": 100000,
+      "disagreements": 0,
+      "seed": 20261030,
+      "seconds": 64.244,
+      "shortest": null,
+      "passed": true,
+      "job": "success"
+    },
+    "mutation": {
+      "target": "src/racket/sports/pickleball/rules",
+      "scope": "sports/pickleball/rules",
+      "killed": 386,
+      "timeout": 0,
+      "survived": 61,
+      "no_tests": 0,
+      "suspicious": 0,
+      "skipped": 0,
+      "total": 447,
+      "tool": "mutmut",
+      "status": "measured",
+      "score": 0.8635,
+      "job": "success"
+    },
+    "mutation_scopes": {
+      "coaching/plan": {
+        "target": "src/racket/coaching/plan",
+        "scope": "coaching/plan",
+        "killed": 1610,
+        "timeout": 1,
+        "survived": 31,
+        "no_tests": 0,
+        "suspicious": 0,
+        "skipped": 0,
+        "total": 1642,
+        "tool": "mutmut",
+        "status": "measured",
+        "score": 0.9811,
+        "min_score": 0.8,
+        "gate": "passed",
+        "job": "success"
+      },
+      "coaching/weakness": {
+        "target": "src/racket/coaching/weakness",
+        "scope": "coaching/weakness",
+        "killed": 286,
+        "timeout": 0,
+        "survived": 10,
+        "no_tests": 59,
+        "suspicious": 0,
+        "skipped": 0,
+        "total": 355,
+        "tool": "mutmut",
+        "status": "measured",
+        "score": 0.8056,
+        "min_score": 0.8,
+        "gate": "passed",
+        "job": "success"
       }
     }
   }
