@@ -122,6 +122,22 @@ $DC cp web-tls:/data/caddy/pki/authorities/local/root.crt "$GOAL/ca.crt"
   ```
 
   `mutation_score.py` takes `--target` (a path under `--project`) and `--out`, both required, and fails closed on a missing target. `--target src/racket/coaching/weakness` follows ST-055's dirs (`weakness*`); if ST-055 ships `weakness.py`, the method author sets `--target src/racket/coaching/weakness.py` with a row in `decisions/ST-055.md` before the dry-run. Any doc-sync test that reads files outside `backend/` gets an `--ignore` (Sprint 3 VR1-S3-01). (a) uses `junit_rate.py --include 'test_it_04_|test_bola_matrix' $(for i in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17; do printf -- '--require test_it_04_%s ' $i; done)` plus the Sprint 3 earlier-id call extended with `test_it_03_`.
+  **(d) integration budget (FIX-04-4a, VERIFY04R4-01; replaces the Sprint 3 G03-11 serial `run_with_budget.py 600 … -m integration tests/integration` line).** NFR-073's 600 s integration budget is the one CI's integration job times: parallel workers after the base database is migrated once, outside the budget (ADR 0048), over the job's selection with coverage. The inherited serial line timed a form the gate never runs (VERIFY-04-r3 and -r4: rc 124 at 600 s on a 4-core host while the gate form took about 3 min). Run with the G03-04 env (dev Postgres + object store, `MAIL_SMTP_URL`), on a fresh cluster or one already migrated:
+
+  ```bash
+  cd backend
+  env -u APP_ENV uv run python -m racket.platform.migrate; echo rc=$?   # base database first, outside the budget (ADR 0048 rule 1)
+  env -u APP_ENV uv run pytest -q --collect-only -p no:cacheprovider -m "(unit or integration or scenario or regression) and not nightly and not red_until" >/dev/null   # unbudgeted warm-up, as CI
+  python3 ../scripts/ci/run_with_budget.py 600 --json "$GOAL/integration-budget.json" -- env -u APP_ENV uv run pytest -q -n auto --durations=25 \
+    -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
+    --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
+    --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
+    --ignore-glob='tests/integration/harness/test_ci_objstore_*.py' \
+    --cov --cov-report=xml:"$GOAL/coverage-integration-budget.xml" --junitxml="$GOAL/integration-budget.xml"; echo rc=$?
+  cd ..
+  ```
+
+  Pass for (d) integration: rc 0, `within_budget: true` in `integration-budget.json`, 0 failed. The command is pinned to CI's budgeted step (budget, `-n auto`, `-m` selection, ignores, `--cov`) by `infra/tests/test_goal_scorecard_integration_budget.py` and, run as written with `uv` recorded, by `tests/features/goal_method_integration_budget.feature`; a change to either side without the other fails those tests. TCR row 2026-10-30 FIX-04-4a; `decisions/FIX-04-4a.md`.
 - **G04-12:** `actions_list list_workflow_runs ci.yml branch=main` → the run at `$H`; `list_workflow_jobs` → every job; for each Sprint 4 ticket PR `python3 scripts/measure/merged_verdict.py --repo nhuthuynh/racket-analytics --pr N --role principal-engineer --role <its senior reviewer>` → rc 0; `python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 0, `open 0`; `search_issues is:open label:bug` → 0 blocker/major.
 
 ## 5. Not met: waiting on P-n (PO P12 option b; not goal metrics)
