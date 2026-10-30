@@ -1,0 +1,43 @@
+{
+  "id": "pb.return.wall-return-and-split",
+  "version": 1,
+  "name": "Wall returns with a split step",
+  "summary": "Alone at a wall, hit a deep, high return above a tape line off the bounce, move forward and split-step before the rebound.",
+  "skills": [
+    "AN-02",
+    "return",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-02"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 1.5 m above the floor (well above net height) and stand about 6 m from the wall",
+    "Toss the ball against the wall so it rebounds and bounces once in front of you, like a serve coming in",
+    "Return it off the bounce with a smooth stroke above the line, then take two to three walking steps forward and split-step (feet apart, balanced) before the rebound reaches you",
+    "Catch the rebound or let it go; walk back and repeat. Sets of 10"
+  ],
+  "success_criterion": "In each of 3 sets of 10 returns, at least 8 hit the wall above the line and you are balanced in your split step before the rebound bounces on at least 7",
+  "progressions": [
+    "pb.return.deep-return-target"
+  ],
+  "regressions": [
+    "pb.return.wall-return"
+  ],
+  "safety_notes": "Walk forward, never sprint, and always face the wall; never backpedal to reach a rebound, let it go. Clear the floor of loose balls between sets. Stop if dizzy or in pain.",
+  "coach_rationale": "(judgment) A deep return plus moving forward in balance is how the receiving side reaches the non-volley-zone line and wins rallies on receive (AN-02). The split step makes the move-in part of the stroke, alone and with no court. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

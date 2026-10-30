@@ -1,0 +1,42 @@
+{
+  "id": "pb.serve.wall-target-serves",
+  "version": 1,
+  "name": "Serves to a wall target box",
+  "summary": "Alone at a wall, serve underhand into a taped target box above a net-height line and count serves in the box and faults.",
+  "skills": [
+    "AN-05",
+    "AN-01",
+    "serve"
+  ],
+  "target_metrics": [
+    "AN-05",
+    "AN-01"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 0.9 m above the floor (the net) and a box about 1 m wide and 0.6 m tall above it, its bottom edge about 0.3 m over the line",
+    "Tape a floor line about 6 m from the wall (the baseline) and serve from behind it with your own legal motion, as your rules allow",
+    "Count: in the box; above the line but outside the box; a fault (below the line, a mis-hit, or a foot on or over the floor line)",
+    "Sets of 10 serves; let the rebound go, collect the balls between sets"
+  ],
+  "success_criterion": "In each of 3 sets of 10 serves: at most 1 fault and at least 6 in the box",
+  "progressions": [
+    "pb.serve.deep-target"
+  ],
+  "regressions": [],
+  "safety_notes": "Low intensity. Leave room behind you and to the sides so a rebound does not hit you; let rebounds go rather than chasing them. Stop if your shoulder or wrist hurts.",
+  "coach_rationale": "(judgment) A repeatable serve with margin over the net keeps serve faults down (AN-05), and a serve that lands where you aim starts more rallies on your terms, which supports winning rallies on serve (AN-01). A wall gives a countable target with no court or partner. The fault rules are UNVERIFIED in this app (P7): count them as your rules allow. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

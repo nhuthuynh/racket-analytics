@@ -35,6 +35,7 @@ SOLO_WALL = {
     "level": "intermediate",
 }
 NOTHING_FITS = SOLO_WALL | {"equipment": [], "level": "advanced"}
+PAIRS_HALF_COURT = SOLO_WALL | {"players_available": 2, "equipment": ["half_court"]}
 GENERATIONS = 20  # NFR-019 sample
 NFR_019_P95_S = 5.0
 
@@ -388,14 +389,17 @@ def test_it_04_02_a_plan_that_no_longer_fits_after_a_deletion_is_deleted_on_read
     api: ApiDriver, committed_db: Any
 ) -> None:
     """QA-ST061b-R1-01 (coaching-plan §8): the stale plan cannot be rebuilt from the match left
-    (it gives no plan that fits), so GET deletes it and answers 404 ``no_plan``."""
+    (it gives no plan that fits), so GET deletes it and answers 404 ``no_plan``. The match left
+    only weakens AN-01, which no reviewed pairs half-court drill trains (QA-VERIFY04R3-01 gave
+    the solo wall player two AN-01 drills, so the setup is pairs on a half court)."""
     gone = st.tagged_example(api, "ivy", "IT-04-02 refit gone")
     st.tag_games(api, "ivy", st.timed(st.no_score_script(20)), "IT-04-02 refit kept")
-    _created(api, "ivy")
+    _created(api, "ivy", PAIRS_HALF_COURT)
     assert st.delete_match(api, "ivy", gone).status_code == 202
     assert st.refusal(api.request("ivy", "GET", PLAN))[:2] == (404, "no_plan")
     assert _plans(committed_db) == 0
-    assert st.refusal(_post(api, "ivy"))[:2] == (409, "no_plan_fits")  # the same data on POST
+    refused = _post(api, "ivy", PAIRS_HALF_COURT)  # the same data on POST
+    assert st.refusal(refused)[:2] == (409, "no_plan_fits")
 
 
 def test_it_04_02_a_plan_the_live_data_no_longer_cites_is_regenerated_on_read(

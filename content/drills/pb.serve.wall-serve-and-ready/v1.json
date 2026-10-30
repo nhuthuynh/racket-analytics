@@ -1,0 +1,44 @@
+{
+  "id": "pb.serve.wall-serve-and-ready",
+  "version": 1,
+  "name": "Serve and get ready for the next ball against a wall",
+  "summary": "Alone at a wall, serve deep over a net-height line, stay back, and play the rebound after one bounce with a controlled groundstroke over the line: a point that starts on your serve.",
+  "skills": [
+    "AN-01",
+    "AN-05",
+    "serve"
+  ],
+  "target_metrics": [
+    "AN-01",
+    "AN-05"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 12,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 0.9 m above the floor (the net) and a floor line about 6 m from the wall (the baseline)",
+    "Serve from behind the floor line with your own legal motion, as your rules allow, aiming high over the tape so the rebound comes back deep",
+    "After the serve stay behind the floor line in a ready position, let the rebound bounce once, then hit one controlled groundstroke back over the line",
+    "A rep counts when the serve and the next shot both clear the line; a fault (below the line, a mis-hit or a foot on or over the floor line) ends the rep. Sets of 10 reps, rest 30 s between sets"
+  ],
+  "success_criterion": "In each of 3 sets of 10 reps: at most 1 serve fault and at least 7 reps where the serve and the next shot both clear the line",
+  "progressions": [
+    "pb.serve.serve-and-third"
+  ],
+  "regressions": [
+    "pb.serve.wall-target-serves"
+  ],
+  "safety_notes": "Low to moderate intensity. Keep clear space around you for rebounds, do not chase a ball you missed and do not backpedal. Stop if your shoulder or wrist hurts.",
+  "coach_rationale": "(judgment) Rallies won on serve (AN-01) start with a serve that lands and a server who is ready for the next ball; serve faults (AN-05) end them at once. Staying back after the serve and letting the rebound bounce rehearses the serving side's next shot alone, and the rep only counts when both shots clear the line. The fault and bounce rules are UNVERIFIED in this app (P7): count them as your rules allow. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

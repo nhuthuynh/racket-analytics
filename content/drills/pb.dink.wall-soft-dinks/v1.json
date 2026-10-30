@@ -1,0 +1,40 @@
+{
+  "id": "pb.dink.wall-soft-dinks",
+  "version": 1,
+  "name": "Soft wall dinks over a low line",
+  "summary": "Alone at a wall, keep a soft rally of dinks just above a net-height line and count unforced errors per 50 shots.",
+  "skills": [
+    "AN-04",
+    "dink"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 0.9 m above the floor (the net) and stand about 2 m from the wall",
+    "Rally soft dinks off one bounce: the ball should hit the wall just above the line and drop, not pop up",
+    "An error is a ball below the line, a ball you pop above head height, a mis-hit, or a ball you had time to reach but missed",
+    "Sets of 50 shots; restart the rally after an error"
+  ],
+  "success_criterion": "In a set of 50 dinks, at most 5 errors",
+  "progressions": [
+    "pb.dink.safe-target-dinks"
+  ],
+  "regressions": [],
+  "safety_notes": "Soft pace only: no speed-ups or drives at this distance from the wall. Keep the ball below head height. Stop if your wrist or back hurts.",
+  "coach_rationale": "(judgment) Many unforced errors come in the soft game; a low, repeatable dink with margin over the net cuts them (AN-04), and counting errors per 50 shots makes the rate visible with no partner or court. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

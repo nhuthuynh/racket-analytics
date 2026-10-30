@@ -1,0 +1,42 @@
+{
+  "id": "pb.serve.wall-routine-ladder",
+  "version": 1,
+  "name": "Serve routine ladder against a wall",
+  "summary": "Alone at a wall, the same pre-serve routine before every serve, climbing a ladder of serves in a row over a net-height line.",
+  "skills": [
+    "AN-05",
+    "AN-01",
+    "serve"
+  ],
+  "target_metrics": [
+    "AN-05",
+    "AN-01"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 12,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 0.9 m above the floor (the net) and a floor line about 6 m from the wall (the baseline)",
+    "Before every serve run the same short routine: feet set, one breath, look at the target, serve",
+    "Ladder: 3 serves in a row over the line, then 5, then 7; a fault (below the line, a mis-hit or a foot on or over the floor line) restarts the current rung",
+    "Rest 30 s between rungs"
+  ],
+  "success_criterion": "Complete the 3-5-7 ladder (15 serves over the line) with at most 3 restarts",
+  "progressions": [
+    "pb.serve.wall-target-serves"
+  ],
+  "regressions": [],
+  "safety_notes": "Low intensity. Keep clear space around you for rebounds and do not chase them. Stop if your shoulder or wrist hurts.",
+  "coach_rationale": "(judgment) A fixed routine and serves-in-a-row pressure build a serve that holds when points count: fewer serve faults (AN-05) and more rallies started on your serve (AN-01). The ladder makes consistency countable alone. The fault rules are UNVERIFIED in this app (P7): count them as your rules allow. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
