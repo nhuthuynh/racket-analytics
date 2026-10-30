@@ -1,6 +1,6 @@
 # 0049. The domain unit suite runs in parallel workers inside its 10 s budget
 
-- **Status:** Proposed (principal-engineer decides; senior-qa-engineer consulted, owner of the pytest selection)
+- **Status:** Accepted (2026-10-30, ticket ADR-0053-0049; retro 4 action C4). Proposed 2026-10-09; the confirmation criterion is amended below
 - **Date:** 2026-10-09
 - **Deciders:** principal-engineer
 - **Consulted:** sre-devops-engineer (author), senior-qa-engineer
@@ -41,3 +41,23 @@ Rules:
 ## Evidence
 
 Locally at load ≈ 2: serial wall 8.5-11.5 s; `-n 4 --dist worksteal` 5.4-6.0 s; `-n auto` 6.0-6.3 s. Red → green: `cd infra && uv run --no-sync pytest -q -p no:cacheprovider tests/test_ci_domain_budget.py tests/test_ci_domain_budget_scenarios.py` → `3 failed, 10 passed` → green. CI run 37933402495 (cee8c00, cold cache): 10 s, exit 124. CI run 37935969739 (dc75b07, warmed): `budget: finished in 7.7s`. Locally, cold vs warmed: 6.5-6.8 s vs 5.6-6.1 s. The `bringing up nodes`/`98%` timestamps in the step log are block-buffered stdout, not phase times (unbuffered: first line at 0.66 s). Done when 3 consecutive CI runs at the PR head show domain wall ≤ 7.5 s and pass.
+
+## Acceptance (2026-10-30, ADR-0053-0049)
+
+**Accepted: option 1 stays.** The binding limit is NFR-073's 10 s, and it held: the last 8 CI
+runs on `main` (2026-10-29 20:36 to 2026-10-30 00:51 UTC, runs 40950495941 ... 40982344238)
+all concluded `success`, and the domain step fails its job when it overruns. Sampled step logs:
+
+| CI run (main) | Commit | `Domain unit suite < 10 s (NFR-073)` log |
+|---|---|---|
+| 40982344238 | a4eabcb | `budget: finished in 8.2s, within budget of 10s` |
+| 40977564338 | 78b1f27 | `budget: finished in 5.0s, within budget of 10s` |
+
+**Amended confirmation.** The 2026-10-09 "done when 3 consecutive runs show ≤ 7.5 s" margin is
+**not met**: run 40982344238 took 8.2 s. That margin was a target of this ADR, not of NFR-073, and
+no option on the table (fewer examples, narrower selection, higher budget) is acceptable to buy it
+back (see Considered options). So the gate stays at 10 s and the margin becomes a trigger: a new
+ADR is due if the domain step overruns on 2 `main` runs within 7 days. Scheduled overruns now
+reach the product owner through `.github/workflows/scheduled-red-notice.yml` (ADR 0053 acceptance).
+Decided by sre-devops-engineer with the principal-engineer (effective when the ADR-0053-0049 PR
+merges with the principal-engineer's APPROVE); senior-qa-engineer remains owner of the selection.

@@ -1,8 +1,8 @@
 # 0053. The daily dependency audit opens a draft upgrade PR; a reviewer marking it ready starts CI
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-10-30, ticket ADR-0053-0049; retro 4 action C4). Proposed 2026-10-28
 - **Date:** 2026-10-28
-- **Deciders:** sre-devops-engineer (proposed); principal-engineer and senior-qa-engineer review the PR
+- **Deciders:** sre-devops-engineer and principal-engineer (accepted in ADR-0053-0049; takes effect when that PR merges with the principal-engineer's APPROVE); senior-qa-engineer reviewed #150
 - **Consulted:** human product owner (decision 2026-10-28, in chat: a daily scheduled audit that opens an upgrade PR through the normal review and merge gates)
 - **Related:** CI-DAILY-AUDIT, NFR-062, ST-002, ADR 0014 (fail closed), ADR 0050 (merge_ready), ADR 0052 (CI skips drafts), PR #148 (certifi)
 
@@ -90,5 +90,45 @@ Chosen option 1, because it is the only option that runs the PR's own `pull_requ
 `infra/tests/test_ci_dependency_audit_scenarios.py` pins the draft PR, the turn-back-to-draft on
 update, the three permissions, the absence of any merge or policy-label command, and the same
 pip-audit command as ci.yml. actionlint passes on the workflow.
+
+## Acceptance (2026-10-30, ADR-0053-0049, retro 4 action C4)
+
+**Accepted, unchanged, with one addition.** Retro C4 set two conditions: a planted advisory opens
+a draft upgrade PR the same day, and a red scheduled run sends the product owner a notice.
+
+1. **Planted advisory -> draft PR the same day: verified.** `tests/features/ci_scheduled_red_notice.feature`
+   runs the workflow's own `run:` scripts (start branch, upgrade, commit and push, open PR) with bash
+   on a throwaway checkout whose `origin` is a local bare repository, with a planted pip-audit report
+   (`PYSEC-2026-4320`, certifi 2026.7.22, fixed in 2026.10.19), a recording `uv` and a recording `gh`.
+   Result: `deps/security-audit` on origin locks certifi 2026.10.19 on top of `main`, and `gh pr create
+   --draft --base main --head deps/security-audit --title "[DEPS-AUDIT] security upgrades <today UTC>"`.
+   An open PR is edited and turned back into a draft; a clean audit pushes nothing. The workflow is
+   scheduled 02:11 UTC daily, so an advisory published before 02:11 gets its PR that day.
+2. **Red scheduled run -> PO notice: added** (it did not exist; M6 shows why it is needed).
+   `.github/workflows/scheduled-red-notice.yml` runs on `workflow_run: completed` of every workflow
+   with a `schedule:` trigger (CI, Nightly quality, Dependency audit; a scenario fails if a new
+   scheduled workflow is not listed). `scripts/ci/scheduled_red_notice.py` decides: a scheduled run
+   that ended `failure`, `timed_out` or `startup_failure` opens one issue per workflow,
+   `[CI-RED] scheduled <workflow> run failed`, assigned to the repository owner (GitHub notifies the
+   assignee), or comments on the open one; the next green scheduled run closes it. Not-scheduled,
+   cancelled or skipped runs send nothing. Token: `contents: read`, `issues: write`, only on the `gh`
+   step; the checkout is the default branch (`workflow_run` never runs the watched run's code).
+
+Options considered for the notice: (a) **issue assigned to the owner** (chosen: GitHub's own
+notification, no new secret, visible on the repo); (b) e-mail or chat webhook (a new secret and
+service); (c) rely on GitHub's "workflow run failed" e-mail (goes only to the user who last edited
+the cron, not configurable from code, and it did not lead to a fix during M6).
+
+**Still to observe live (ADR 0055):** the first scheduled run on GitHub. On 2026-10-30
+`actions/workflows/dependency-audit.yml/runs` -> `total_count: 0` (merged 2026-10-29, first
+schedule 2026-10-30 02:11 UTC). A real draft PR also needs admin setting 6 of `ci-cd.md` §2.1
+(a human action). Until both are seen, retro C4's "no scheduled red run over 24 h without a PO
+notice" is met by the scenario evidence only.
+
+| Claim | Evidence | Type |
+|---|---|---|
+| Red first | `cd infra && uv run --no-sync pytest -q -p no:cacheprovider tests/test_scheduled_red_notice.py tests/test_ci_scheduled_red_notice_scenarios.py` -> `7 failed, 3 passed, 24 errors` (script and workflow missing; the 3 passing are the ADR 0053 verification scenarios against the existing workflow) | test result |
+| Green | same command -> `34 passed` | test result |
+| Workflow lint | `actionlint -color` (actionlint-py 1.7.12.25, shellcheck-py 0.11.0.1, as ci.yml) -> rc 0 | test result |
 
 ## Notes
