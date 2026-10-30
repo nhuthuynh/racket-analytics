@@ -4,10 +4,11 @@ Small decisions, one dated row each (who, decision, evidence, reasoning). Append
 
 In Sprint 4 each ticket wrote its own small decisions in `decisions/<TICKET-ID>.md`, so that parallel PRs did not conflict (sprint-04 header). Only RETRO-04 consolidates them. To keep each decision in one place, this file does not copy their rows. It gives (1) an index of the per-ticket files and (2) the sprint-level decisions of the engineering-manager at the close.
 
-## 1. Index of the per-ticket decision files (59 files; rows = dated rows in the file)
+## 1. Index of the per-ticket decision files (73 files; rows = dated rows in the file)
 
 | File | PR | Rows |
 |---|---|---|
+| [ADR-0053-0049](decisions/ADR-0053-0049.md) | #171 | 8 |
 | [C4-CA](decisions/C4-CA.md) | #95 | 5 |
 | [C4-G12](decisions/C4-G12.md) | #92 | 4 |
 | [C4-LOCUST](decisions/C4-LOCUST.md) | #96 | 10 |
@@ -23,6 +24,7 @@ In Sprint 4 each ticket wrote its own small decisions in `decisions/<TICKET-ID>.
 | [CI-SIGNIN-HYDRATION](decisions/CI-SIGNIN-HYDRATION.md) | #106 | 4 |
 | [CI-SIZE-PROD-ONLY](decisions/CI-SIZE-PROD-ONLY.md) | #151 | 10 |
 | [COACH-4](decisions/COACH-4.md) | #91 | 8 |
+| [EM-PR27-01](decisions/EM-PR27-01.md) | #170 | 3 |
 | [PD-4](decisions/PD-4.md) | #88 | 15 |
 | [PD-4b](decisions/PD-4b.md) | #114 | 7 |
 | [PE-4](decisions/PE-4.md) | #89 | 18 |
@@ -30,8 +32,20 @@ In Sprint 4 each ticket wrote its own small decisions in `decisions/<TICKET-ID>.
 | [PM-4](decisions/PM-4.md) | #93 | 7 |
 | [QA-HARNESS-4a](decisions/QA-HARNESS-4a.md) | #103 | 15 |
 | [QA-HARNESS-4b](decisions/QA-HARNESS-4b.md) | #105 | 16 |
+| [QA-VERIFY04R3-01](decisions/QA-VERIFY04R3-01.md) | #166 | 20 |
+| [QA-VERIFY04R3-02-08](decisions/QA-VERIFY04R3-02-08.md) | #165 | 5 |
+| [QA-VERIFY04R3-03](decisions/QA-VERIFY04R3-03.md) | #163 | 9 |
+| [QA-VERIFY04R3-04](decisions/QA-VERIFY04R3-04.md) | #168 | 7 |
+| [QA-VERIFY04R3-05-06](decisions/QA-VERIFY04R3-05-06.md) | #164 | 6 |
+| [QA-VERIFY04R3-07](decisions/QA-VERIFY04R3-07.md) | #172 | 7 |
+| [QA-VERIFY04R3-09](decisions/QA-VERIFY04R3-09.md) | #169 | 11 |
+| [RETRO-04](decisions/RETRO-04.md) | #161 and this PR (second close) | 8 |
 | [SEC-4](decisions/SEC-4.md) | #90 | 7 |
+| [SMOKE-04-r2](decisions/SMOKE-04-r2.md) | #174 (folded into RETRO-04, second close) | 5 |
 | [SMOKE-04](decisions/SMOKE-04.md) | #159 (folded into RETRO-04) | 4 |
+| [SRE-VERIFY04R3-01](decisions/SRE-VERIFY04R3-01.md) | #167 | 6 |
+| [SRE-VERIFY04R3-02](decisions/SRE-VERIFY04R3-02.md) | #162 | 5 |
+| [SRE-VERIFY04R3-03](decisions/SRE-VERIFY04R3-03.md) | #173 | 11 |
 | [ST-055](decisions/ST-055.md) | #100 | 16 |
 | [ST-056](decisions/ST-056.md) | #102 | 17 |
 | [ST-057](decisions/ST-057.md) | #108 | 11 |
@@ -68,7 +82,7 @@ In Sprint 4 each ticket wrote its own small decisions in `decisions/<TICKET-ID>.
 | [ST-073](decisions/ST-073.md) | #104 | 11 |
 | [VERIFY-04-r3](decisions/VERIFY-04-r3.md) | #160 (folded into RETRO-04) | 15 |
 
-Count: `ls docs/sprints/04/decisions | wc -l` → 60 with `RETRO-04.md`. ST-063c-part2-part2-part2 (#142, #144) has no file on `main` (its branches were never merged); its rebuild, #145, refers to it in `ST-063c-swap-ui.md`.
+Count: `ls docs/sprints/04/decisions | wc -l` → 60 with `RETRO-04.md` at the first close; **73** at the second close (2026-10-30), after the 12 fix-wave files and `SMOKE-04-r2.md`. ST-063c-part2-part2-part2 (#142, #144) has no file on `main` (its branches were never merged); its rebuild, #145, refers to it in `ST-063c-swap-ui.md`.
 
 ## 2. Sprint-level decisions at the close (engineering-manager, RETRO-04)
 
@@ -82,3 +96,16 @@ Count: `ls docs/sprints/04/decisions | wc -l` → 60 with `RETRO-04.md`. ST-063c
 | 2026-10-29 | engineering-manager | **ADR 0055 accepted** (verification only after the build is merged; live dry-run per method in its own configuration; evidence PRs never closed unmerged; env-to-Compose parity) | retro 4 M1, M2 | Repeated miss (retro 3 M9); 5 of 10 misses (and part of G04-11) were method or configuration defects |
 | 2026-10-29 | engineering-manager | **Retro file name `docs/retros/2026-12-11-sprint-04.md`**, not `docs/retros/sprint-04.md` as the ticket brief says | sprint-04 header and §13; `ls docs/retros` | Matches the plan and retros 0-3 (judgment) |
 | 2026-10-29 | engineering-manager | **Load factor stays 0.8.** Implemented ratio 1.00; DoD-done 0.73. Sprint 5 reserves about 12 units for the fix wave (retro C2) before any feature | `status.json` totals | ADR 0010; the misses are fix work, not lost capacity |
+
+## 3. Sprint-level decisions at the second close (engineering-manager, RETRO-04, 2026-10-30, at `origin/main` `d48f19a3`)
+
+| Date | Who | Decision | Evidence | Reasoning |
+|---|---|---|---|---|
+| 2026-10-30 | engineering-manager | **The goal of record stays "not met, 2 of 12"** although SMOKE-04-r2 is green at `d48f19a3` | `smoke.md` top section; no VERIFY PR at `d48f19a3` (`list_pull_requests state=all`, #174 is the last) | PO rule: a goal counts only when a verifier measures it live with the full method. A smoke runs one pass (ADR 0055) |
+| 2026-10-30 | engineering-manager | **SMOKE-04-r2 (#174) is folded into RETRO-04**: its branch is merged into this PR unchanged (`6184b023`), and #174 is closed with a pointer | `git merge-base --is-ancestor origin/s04/smoke-04-r2-integration-smoke-of-main-d48f19a HEAD` → rc 0 | ADR 0055 rule 3: evidence lands on `main`. One review instead of two for evidence that does not change |
+| 2026-10-30 | engineering-manager | **Fixed rows written for SRE-VERIFY04R3-02, QA-VERIFY04R3-04, -05, -06 and EM-RETRO04-01.** Their fixes merged (#162, #168, #164; #144 closed) without a closing row. SRE-VERIFY04R3-02 carries the residual "config level only" | `open_defects.py` both ledgers: open 4 → 0; `reconcile_due.py … --base HEAD` → 0 due | ADR 0037 rule 1. The evidence is the fix PR's own live dry-run plus SMOKE-04-r2 |
+| 2026-10-30 | engineering-manager | **DoD-done is 48 of 48 units (1.00) at the second close**, from 35 at the first. Every major traced to a ticket in report §3 is Fixed | `status.json` `totals`, `second_close.first_close` | Same rule as the first close, applied to the ledger now (judgment) |
+| 2026-10-30 | engineering-manager | **No new ADR.** Retro action D3 (run `reconcile_due.py` in `pr-policy` on each ticket PR) enforces ADR 0033 rule 1. L17 (close after the fix wave and VERIFY) is an ordering choice for the Sprint 5 plan | retro §10 | A check that enforces an existing rule needs no new decision record (judgment) |
+| 2026-10-30 | engineering-manager | **Not decided here:** the G04-05 (e) TCR row stays with the senior-qa-engineer (retro D2). No PR is merged and no label is set | `test-change-requests.md` row 21 "pending (senior-qa-engineer)" | Separation of duties (orchestrator, 2026-10-09); ADR 0014 |
+| 2026-10-30 | engineering-manager | **Review round 1 of PR #175: QA-RETRO04R2-01 accepted; ledger row EM-RETRO04-02 (major, Open, senior-qa-engineer) written.** TCR row 20 (the E2E-04-04 change merged in #166) has no QA decision. Open blocker/major is now 1 | `open_defects.py` both ledgers → rc 1, `open 1`; `decisions/RETRO-04.md` "Review round 1" | An accepted test changed on `main` without a QA decision (ADR 0014). Only QA decides the row (retro D2) |
+| 2026-10-30 | engineering-manager | **Review round 1 of PR #175: QA-RETRO04R2-02 accepted; the G04-03 (c) method line of TCR row 23 is applied to `goal-scorecard.md` §4** (`HYPOTHESIS_PROFILE=ci uv run pytest -q -m plan_property --hypothesis-show-statistics`) | dry run → `1000 passing, 0 failing`, `1 passed`; default profile → `100 passing` | Since #173 the default profile draws 100 examples, under the ≥ 1,000 target; TCR row 23 assigned the edit to this consolidation |
