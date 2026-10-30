@@ -114,7 +114,7 @@ def domain_paths(world: dict[str, Any]) -> None:
 
 @when("the budgeted domain step's command from ci.yml collects its tests")
 def collect(world: dict[str, Any]) -> None:
-    res = run_in_backend([*command(), "--collect-only", "-q", "-p", "no:cacheprovider"])
+    res = run_in_backend([*command(), "--collect-only", "-n", "0", "-p", "no:cacheprovider"])
     assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-2000:]
     world["collected"] = [ln for ln in res.stdout.splitlines() if "::" in ln]
 
@@ -144,7 +144,7 @@ def run_properties(world: dict[str, Any]) -> None:
 def at_least_1000(world: dict[str, Any]) -> None:
     res = world["property"]
     assert res.returncode == 0, res.stdout[-3000:]
-    passing = [int(n) for n in re.findall(r"(\d+) passing examples", res.stdout)]
+    passing = [int(n) for n in re.findall(r"(\d+) passing\b", res.stdout)]
     # Statistics per test and phase; the generate phase carries the drawn examples.
     per_test = res.stdout.split("Hypothesis Statistics")[-1]
     for name in (t.rsplit("::", 1)[1] for t in PROPERTY_TESTS):

@@ -423,34 +423,39 @@ NEEDS = ("wall", "half_court", "full_court", "ball_machine", "partner_feeder")
 LEVELS = ("beginner", "intermediate", "advanced")
 
 
+_DMIN = st.integers(1, 45)
+_LEVEL_PAIR = st.lists(st.sampled_from(LEVELS), min_size=2, max_size=2)
+_SKILLS = st.lists(
+    st.sampled_from(["warm-up", "share:fault", "share:forced-error", "x"]), unique=True
+)
+_DRILL_TARGETS = st.lists(
+    st.sampled_from(["AN-01", "AN-02", "AN-04", "AN-05", "AN-07"]),
+    min_size=1,
+    max_size=3,
+    unique=True,
+)
+_PLAYERS = st.integers(1, 4)
+_NEEDS = st.lists(st.sampled_from(NEEDS), max_size=2, unique=True)
+_STATUS = st.sampled_from(["draft", "coach-reviewed", "verified"])
+_DEPRECATED_BY = st.sampled_from([None, None, None, "pb.gen.old@1"])
+_DMAX = {dmin: st.integers(dmin, 45) for dmin in range(1, 46)}
+
+
 @st.composite
 def drills(draw: st.DrawFn, i: int) -> Drill:
-    dmin = draw(st.integers(1, 45))
-    lo, hi = sorted(
-        draw(st.lists(st.sampled_from(LEVELS), min_size=2, max_size=2)), key=LEVELS.index
-    )
-    skills = draw(
-        st.lists(
-            st.sampled_from(["warm-up", "share:fault", "share:forced-error", "x"]), unique=True
-        )
-    )
+    dmin = draw(_DMIN)
+    lo, hi = sorted(draw(_LEVEL_PAIR), key=LEVELS.index)
+    skills = draw(_SKILLS)
     return drill(
         f"pb.gen.d{i}",
-        targets=draw(
-            st.lists(
-                st.sampled_from(["AN-01", "AN-02", "AN-04", "AN-05", "AN-07"]),
-                min_size=1,
-                max_size=3,
-                unique=True,
-            )
-        ),
+        targets=draw(_DRILL_TARGETS),
         skills=skills,
-        players=draw(st.integers(1, 4)),
-        needs=draw(st.lists(st.sampled_from(NEEDS), max_size=2, unique=True)),
-        minutes=(dmin, draw(st.integers(dmin, 45))),
+        players=draw(_PLAYERS),
+        needs=draw(_NEEDS),
+        minutes=(dmin, draw(_DMAX[dmin])),
         levels=(lo, hi),
-        status=draw(st.sampled_from(["draft", "coach-reviewed", "verified"])),
-        deprecated_by=draw(st.sampled_from([None, None, None, "pb.gen.old@1"])),
+        status=draw(_STATUS),
+        deprecated_by=draw(_DEPRECATED_BY),
     )
 
 
@@ -480,8 +485,10 @@ def inputs(draw: st.DrawFn) -> tuple[list[PlanWeakness], Preferences, list[Drill
     return weaknesses, prefs, library
 
 
+# Examples come from the Hypothesis profile: >= 1,000 on `ci` (CI property step, G04-03 c),
+# the default profile in the 10 s domain step (SRE-VERIFY04R3-03, ADR 0049).
 @pytest.mark.plan_property
-@settings(max_examples=1000, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(inputs(), st.randoms(use_true_random=False))
 def test_property_assembled_plans_keep_every_rule(
     case: tuple[list[PlanWeakness], Preferences, list[Drill]], rnd: random.Random
