@@ -566,3 +566,17 @@ The §16 and §17 rows are now measured by **VERIFY-04-r4** (#178) at `c83145c`,
 | FR-003, FR-008, FR-009, FR-160, NFR-023 (flags on) | — | — | Compose with `FEATURE_*=1`, no override: privacy 3/3 accounts, quotas 10/40, 0 bytes stored | P16, P8 |
 | Process: CI notice when no session runs | — | — | first scheduled `Dependency audit` run 41027270158 → success | draft upgrade PR (setting 6) |
 
+## 19. Sprint 4 outcome per requirement at the fourth close (engineering-manager, 2026-10-30, ticket RETRO-04)
+
+**VERIFY-04-r5** (#181) at `4095937` is now the measurement of record, and it met 12 of 12. Every requirement row of §16-§18 is shown live there (scorecard §2; report §1.0), including NFR-073's integration budget in the decided form. No product file changed between `c83145c` and `4095937`. `git diff --stat c83145c2 4095937e` shows docs, plus FIX-04-4a's new method pin: `infra/tests/integration_budget_method.py`, two `infra/tests` test files and `goal_method_integration_budget.feature` (all added, none changed).
+
+| Requirement | Fix ticket (PR) | Feature file(s) added or changed | Shown live (VERIFY-04-r5 at `4095937`) | Open after the fourth close |
+|---|---|---|---|---|
+| NFR-073 Test-suite budgets (integration) | FIX-04-4a (#179) | — (method and pin tests only) | domain 7.1 s of 10, unit 16.8 s of 60, integration 432.6 s of 600 (CI's NFR-073 form), rc 0 | — |
+| NFR-071 Coverage and mutation | — | — | changed lines 98%, coaching 99%, web 94.15%; plan 0.9811, weakness 0.8056, rules 0.8635 | — |
+| FR-120..FR-124 Plan journey | — | — | 5 of 5 runs, steps 1-10, incl. the swap and the second-account 404 | — |
+| NFR-019 Plan read at 50 RPS | — | — | 49.98 RPS, p95 58.9 ms, p99 148.4 ms, availability 1.0 | — |
+| FR-003, FR-008, FR-009, FR-160, NFR-023 (flags on) | — | — | privacy 3/3 accounts; quotas 10 × 201 + 40 × 429, 0 bytes stored; 6 alert rules | P16, P8 |
+| FR-141 Starter library | — | — | 31 reviewed drills; lint and coverage ok; scoped safety check empty | `verified` needs P15 |
+| Demo with flags on (`make demo`) | — (QA-VERIFY04R5-01, minor, Sprint 5) | — | `make demo` on a flag-on stack → 403 `age_confirmation_required` (not a goal metric) | QA-VERIFY04R5-01 |
+

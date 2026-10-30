@@ -58,7 +58,7 @@ need(
     "report head lacks the fourth-close paragraph (12 of 12)",
 )
 m1 = re.search(
-    r"^## 1\. Goal.*?(?=^### 1\.0 Measurement of record: VERIFY-04-r4)", rep, re.M | re.S
+    r"^## 1\. Goal.*?(?=^### 1\.0a Previous measurement of record: VERIFY-04-r4)", rep, re.M | re.S
 )
 sec1 = m1.group(0) if m1 else ""
 need(
@@ -84,7 +84,7 @@ need(
     "this close's count of #175/#176" not in rep,
     "report still explains 71 -> 73 with #175/#176 (QA-RETRO04R3-01, PE-RETRO04R3-01)",
 )
-r4 = re.search(r"^### 1\.0 Measurement of record: VERIFY-04-r4.*?(?=^### 1\.1 )", rep, re.M | re.S)
+r4 = re.search(r"^### 1\.0a Previous measurement of record: VERIFY-04-r4.*?(?=^### 1\.1 )", rep, re.M | re.S)
 g12 = [ln for ln in (r4.group(0) if r4 else "").splitlines() if ln.startswith("| G04-12 |")]
 need(g12 and "#139" in g12[0], "r4 §1.0 G04-12 row does not name #139 as the missing PR")
 need(g12 and "M13" in g12[0], "r4 §1.0 G04-12 row lacks the pointer to retro M13 (PE-RETRO04R3-02)")
