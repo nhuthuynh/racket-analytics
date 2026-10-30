@@ -4,8 +4,10 @@ Each document is checked against ``schema.json`` (QD-DR-01); then: every target 
 ``AN-*`` skill) is in the metric dictionary; every progression and regression names a drill of the
 library, and neither graph has a cycle; no duration over 45 minutes and min <= max; level_min <=
 level_max; the success criterion contains a number; a ``source``, or a ``coach_rationale``
-labelled "(judgment)"; one file per (id, version); ``deprecated_by`` names a drill version.
-Immutability over versions (the lock) is in ``lock.py``.
+labelled "(judgment)"; one file per (id, version); ``deprecated_by`` names a drill version; a
+reviewed (``coach-reviewed`` or ``verified``), not deprecated drill tagged with a movement skill
+(``footwork``, ``movement``) has a non-blank ``safety_notes`` (QD-DR-04, checklist C5;
+QA-VERIFY04R3-09). Immutability over versions (the lock) is in ``lock.py``.
 """
 
 from __future__ import annotations
@@ -21,6 +23,8 @@ MAX_MINUTES = 45
 LEVELS = ("beginner", "intermediate", "advanced")
 _METRIC = re.compile(r"^AN-\d{2}$")
 _NUMBER = re.compile(r"\d")
+REVIEWED = ("coach-reviewed", "verified")
+MOVEMENT_SKILLS = frozenset({"footwork", "movement"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +68,10 @@ def _rules(src: str, d: Mapping[str, Any], metrics: frozenset[str], ids: set[str
         fail("no source", "neither source nor coach_rationale")
     elif rationale and not source and "(judgment)" not in rationale:
         fail("rationale not labelled", 'coach_rationale must say "(judgment)"')
+    moves = sorted(MOVEMENT_SKILLS.intersection(d["skills"]))
+    current = d["review_status"] in REVIEWED and "deprecated_by" not in d
+    if moves and current and not str(d["safety_notes"]).strip():
+        fail("no safety note", f"reviewed drill tagged {', '.join(moves)} (checklist C5)")
     return found
 
 
