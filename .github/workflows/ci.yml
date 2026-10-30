@@ -36,7 +36,9 @@ env:
   PROPERTY_BUDGET_S: "90"
   # NFR-073 "rules + domain unit suite": the rules engine and the bounded contexts' unit tests.
   # tests/unit as a whole is the backend unit suite with its own 60 s budget (W-01, run 37434214390).
-  DOMAIN_TEST_PATHS: "tests/unit/sports tests/unit/matches tests/unit/players tests/unit/video_ingest tests/unit/analytics"
+  # SRE-VERIFY04R3-03 (sprint-04 §8, retro C5): coaching joins; its property tests follow the
+  # Hypothesis profile (default here, ci in the property step), so the 10 s budget is unchanged.
+  DOMAIN_TEST_PATHS: "tests/unit/sports tests/unit/matches tests/unit/players tests/unit/video_ingest tests/unit/analytics tests/unit/coaching"
   COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
   FORCE_COLOR: "1"
 

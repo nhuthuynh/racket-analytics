@@ -18,7 +18,9 @@ stops at "failed to collect stats" (PE-R1-S1-01). Those tests still run in the n
 
 Score = (killed + timeout) / (total - skipped). Mutants with no covering test count as
 survivors. Fails closed: a missing target or zero mutants is exit 1, never a pass.
-Sprint 1 records a baseline; the >= 85% gate starts in Sprint 2 (``--min-score``).
+Sprint 1 records a baseline; the >= 85% gate starts in Sprint 2 (``--min-score``). With
+``--min-score`` the report also carries ``min_score`` and ``gate`` (passed|failed; no score is
+failed), and the exit code is 1 below the minimum (SRE-VERIFY04R3-03: coaching at 0.80).
 """
 
 from __future__ import annotations
@@ -134,6 +136,9 @@ def main(argv: list[str] | None = None) -> int:
         }
     else:
         report = score(stats, a.target)
+    if a.min_score is not None:  # the gate's verdict travels with the report (status file)
+        met = report["score"] is not None and report["score"] >= a.min_score
+        report = {**report, "min_score": a.min_score, "gate": "passed" if met else "failed"}
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))

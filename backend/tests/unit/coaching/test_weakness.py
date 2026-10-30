@@ -300,7 +300,9 @@ _KIND = st.sampled_from([None, "serve", "nvz", "two_bounce", "foot", "other"])
 _RALLY = st.tuples(st.integers(1, 3), _SIDE, _SIDE, _ENDING, _KIND, st.booleans())
 
 
-@settings(max_examples=1000, deadline=None)
+# Examples come from the Hypothesis profile: >= 1,000 on `ci` (CI property step, G04-03 c),
+# the default profile in the 10 s domain step (SRE-VERIFY04R3-03, ADR 0049).
+@settings(deadline=None)
 @given(rallies=st.lists(_RALLY, max_size=60), side=_SIDE)
 def test_every_lost_rally_is_attributed_once_per_game_and_phase(
     rallies: list[tuple[int, str, str, str, str | None, bool]], side: str

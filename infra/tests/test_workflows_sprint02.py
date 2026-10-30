@@ -94,6 +94,8 @@ def test_domain_budget_measures_the_rules_and_domain_suite_only() -> None:
         "tests/unit/video_ingest",
         # ST-054 (NFR-073): the analytics domain (TCR row 2026-10-06, accepted 2026-10-07).
         "tests/unit/analytics",
+        # SRE-VERIFY04R3-03 (sprint-04 §8, retro C5): the coaching domain (TCR row 2026-10-30).
+        "tests/unit/coaching",
     ]
     for p in paths:
         assert (REPO_ROOT / "backend" / p).is_dir(), p
