@@ -87,6 +87,8 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 
 **Expected red until code exists:** `python-unit`, `integration` (coverage, red-first QA suites), `web-checks`, `e2e`, the web part of `secrets-and-audit` and `sbom-licences` stay red until ST-005..ST-010 land. This is intended: QA's red-first suites (ST-012) must fail until their stories turn them green.
 
+`.github/workflows/scheduled-red-notice.yml` (on `workflow_run: completed` of CI, Nightly quality and Dependency audit; ADR-0053-0049, retro 4 C4, ADR 0053): for a **scheduled** run only, `scripts/ci/scheduled_red_notice.py` decides and one `gh` step acts. A run that ended `failure`, `timed_out` or `startup_failure` opens one issue per workflow, `[CI-RED] scheduled <workflow> run failed`, assigned to the repository owner (the product owner gets GitHub's assignment notification), or comments on it if open; the next green scheduled run of that workflow closes it. Token: `contents: read` and `issues: write`, only on the `gh` step; checkout of the default branch without persisted credentials. A new workflow with a `schedule:` trigger must be added to its `workflows:` list (a scenario fails otherwise). Not part of `ci-gate`.
+
 ### 2.1 Repository settings a human admin must apply (not possible from code)
 
 1. **Branch protection on `main`:** require the `ci-gate` check, require PRs, and dismiss stale approvals. Exact settings and the pre-merge check `scripts/ci/merge_ready.py`: `docs/ops/branch-protection.md` (CI-PR-GATE).

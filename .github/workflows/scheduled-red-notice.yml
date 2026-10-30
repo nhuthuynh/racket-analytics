@@ -1,0 +1,71 @@
+# Scheduled red-run notice to the product owner (ADR-0053-0049; retro 4 action C4, major M6).
+# From 2026-10-21 main's scheduled runs were red for about 6 days and nobody told the PO: agents
+# enforce CI FIRST only while a session runs. This workflow runs when a run of any scheduled
+# workflow completes. For a scheduled run it
+# * opens ONE issue per workflow, assigned to the repository owner (GitHub notifies the
+#   assignee), when the run failed, or comments on that issue if it is already open;
+# * closes that issue when a later scheduled run of the same workflow passes.
+# scripts/ci/scheduled_red_notice.py decides; only the last step calls GitHub. It never touches
+# code, pull requests or labels. `workflow_run` runs the default branch's copy of this file, and
+# the checkout is the default branch, so no code from the watched run is executed.
+name: Scheduled red-run notice
+
+on:
+  workflow_run:
+    workflows: [CI, Nightly quality, Dependency audit] # every workflow with a `schedule:` trigger
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: scheduled-red-notice-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
+jobs:
+  notice:
+    name: Notify the product owner of a red scheduled run
+    if: github.event.workflow_run.event == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read # check out the script
+      issues: write # open, comment on or close the notice issue
+    env:
+      WORKFLOW: ${{ github.event.workflow_run.name }}
+      EVENT: ${{ github.event.workflow_run.event }}
+      CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      PO: ${{ github.repository_owner }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Decide the notice (scripts/ci/scheduled_red_notice.py)
+        run: |
+          python3 scripts/ci/scheduled_red_notice.py --workflow "$WORKFLOW" --event "$EVENT" \
+            --conclusion "$CONCLUSION" --run-url "$RUN_URL" --sha "$SHA" \
+            --date "$(date -u +%F)" --out-dir "$RUNNER_TEMP/notice"
+          echo "NOTICE=$RUNNER_TEMP/notice" >> "$GITHUB_ENV"
+      - name: Open, comment on or close the notice issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ACTION="$(cat "$NOTICE/action.txt")"
+          if [ "$ACTION" = none ]; then
+            echo "no notice for a $EVENT run that ended $CONCLUSION"
+            exit 0
+          fi
+          TITLE="$(cat "$NOTICE/title.txt")"
+          export TITLE
+          N="$(gh issue list --state open --search "in:title CI-RED" --json number,title --jq 'map(select(.title == env.TITLE)) | .[0].number // empty')"
+          if [ "$ACTION" = open ] && [ -n "$N" ]; then
+            gh issue comment "$N" --body-file "$NOTICE/body.md"
+          elif [ "$ACTION" = open ]; then
+            gh issue create --title "$TITLE" --body-file "$NOTICE/body.md" --assignee "$PO"
+          elif [ -n "$N" ]; then
+            gh issue close "$N" --comment "$(cat "$NOTICE/body.md")"
+          else
+            echo "no open notice for $WORKFLOW to close"
+          fi
