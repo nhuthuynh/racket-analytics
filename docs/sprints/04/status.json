@@ -8,7 +8,8 @@
     "work_started": "2026-10-17",
     "status_written": "2026-10-29 (sprint close, engineering-manager, RETRO-04, at origin/main b9d0dc3; VERIFY-04-r3 and SMOKE-04 measured b9d0dc3)",
     "closed": "2026-10-29",
-    "second_close": "2026-10-30 (engineering-manager, RETRO-04 second close, at origin/main d48f19a3; SMOKE-04-r2 measured d48f19a3)"
+    "second_close": "2026-10-30 (engineering-manager, RETRO-04 second close, at origin/main d48f19a3; SMOKE-04-r2 measured d48f19a3)",
+    "third_close": "2026-10-30 (engineering-manager, RETRO-04 third close, at origin/main 22ca756c; VERIFY-04-r4 and SMOKE-04-r3 measured c83145c2)"
   },
   "owner": "engineering-manager",
   "branch": "main (one PR per ticket, ADR 0039; no sprint branch)",
@@ -29,76 +30,135 @@
   },
   "goal_metrics": {
     "G04-01": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "0 of 5; steps 1-8 and 10 pass; step 9 swap 409 no_alternative"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "5 of 5 runs pass every step, incl. the step-9 swap",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "0 of 5; steps 1-8 and 10 pass; step 9 swap 409 no_alternative"
+      }
     },
     "G04-02": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "(a) p95 59.5 ms n 20; (b) 82.1 ms n 5; (c) p95 3229 ms, p99 4322 ms, 34.4 RPS"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "(a) p95 66.1 ms n 20; (b) p95 103.2 ms n 5; (c) p95 43.1 ms, p99 113.0 ms, 50.0 RPS, availability 100%",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "(a) p95 59.5 ms n 20; (b) 82.1 ms n 5; (c) p95 3229 ms, p99 4322 ms, 34.4 RPS"
+      }
     },
     "G04-03": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "product passes (golden 9/9, scenarios 39/39, property 1000, determinism 3/3); junit_rate --require fails closed"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "golden 9/9; scenarios 41/41; property 1000 passing 0 failing (ci profile); determinism ok x5",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "product passes (golden 9/9, scenarios 39/39, property 1000, determinism 3/3); junit_rate --require fails closed"
+      }
     },
     "G04-04": {
       "met": true,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "32/32 cases pass^3; CI plan-eval green"
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "32 cases, pass^3 32/32",
+      "of_record_r3": {
+        "met": true,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "32/32 cases pass^3; CI plan-eval green"
+      }
     },
     "G04-05": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "23 reviewed, lint ok, coverage rc 0, gap fixture rc 1; safety grep 6 lines"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "31 reviewed; lint ok; 0 empty cells; gap rc 1; scoped safety check (TCR row 21) empty",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "23 reviewed, lint ok, coverage rc 0, gap fixture rc 1; safety grep 6 lines"
+      }
     },
     "G04-06": {
       "met": true,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "fresh checkout make up/demo x2/README/down rc 0; plan 6 sessions, 12 cited assignments; idempotent"
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "fresh checkout make up/demo x2/readme/down rc 0; plan 6 sessions, 15 assignments, 0 uncited; idempotent",
+      "of_record_r3": {
+        "met": true,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "fresh checkout make up/demo x2/README/down rc 0; plan 6 sessions, 12 cited assignments; idempotent"
+      }
     },
     "G04-07": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "flags off 145 passed, 6 named skips, 0 flaky; flag-on project 3 of 6"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "145 passed, 6 named skips; x3 435 passed 0 flaky; flag-on 6/6",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "flags off 145 passed, 6 named skips, 0 flaky; flag-on project 3 of 6"
+      }
     },
     "G04-08": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "axe 0 over 75, targets 0; no R checks, no Q over-limit targets"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "axe 72+10, targets 54+8, 0 errors; P, A, R, Q families; 320/360 ok",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "axe 0 over 75, targets 0; no R checks, no Q over-limit targets"
+      }
     },
     "G04-09": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "product passes; live_privacy.py reads the error code at the top level"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "flags off rc 0; flags on age, consent, retention ok 3/3",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "product passes; live_privacy.py reads the error code at the top level"
+      }
     },
     "G04-10": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "product passes (10 x 201, 40 x 429, over-quota 0 bytes, 6 rules); same harness defect; GET /me/quota 404"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "10x201 then 40x429; over-quota 429, 0 bytes; flags off ok; 6 rules SUCCESS",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "product passes (10 x 201, 40 x 429, over-quota 0 bytes, 6 rules); same harness defect; GET /me/quota 404"
+      }
     },
     "G04-11": {
       "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "IT-04 224/224 (IT-04-11/-15 not found by name); coverage 98/98/94.15%; mutation coaching/plan 0.6753; domain budget and DOMAIN_TEST_PATHS"
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "(a)-(c) met; (d) domain 6.6 s, unit 15.1 s; integration serial form stopped at 600 s rc 124 (CI form 177.5 s). Method finding VERIFY04R4-01 Fixed by FIX-04-4a #179 (decided block live 388.1 s rc 0); re-measure: retro E1 VERIFY-04-r5",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "IT-04 224/224 (IT-04-11/-15 not found by name); coverage 98/98/94.15%; mutation coaching/plan 0.6753; domain budget and DOMAIN_TEST_PATHS"
+      },
+      "owner_if_unmet": "senior-qa-engineer"
     },
     "G04-12": {
-      "met": false,
-      "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "(a) CI green; (b) 57/57 verdicts; (c) open 13 after RETRO-04",
-      "after_second_close": "(a) CI green d48f19a3 run 40999590501; (b) 70/70 verdicts; (c) open 0 at the second close, open 1 after review round 1 of PR #175 (EM-RETRO04-02, undecided TCR row 20; ledger, not re-measured by a VERIFY round)"
+      "met": true,
+      "verified": "VERIFY-04-r4 c83145c (senior-qa-engineer with sre-devops-engineer)",
+      "actual": "17 jobs green incl. ci-gate; 71/71 verdicts at c83145c (73/73 at the third close); open 0",
+      "after_second_close": "(a) CI green d48f19a3 run 40999590501; (b) 70/70 verdicts; (c) open 0 at the second close, open 1 after review round 1 of PR #175 (EM-RETRO04-02, undecided TCR row 20; ledger, not re-measured by a VERIFY round)",
+      "of_record_r3": {
+        "met": false,
+        "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
+        "actual": "(a) CI green; (b) 57/57 verdicts; (c) open 13 after RETRO-04"
+      }
     }
   },
   "goal_met": false,
-  "goal_met_note": "2 of 12 met live of record (VERIFY-04-r3 at b9d0dc3: G04-04, G04-06). After the fix wave SMOKE-04-r2 is green at d48f19a3, but no VERIFY round has run there; VERIFY-04-r4 is carry-over D1. See sprint-report.md §1, §1.4, §11",
+  "goal_met_note": "11 of 12 met live of record (VERIFY-04-r4 at c83145c; only G04-11 (d) integration missed, a method defect). FIX-04-4a (#179) decided the method and measured it live (388.1 s of 600 s, rc 0); the row is re-measured by VERIFY-04-r5 (retro E1). See sprint-report.md §1.0, §13",
   "open_defects": {
-    "count": 1,
+    "count": 0,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md",
-    "at": "d48f19a3 + RETRO-04 second-close reconciliation + review round 1 of PR #175",
-    "ids": [
-      "EM-RETRO04-02"
-    ],
+    "at": "22ca756c + RETRO-04 third-close reconciliation",
+    "ids": [],
     "closed_since_first_close": [
       "EM-PR27-01",
       "QA-VERIFY04R3-01",
@@ -113,7 +173,9 @@
       "QA-VERIFY04R3-08",
       "SRE-VERIFY04R3-03",
       "QA-VERIFY04R3-09",
-      "EM-RETRO04-01 (minor)"
+      "EM-RETRO04-01 (minor)",
+      "EM-RETRO04-02 (#176)",
+      "QA-VERIFY04R4-01 alias VERIFY04R4-01 (#179)"
     ],
     "minor_open": [
       "QA-VERIFY04R3-10",
@@ -654,11 +716,11 @@
   },
   "ticket_prs": {
     "rule": "one PR per ticket into main; merge only through merge_ready.py by the gated merge step (ADR 0050)",
-    "merged": 70,
-    "merged_range": "#87 (2026-10-17T11:22Z) .. #173 (2026-10-30T03:50Z)",
-    "review_rule_met_on_merged_head": "70/70 (merged_verdict.py rc 0)",
-    "ci_gate_green_on_head": "70/70",
-    "size_waiver": "33/70",
+    "merged": 73,
+    "merged_range": "#87 (2026-10-17T11:22Z) .. #179 (2026-10-30T08:40Z)",
+    "review_rule_met_on_merged_head": "73/73 (merged_verdict.py rc 0)",
+    "ci_gate_green_on_head": "73/73",
+    "size_waiver": "33/73",
     "map": [
       {
         "id": "PLAN-04",
@@ -1595,6 +1657,51 @@
         "changes_requested_verdicts": 0,
         "merge_commit": "d48f19a3",
         "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "RETRO-04-r2",
+        "pr": 175,
+        "merged": true,
+        "merged_at": "2026-10-30T05:06:02Z",
+        "head": "a8ab120",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 894,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 1,
+        "merge_commit": "1a320dfa",
+        "phase": "second close"
+      },
+      {
+        "id": "EM-RETRO04-02",
+        "pr": 176,
+        "merged": true,
+        "merged_at": "2026-10-30T05:33:52Z",
+        "head": "791b375",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 26,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "c83145c2",
+        "phase": "second close follow-up"
+      },
+      {
+        "id": "FIX-04-4a",
+        "pr": 179,
+        "merged": true,
+        "merged_at": "2026-10-30T08:40:23Z",
+        "head": "37648e1",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 428,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "22ca756c",
+        "phase": "after VERIFY-04-r4"
       }
     ],
     "not_merged": [
@@ -1677,10 +1784,19 @@
     ]
   },
   "ci": {
-    "main_head": "d48f19a3",
-    "run": 40999590501,
-    "conclusion": "success",
-    "main_push_runs_since_first_close": "13: 12 success, 1 cancelled (superseded)"
+    "main_head": "22ca756c",
+    "run": 41028026459,
+    "conclusion": "in progress at the third close (11 success, 2 allowed skips, 3 running); merge gate of #179 green (ci-gate run 41026210767)",
+    "last_completed_main_run": {
+      "head": "c83145c2",
+      "run": 41009129548,
+      "conclusion": "success",
+      "jobs": "17: 15 success, 2 allowed skips, ci-gate success"
+    },
+    "first_scheduled_dependency_audit": {
+      "run": 41027270158,
+      "conclusion": "success"
+    }
   },
   "retro": {
     "file": "docs/retros/2026-12-11-sprint-04.md",
@@ -1704,6 +1820,19 @@
       "C3": "partly",
       "C4": "partly",
       "C5": "done"
+    },
+    "third_close_actions": [
+      "E1",
+      "E2",
+      "E3",
+      "E4",
+      "E5"
+    ],
+    "second_close_actions_status": {
+      "D1": "done (build at 12 GB, not the 16 GB floor)",
+      "D2": "partly (rows 20, 21 accepted; 11, 14 pending)",
+      "D3": "not started",
+      "D4": "partly (scheduled audit success; §6 2 of 12 rows; no draft upgrade PR)"
     }
   },
   "second_close": {
@@ -1874,6 +2003,41 @@
         }
       }
     }
+  },
+  "third_close": {
+    "date": "2026-10-30",
+    "head": "22ca756c",
+    "verify_round": {
+      "id": "VERIFY-04-r4",
+      "pr": 178,
+      "head": "c83145c2",
+      "met": "11 of 12",
+      "folded": true
+    },
+    "smoke": {
+      "id": "SMOKE-04-r3",
+      "pr": 177,
+      "head": "c83145c2",
+      "verdict": "green",
+      "folded": true
+    },
+    "fix_prs": [
+      179
+    ],
+    "merged_since_second_close": [
+      175,
+      176,
+      179
+    ],
+    "goal_met_of_record": false,
+    "open_defects_before": 0,
+    "open_defects_after": 0,
+    "ledger_rows": [
+      "QA-VERIFY04R4-01 Open + Fixed",
+      "QA-RETRO04R2-04..06, PE-RETRO04R2-01..02 Fixed"
+    ],
+    "scorecard_change": "§4 G04-05 (e) scoped safety method (TCR row 21) applied",
+    "next": "VERIFY-04-r5 re-measures G04-11 (retro E1, 2026-11-02)"
   },
   "nightly": {
     "run_date": "2026-10-30",
