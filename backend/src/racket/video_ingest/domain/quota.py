@@ -17,6 +17,14 @@ class QuotaUsage:
 
 
 @dataclass(frozen=True)
+class StorageUsage:
+    """What ``GET /me/quota`` shows (QA-VERIFY04R3-04; api-sprint-04 §7): the caller's own."""
+
+    used_bytes: int
+    limit_bytes: int
+
+
+@dataclass(frozen=True)
 class StorageQuota:
     limit_bytes: int
 
@@ -24,13 +32,19 @@ class StorageQuota:
         if self.limit_bytes < 0:
             raise ValueError("a storage quota is never negative")
 
+    def usage(self, *, stored_bytes: int, reserved_bytes: int) -> StorageUsage:
+        """Used as check 4a counts it, so the page and a refusal agree (fail closed on nonsense)."""
+        if stored_bytes < 0 or reserved_bytes < 0:
+            raise ValueError("impossible byte counts")
+        return StorageUsage(stored_bytes + reserved_bytes, self.limit_bytes)
+
     def refusal(
         self, *, stored_bytes: int, reserved_bytes: int, requested_bytes: int
     ) -> QuotaUsage | None:
         """``None`` when the new upload fits, else the usage to report (fail closed on nonsense)."""
-        if stored_bytes < 0 or reserved_bytes < 0 or requested_bytes < 1:
+        if requested_bytes < 1:
             raise ValueError("impossible byte counts")
-        used = stored_bytes + reserved_bytes
+        used = self.usage(stored_bytes=stored_bytes, reserved_bytes=reserved_bytes).used_bytes
         if used + requested_bytes <= self.limit_bytes:
             return None
         return QuotaUsage(used, self.limit_bytes, requested_bytes)

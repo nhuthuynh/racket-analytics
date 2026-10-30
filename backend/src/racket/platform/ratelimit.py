@@ -28,6 +28,12 @@ rate_limit_events = sa.Table(
 )
 
 
+def rfc3339_seconds(value: datetime) -> str:
+    """``retry_at`` and ``next_slot_at``: UTC, whole seconds, ``Z`` (api-sprint-01 §1.1). The DB
+    session's zone may not be UTC (C-08)."""
+    return value.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 class RateLimited(AppError):
     """429 with ``retry_at`` and ``Retry-After`` (api-sprint-01 §1.1, §2.4)."""
 
@@ -35,8 +41,7 @@ class RateLimited(AppError):
 
     def __init__(self, retry_at: datetime, now: datetime) -> None:
         super().__init__("rate limited")
-        utc = retry_at.astimezone(UTC)  # the DB session's zone may not be UTC (C-08)
-        self.retry_at: str | None = utc.isoformat(timespec="seconds").replace("+00:00", "Z")
+        self.retry_at: str | None = rfc3339_seconds(retry_at)
         wait = max(1, int((retry_at - now).total_seconds() + 0.999))
         self.response_headers = {"Retry-After": str(wait)}
 
@@ -71,3 +76,13 @@ class RateLimiter:
             return retry_at
         self.session.execute(sa.insert(rate_limit_events).values(key=key, at=now))
         return None
+
+    def usage(self, key: str, *, window: timedelta) -> tuple[int, datetime | None]:
+        """Read only: (hits counted in the window, the oldest of them) for ``key``; what ``hit``
+        would count now, without spending a slot (``GET /me/quota``, QA-VERIFY04R3-04)."""
+        count, oldest = self.session.execute(
+            sa.select(sa.func.count(), sa.func.min(rate_limit_events.c.at)).where(
+                rate_limit_events.c.key == key, rate_limit_events.c.at > self.clock() - window
+            )
+        ).one()
+        return int(count), oldest

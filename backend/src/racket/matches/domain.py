@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from typing import Self
 
@@ -98,9 +98,36 @@ class CreationLimits:
 
     def keys(self, owner: OwnerId, client_ip: str) -> tuple[tuple[str, int], ...]:
         return (
-            (f"match:create:{owner.value}", self.per_account),
+            (account_creation_key(owner), self.per_account),
             (f"match:create:ip:{client_ip}", self.per_ip),
         )
+
+
+def account_creation_key(owner: OwnerId) -> str:
+    return f"match:create:{owner.value}"
+
+
+@dataclass(frozen=True)
+class CreationUsage:
+    """``GET /me/quota`` ``match_creations`` (QA-VERIFY04R3-04; api-sprint-04 §7; Q-01): the
+    account's creations in the window; ``next_slot_at`` only at the limit, when the oldest
+    counted creation leaves the window (the ``retry_at`` a creation would get)."""
+
+    limit: int
+    window_s: int
+    used: int
+    next_slot_at: datetime | None
+
+    @classmethod
+    def in_window(
+        cls, *, limit: int, window: timedelta, used: int, oldest: datetime | None
+    ) -> CreationUsage:
+        if limit < 1:
+            raise ValueError("a creation limit is at least 1")
+        if used < 0 or (used > 0) != (oldest is not None):
+            raise ValueError("impossible creation count")
+        next_slot_at = oldest + window if oldest is not None and used >= limit else None
+        return cls(limit, int(window.total_seconds()), used, next_slot_at)
 
 
 class MatchFormat(StrEnum):
