@@ -1,0 +1,11 @@
+# SMOKE-04-r2 decisions
+
+Per-ticket decision file (PO rule 2026-10-07). Ticket: re-smoke of `origin/main` at `d48f19a3` after the VERIFY-04-r3 fix PRs (#161-#173). Results go to `docs/sprints/04/smoke.md` (new top section). Owner: sre-devops-engineer with senior-qa-engineer. Docs-only. No product, test or harness file is changed.
+
+| Date | Role | Decision | Evidence | Why |
+|---|---|---|---|---|
+| 2026-10-30 | sre-devops-engineer | **The 16 GB build floor was kept again; no Compose image build.** The stack used the SMOKE-04 topology (Compose for pulled services, app as local processes behind the committed Caddyfile), from a clean state | `RA_MIN_FREE_GB=16 bash scripts/disk-precheck.sh` → rc 3, 14 GB free after prune steps 2-3 | A build takes about 6 GB and would take the shared host under the 10 GB run floor (`docs/ops/disk-and-prune.md`) |
+| 2026-10-30 | sre-devops-engineer | **Prune step 4 (`docker volume prune -f`) was skipped** | `docker volume ls`: `racket-analytics_pgdata`, `_s3data` (developer stack, its containers running) and `racket-qv01_*` have no running container | Those volumes hold other stacks' data; the runbook allows step 4 only for volumes nobody needs |
+| 2026-10-30 | sre-devops-engineer | **SMOKE-04-04 (Compose forwarding) is checked at config level**, not in running containers | `FEATURE_AGE_GATE=true docker compose … config \| grep -c 'FEATURE_AGE_GATE: "true"'` → 5 | No image build on this host (row 1); CI's Compose E2E jobs run the containers |
+| 2026-10-30 | senior-qa-engineer | **The `test_demo_seed_live.py:48` failure against this stack is a topology limit, not a finding**: `make demo` copies the CA from the Compose `web-tls` service, which this topology does not run | `make demo: the stack's web-tls service is not reachable`; `seed_demo.py` twice → rc 0, same plan id; CI step `make demo seeds a match …` success on `d48f19a3` | The product path (`seed_demo.py`) passes live; the make wrapper is covered by CI on the full Compose stack |
+| 2026-10-30 | senior-qa-engineer | **The plan load method (G04-02 c) was run once in the smoke**, though it belongs to the verifier | `live_plan.py --load --rps 50 --duration 60` → rc 0, p95 24.5 ms | Its fix (#167) merged after SMOKE-04; one run shows the verifier will not start from a known red |
