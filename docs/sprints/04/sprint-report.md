@@ -1,8 +1,10 @@
 # Sprint 4 report: runnable R1 prototype (rules-only plan and drill library), privacy and quotas behind flags
 
-- **Prepared by:** engineering-manager, ticket RETRO-04, at the sprint close on 2026-10-29. The review with the PO keeps its planned date, 2026-12-11 (sprint-04 header).
-- **Head measured:** `origin/main` `b9d0dc3` (merge of PR #152, ST-065, the last Sprint 4 ticket merge). It was measured twice, independently: by SMOKE-04 (#159, sre-devops-engineer with senior-qa-engineer) and by VERIFY-04-r3 (#160, senior-qa-engineer with sre-devops-engineer, fresh worktree and Compose stack). Both PRs are folded into this PR (`smoke.md`, `goal-scorecard.md` §2, `decisions/SMOKE-04.md`, `decisions/VERIFY-04-r3.md`) and closed with a pointer, as ADR 0050 rule 4 asks. After `b9d0dc3`, only this docs PR changes the tree.
-- **Sources:** `goal-scorecard.md` §2 (r3 values), `smoke.md`, `review-rounds.md` (with the RETRO-04 reconciliation), the 59 per-ticket files in `decisions/`, and GitHub REST read with the rules of `scripts/ci/merge_ready.py` (commands in §2 and §7).
+- **Prepared by:** engineering-manager, ticket RETRO-04, at the sprint close on 2026-10-29, and **updated at the second close on 2026-10-30**, after the fix wave (retro action C2: 12 ticket PRs, #162-#173) and SMOKE-04-r2 (#174). The review with the PO keeps its planned date, 2026-12-11 (sprint-04 header).
+- **Heads measured:** (1) `origin/main` `b9d0dc3` (merge of PR #152, ST-065, the last Sprint 4 feature merge). Measured by SMOKE-04 (#159) and VERIFY-04-r3 (#160); this is the **measurement of record** for the scorecard. (2) `origin/main` **`d48f19a3`** (merge of PR #173, SRE-VERIFY04R3-03, the last fix-wave merge). Measured by **SMOKE-04-r2** (#174, sre-devops-engineer with senior-qa-engineer, folded into this PR: `smoke.md` top section, `decisions/SMOKE-04-r2.md`). No VERIFY round has run at `d48f19a3` yet (VERIFY-04-r4 is the first carry-over row, §10).
+- **Sources:** `goal-scorecard.md` §2 (r3 values), `smoke.md` (SMOKE-04 and SMOKE-04-r2), `review-rounds.md` (with both RETRO-04 reconciliations), the 73 per-ticket files in `decisions/`, and GitHub REST read with the rules of `scripts/ci/merge_ready.py` (commands in §2, §7 and §11).
+
+> **Second close in one paragraph (2026-10-30).** All 12 Sprint 4 majors and EM-PR27-01 now have a merged fix. The ledger reads **open 0** (`open_defects.py` both ledgers → rc 0). CI on `main` is green at `d48f19a3` (push run 40999590501: 17 jobs, `ci-gate` success). SMOKE-04-r2 is **green** live at `d48f19a3`, with flags off and with flags on. Steps 1-10 of the plan journey pass, including "Not for me". `GET /me/plan` holds 50 RPS at p95 24.5 ms. The flag-on E2E project passes 6 of 6, and the privacy and quota harness returns rc 0. **The goal of record is still 2 of 12, not met**: a smoke runs one pass of each method, and only a VERIFY round counts (PO rule, ADR 0055). SMOKE-04-r2 and the fix tickets' live dry-runs suggest 11 of 12 rows will pass in VERIFY-04-r4. G04-05 (e) waits on one senior-qa-engineer decision, the scoped safety grep (TCR row 2026-10-30), §1.4.
 
 ## 1. Goal and scorecard (read this first)
 
@@ -58,6 +60,23 @@ No PO answer to P6, P7, P8, P10, P11, P15 or P16 is recorded since planning: `gr
 | VERIFY-04-r1 (#116, closed unmerged 2026-10-18) | `3c4be05` | 1 / 12 | ran after 27 merges, before the plan API and UI; its FIX-04-1a..1f PRs (#117-#121) were closed with it |
 | VERIFY-04-r2 (#135, closed unmerged 2026-10-18) | `09d279d` | 2 / 12 | closed as "premature" with SMOKE (#134) and FIX-04-2b..2d (#136-#138), because 10 tickets were still unmerged |
 | VERIFY-04-r3 (#160, folded in here) | `b9d0dc3` | **2 / 12** | after every Sprint 4 ticket merged; SMOKE-04 (#159) agrees on every overlapping row |
+
+### 1.4 After the fix wave: SMOKE-04-r2 at `d48f19a3` (2026-10-30; not the measurement of record)
+
+| ID | Of record (VERIFY-04-r3, `b9d0dc3`) | Fix PR(s) | Live evidence at or before `d48f19a3` | What VERIFY-04-r4 must still run |
+|---|---|---|---|---|
+| G04-01 | no (0 of 5; swap 409) | #166 | SMOKE-04-r2 `live_plan.py --runs 1 --determinism 3` → rc 0, `runs_passed 1/1`, swap ok; QA-VERIFY04R3-01 dry-run on Compose at `338d7d22` → `runs_passed 5`, swap 5 of 5 | 5 runs at `d48f19a3` |
+| G04-02 | no ((c) 34.4 RPS, p95 3,229 ms) | #167 | SMOKE-04-r2 `--load --rps 50 --duration 60` → rc 0, 50.0 RPS, p95 24.5 ms, p99 62.9 ms, availability 1.0; generate p95 44.5 ms (n 4) | (a) n ≥ 20 and (b) n ≥ 5 on the Compose stack |
+| G04-03 | no (method fails closed) | #165 | `junit_rate.py --include '.' --require weakness_golden` → rc 0 (`decisions/QA-VERIFY04R3-02-08.md`); SMOKE-04-r2 reference 9 comparisons, 0 mismatches | the four parts as written |
+| G04-04 | **yes** | — | SMOKE-04-r2 `racket-plan-eval --runs 3` → pass^3 32 of 32 | re-confirm |
+| G04-05 | no ((e) safety grep 6 lines) | #166, #169 | SMOKE-04-r2: 31 reviewed drills, lint ok, coverage rc 0, gap fixture rc 1; new lint rule fails a footwork drill without a safety note. The (e) grep as written still matches the 5 draft `pb.fixture.*` files (false positives) | **senior-qa-engineer decides the TCR row 2026-10-30** (scope (e) to (a)'s population); then (a)-(e) |
+| G04-06 | **yes** | — | not re-run locally (disk under the 16 GB build floor); CI run 40999590501 `make demo seeds a match` success; SMOKE-04-r2 `seed_demo.py` ×2 idempotent, same plan id | fresh checkout `make up` / `demo` ×2 / `down` |
+| G04-07 | no (flag-on 3 of 6) | #164 | SMOKE-04-r2: flags off 145 passed, 6 named skips, 0 failed, 0 flaky; flags on **6 passed, 0 failed**; #164 dry-run flags on ×3 green | `--repeat-each=3` both projects |
+| G04-08 | no (no R, no Q target checks) | #164 | SMOKE-04-r2 flags on: `axe-R-01`, `targets-R-01` (plain, 320, 360), `axe-Q-10-*`, `targets-Q-10-*`, 0 errors | the jq counts as written |
+| G04-09 | no (harness reads the wrong level) | #163, #162 | SMOKE-04-r2 `live_privacy.py --flags on --runs 3 --quotas` → rc 0 (age, consent, retention 3 of 3); `--flags off` → rc 0. Local-process topology; Compose forwarding checked at config level (`grep -c` → 5) | flags on through `make up` (running containers) |
+| G04-10 | no (same harness defect; `GET /me/quota` 404) | #163, #168 | SMOKE-04-r2: burst 10 × 201 then 40 × 429; quota 429 with stored bytes unchanged; alerts ok (6 rules); #168 live dry-run of `GET /me/quota` | as G04-09 |
+| G04-11 | no (plan mutation 0.6753; IT names; domain budget) | #165, #172, #173 | `mutation_score.py --target src/racket/coaching/plan` → 0.9811 (#172); weakness 0.8056; IT-04 236/236 with every id found (#165); domain step with coaching 6.2-7.3 s of 10 s (#173); integration 391 s of 600 s (run 40991209335) | coverage and the full budget set at one head |
+| G04-12 | no ((c) 13 after RETRO-04) | #170 and every row above | (a) CI green at `d48f19a3`; (b) **70 of 70** merged Sprint 4 PRs meet the review rule on the merged head (§2 and §11); (c) **open 0** after this PR | re-measure (a)-(c) |
 
 ## 2. Tickets: PR, reviews, CI and merge
 
@@ -232,6 +251,8 @@ Unsized work that also merged: 5 gate tickets, C4-G12, PLAN-04, 2 ticket slices 
 
 Fix first, before any Sprint 5 feature ticket (the goal is not met and the PO rule puts open majors first). Every row is in `review-rounds.md` with its evidence.
 
+**Status on 2026-10-30 (second close):** every major row below is **Fixed** by a merged ticket PR (§11), and PR #144 is closed. Still open: QA-VERIFY04R3-10 (minor) and C4-MIN (minors). The new carry-over list is §10.
+
 | Ledger id | What | Owner | Closes |
 |---|---|---|---|
 | EM-PR27-01 (Sprint 3) | senior-backend-engineer verdict on PR #27 head `52582fd` | senior-backend-engineer | G04-12 (c) |
@@ -250,6 +271,57 @@ Fix first, before any Sprint 5 feature ticket (the goal is not met and the PO ru
 | C4-MIN (minor, Sprint 3 ledger) | not worked in Sprint 4; carried unchanged | each owner | — |
 | ADR 0053 and ADR 0049 (both Proposed) | decide | sre-devops-engineer with principal-engineer | — |
 
-## 10. History of this report
+## 10. Carry-over after the second close (for Sprint 5 planning, 2026-10-30)
 
-- 2026-10-29: written at the sprint close (RETRO-04), from VERIFY-04-r3 and SMOKE-04 at `b9d0dc3`, with the RETRO-04 ledger reconciliation (open 2 → 13).
+The majors are closed. What is left before the goal can count as met is measurement, one QA decision and the human items:
+
+| Item | What | Owner | Closes |
+|---|---|---|---|
+| VERIFY-04-r4 | A full verification round at the latest `main` (ADR 0055 rule 1: the build is merged; rule 3: its PR merges). It includes the flag-on stack through `make up` in running containers, which no local run has done (disk floor) | senior-qa-engineer with sre-devops-engineer | the scorecard of record (§1.4 last column) |
+| G04-05 (e) TCR row 2026-10-30 | Decide whether to scope the safety grep to (a)'s population (`test-change-requests.md` row 21, "pending (senior-qa-engineer)") | senior-qa-engineer | G04-05 (e) |
+| QA-VERIFY04R3-10 (minor) | Demo script says "12 rallies"; the product says 11 | product-manager | — |
+| QA-VERIFY04R3-01 follow-up (minor) | A single-weakness plan can put both drills of one target in the same session | pickleball-domain-coach | — |
+| BE-PR27-01..03 (minor/nit, Sprint 3 ledger) | Follow-ups of the post-merge review of PR #27 (row scope of the `jobs` grant; plaintext `ALTER ROLE` password in server logs) | senior-backend-engineer | — |
+| ADR 0053 live check | First scheduled `Dependency audit` run and a real draft upgrade PR (the run needs admin setting 6, human; `decisions/ADR-0053-0049.md`) | sre-devops-engineer; PO (setting 6) | retro C4 success measure |
+| Disk (blockers row 2) | 13-15 GB free; the 16 GB build floor stopped both smokes from building images | P5 standing approval (prune) | local image builds |
+| C4-MIN (Sprint 3 minors) | carried unchanged | each owner | — |
+| P6, P7, P8, P10, P11, P15, P16 | human-gated (§1.2) | PO | S4-DoD-P rows |
+
+## 11. Second close: the fix wave and SMOKE-04-r2 (2026-10-29 20:36 → 2026-10-30 03:50 UTC)
+
+The first close (#161) planned the fix wave as retro action C2: one red-first ticket per open major. It ran the same evening. Each of the 12 ticket PRs went through the full process: TDD with red first, a live dry-run of the method it fixes (ADR 0055 rule 2), principal-engineer and senior verdicts on the merged head, and the gated merge after `merge_ready.py` rc 0. Commands as in §2. The verdict rule was checked with `merged_verdict.py --repo nhuthuynh/racket-analytics --pr N --role principal-engineer --role <senior>` → `merged-verdict: met` and rc 0 for each of #161-#173 (2026-10-30). The ci-gate result is the latest `ci-gate` check run on the merged head. Lines are GitHub `additions + deletions` / `PR_LABELS='[]' check_pr_size.py --base <merge>^1 --head <merge>^2`.
+
+| # | Ticket | PR | Merged (UTC) | Open → merge | Changed lines: all / production | `size-waiver` | `qa-approved-test-change` | CHANGES REQUESTED verdicts before APPROVE | APPROVE on merged head | `ci-gate` on merged head | Merge commit | Closes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 58 | RETRO-04 | #161 | 2026-10-29 20:36 | 0.4 h | 2252 / 0 | — | — | 0 | principal-engineer + senior-qa-engineer (`a970286`) | success | `6ec3c3fe` | first close (report, retro, ADR 0055, ledger reconciliation) |
+| 59 | SRE-VERIFY04R3-02 | #162 | 2026-10-29 21:52 | 1.1 h | 374 / 15 | — | — | 0 | principal-engineer + senior-backend-engineer (`621acc2`) | success | `9dee347c` | SRE-VERIFY04R3-02 (Compose forwards the Sprint 4 settings; parity test) |
+| 60 | QA-VERIFY04R3-03 | #163 | 2026-10-29 22:41 | 1.8 h | 172 / 34 | — | yes | 0 | principal-engineer + senior-backend-engineer (`490d48c`) | success | `aa24482b` | QA-VERIFY04R3-03 (`live_privacy.py` reads `error.*`) |
+| 61 | QA-VERIFY04R3-05-06 | #164 | 2026-10-29 22:09 | 1.0 h | 184 / 2 | — | yes | 0 | principal-engineer + senior-qa-engineer (`3ce4eb4`) | success | `fae1b838` | QA-VERIFY04R3-05, -06 (flag-on specs answer A-10; R and Q checks) |
+| 62 | QA-VERIFY04R3-02-08 | #165 | 2026-10-29 21:57 | 0.8 h | 383 / 41 | — | — | 0 | principal-engineer + senior-backend-engineer (`cf3f54b`) | success | `74cf968c` | QA-VERIFY04R3-02, -08 (`junit_rate` matches markers; IT-04-11/-15 names) |
+| 63 | QA-VERIFY04R3-01 | #166 | 2026-10-30 00:51 | 1.7 h | 1060 / 467 | yes | yes | 1 | principal-engineer + senior-qa-engineer (`e3d6001`) | success | `a4eabcba` | QA-VERIFY04R3-01 (8 solo-wall drills; `solo+wall` coverage axis) |
+| 64 | SRE-VERIFY04R3-01 | #167 | 2026-10-29 23:56 | 0.7 h | 822 / 251 | — | — | 0 | principal-engineer + senior-qa-engineer (`8ef1886`) | success | `60d2401c` | SRE-VERIFY04R3-01 (`GET /me/plan` at 50 RPS; Locust plan gate) |
+| 65 | QA-VERIFY04R3-04 | #168 | 2026-10-30 00:06 | 0.6 h | 439 / 164 | — | — | 0 | principal-engineer + senior-qa-engineer (`339e0fd`) | success | `78b1f276` | QA-VERIFY04R3-04 (`GET /me/quota`) |
+| 66 | QA-VERIFY04R3-09 | #169 | 2026-10-30 02:20 | 1.3 h | 414 / 57 | — | — | 0 | principal-engineer + senior-qa-engineer (`e5caa77`) | success | `3b36d4e2` | QA-VERIFY04R3-09 (safety note; lint rule) |
+| 67 | EM-PR27-01 | #170 | 2026-10-30 02:20 | 1.2 h | 28 / 0 | — | — | 0 | principal-engineer + senior-qa-engineer (`2320743`) | success | `903eaf8b` | EM-PR27-01 (senior-backend verdict on PR #27; retro C1) |
+| 68 | ADR-0053-0049 | #171 | 2026-10-30 02:21 | 1.0 h | 932 / 180 | — | — | 0 | principal-engineer + senior-backend-engineer (`375a4b5`) | success | `a955f98a` | retro C4 (ADR 0053 and ADR 0049 Accepted; PO notice on a red scheduled run) |
+| 69 | QA-VERIFY04R3-07 | #172 | 2026-10-30 02:58 | 1.4 h | 991 / 0 | — | — | 0 | principal-engineer + senior-qa-engineer (`d58c6d0`) | success | `2bc9bc77` | QA-VERIFY04R3-07 (`coaching/plan` mutation 0.9811) |
+| 70 | SRE-VERIFY04R3-03 | #173 | 2026-10-30 03:50 | 0.5 h | 590 / 83 | — | yes | 0 | principal-engineer + senior-backend-engineer (`ddea789`) | success | `d48f19a3` | SRE-VERIFY04R3-03 (coaching gates nightly; `DOMAIN_TEST_PATHS`; retro C5) |
+| — | SMOKE-04-r2 | #174 | folded into this PR | — | 78 / 0 (docs) | — | — | — | (reviewed with this PR) | — | — | re-smoke of `d48f19a3`: **green**; commit `6184b023` merged into this branch unchanged, PR closed with a pointer (ADR 0055 rule 3) |
+
+**Summary of the fix wave (12 ticket PRs, #162-#173):** median open → merge 1.05 h (mean 1.09 h, max 1.8 h). Median 426.5 changed lines (all files) and **49 production lines**. One PR is over 400 production lines (#166, 467, `size-waiver` from the EM/QA step). There was 1 CHANGES REQUESTED verdict in total (#166, round 1: the principal-engineer's PE-R1-1 pair-rule finding, fixed in the PR). `qa-approved-test-change` was used on 4 PRs (#163, #164, #166, #173), each with a TCR row. **`main` stayed green the whole time**: 13 push runs on `main` after #161 (`actions/runs?branch=main&created>=2026-10-29T20:30Z`), 12 success and 1 cancelled (`903eaf8b`, superseded 30 s later by the merge of #171). No scheduled run fell in the window.
+
+**Sprint 4 totals after the second close:** 70 PRs merged into `main` (57 at the first close + #161-#173). All 70 meet the review rule on the merged head, with `ci-gate` success. `size-waiver` on 33 of 70 (47%). Open blocker/major: **0**. Units: 48 / 48 implemented. **DoD-done 48 (1.00)**: every major traced to a ticket in §3 is Fixed. The 13 units that §3 held back are DoD-done now (judgment; the goal of record is still VERIFY-04-r3's).
+
+**SMOKE-04-r2 (#174) problems and how this close handles them** (`smoke.md`, `decisions/SMOKE-04-r2.md`):
+
+| Problem raised | Disposition |
+|---|---|
+| sre-devops-engineer: no full Compose image build, app-container hardening, IT-00-10 or `make up` / `make demo` / `make down` from a fresh checkout. The disk was under the 16 GB build floor: `RA_MIN_FREE_GB=16 bash scripts/disk-precheck.sh` → rc 3, 14 GB after `docker builder prune -af` reclaimed 2.422 GB | Environment, not a product finding (blockers row 2 stays open). CI run 40999590501 on `d48f19a3` covers these: `Start the full stack`, `Worker sandbox IT-00-10` and `make demo seeds a match` all success. VERIFY-04-r4 runs them locally (§10) |
+| sre-devops-engineer: the SMOKE-04-04 fix (#162) was checked at config level only | `docker compose … config \| grep -c 'FEATURE_AGE_GATE: "true"'` → 5. SRE-VERIFY04R3-02 is Fixed with this residual written in its row. The running-container check is in VERIFY-04-r4's scope (§10) |
+| engineering-manager: the ledger rows of the SMOKE-04 findings still said Open | Closed by this PR (`review-rounds.md`, "Ticket RETRO-04 (second close)"). QA-VERIFY04R3-01 and -03 were already Fixed by their tickets. This PR adds the Fixed rows for -05, -06, -04 and SRE-VERIFY04R3-02, with the SMOKE-04-r2 evidence: `live_plan.py --runs 1 --determinism 3` → rc 0, flags-on Playwright 6 passed, `live_privacy.py --flags on --runs 3 --quotas` → rc 0. `open_defects.py` both ledgers → rc 0, `open 0` |
+| senior-qa-engineer (minor, topology): `infra/tests/test_demo_seed_live.py:48` fails against a stack without the `web-tls` service | Topology limit, not a finding: `seed_demo.py` ×2 → rc 0 with the same plan id, and the CI `make demo` step on `d48f19a3` is success. No ledger row |
+
+## 12. History of this report
+
+- 2026-10-29: written at the sprint close (RETRO-04, #161), from VERIFY-04-r3 and SMOKE-04 at `b9d0dc3`, with the RETRO-04 ledger reconciliation (open 2 → 13).
+- 2026-10-30: second close (RETRO-04, this PR), after the fix wave (#162-#173) and SMOKE-04-r2 (#174) at `d48f19a3`: head summary, §1.4, §9 status line, §10, §11; ledger open 4 → 0. The goal of record is unchanged (2 of 12) until VERIFY-04-r4.

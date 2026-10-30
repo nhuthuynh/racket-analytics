@@ -7,7 +7,8 @@
     "planned_review": "2026-12-11",
     "work_started": "2026-10-17",
     "status_written": "2026-10-29 (sprint close, engineering-manager, RETRO-04, at origin/main b9d0dc3; VERIFY-04-r3 and SMOKE-04 measured b9d0dc3)",
-    "closed": "2026-10-29"
+    "closed": "2026-10-29",
+    "second_close": "2026-10-30 (engineering-manager, RETRO-04 second close, at origin/main d48f19a3; SMOKE-04-r2 measured d48f19a3)"
   },
   "owner": "engineering-manager",
   "branch": "main (one PR per ticket, ADR 0039; no sprint branch)",
@@ -85,16 +86,18 @@
     "G04-12": {
       "met": false,
       "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
-      "actual": "(a) CI green; (b) 57/57 verdicts; (c) open 13 after RETRO-04"
+      "actual": "(a) CI green; (b) 57/57 verdicts; (c) open 13 after RETRO-04",
+      "after_second_close": "(a) CI green d48f19a3 run 40999590501; (b) 70/70 verdicts; (c) open 0 (ledger; not re-measured by a VERIFY round)"
     }
   },
   "goal_met": false,
-  "goal_met_note": "2 of 12 met live (G04-04, G04-06); see sprint-report.md \u00a71",
+  "goal_met_note": "2 of 12 met live of record (VERIFY-04-r3 at b9d0dc3: G04-04, G04-06). After the fix wave SMOKE-04-r2 is green at d48f19a3, but no VERIFY round has run there; VERIFY-04-r4 is carry-over D1. See sprint-report.md \u00a71, \u00a71.4, \u00a711",
   "open_defects": {
-    "count": 13,
+    "count": 0,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md",
-    "at": "b9d0dc3 + RETRO-04 reconciliation",
-    "ids": [
+    "at": "d48f19a3 + RETRO-04 second-close reconciliation",
+    "ids": [],
+    "closed_since_first_close": [
       "EM-PR27-01",
       "QA-VERIFY04R3-01",
       "SRE-VERIFY04R3-01",
@@ -107,10 +110,14 @@
       "QA-VERIFY04R3-07",
       "QA-VERIFY04R3-08",
       "SRE-VERIFY04R3-03",
-      "QA-VERIFY04R3-09"
+      "QA-VERIFY04R3-09",
+      "EM-RETRO04-01 (minor)"
     ],
-    "closed_this_close": [
-      "PD-R1S3-01 group (Fixed by C4-G12 #92; EM row written in RETRO-04)"
+    "minor_open": [
+      "QA-VERIFY04R3-10",
+      "QA-VERIFY04R3-01 follow-up (PE-R1-1 note)",
+      "C4-MIN (Sprint 3 minors)",
+      "BE-PR27-01..03 (Sprint 3 ledger, deferred)"
     ]
   },
   "po_items_open": [
@@ -141,14 +148,15 @@
       "lane": "BE",
       "units": 2,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
-      "open": [
-        "QA-VERIFY04R3-07"
-      ],
+      "dod_done_units": 2,
+      "open": [],
       "ticket_prs": [
         102
+      ],
+      "fixed_by": [
+        "QA-VERIFY04R3-07 (#172)"
       ]
     },
     {
@@ -182,14 +190,15 @@
       "lane": "BE",
       "units": 2,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
-      "open": [
-        "SRE-VERIFY04R3-01"
-      ],
+      "dod_done_units": 2,
+      "open": [],
       "ticket_prs": [
         111
+      ],
+      "fixed_by": [
+        "SRE-VERIFY04R3-01 (#167)"
       ]
     },
     {
@@ -211,14 +220,15 @@
       "lane": "BE",
       "units": 1,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
-      "open": [
-        "SRE-VERIFY04R3-02"
-      ],
+      "dod_done_units": 1,
+      "open": [],
       "ticket_prs": [
         99
+      ],
+      "fixed_by": [
+        "SRE-VERIFY04R3-02 (#162)"
       ]
     },
     {
@@ -252,14 +262,15 @@
       "lane": "BE",
       "units": 2,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
-      "open": [
-        "QA-VERIFY04R3-04"
-      ],
+      "dod_done_units": 2,
+      "open": [],
       "ticket_prs": [
         130
+      ],
+      "fixed_by": [
+        "QA-VERIFY04R3-04 (#168)"
       ]
     },
     {
@@ -325,14 +336,15 @@
       "lane": "FE",
       "units": 2,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 2,
-      "dod_done_units": 0,
-      "open": [
-        "QA-VERIFY04R3-05"
-      ],
+      "dod_done_units": 2,
+      "open": [],
       "ticket_prs": [
         154
+      ],
+      "fixed_by": [
+        "QA-VERIFY04R3-05 (#164)"
       ]
     },
     {
@@ -340,15 +352,16 @@
       "lane": "FE",
       "units": 1,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
-      "open": [
-        "QA-VERIFY04R3-05"
-      ],
+      "dod_done_units": 1,
+      "open": [],
       "ticket_prs": [
         156,
         157
+      ],
+      "fixed_by": [
+        "QA-VERIFY04R3-05 (#164)"
       ]
     },
     {
@@ -421,14 +434,15 @@
       "lane": "QA",
       "units": 1,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
-      "open": [
-        "QA-VERIFY04R3-03"
-      ],
+      "dod_done_units": 1,
+      "open": [],
       "ticket_prs": [
         105
+      ],
+      "fixed_by": [
+        "QA-VERIFY04R3-03 (#163)"
       ]
     },
     {
@@ -436,16 +450,17 @@
       "lane": "QA",
       "units": 1,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
-      "open": [
-        "rounds 1-2 closed unmerged; r3 merges with RETRO-04"
-      ],
+      "dod_done_units": 1,
+      "open": [],
       "ticket_prs": [
         116,
         135,
         160
+      ],
+      "fixed_by": [
+        "r3 evidence merged with RETRO-04 (#161)"
       ]
     },
     {
@@ -583,38 +598,40 @@
       "lane": "COACH",
       "units": 1,
       "committed": true,
-      "status": "partial",
+      "status": "done",
       "implemented_units": 1,
-      "dod_done_units": 0,
-      "open": [
-        "QA-VERIFY04R3-01, QA-VERIFY04R3-09"
-      ],
+      "dod_done_units": 1,
+      "open": [],
       "ticket_prs": [
         110
+      ],
+      "fixed_by": [
+        "QA-VERIFY04R3-01 (#166)",
+        "QA-VERIFY04R3-09 (#169)"
       ]
     }
   ],
   "totals": {
     "planned_units": 48,
     "implemented_units": 48.0,
-    "dod_done_units": 35.0,
+    "dod_done_units": 48.0,
     "implemented_ratio": 1.0,
-    "dod_done_ratio": 0.729,
+    "dod_done_ratio": 1.0,
     "by_lane": {
       "BE": {
         "planned": 17,
         "implemented": 17,
-        "dod_done": 10
+        "dod_done": 17
       },
       "FE": {
         "planned": 10,
         "implemented": 10,
-        "dod_done": 7
+        "dod_done": 10
       },
       "QA": {
         "planned": 8.5,
         "implemented": 8.5,
-        "dod_done": 6.5
+        "dod_done": 8.5
       },
       "SRE": {
         "planned": 5.5,
@@ -629,17 +646,17 @@
       "COACH": {
         "planned": 3,
         "implemented": 3,
-        "dod_done": 2
+        "dod_done": 3
       }
     }
   },
   "ticket_prs": {
     "rule": "one PR per ticket into main; merge only through merge_ready.py by the gated merge step (ADR 0050)",
-    "merged": 57,
-    "merged_range": "#87 (2026-10-17T11:22Z) .. #152 (2026-10-29T17:48Z)",
-    "review_rule_met_on_merged_head": "57/57 (merged_verdict.py rc 0)",
-    "ci_gate_green_on_head": "57/57",
-    "size_waiver": "32/57",
+    "merged": 70,
+    "merged_range": "#87 (2026-10-17T11:22Z) .. #173 (2026-10-30T03:50Z)",
+    "review_rule_met_on_merged_head": "70/70 (merged_verdict.py rc 0)",
+    "ci_gate_green_on_head": "70/70",
+    "size_waiver": "33/70",
     "map": [
       {
         "id": "PLAN-04",
@@ -1381,6 +1398,201 @@
         "size_waiver": false,
         "qa_approved_test_change": false,
         "changes_requested_verdicts": 0
+      },
+      {
+        "id": "RETRO-04",
+        "pr": 161,
+        "merged": true,
+        "merged_at": "2026-10-29T20:36:09Z",
+        "head": "a970286",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 2252,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "6ec3c3fe",
+        "phase": "first close"
+      },
+      {
+        "id": "SRE-VERIFY04R3-02",
+        "pr": 162,
+        "merged": true,
+        "merged_at": "2026-10-29T21:52:43Z",
+        "head": "621acc2",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 374,
+        "production_lines": 15,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "9dee347c",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "QA-VERIFY04R3-03",
+        "pr": 163,
+        "merged": true,
+        "merged_at": "2026-10-29T22:41:30Z",
+        "head": "490d48c",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 172,
+        "production_lines": 34,
+        "size_waiver": false,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "aa24482b",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "QA-VERIFY04R3-05-06",
+        "pr": 164,
+        "merged": true,
+        "merged_at": "2026-10-29T22:09:13Z",
+        "head": "3ce4eb4",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 184,
+        "production_lines": 2,
+        "size_waiver": false,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "fae1b838",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "QA-VERIFY04R3-02-08",
+        "pr": 165,
+        "merged": true,
+        "merged_at": "2026-10-29T21:57:02Z",
+        "head": "cf3f54b",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 383,
+        "production_lines": 41,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "74cf968c",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "QA-VERIFY04R3-01",
+        "pr": 166,
+        "merged": true,
+        "merged_at": "2026-10-30T00:51:55Z",
+        "head": "e3d6001",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 1060,
+        "production_lines": 467,
+        "size_waiver": true,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 1,
+        "merge_commit": "a4eabcba",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "SRE-VERIFY04R3-01",
+        "pr": 167,
+        "merged": true,
+        "merged_at": "2026-10-29T23:56:09Z",
+        "head": "8ef1886",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 822,
+        "production_lines": 251,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "60d2401c",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "QA-VERIFY04R3-04",
+        "pr": 168,
+        "merged": true,
+        "merged_at": "2026-10-30T00:06:35Z",
+        "head": "339e0fd",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 439,
+        "production_lines": 164,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "78b1f276",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "QA-VERIFY04R3-09",
+        "pr": 169,
+        "merged": true,
+        "merged_at": "2026-10-30T02:20:25Z",
+        "head": "e5caa77",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 414,
+        "production_lines": 57,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "3b36d4e2",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "EM-PR27-01",
+        "pr": 170,
+        "merged": true,
+        "merged_at": "2026-10-30T02:20:56Z",
+        "head": "2320743",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 28,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "903eaf8b",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "ADR-0053-0049",
+        "pr": 171,
+        "merged": true,
+        "merged_at": "2026-10-30T02:21:27Z",
+        "head": "375a4b5",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 932,
+        "production_lines": 180,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "a955f98a",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "QA-VERIFY04R3-07",
+        "pr": 172,
+        "merged": true,
+        "merged_at": "2026-10-30T02:58:20Z",
+        "head": "d58c6d0",
+        "senior": "senior-qa-engineer",
+        "changed_lines": 991,
+        "production_lines": 0,
+        "size_waiver": false,
+        "qa_approved_test_change": false,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "2bc9bc77",
+        "phase": "fix wave (retro C2)"
+      },
+      {
+        "id": "SRE-VERIFY04R3-03",
+        "pr": 173,
+        "merged": true,
+        "merged_at": "2026-10-30T03:50:24Z",
+        "head": "ddea789",
+        "senior": "senior-backend-engineer",
+        "changed_lines": 590,
+        "production_lines": 83,
+        "size_waiver": false,
+        "qa_approved_test_change": true,
+        "changes_requested_verdicts": 0,
+        "merge_commit": "d48f19a3",
+        "phase": "fix wave (retro C2)"
       }
     ],
     "not_merged": [
@@ -1452,12 +1664,21 @@
         "pr": 160,
         "state": "folded into RETRO-04, closed with a pointer"
       }
+    ],
+    "folded_not_merged": [
+      {
+        "id": "SMOKE-04-r2",
+        "pr": 174,
+        "commit": "6184b023",
+        "note": "merged into the RETRO-04 second-close branch unchanged; PR closed with a pointer"
+      }
     ]
   },
   "ci": {
-    "main_head": "b9d0dc3",
-    "run": 40924867330,
-    "conclusion": "success"
+    "main_head": "d48f19a3",
+    "run": 40999590501,
+    "conclusion": "success",
+    "main_push_runs_since_first_close": "13: 12 success, 1 cancelled (superseded)"
   },
   "retro": {
     "file": "docs/retros/2026-12-11-sprint-04.md",
@@ -1468,6 +1689,188 @@
       "C4",
       "C5"
     ],
-    "adr": "0055"
+    "adr": "0055",
+    "second_close_actions": [
+      "D1",
+      "D2",
+      "D3",
+      "D4"
+    ],
+    "first_close_actions_status": {
+      "C1": "done (verdict); general rule not shown",
+      "C2": "partly (fix wave done; VERIFY-04-r4 not run)",
+      "C3": "partly",
+      "C4": "partly",
+      "C5": "done"
+    }
+  },
+  "second_close": {
+    "date": "2026-10-30",
+    "head": "d48f19a3",
+    "fix_wave_prs": [
+      162,
+      163,
+      164,
+      165,
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173
+    ],
+    "smoke": {
+      "id": "SMOKE-04-r2",
+      "pr": 174,
+      "verdict": "green",
+      "doc": "docs/sprints/04/smoke.md"
+    },
+    "verify_round": null,
+    "goal_met_of_record": false,
+    "open_defects_before": 4,
+    "open_defects_after": 0,
+    "first_close": {
+      "ticket_prs": {
+        "merged": 57,
+        "merged_range": "#87 (2026-10-17T11:22Z) .. #152 (2026-10-29T17:48Z)",
+        "review_rule_met_on_merged_head": "57/57 (merged_verdict.py rc 0)",
+        "ci_gate_green_on_head": "57/57",
+        "size_waiver": "32/57"
+      },
+      "totals": {
+        "planned_units": 48,
+        "implemented_units": 48.0,
+        "dod_done_units": 35.0,
+        "implemented_ratio": 1.0,
+        "dod_done_ratio": 0.729,
+        "by_lane": {
+          "BE": {
+            "planned": 17,
+            "implemented": 17,
+            "dod_done": 10
+          },
+          "FE": {
+            "planned": 10,
+            "implemented": 10,
+            "dod_done": 7
+          },
+          "QA": {
+            "planned": 8.5,
+            "implemented": 8.5,
+            "dod_done": 6.5
+          },
+          "SRE": {
+            "planned": 5.5,
+            "implemented": 5.5,
+            "dod_done": 5.5
+          },
+          "ML": {
+            "planned": 4,
+            "implemented": 4,
+            "dod_done": 4
+          },
+          "COACH": {
+            "planned": 3,
+            "implemented": 3,
+            "dod_done": 2
+          }
+        }
+      },
+      "open_defects": {
+        "count": 13,
+        "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md",
+        "at": "b9d0dc3 + RETRO-04 reconciliation",
+        "ids": [
+          "EM-PR27-01",
+          "QA-VERIFY04R3-01",
+          "SRE-VERIFY04R3-01",
+          "QA-VERIFY04R3-02",
+          "QA-VERIFY04R3-03",
+          "SRE-VERIFY04R3-02",
+          "QA-VERIFY04R3-04",
+          "QA-VERIFY04R3-05",
+          "QA-VERIFY04R3-06",
+          "QA-VERIFY04R3-07",
+          "QA-VERIFY04R3-08",
+          "SRE-VERIFY04R3-03",
+          "QA-VERIFY04R3-09"
+        ],
+        "closed_this_close": [
+          "PD-R1S3-01 group (Fixed by C4-G12 #92; EM row written in RETRO-04)"
+        ]
+      },
+      "ci": {
+        "main_head": "b9d0dc3",
+        "run": 40924867330,
+        "conclusion": "success"
+      },
+      "stories": {
+        "ST-056": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "QA-VERIFY04R3-07"
+          ]
+        },
+        "ST-061b": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "SRE-VERIFY04R3-01"
+          ]
+        },
+        "ST-067": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "SRE-VERIFY04R3-02"
+          ]
+        },
+        "ST-072a": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "QA-VERIFY04R3-04"
+          ]
+        },
+        "ST-071": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "QA-VERIFY04R3-05"
+          ]
+        },
+        "ST-072b": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "QA-VERIFY04R3-05"
+          ]
+        },
+        "QA-HARNESS-4b": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "QA-VERIFY04R3-03"
+          ]
+        },
+        "VERIFY-04": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "rounds 1-2 closed unmerged; r3 merges with RETRO-04"
+          ]
+        },
+        "ST-058c": {
+          "status": "partial",
+          "dod_done_units": 0,
+          "open": [
+            "QA-VERIFY04R3-01, QA-VERIFY04R3-09"
+          ]
+        }
+      }
+    }
   }
 }

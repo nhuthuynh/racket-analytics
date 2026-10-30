@@ -535,3 +535,20 @@ Backend paths are relative to `backend/tests/`; feature files are under `tests/f
 | Process: red-first check; build behind a TLS proxy | C4-RED, C4-CA | #97, #95 | `red_first_check.feature`, `compose_extra_ca.feature` | Yes (CI `pr-policy`; G04-06 built with `EXTRA_CA_FILE`) | — |
 | NFR-027 (a), NFR-028, NFR-034 Sprint 4 screens | ST-063a..c, ST-068b, ST-071, ST-072b | as above | (E2E) | P and A yes; R and Q over-limit not reached | QA-VERIFY04R3-06; NFR-027 (b) P6 |
 | NFR-072 Mutation | — | — | — | rules 0.8635 yes; coaching/plan 0.6753 no | QA-VERIFY04R3-07; nightly lacks coaching (retro C5) |
+
+## 17. Sprint 4 outcome per requirement at the second close (engineering-manager, 2026-10-30, ticket RETRO-04)
+
+The §16 rows changed after the fix wave (#162-#173). "Live" here means SMOKE-04-r2 (#174) on `main` at `d48f19a3`: one pass of each method on the smoke topology (Compose for the pulled services, the app as local processes behind the committed Caddyfile). This is **not** the verifier's measurement of record; VERIFY-04-r4 re-measures every row (`docs/sprints/04/sprint-report.md` §1.4). Rows not listed are unchanged from §16.
+
+| Requirement | Fix ticket (PR) | Feature file(s) added or changed | Shown live at `d48f19a3` (SMOKE-04-r2) | Open after the second close |
+|---|---|---|---|---|
+| FR-120 Weaknesses (G04-03 method) | QA-VERIFY04R3-02-08 (#165) | — (method: `junit_rate.py` matches markers) | reference 9 comparisons, 0 mismatches; `--require weakness_golden` rc 0 (ticket dry-run) | side-out part `@needs-verification` (P7) |
+| FR-121 Rules-only plan (mutation) | QA-VERIFY04R3-07 (#172), SRE-VERIFY04R3-03 (#173) | — (unit tests; nightly gate) | `coaching/plan` mutation 0.9811 (ticket dry-run); nightly gates both coaching targets at 0.80 | — |
+| FR-124 "Not for me" | QA-VERIFY04R3-01 (#166) | `drill_coverage_solo_wall.feature` (`solo+wall` profile axis) | `live_plan.py --runs 1` → swap ok; 5 of 5 in the ticket dry-run | one-session pairing (minor, Sprint 5) |
+| FR-141 Starter library | QA-VERIFY04R3-01 (#166), QA-VERIFY04R3-09 (#169) | `drill_safety_notes.feature` (lint safety rule) | 31 reviewed drills; lint and coverage ok | G04-05 (e) TCR decision (senior-qa-engineer); `verified` needs P15 |
+| NFR-019 Plan read at 50 RPS | SRE-VERIFY04R3-01 (#167) | `plan_read_scope.feature`; Locust plan gate (`plan_load_verdict.py`) | 50.0 RPS, p95 24.5 ms, p99 62.9 ms, availability 1.0 | — |
+| FR-003, FR-008, FR-009 privacy (flags on) | QA-VERIFY04R3-03 (#163), SRE-VERIFY04R3-02 (#162), QA-VERIFY04R3-05-06 (#164) | `e2e_flags_on.feature`; `compose_settings_parity.feature` (parity test in `infra/tests`) | `live_privacy.py --flags on --runs 3` rc 0; flag-on E2E 6 of 6; Compose forwarding at config level (5 services) | running-container flag-on stack through `make up` (VERIFY-04-r4); legal review P16 |
+| FR-160, NFR-023 Rate limit and quota | QA-VERIFY04R3-03 (#163), QA-VERIFY04R3-04 (#168) | `my_quota.feature` (IT-04-09b) | burst 10 × 201 then 40 × 429; quota 429 with stored bytes unchanged; `GET /me/quota` live in the ticket dry-run | quota size P8 |
+| NFR-027 (a), NFR-028 R and Q screens | QA-VERIFY04R3-05-06 (#164) | `e2e_flags_on.feature` | `axe-R-01`, `targets-R-01` at 320/360; `axe-Q-10-*`, `targets-Q-10-*`; 0 errors | NFR-027 (b) P6 |
+| NFR-072 Mutation | QA-VERIFY04R3-07 (#172) | — | plan 0.9811, weakness 0.8056, rules 0.8635 | — |
+| Process: CI notice when no session runs | ADR-0053-0049 (#171) | `ci_scheduled_red_notice.feature` | scenarios in CI; no scheduled audit run yet | live check (retro D4) |
