@@ -40,3 +40,18 @@
 | Open blocker/major | **1**: EM-RETRO04-02 (TCR row 20 undecided; an accepted E2E test changed in #166), found in review round 1 of #175. It was 0 at the second close | `open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 1, `open 1` |
 | CI on `main` | green | run 40999590501 at `d48f19a3` |
 | Next | VERIFY-04-r4 (retro D1), after the senior-qa-engineer decides the Pending TCR rows 20, 21, 11 and 14 (D2; row 20 closes EM-RETRO04-02). G04-03 (c) runs with `HYPOTHESIS_PROFILE=ci` (scorecard §4) | retro §10 |
+
+## Third close status (2026-10-30, `22ca756c`)
+
+| Date | Done | PRs |
+|---|---|---|
+| 2026-10-30 | RETRO-04 second close (#175, 05:06); EM-RETRO04-02 (#176, 05:33, TCR rows 20 and 21 Accepted). VERIFY-04-r4 and SMOKE-04-r3 at `c83145c2`. FIX-04-4a (#179, 08:40) for the one VERIFY-04-r4 finding. RETRO-04 third close (this PR) folds #177 and #178 in | #175, #176, #179; #177, #178 folded |
+
+| Item | Result | Evidence |
+|---|---|---|
+| Goal | **Not met of record: 11 of 12** (VERIFY-04-r4 at `c83145c`). Only G04-11 (d) missed, a method defect, Fixed by FIX-04-4a (live 388.1 s of 600 s); VERIFY-04-r5 re-measures it (retro E1) | `sprint-report.md` §1.0, §13 |
+| Units | 48 committed / 48 implemented / 48 DoD-done | `status.json` totals |
+| PRs | 73 merged, all with both verdicts on the merged head and `ci-gate` green | `merged_verdict.py` rc 0 ×73 |
+| Open blocker/major | **0** (QA-VERIFY04R4-01 Open then Fixed in this PR) | `open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 0, `open 0` |
+| CI on `main` | green at `c83145c` (run 41009129548); run 41028026459 at `22ca756c` still running at writing time; #179's merge gate green | GitHub `actions/runs` |
+| Next | VERIFY-04-r5 (G04-11, E1) and TCR rows 11 and 14 (E2), both due 2026-11-02 | retro §11 |

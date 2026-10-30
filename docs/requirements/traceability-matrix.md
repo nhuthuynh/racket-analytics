@@ -552,3 +552,17 @@ The §16 rows changed after the fix wave (#162-#173). "Live" here means SMOKE-04
 | NFR-027 (a), NFR-028 R and Q screens | QA-VERIFY04R3-05-06 (#164) | `e2e_flags_on.feature` | `axe-R-01`, `targets-R-01` at 320/360; `axe-Q-10-*`, `targets-Q-10-*`; 0 errors | NFR-027 (b) P6 |
 | NFR-072 Mutation | QA-VERIFY04R3-07 (#172) | — | plan 0.9811, weakness 0.8056, rules 0.8635 | — |
 | Process: CI notice when no session runs | ADR-0053-0049 (#171) | `ci_scheduled_red_notice.feature` | scenarios in CI; no scheduled audit run yet | live check (retro D4) |
+
+## 18. Sprint 4 outcome per requirement at the third close (engineering-manager, 2026-10-30, ticket RETRO-04)
+
+The §16 and §17 rows are now measured by **VERIFY-04-r4** (#178) at `c83145c`, the measurement of record: every requirement row of §16/§17 is shown live there (scorecard §2; report §1.0), except NFR-073's integration budget in the method's serial form. FIX-04-4a (#179, `22ca756c`) changed only the goal method and its tests.
+
+| Requirement | Fix ticket (PR) | Feature file(s) added or changed | Shown live (VERIFY-04-r4 at `c83145c`, or as noted) | Open after the third close |
+|---|---|---|---|---|
+| NFR-073 Test speed (integration < 10 min) | FIX-04-4a (#179) | `tests/features/goal_method_integration_budget.feature` (bound by `infra/tests/test_goal_scorecard_integration_budget_scenarios.py`) | VERIFY-04-r4: serial form rc 124 at 600 s; CI form 177.5 s. FIX-04-4a, decided block: `4186 passed, 1 skipped`, 388.1 s, rc 0 | G04-11 re-measure in VERIFY-04-r5 (retro E1) |
+| FR-124 "Not for me" | — | — | `live_plan.py --runs 5` → swap ok in 5 of 5 | one-session pairing (minor) |
+| FR-141 Starter library (safety) | — (method: TCR row 21 applied to scorecard §4 by RETRO-04) | — | 31 reviewed drills; scoped safety check empty | `verified` needs P15 |
+| NFR-019 Plan read at 50 RPS | — | — | 50.0 RPS, p95 43.1 ms, p99 113.0 ms, availability 100% | — |
+| FR-003, FR-008, FR-009, FR-160, NFR-023 (flags on) | — | — | Compose with `FEATURE_*=1`, no override: privacy 3/3 accounts, quotas 10/40, 0 bytes stored | P16, P8 |
+| Process: CI notice when no session runs | — | — | first scheduled `Dependency audit` run 41027270158 → success | draft upgrade PR (setting 6) |
+
