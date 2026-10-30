@@ -37,6 +37,6 @@
 | Goal | **Not met of record**: 2 of 12 (VERIFY-04-r3). SMOKE-04-r2 green at `d48f19a3`; VERIFY-04-r4 not run | `sprint-report.md` §1.4 |
 | Units | 48 committed / 48 implemented / 48 DoD-done | `status.json` totals |
 | PRs | 70 merged, all with both verdicts on the merged head and `ci-gate` green | `merged_verdict.py` rc 0 ×70 |
-| Open blocker/major | **0** | `open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 0, `open 0` |
+| Open blocker/major | **1**: EM-RETRO04-02 (TCR row 20 undecided; an accepted E2E test changed in #166), found in review round 1 of #175. It was 0 at the second close | `open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md` → rc 1, `open 1` |
 | CI on `main` | green | run 40999590501 at `d48f19a3` |
-| Next | VERIFY-04-r4 (retro D1), after the senior-qa-engineer decides the G04-05 (e) TCR row (D2) | retro §10 |
+| Next | VERIFY-04-r4 (retro D1), after the senior-qa-engineer decides the Pending TCR rows 20, 21, 11 and 14 (D2; row 20 closes EM-RETRO04-02). G04-03 (c) runs with `HYPOTHESIS_PROFILE=ci` (scorecard §4) | retro §10 |

@@ -87,16 +87,18 @@
       "met": false,
       "verified": "VERIFY-04-r3 b9d0dc3 (senior-qa-engineer with sre-devops-engineer)",
       "actual": "(a) CI green; (b) 57/57 verdicts; (c) open 13 after RETRO-04",
-      "after_second_close": "(a) CI green d48f19a3 run 40999590501; (b) 70/70 verdicts; (c) open 0 (ledger; not re-measured by a VERIFY round)"
+      "after_second_close": "(a) CI green d48f19a3 run 40999590501; (b) 70/70 verdicts; (c) open 0 at the second close, open 1 after review round 1 of PR #175 (EM-RETRO04-02, undecided TCR row 20; ledger, not re-measured by a VERIFY round)"
     }
   },
   "goal_met": false,
   "goal_met_note": "2 of 12 met live of record (VERIFY-04-r3 at b9d0dc3: G04-04, G04-06). After the fix wave SMOKE-04-r2 is green at d48f19a3, but no VERIFY round has run there; VERIFY-04-r4 is carry-over D1. See sprint-report.md \u00a71, \u00a71.4, \u00a711",
   "open_defects": {
-    "count": 0,
+    "count": 1,
     "command": "python3 scripts/measure/open_defects.py docs/sprints/03/review-rounds.md docs/sprints/04/review-rounds.md",
-    "at": "d48f19a3 + RETRO-04 second-close reconciliation",
-    "ids": [],
+    "at": "d48f19a3 + RETRO-04 second-close reconciliation + review round 1 of PR #175",
+    "ids": [
+      "EM-RETRO04-02"
+    ],
     "closed_since_first_close": [
       "EM-PR27-01",
       "QA-VERIFY04R3-01",
