@@ -66,9 +66,10 @@ FAKE_GH = r"""
 import json, os, sys
 args = sys.argv[1:]
 entry = {"args": args}
-for flag in ("--body-file",):
-    if flag in args:
-        entry["body"] = open(args[args.index(flag) + 1]).read()
+if "--body-file" in args:
+    entry["body"] = open(args[args.index("--body-file") + 1]).read()
+elif "--comment" in args:
+    entry["body"] = args[args.index("--comment") + 1]
 with open(os.environ["FAKE_GH_LOG"], "a") as log:
     log.write(json.dumps(entry) + "\n")
 if args[:2] == ["pr", "list"]:
@@ -259,9 +260,10 @@ def run_audit(ctx: dict[str, Any]) -> None:
 def origin_locks(ctx: dict[str, Any], branch: str, pkg: str, version: str) -> None:
     lock = git(ctx["origin"], "show", f"{branch}:backend/uv.lock")
     assert f'name = "{pkg}"\nversion = "{version}"' in lock
-    assert git(ctx["origin"], "rev-parse", "main") in git(
-        ctx["origin"], "rev-list", branch
-    ).splitlines()  # built on main, not a rewrite of it
+    assert (
+        git(ctx["origin"], "rev-parse", "main")
+        in git(ctx["origin"], "rev-list", branch).splitlines()
+    )  # built on main, not a rewrite of it
 
 
 @then(
@@ -325,8 +327,13 @@ def run_notice(ctx: dict[str, Any], event_values: dict[str, str]) -> subprocess.
 
 
 def event(workflow_name: str, ev: str, conclusion: str, url: str = RUN_URL) -> dict[str, str]:
-    return {"WORKFLOW": workflow_name, "EVENT": ev, "CONCLUSION": conclusion, "RUN_URL": url,
-            "SHA": SHA}  # fmt: skip
+    return {
+        "WORKFLOW": workflow_name,
+        "EVENT": ev,
+        "CONCLUSION": conclusion,
+        "RUN_URL": url,
+        "SHA": SHA,
+    }
 
 
 @when(parsers.parse('the scheduled "{name}" run ends with "{conclusion}"'))
@@ -346,9 +353,7 @@ def without_url(ctx: dict[str, Any]) -> subprocess.CompletedProcess[str]:
     return run_notice(ctx, event("CI", "schedule", "failure", url=""))
 
 
-@then(
-    parsers.parse('gh opened an issue titled "{title}" assigned to the repository owner')
-)  # fmt: skip
+@then(parsers.parse('gh opened an issue titled "{title}" assigned to the repository owner'))
 def opened_issue(ctx: dict[str, Any], title: str) -> None:
     (create,) = [c for c in gh_calls(ctx) if c["args"][:2] == ["issue", "create"]]
     args = create["args"]
@@ -392,7 +397,11 @@ def notice_fails(result: subprocess.CompletedProcess[str], flag: str) -> None:
     assert flag in result.stdout + result.stderr
 
 
-@then(parsers.parse('the notice workflow runs on the completion of every workflow with a "{trigger}" trigger'))  # fmt: skip
+@then(
+    parsers.parse(
+        'the notice workflow runs on the completion of every workflow with a "{trigger}" trigger'
+    )
+)
 def listens(ctx: dict[str, Any], trigger: str) -> None:
     scheduled = set()
     for path in sorted(WF.glob("*.yml")):
