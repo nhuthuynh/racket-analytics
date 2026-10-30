@@ -71,3 +71,9 @@ ADR 0037 rule 1 and ADR 0050 rule 5: one row per finding that SMOKE-04 (#159) an
 | Finding | Severity | Disposition | Owner | Evidence |
 |---|---|---|---|---|
 | QA-VERIFY04R3-09 | major | **Fixed (closed on merge of this ticket's PR).** `pb.volley.line-volleys-no-step-in@2` carries a coach-reviewed safety note and v1 is deprecated (kept, never deleted). A lint rule now fails any reviewed, not deprecated drill tagged `footwork` or `movement` without `safety_notes` (CI `drill-lint`). The other 5 grep lines are draft `pb.fixture.*` files that match only the word "Sprint" (false positives). The G04-05 (e) method scoped to (a)'s population is a TCR row for the senior-qa-engineer (`decisions/QA-VERIFY04R3-09.md`) | pickleball-domain-coach | red `2221c6a8` 15 failed; green `ff52c2ae` 21 passed; `racket-drill-lint ../content/drills` → `ok, 0 problem(s)`; scoped (e) form → empty, rc 0 |
+
+## Ticket QA-VERIFY04R3-07 (fix wave, retro action C2; senior-backend-engineer, 2026-10-30)
+
+| Finding | Severity | Disposition | Owner | Evidence |
+|---|---|---|---|---|
+| QA-VERIFY04R3-07 | major | **Fixed (closed on merge of this ticket's PR).** 64 behavioural unit tests in four new files kill the `coaching/plan` survivors (content and digest contract, citation ACL, repository statements with the owner filter, rule edges); no production change, no existing test changed. Red first: the new tests fail on 504 of the 534 mutants the old suite left alive (`decisions/QA-VERIFY04R3-07.md`) | senior-backend-engineer | Live dry-run of the G04-11 (c) method as written: before, `origin/main` `a4eabcba`: `mutation_score.py --project . --target src/racket/coaching/plan --tests tests/unit/coaching --min-score 0.80` → rc 1, **0.6748**; after, `8c0a0487`: same → rc 0, **0.9811** (1,611 of 1,642 killed, 0 no tests); `--target src/racket/coaching/weakness` → rc 0, 0.8056 |
