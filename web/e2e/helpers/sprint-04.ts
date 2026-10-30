@@ -6,8 +6,10 @@
 // - setup: the P-02 answers every spec uses (30 minutes, 2 sessions a week, 2 players, a wall and
 //   half a court, intermediate). For the coach's worked example the plan is deterministic
 //   (rules-only assembly, ST-056): week 1 session 1 is a warm-up and CITED, session 2 a warm-up,
-//   SWAPPABLE and CITED. CITED is the one AN-02 drill that fits, so it has no alternative (409
-//   `no_alternative`); SWAPPABLE has one. Measured on the stack at 25d3531 (decisions/ST-065.md).
+//   SWAPPABLE and CITED. SWAPPABLE has another drill for its weakness. Since QA-VERIFY04R3-01
+//   (a second wall drill per target) CITED has one too, so the no-alternative case (E2E-04-04,
+//   409 `no_alternative`) uses NO_ALTERNATIVE_SETUP, where NO_ALTERNATIVE is the one AN-02 drill
+//   that fits (decisions/QA-VERIFY04R3-01.md).
 import { expect, type Locator, type Page } from '@playwright/test';
 import { receivedMatch } from './sprint-02';
 import { tagWorkedExampleByApi } from './sprint-03';
@@ -38,8 +40,12 @@ export const SETUP = {
   level: 'intermediate',
 } as const;
 
-/** Cites AN-02 "Rallies won when receiving"; no other drill fits it (E2E-04-04). */
+/** Cites AN-02 "Rallies won when receiving". */
 export const CITED = 'Deep return strokes against a wall';
+/** SETUP with a full court instead of a wall and half a court: one AN-02 drill fits (E2E-04-04). */
+export const NO_ALTERNATIVE_SETUP = { ...SETUP, equipment: ['full_court'] } as const;
+/** Cites AN-02 under NO_ALTERNATIVE_SETUP; no other drill fits it (409 `no_alternative`). */
+export const NO_ALTERNATIVE = 'Deep return to a target zone';
 /** Has another drill for the same weakness in its session (E2E-04-01 swap). */
 export const SWAPPABLE = 'Safe-margin target dinks';
 
@@ -68,11 +74,14 @@ export async function planRead(page: Page): Promise<PlanBody> {
   return (await r.json()) as PlanBody;
 }
 
-/** A fresh account with the worked example tagged on a received match and a plan made with SETUP. */
-export async function planReadyAccount(page: Page): Promise<{ matchId: string; plan: PlanBody }> {
+/** A fresh account with the worked example tagged on a received match and a plan made with `setup`. */
+export async function planReadyAccount(
+  page: Page,
+  setup: typeof SETUP | typeof NO_ALTERNATIVE_SETUP = SETUP,
+): Promise<{ matchId: string; plan: PlanBody }> {
   const matchId = await receivedMatch(page, 'Saturday doubles');
   await tagWorkedExampleByApi(page, matchId);
-  const made = await page.request.post('/api/me/plan', { data: SETUP });
+  const made = await page.request.post('/api/me/plan', { data: setup });
   expect(made.status(), await made.text()).toBe(201);
   return { matchId, plan: (await made.json()) as PlanBody };
 }

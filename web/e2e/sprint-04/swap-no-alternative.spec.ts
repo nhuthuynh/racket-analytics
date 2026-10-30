@@ -3,14 +3,23 @@
 // unchanged, focus moves to it, "Close" closes the dialog, and the plan the API holds is the same
 // version with the same drill. Then the dialog rule of flows-sprint-03 §0 (P-03 row of
 // flows-sprint-04 §9: "focus trapped, returned"): Close, Cancel and Esc give focus back to the
-// row's "Not for me". Words: e2e/helpers/sprint-04.ts.
+// row's "Not for me". Words and NO_ALTERNATIVE_SETUP: e2e/helpers/sprint-04.ts.
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations, expectTargetsAtLeast24 } from '../helpers/axe';
-import { CITED, PLAN_COPY, PLAN_PATH, SCREEN_P, drillRow, planRead, planReadyAccount } from '../helpers/sprint-04';
+import {
+  NO_ALTERNATIVE as CITED,
+  NO_ALTERNATIVE_SETUP,
+  PLAN_COPY,
+  PLAN_PATH,
+  SCREEN_P,
+  drillRow,
+  planRead,
+  planReadyAccount,
+} from '../helpers/sprint-04';
 
 test.describe('@M0 @story-ST-065 Swap with no alternative', () => {
   test('E2E-04-04 a drill with no other that fits stays, and the dialog says so', async ({ page }, testInfo) => {
-    const { plan } = await planReadyAccount(page);
+    const { plan } = await planReadyAccount(page, NO_ALTERNATIVE_SETUP);
     await page.goto(PLAN_PATH);
     const row = drillRow(page, CITED);
     await row.getByRole('button', { name: `Not for me, ${CITED}` }).click();
@@ -33,7 +42,7 @@ test.describe('@M0 @story-ST-065 Swap with no alternative', () => {
 
   // Defect QA-ST065-01 (decisions/ST-065.md), red first in Chromium: focus landed on <body>.
   test('E2E-04-04 focus returns to "Not for me" after Close, Cancel and Esc', async ({ page }) => {
-    await planReadyAccount(page);
+    await planReadyAccount(page, NO_ALTERNATIVE_SETUP);
     await page.goto(PLAN_PATH);
     const opener = drillRow(page, CITED).getByRole('button', { name: `Not for me, ${CITED}` });
     const dialog = page.getByRole('dialog', { name: `Swap ${CITED}?` });
