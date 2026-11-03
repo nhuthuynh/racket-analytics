@@ -100,13 +100,16 @@ of these hold on that SHA:
 
   | Tier | Required APPROVE verdicts on the head | Required check |
   |---|---|---|
-  | 0, docs and process text | one, from any role but the author's | `Doc checks (paths, citations, agent front matter, decider cells)` |
+  | 0, docs and process text | one, from any of the 12 role files but the author's | `Doc checks (paths, citations, agent front matter, decider cells)` |
   | 1, ordinary code | `principal-engineer` and `senior-qa-engineer` | `ci-gate` |
   | 2, security, personal data, schema, API contracts, the merge gate, an unmatched path | tier 1 plus `security-privacy-engineer`, plus every flagged specialist | `ci-gate` |
 
   Every other check run must still be `success`, `skipped` or `neutral`. No role's latest review
   on that SHA says `Verdict: CHANGES REQUESTED`. The script prints `review-tier:` and
   `author-role:` lines.
+- The tier is computed from **every** changed file. `GET /pulls/{n}/files` lists at most 3000
+  files, so the check exits 2 ("merge-ready: unknown") when the PR's `changed_files` is missing,
+  differs from the number of files listed, or is 3000 or more; split such a PR (SEC-193-01).
 - An APPROVE from the **author role** never counts. The author role is the `owner` of the head
   branch's row in `docs/sprints/<nn>/ticket-owners.json` on `main` (`<nn>` from the head branch
   `s<nn>/<id>`; the branch may carry a `-<slug>` suffix after the id). That file is created by
@@ -134,6 +137,9 @@ The `Reviewer:` line must be the line right after the `Verdict:` line. The check
 review when:
 
 - its body does not *start* with the verdict, or the next line is not `Reviewer: <role>`;
+- it is an APPROVE and `<role>` is not one of the 12 role files under `.claude/agents/`
+  (`engineering-managers` is not `engineering-manager`; PE-193-01). A `CHANGES REQUESTED` from
+  any name still blocks;
 - it was not submitted (only `COMMENTED`, `APPROVED` and `CHANGES_REQUESTED` count, so a
   `PENDING` or `DISMISSED` review never counts);
 - its author is not trusted. GitHub's `author_association` must be `OWNER`, `MEMBER` or

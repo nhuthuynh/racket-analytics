@@ -182,7 +182,9 @@ def latest_runs(
 
 
 def verdicts(reviews: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
-    """role -> (verdict, commit SHA) of that role's latest verdict review."""
+    """role -> (verdict, commit SHA) of that role's latest verdict review. An APPROVE counts only
+    from one of the 12 ROLES (PE-193-01: "engineering-managers" is not "engineering-manager");
+    a CHANGES REQUESTED from any name is kept, so a typo never unblocks a PR."""
     found: dict[str, tuple[tuple[str, int], str, str]] = {}
     for rv in reviews:
         match = _VERDICT.match((rv.get("body") or "").lstrip())
@@ -191,6 +193,8 @@ def verdicts(reviews: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
         if rv.get("author_association") not in TRUSTED:
             continue
         verdict, role = match.groups()
+        if verdict == APPROVE and role not in ROLES:
+            continue
         key = (rv.get("submitted_at") or "", rv["id"])
         if role not in found or key > found[role][0]:
             found[role] = (key, verdict, rv.get("commit_id") or "")
@@ -258,9 +262,12 @@ def review_reasons(reviews: list[dict[str, Any]], sha: str, gate: Gate | None = 
     ]
     author = f" ({gate.author} authored this PR, so its own APPROVE is ignored)"
     if gate.tier == 0:
-        if not any(v == (APPROVE, sha) for r, v in latest.items() if r != gate.author):
+        others = (v for r, v in latest.items() if r in ROLES and r != gate.author)
+        if not any(v == (APPROVE, sha) for v in others):
             who = author if gate.author else ""
-            reasons.append(f"tier 0: no 'Verdict: {APPROVE}' on the head from another role{who}")
+            reasons.append(
+                f"tier 0: no 'Verdict: {APPROVE}' on the head from another role file{who}"
+            )
         return reasons
     for role in gate.required():
         found = latest.get(role)
@@ -439,12 +446,25 @@ def _tier_if(path: str, executable: bool) -> int:
     return file_tier(ChangedFile(path, executable, executable, False))[0]
 
 
-def pr_files(base: str, pr: int, sha: str) -> list[ChangedFile]:
+FILES_CAP = 3000  # GET /pulls/{n}/files lists at most 3000 files
+
+
+def pr_files(base: str, pr: int, sha: str, changed_files: Any = None) -> list[ChangedFile]:
     """The PR's changed files for the classifier. A renamed file counts under both names. The
     executable bit, the shebang and a role file's front matter are read only where they can
-    change the tier; a truncated tree counts as executable."""
+    change the tier; a truncated tree counts as executable. The files API stops at 3000 files,
+    so a PR whose `changed_files` is missing, differs from the files read, or reaches the cap
+    raises (exit 2): an unread file could be the gate itself (SEC-193-01)."""
+    listed = _all_pages(f"{base}/pulls/{pr}/files")
+    if not isinstance(changed_files, int) or isinstance(changed_files, bool):
+        raise ValueError(f"PR #{pr} has no changed_files count ({changed_files!r})")
+    if len(listed) != changed_files or changed_files >= FILES_CAP:
+        raise ValueError(
+            f"PR #{pr} changes {changed_files} files and the files API listed {len(listed)} "
+            f"(cap {FILES_CAP}): the tier cannot be computed from every file; split the PR"
+        )
     paths: dict[str, bool] = {}  # path -> present at the head
-    for f in _all_pages(f"{base}/pulls/{pr}/files"):
+    for f in listed:
         paths[f["filename"]] = f.get("status") != "removed"
         if f.get("previous_filename"):
             paths.setdefault(f["previous_filename"], False)
@@ -485,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
         runs = _all_pages(f"{base}/commits/{args.sha}/check-runs", "check_runs")
         reviews = _all_pages(f"{base}/pulls/{args.pr}/reviews")
         wruns = _all_pages(f"{base}/actions/runs?head_sha={args.sha}", "workflow_runs")
-        tiers = review_tier(pr_files(base, args.pr, args.sha))
+        tiers = review_tier(pr_files(base, args.pr, args.sha, pr.get("changed_files")))
         gate = gate_for(pr, tiers, lambda nn: _file(base, OWNERS.format(nn=nn), "main"))
     except (OSError, ValueError, KeyError, TypeError) as exc:  # URLError is an OSError
         print(f"merge-ready: unknown (GitHub could not be read: {exc})")
