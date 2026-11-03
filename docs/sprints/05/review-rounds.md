@@ -12,3 +12,13 @@ Source: `docs/security/threat-notes-sprint-05.md` §7 and `docs/sprints/05/decis
 |---|---|---|---|---|
 | SEC-S5-TM-01 | blocker | Open: ST-076a must stream `pg_dump` into the encryptor and test that no plaintext dump file exists after the run (T5-BK-1) | sre-devops-engineer (ST-076a) | ST-076a |
 | SEC-S5-TM-02 | blocker | Open: PE-5b (ADR 0058) must decide backup expiry and deletion replay on restore, so a restore does not bring back deleted accounts (NFR-066, T5-BK-4) | principal-engineer (PE-5b), sre-devops-engineer (ST-076a, ST-076c) | PE-5b, ST-076a, ST-076c |
+
+## PD-DR04: shipped Sprint 4 screens against flows-sprint-04 (principal-designer, 2026-11-03)
+
+Source: `docs/design/flows-sprint-04.md` §14.4 (chair's re-read; DR-04 not yet held). Found by reading the Sprint 4 decision files and `web/src`, not by a live walk.
+
+| Finding | Severity | Disposition | Owner (Sprint 5) | Waits on |
+|---|---|---|---|---|
+| PD-DR04-01 | major | Open: R-01 has no shorter-retention confirmation dialog (flows-sprint-04 §6, HAX G16); shortening retention deletes videos within a day with no confirm. Needs PM words (PD-FL4-04) and an FE ticket before `feature_retention_setting` is on | product-manager (words), engineering-manager (ticket), senior-frontend-engineer (build) | PD-FL4-04 |
+| PD-DR04-02 | minor | Open: A-12/A-13 (existing unconfirmed account answers "No") not built (ST-068b decisions row 8) | product-manager (PD-FL4-06 words), senior-frontend-engineer | PD-FL4-06 |
+| PD-DR04-03 | minor | Open: no "Privacy settings" link on X-00 or the account menu (ST-071 deferred row (2)) | engineering-manager (ticket), senior-frontend-engineer | — |
