@@ -32,8 +32,12 @@ import os
 import re
 import sys
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
+from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from review_tiers import ChangedFile, Classification, classify
 
 GATE = "ci-gate"
 PRINCIPAL = "principal-engineer"
@@ -197,6 +201,13 @@ def review_reasons(reviews: list[dict[str, Any]], sha: str) -> list[str]:
     if (APPROVE, sha) not in seniors.values():
         reasons.append(f"senior reviewer: no latest 'Verdict: {APPROVE}' on the head ({seniors})")
     return reasons
+
+
+def review_tier(files: Iterable[ChangedFile]) -> Classification:
+    """The PR's review tier and flagged specialists, computed from its changed files by the
+    rules-as-data classifier (`review_tiers.py`, CI-TIERS-a); never read from a label.
+    CI-TIERS-b maps the tier to the verdicts this gate requires."""
+    return classify(files)
 
 
 def evaluate(
