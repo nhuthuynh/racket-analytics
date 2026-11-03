@@ -429,6 +429,9 @@ jobs:
             BASE_SHA="$(git rev-parse HEAD^)"
           fi
           python3 scripts/ci/check_docs.py --base "$BASE_SHA" --head HEAD
+      # QA-DOR-CHECK (PRC-7.1): the current sprint's requirements-breakdown.md is atomic (NFR rows
+      # name metric, method, target, test level; FR rules have a negative Example; ids parse).
+      - run: python3 scripts/ci/check_atomic_breakdown.py
 
   infra-tests:
     name: Infra, hooks and CI-script tests (ST-001..ST-003)
