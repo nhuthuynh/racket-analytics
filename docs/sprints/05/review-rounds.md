@@ -12,3 +12,13 @@ Source: `docs/security/threat-notes-sprint-05.md` §7 and `docs/sprints/05/decis
 |---|---|---|---|---|
 | SEC-S5-TM-01 | blocker | Open: ST-076a must stream `pg_dump` into the encryptor and test that no plaintext dump file exists after the run (T5-BK-1) | sre-devops-engineer (ST-076a) | ST-076a |
 | SEC-S5-TM-02 | blocker | Open: PE-5b (ADR 0058) must decide backup expiry and deletion replay on restore, so a restore does not bring back deleted accounts (NFR-066, T5-BK-4) | principal-engineer (PE-5b), sre-devops-engineer (ST-076a, ST-076c) | PE-5b, ST-076a, ST-076c |
+
+## COACH-5: domain findings for the Sprint 5 stories (pickleball-domain-coach, 2026-11-03)
+
+Source: `docs/domain/drill-review-checklist.md` §3.1.1, `docs/domain/rc-copy-review.md`, `docs/domain/usability-drill-safety.md` and `docs/sprints/05/decisions/COACH-5.md`. COACH-S5-01 is the ledger row that kickoff item COACH-1 asks for. ST-081a reports the gap red, and ST-081b closes it.
+
+| Finding | Severity | Disposition | Owner (Sprint 5) | Waits on |
+|---|---|---|---|---|
+| COACH-S5-01 | major | Open: "Not for me" can dead-end with `409 no_alternative` on a single-weakness plan, and in a session of 3 or more drills whose drills overlap. Each target × level × profile cell needs ≥ S + 1 counted drills (3 for `solo+wall`, 30 min). On `main` at `8c37e98d`, 4 cells are short by one drill (AN-02, AN-04, AN-07:fault, AN-07:forced-error × intermediate × solo+wall) | senior-backend-engineer (ST-081a: check and swap ITs); pickleball-domain-coach (ST-081b: ≤ 6 drills) | ST-081a, ST-081b |
+| COACH-S5-02 | minor | Open: the stats line "Definition version N, checked by our coach." reads as a human review next to the plan's "not yet checked by a human coach" (rc-copy-review R9) | principal-designer (words); senior-frontend-engineer (`web/src/lib/stats/view.ts` `versionLine`) | P15 answer (EM-ESC-05) |
+| COACH-S5-03 | minor | Open: `pb.drive.wall-margin@1` and `pb.return.wall-return@1` are solo wall drills with empty `safety_notes`. They are excluded from the usability sessions (class C) until a new version adds notes and is reviewed again (checklist §1 C5) | pickleball-domain-coach | the next drill PR (ST-081b if within its 6 drills, else a Sprint 6 drill ticket) |
