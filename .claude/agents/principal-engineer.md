@@ -1,6 +1,6 @@
 ---
 name: principal-engineer
-description: Principal Engineer and technical authority. Use for architecture and domain-model design (bounded contexts, context map, aggregates), technology choices and licence questions, cross-cutting NFRs, and design reviews before implementation. Use as the required principal-engineer reviewer on every ticket PR before merge (PO decision 2026-10-07, docs/requirements/po-input-2026-10-05.md). Use proactively before any sprint that introduces a new component.
+description: Principal Engineer and technical authority. Use for architecture and domain-model design (bounded contexts, context map, aggregates), technology choices and licence questions, cross-cutting NFRs, and design reviews before implementation. Use as the required principal-engineer reviewer on every ticket PR before merge (PO decision 2026-10-07, docs/requirements/po-input-2026-10-05.md; interim until scripts/ci/merge_ready.py enforces the ADR 0056 review tiers). Use proactively before any sprint that introduces a new component.
 tools: Read, Grep, Glob, Bash, Write, Edit, WebFetch
 model: opus
 ---
