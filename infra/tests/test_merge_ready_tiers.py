@@ -263,6 +263,27 @@ def test_tier_0_passes_with_one_other_role_and_the_doc_check_without_ci_gate() -
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("name", ["engineering-managers", "doc-reviewer", "principal-engineers"])
+def test_tier_0_ignores_an_approve_from_a_name_that_is_not_a_role(name: str) -> None:
+    """PE-193-01: only the 12 role files count, so a one-character variant of the author's
+    role (or any made-up name) never satisfies tier 0."""
+    reasons = evaluate(0, approve(name), author=EM)
+    assert any("tier 0" in r for r in reasons), reasons
+
+
+@pytest.mark.unit
+def test_verdicts_keeps_only_role_file_approvals_but_any_changes_requested_blocks() -> None:
+    """PE-193-01: an unknown name never approves; its CHANGES REQUESTED still blocks (fail
+    closed, a typo in a blocking review must not unblock the PR)."""
+    mod = mr()
+    found = mod.verdicts([*approve("doc-reviewer", PE)])
+    assert set(found) == {PE}, found
+    blocked = [review("doc-reviewer", "CHANGES REQUESTED", review_id=40), *approve(PE)]
+    reasons = evaluate(0, blocked, author=EM)
+    assert any("doc-reviewer" in r and "CHANGES REQUESTED" in r for r in reasons), reasons
+
+
+@pytest.mark.unit
 def test_tier_1_with_principal_and_senior_backend_fails_naming_qa() -> None:
     reasons = evaluate(1, approve(PE, BE))
     assert any(QA in r for r in reasons), reasons
@@ -547,3 +568,35 @@ def test_an_unmatched_executable_outside_docs_is_tier_2(path: str) -> None:
 def test_an_unmatched_shebang_file_under_docs_stays_tier_1() -> None:
     rt = _load("review_tiers")
     assert rt.classify([rt.ChangedFile("docs/tools/run-check", shebang=True)]).tier == 1
+
+
+# ========== SEC-193-01: the files API caps at 3000 files, so a short read must not lower the tier
+def unknown(res: subprocess.CompletedProcess[str], *words: str) -> None:
+    assert res.returncode == 2, res.stdout + res.stderr
+    assert "merge-ready: unknown" in res.stdout
+    for word in words:
+        assert word in res.stdout, res.stdout
+
+
+@pytest.mark.integration
+def test_script_exits_2_when_the_files_read_differ_from_changed_files() -> None:
+    stub = GitHubStub(files=changed("docs/process/x.md"), check_runs=t0_runs())
+    stub.pr["changed_files"] = 3001  # GitHub listed 1 of them; the gate file may be in the rest
+    stub.reviews = approve("principal-designer")
+    unknown(run(stub), "3001", "1")
+
+
+@pytest.mark.integration
+def test_script_exits_2_when_the_pr_has_3000_files_or_more() -> None:
+    paths = [f"docs/bulk/f{i:04d}.md" for i in range(3000)]
+    stub = GitHubStub(files=changed(*paths), check_runs=t0_runs(), page_size=100)
+    stub.reviews = approve("principal-designer")
+    unknown(run(stub), "3000")
+
+
+@pytest.mark.integration
+def test_script_exits_2_when_the_pr_has_no_changed_files_count() -> None:
+    stub = GitHubStub(files=changed("docs/process/x.md"), check_runs=t0_runs())
+    stub.pr["changed_files"] = None
+    stub.reviews = approve("principal-designer")
+    unknown(run(stub), "changed_files")

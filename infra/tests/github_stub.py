@@ -178,12 +178,18 @@ class GitHubStub:
         return b"plain text\n" if ref == HEAD_SHA and path in live else None
 
     def pr_body(self) -> dict[str, Any]:
-        """The PR as GitHub lists it: `head.ref` is always there (a test's bare {"sha"} head
-        gets the default branch, as every older test meant)."""
-        head = self.pr.get("head")
+        """The PR as GitHub lists it: `head.ref` and `changed_files` are always there (a test's
+        bare {"sha"} head gets the default branch, as every older test meant; `changed_files`
+        defaults to the number of `files`)."""
+        body = dict(self.pr)
+        head = body.get("head")
         if isinstance(head, dict) and "ref" not in head:
-            return {**self.pr, "head": {**head, "ref": HEAD_REF}}
-        return self.pr
+            body["head"] = {**head, "ref": HEAD_REF}
+        # SEC-193-01: GitHub always sends `changed_files`; a test may set another count (or None).
+        body.setdefault("changed_files", len(self.files))
+        if body["changed_files"] is None:
+            del body["changed_files"]
+        return body
 
     def tree(self) -> dict[str, Any]:
         live = [f["filename"] for f in self.files if f.get("status") != "removed"]

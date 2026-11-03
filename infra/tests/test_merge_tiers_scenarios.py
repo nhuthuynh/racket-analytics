@@ -66,6 +66,11 @@ def body(stub: GitHubStub, text: str) -> None:
     stub.pr["body"] = text
 
 
+@given(parsers.parse("the PR reports {count:d} changed files"))
+def reports(stub: GitHubStub, count: int) -> None:
+    stub.pr["changed_files"] = count
+
+
 @given("the doc-check succeeded on the head")
 def doc_check(stub: GitHubStub) -> None:
     stub.check_runs = [*green_runs(), check_run(DOC_CHECK, run_id=30)]
@@ -99,6 +104,13 @@ def exits_0(result: subprocess.CompletedProcess[str]) -> None:
 def refused(result: subprocess.CompletedProcess[str], word: str) -> None:
     assert result.returncode == 1, result.stdout + result.stderr
     assert "merge-ready: no" in result.stdout
+    assert word in result.stdout, result.stdout
+
+
+@then(parsers.parse('it exits 2 naming "{word}"'))
+def unknown(result: subprocess.CompletedProcess[str], word: str) -> None:
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "merge-ready: unknown" in result.stdout
     assert word in result.stdout, result.stdout
 
 

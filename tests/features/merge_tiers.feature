@@ -51,6 +51,13 @@ Feature: The merge gate requires the verdicts of the PR's risk tier
       When merge_ready.py runs
       Then it exits non-zero naming "sre-devops-engineer"
 
+    Example: an APPROVE from a name that is not a role file does not count (PE-193-01)
+      Given a PR from the head branch "s05/retro-05" that changes only "docs/process/x.md"
+      And the doc-check succeeded on the head
+      And APPROVE verdicts from engineering-managers and doc-reviewer on the head
+      When merge_ready.py runs
+      Then it exits non-zero naming "tier 0"
+
     Example: a hidden code file makes a docs PR tier 1
       Given a PR that changes only "docs/process/x.md"
       And the PR also adds an extensionless file "docs/process/run" with a shebang line
@@ -100,3 +107,13 @@ Feature: The merge gate requires the verdicts of the PR's risk tier
       And APPROVE verdicts from principal-engineer, senior-qa-engineer and security-privacy-engineer on the head
       When merge_ready.py runs
       Then it exits 0
+
+  Rule: SEC-193-01 The tier is computed from every changed file, or the gate cannot answer
+
+    Example: the files API returns fewer files than the PR changed
+      Given a PR that changes only "docs/process/x.md"
+      And the PR reports 3001 changed files
+      And the doc-check succeeded on the head
+      And APPROVE verdicts from principal-designer on the head
+      When merge_ready.py runs
+      Then it exits 2 naming "3001"
