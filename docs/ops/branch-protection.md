@@ -121,7 +121,7 @@ and both reviewers must post their verdicts again on the new SHA.
 | Label | Who applies it | When | CI job |
 |---|---|---|---|
 | `qa-approved-test-change` | senior-qa-engineer only | The PR modifies, deletes or renames an existing file under `backend/tests/`, `web/e2e/`, `fixtures/gold/` or `tests/features/`. It needs a row in `docs/sprints/<nn>/test-change-requests.md` that the senior-qa-engineer has decided | `pr-policy` (`check_test_immutability.py`) |
-| `size-waiver` | engineering-manager only | More than 400 changed lines (lockfiles and fixtures do not count). The waiver row must exist before the commit (ADR 0030; ticket SIZE-WAIVERS-03) | `pr-policy` (`check_pr_size.py`) |
+| `size-waiver` | engineering-manager only | The PR has more than 400 changed lines of production code; tests, docs, lockfiles, fixtures and snapshots do not count (ADR 0054). The EM decides it while the PR is a draft (ADR 0052); the per-commit waiver rule of ADR 0030 is retired (ADR 0056 decision 5) | `pr-policy` (`check_pr_size.py`) |
 | `skip-claude-review` | EM | Skip the automated Claude review. This label does not exist on the repo yet (2026-10-08) | `claude-review.yml` |
 
 GitHub cannot limit who applies a label. Reviewers check the label events in the PR timeline

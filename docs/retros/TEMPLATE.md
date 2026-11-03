@@ -32,6 +32,11 @@ Citation prefixes: see docs/process/working-agreement.md §0. Label opinions "(j
 | Failed deployment recovery time | | | working-agreement §10 [ASB/AGL-02] |
 | Deployment rework rate | | | working-agreement §10 [ASB/AGL-02] |
 | PR time-to-merge (avg) | | | [EP/ENG-19] |
+| Cycle time, first commit to merge (median / max) | | | working-agreement §10 (ADR 0056) |
+| Throughput (tickets merged) | | | working-agreement §10 (ADR 0056) |
+| Work item age of open tickets (max) | | | working-agreement §10 (ADR 0056) |
+| WIP limit breaches (count; reasons) | | | working-agreement §3 "Flow and WIP limits" |
+| Cost per PR (median; sprint total), tokens and wall time | | | working-agreement §10 (ADR 0056); `decisions/<TICKET-ID>.md` |
 | Median PR size (changed lines) | | | [EP/ENG-04] |
 | Auto-fix iterations per PR (avg / max) | | | working-agreement §7 |
 | Escalations to human | | | working-agreement §8 |
