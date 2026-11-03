@@ -27,3 +27,10 @@ This is the per-ticket decision file (working-agreement §3, "Daily sync").
 | Round | wall_time_min | total_cost_usd / tokens |
 |---|---|---|
 | Author build | not measured | not measured |
+
+## 3. Doc-check record
+
+| Step | Command | Result |
+|---|---|---|
+| First draft | `python3 scripts/ci/check_docs.py --base origin/main --head HEAD` | rc 1: `FAIL path: docs/sprints/05/po-escalations.md:110: .claude/skills does not exist` (A12 option (c) names a folder that does not exist yet) |
+| Fix | A12 names the folder without backticks and says that it does not exist yet. Evidence lines added for P11 and P18, so that every item has question, recommendation, default, deadline and evidence | rc 0: `doc-check: 0 problem(s) in 2 file(s)` |

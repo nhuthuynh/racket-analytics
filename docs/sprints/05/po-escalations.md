@@ -107,7 +107,7 @@ The principal-designer (chair) wrote this request in PR #200, `docs/design/flows
 
 ### A12. Which "plan and brainstorm skills"? (finding F08)
 
-- **Question:** your 2026-10-31 instruction says "plan + brainstorm skills". Did you mean (a) the installed product-management brainstorm and sprint-planning skills, (b) Claude Code plan mode, or (c) new repository skills under `.claude/skills/`?
+- **Question:** your 2026-10-31 instruction says "plan + brainstorm skills". Did you mean (a) the installed product-management brainstorm and sprint-planning skills, (b) Claude Code plan mode, or (c) new repository skills in a new .claude/skills/ folder (it does not exist yet)?
 - **Recommendation:** (a). It costs nothing new, and sprint-05 §0.6 shows what it produced.
 - **Default if no answer:** (a), as used at Sprint 5 planning.
 - **Evidence:** `docs/sprints/sprint-05.md` §0.6; audit item 12.
@@ -241,6 +241,7 @@ Each of these is a `goal-scorecard.md` §5 row, not a goal metric. Need-by dates
 - **Options:** (a) choose a provider, and the team plans the spikes at S7 planning; (b) defer R2 vision work.
 - **Recommendation:** (a).
 - **Default if no answer:** the R2 spikes stay unplanned. ST-084a and ST-084b (which need no footage) go ahead.
+- **Evidence:** `docs/sprints/04/sprint-report.md` §1.2, row S4-DoD-P11; scorecard row S5-P11; roadmap SPIKE-07 row ("needs footage, P11").
 - **Deadline:** S7 planning.
 
 ### P18. R1 release-candidate sign-off (new)
@@ -249,6 +250,7 @@ Each of these is a `goal-scorecard.md` §5 row, not a goal metric. Need-by dates
 - **Options:** (a) sign off; (b) sign off with conditions (for example P16 before any real user); (c) do not sign off yet.
 - **Recommendation:** decided at the sprint review from the PM's readiness recommendation and the ST-082 release notes.
 - **Default if no answer:** there is no release, and R1 stays a candidate.
+- **Evidence:** scorecard row S5-P18; sprint-05 §0.4 (REL-1.4).
 - **Deadline:** the sprint review on 2026-12-22.
 
 ## 5. How answers are recorded
