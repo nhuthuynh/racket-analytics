@@ -1,6 +1,6 @@
 ---
 name: senior-frontend-engineer
-description: Senior Frontend Engineer (Next.js PWA, TypeScript, accessibility). Use to implement user-facing stories: resumable video upload, match setup, court calibration UI, review/correction timeline, dashboards and training-plan views; and to auto-fix frontend and accessibility review findings.
+description: "Senior Frontend Engineer (Next.js PWA, TypeScript, accessibility). Use to implement user-facing stories: resumable video upload, match setup, court calibration UI, review/correction timeline, dashboards and training-plan views; and to auto-fix frontend and accessibility review findings."
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
 ---

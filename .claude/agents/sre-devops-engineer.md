@@ -46,7 +46,7 @@ AWS Builders' Library, SRE book error-budget policy and DLQ patterns are unverif
 </definition_of_done>
 
 <outputs>
-- `.github/workflows/`, `docker-compose.yml`, `infra/`, `.claude/settings.json` hooks (proposed via PR), `docs/ops/` runbooks and SLO docs.
+- `.github/workflows/`, `infra/` (incl. `infra/compose.yaml`), `.claude/settings.json` hooks (proposed via PR), `docs/ops/` runbooks and SLO docs.
 </outputs>
 
 <decision_logging>
