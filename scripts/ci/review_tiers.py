@@ -6,14 +6,17 @@ API contracts and the merge gate itself (kickoff SEC-1). The rules are data (`RU
 order: a file gets the HIGHEST tier of every rule it matches, so a broader rule never lowers a
 tier; the PR gets the highest tier over its files; a path that matches no rule, or an empty
 change set, is tier 2 (fail closed). An executable file is at least tier 1 wherever it lives
-(`EXEC_*`, a shebang line or the executable bit). A `.claude/agents/*.md` file whose front
-matter (the text between its first two `---` lines; lines end at "\n" only) differs between the
-merge base and head is tier 2, as is an added or deleted role file, one without a closed front
-matter block, one whose front matter holds a control character or U+2028/U+2029, and one whose
-front matter state the caller did not compute: the only rule that reads content, not just the
-path (separation of duties, audit item 13).
+(`EXEC_*`, a shebang line or the executable bit); one that no rule names is tier 1 under `docs/`
+and tier 2 elsewhere (CI-TIERS-b, sprint-05 §7 "an unclassified path is tier 2").
+A `.claude/agents/*.md` file whose front matter (the text between its first two `---` lines;
+lines end at "\n" only) differs between the merge base and head is tier 2, as is an added or
+deleted role file, one without a closed front matter block, one whose front matter holds a
+control character or U+2028/U+2029, and one whose front matter state the caller did not
+compute: the only rule that reads content, not just the path (separation of duties, audit
+item 13).
 The tier is always computed here, never read from a label or the PR body.
-`merge_ready.py` imports this module; CI-TIERS-b maps the tier to the required verdicts.
+`merge_ready.py` imports this module and maps the tier to the required verdicts (CI-TIERS-b);
+it reads `BOOTSTRAP_OWNERS` before `docs/sprints/<nn>/ticket-owners.json` for the author role.
 
 Usage: review_tiers.py --base REF --head REF [--json]   (in a git checkout; prints the tier,
 the flagged specialist roles and each file's tier). Exit 0, or 2 when git cannot be read.
@@ -137,6 +140,18 @@ _SPECIALISTS = (
     Rule("web/public/sw.js", 1, (FRONTEND,)),
 )
 
+EM, SRE = "engineering-manager", "sre-devops-engineer"
+# CI-TIERS-b bootstrap (PE-PLAN05-R3-01): head-branch shapes whose author role is fixed here,
+# read by merge_ready.py BEFORE docs/sprints/<nn>/ticket-owners.json, for PRs that cannot have a
+# row on main yet: (regex over the whole head branch, owner role, highest tier it may carry or
+# None). An optional "-<slug>" suffix follows the id, as on every lane branch.
+BOOTSTRAP_OWNERS: tuple[tuple[str, str, int | None], ...] = (
+    (r"s(?P<nn>\d{2})/plan(?:-[a-z0-9][a-z0-9-]*)?", EM, None),  # creates the owner file
+    (r"s(?P<nn>\d{2})/ci-fix-[a-z0-9][a-z0-9-]*", SRE, None),  # CI FIRST red-main fix
+    (r"s(?P<nn>\d{2})/owners-[a-z0-9][a-z0-9-]*", EM, None),  # adds a mid-sprint row
+    (r"docs/[a-z0-9][a-z0-9-]*", EM, 0),  # docs and process text only
+)
+
 AGENT_FILES = ".claude/agents/*.md"
 _TIER0 = ("docs/**/*.md", "*.md", AGENT_FILES, "docs/sprints/*/status.json")
 
@@ -216,9 +231,10 @@ def file_tier(f: ChangedFile, rules: Sequence[Rule] = RULES) -> tuple[int, froze
     """(tier, specialist roles) of one changed file: the highest matching rule, tier 2 when
     none matches, raised to 1 for an executable file and to 2 for a role file's front matter."""
     hits = _matches(f.path, rules)
-    # The executable floor counts as a matched tier 1 rule, so an executable file no rule names
-    # (a shebang script under docs/) is tier 1; a file nothing matches at all fails closed.
-    tiers = [r.tier for r in hits] + ([1] if is_executable(f) else [])
+    # The executable floor counts as a matched tier 1 rule under docs/ (a shebang script there
+    # is tier 1); any other file no rule names fails closed, code included (CI-TIERS-b, §7).
+    floor = is_executable(f) and (bool(hits) or f.path.startswith("docs/"))
+    tiers = [r.tier for r in hits] + ([1] if floor else [])
     tier = max(tiers, default=FAIL_CLOSED)
     if f.front_matter_changed is not False and glob_match(AGENT_FILES, f.path):
         tier = 2  # changed, or unknown (SEC-188-07): fail closed

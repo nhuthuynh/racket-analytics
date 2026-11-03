@@ -93,9 +93,38 @@ of these hold on that SHA:
   progress still wins, so a newer failure is never hidden. If every run of a workflow on the SHA
   was cancelled, the check refuses with `all <workflow> runs on <SHA> were cancelled`
   (`docs/sprints/03/decisions/CI-MERGE-READY-CANCELLED.md`).
-- The **principal-engineer's** latest review and at least one **senior-\*** role's latest
-  review start with `Verdict: APPROVE` and were given on that SHA. No role's latest review on
-  that SHA says `Verdict: CHANGES REQUESTED`.
+- The **verdict set of the PR's review tier** starts with `Verdict: APPROVE` on that SHA
+  (CI-TIERS-b, ADR 0056 decision 2; `docs/sprints/05/decisions/CI-TIERS-b.md`). The tier is
+  computed from the PR's changed files by `scripts/ci/review_tiers.py` (CI-TIERS-a), never read
+  from a label or the PR body:
+
+  | Tier | Required APPROVE verdicts on the head | Required check |
+  |---|---|---|
+  | 0, docs and process text | one, from any of the 12 role files but the author's | `Doc checks (paths, citations, agent front matter, decider cells)` |
+  | 1, ordinary code | `principal-engineer` and `senior-qa-engineer` | `ci-gate` |
+  | 2, security, personal data, schema, API contracts, the merge gate, an unmatched path | tier 1 plus `security-privacy-engineer`, plus every flagged specialist | `ci-gate` |
+
+  Every other check run must still be `success`, `skipped` or `neutral`. No role's latest review
+  on that SHA says `Verdict: CHANGES REQUESTED`. The script prints `review-tier:` and
+  `author-role:` lines.
+- The tier is computed from **every** changed file. `GET /pulls/{n}/files` lists at most 3000
+  files, so the check exits 2 ("merge-ready: unknown") when the PR's `changed_files` is missing,
+  differs from the number of files listed, or is 3000 or more; split such a PR (SEC-193-01).
+- An APPROVE from the **author role** never counts. The author role is the `owner` of the head
+  branch's row in `docs/sprints/<nn>/ticket-owners.json` on `main` (`<nn>` from the head branch
+  `s<nn>/<id>`; the branch may carry a `-<slug>` suffix after the id). That file is created by
+  the sprint's plan PR (PLAN-05 for Sprint 5) and is tier 2; this check only reads it. The PR
+  body, labels and the author's comments are never read for the author role. Before the file,
+  the fixed `BOOTSTRAP_OWNERS` table in `review_tiers.py` is read: `s<nn>/plan` and
+  `s<nn>/owners-<slug>` are the engineering-manager's, `s<nn>/ci-fix-<slug>` the
+  sre-devops-engineer's, and `docs/<slug>` the engineering-manager's at tier 0 only. The check
+  fails closed, naming the row or step, on a branch of another shape, no row (merge an
+  `s<nn>/owners-<slug>` PR first), two matching rows, an owner that is not one of the 12 role
+  files, a bootstrap branch whose row names another owner, a `docs/<slug>` branch with a tier 1
+  or 2 file, and a sprint with no owner file on `main` ("merge s<nn>/plan first (bootstrap
+  step)"). A PR that adds its own row is still checked against `main`.
+- The §15 ticket map in `docs/sprints/sprint-<nn>.md` is the human view of the owner file;
+  `test_ticket_owner_map_matches_plan_section_15` fails CI when the two differ.
 
 **Review format.** All agents share one GitHub account, so each review names its role:
 
@@ -108,6 +137,9 @@ The `Reviewer:` line must be the line right after the `Verdict:` line. The check
 review when:
 
 - its body does not *start* with the verdict, or the next line is not `Reviewer: <role>`;
+- it is an APPROVE and `<role>` is not one of the 12 role files under `.claude/agents/`
+  (`engineering-managers` is not `engineering-manager`; PE-193-01). A `CHANGES REQUESTED` from
+  any name still blocks;
 - it was not submitted (only `COMMENTED`, `APPROVED` and `CHANGES_REQUESTED` count, so a
   `PENDING` or `DISMISSED` review never counts);
 - its author is not trusted. GitHub's `author_association` must be `OWNER`, `MEMBER` or

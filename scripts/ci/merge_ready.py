@@ -3,9 +3,16 @@
 
 A pull request may merge into `main` only when, on its current head SHA:
   * every current CI check run concluded success (a non-gate run may be `skipped` or `neutral`, e.g.
-    the schedule-only flaky report), and `ci-gate` itself concluded success;
-  * the latest review of the principal-engineer and the latest review of at least one
-    senior-* role start with "Verdict: APPROVE" and were given on that SHA;
+    the schedule-only flaky report), and the tier's gate check itself concluded success;
+  * the verdict set of the PR's review tier (CI-TIERS-b, ADR 0056) starts with "Verdict: APPROVE"
+    on that SHA. The tier is computed from the changed files (`review_tiers.py`), never read:
+      T0  one APPROVE from any role but the author's; gate check `doc-check`;
+      T1  principal-engineer + senior-qa-engineer; gate check `ci-gate`;
+      T2  T1 + security-privacy-engineer + every flagged specialist; gate check `ci-gate`;
+  * an APPROVE from the PR's author role never counts. The author role is the `owner` of the head
+    branch's row in docs/sprints/<nn>/ticket-owners.json on main (`<nn>` from `s<nn>/<id>`), or
+    a `BOOTSTRAP_OWNERS` entry of `review_tiers.py`; never the PR body, labels or comments. A bad
+    branch, a missing, duplicate or ambiguous row, or an owner that is not a role fails closed;
   * no role's latest review on that SHA says "Verdict: CHANGES REQUESTED".
 All agents post as one GitHub account, so a review names its role on the line right after the
 verdict ("Reviewer: <role>"). Only submitted reviews (COMMENTED, APPROVED, CHANGES_REQUESTED)
@@ -27,19 +34,54 @@ Exit codes: 0 merge-ready, 1 not ready (reasons printed), 2 GitHub could not be 
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import json
 import os
 import re
 import sys
+import urllib.error
+import urllib.parse
 import urllib.request
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from review_tiers import ChangedFile, Classification, classify
+from review_tiers import (
+    AGENT_FILES,
+    BOOTSTRAP_OWNERS,
+    ChangedFile,
+    Classification,
+    classify,
+    file_tier,
+    front_matter_changed,
+    glob_match,
+)
 
 GATE = "ci-gate"
+DOC_CHECK = "Doc checks (paths, citations, agent front matter, decider cells)"
+QA = "senior-qa-engineer"
+SECURITY = "security-privacy-engineer"
+# The 12 role files under .claude/agents/ (test_the_twelve_roles_are_the_role_files).
+ROLES = frozenset(
+    {
+        "business-analyst",
+        "engineering-manager",
+        "pickleball-domain-coach",
+        "principal-designer",
+        "principal-engineer",
+        "product-manager",
+        "security-privacy-engineer",
+        "senior-backend-engineer",
+        "senior-frontend-engineer",
+        "senior-ml-cv-engineer",
+        "senior-qa-engineer",
+        "sre-devops-engineer",
+    }
+)
+OWNERS = "docs/sprints/{nn}/ticket-owners.json"
+_TICKET_BRANCH = re.compile(r"s(\d{2})/[a-z0-9][a-z0-9._-]*")
 PRINCIPAL = "principal-engineer"
 SENIOR_PREFIX = "senior-"
 APPROVE = "APPROVE"
@@ -140,7 +182,9 @@ def latest_runs(
 
 
 def verdicts(reviews: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
-    """role -> (verdict, commit SHA) of that role's latest verdict review."""
+    """role -> (verdict, commit SHA) of that role's latest verdict review. An APPROVE counts only
+    from one of the 12 ROLES (PE-193-01: "engineering-managers" is not "engineering-manager");
+    a CHANGES REQUESTED from any name is kept, so a typo never unblocks a PR."""
     found: dict[str, tuple[tuple[str, int], str, str]] = {}
     for rv in reviews:
         match = _VERDICT.match((rv.get("body") or "").lstrip())
@@ -149,6 +193,8 @@ def verdicts(reviews: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
         if rv.get("author_association") not in TRUSTED:
             continue
         verdict, role = match.groups()
+        if verdict == APPROVE and role not in ROLES:
+            continue
         key = (rv.get("submitted_at") or "", rv["id"])
         if role not in found or key > found[role][0]:
             found[role] = (key, verdict, rv.get("commit_id") or "")
@@ -171,43 +217,158 @@ def check_reasons(
     check_runs: list[dict[str, Any]],
     sha: str,
     workflow_runs: Sequence[dict[str, Any]] = (),
+    gate: str = GATE,
 ) -> list[str]:
-    """Every latest check run of the current suites is green; ci-gate exists and succeeded."""
+    """Every latest check run of the current suites is green; the gate check (ci-gate, or
+    doc-check on tier 0) exists and succeeded."""
     current = latest_runs(check_runs, workflow_runs).values()
     runs = sorted(current, key=lambda r: (r["name"], r["id"]))
     reasons = cancelled_reasons(workflow_runs, sha)
-    if not any(r["name"] == GATE for r in runs):
-        reasons.append(f"no {GATE} check run on {sha}")
+    if not any(r["name"] == gate for r in runs):
+        reasons.append(f"no {gate} check run on {sha}")
     for run in runs:
         name = run["name"]
         outcome = run.get("conclusion") if run.get("status") == "completed" else run.get("status")
-        if outcome not in (GREEN if name == GATE else GREEN_IF_NOT_GATE):
+        if outcome not in (GREEN if name == gate else GREEN_IF_NOT_GATE):
             reasons.append(f"check '{name}' is {outcome}")
     return reasons
 
 
-def review_reasons(reviews: list[dict[str, Any]], sha: str) -> list[str]:
-    """Principal and a senior approve the head; nobody's latest verdict there blocks."""
+class Gate(NamedTuple):
+    """What a PR needs: its computed tier, author role, flagged specialists, and the problems
+    that kept the author role from being computed (each one blocks the merge). A NamedTuple, not
+    a dataclass: tests load this file without registering it in sys.modules."""
+
+    tier: int = 1
+    author: str | None = None
+    specialists: frozenset[str] = frozenset()
+    problems: tuple[str, ...] = ()
+
+    def required(self) -> list[str]:
+        """The roles whose APPROVE on the head is required (tier 1 and 2)."""
+        extra = [SECURITY, *sorted(self.specialists - {PRINCIPAL, QA, SECURITY})]
+        return [PRINCIPAL, QA, *(extra if self.tier >= 2 else [])]
+
+
+def review_reasons(reviews: list[dict[str, Any]], sha: str, gate: Gate | None = None) -> list[str]:
+    """The tier's verdict set approves the head; the author role's APPROVE never counts; nobody's
+    latest verdict on the head blocks."""
+    gate = gate or Gate()
     latest = verdicts(reviews)
     reasons = [
         f"{role}: Verdict: {CHANGES} on the head"
         for role, (verdict, at) in sorted(latest.items())
         if verdict == CHANGES and at == sha
     ]
-    principal = latest.get(PRINCIPAL)
-    if principal != (APPROVE, sha):
-        reasons.append(f"{PRINCIPAL}: no latest 'Verdict: {APPROVE}' on the head ({principal})")
-    seniors = {r: v for r, v in latest.items() if r.startswith(SENIOR_PREFIX)}
-    if (APPROVE, sha) not in seniors.values():
-        reasons.append(f"senior reviewer: no latest 'Verdict: {APPROVE}' on the head ({seniors})")
+    author = f" ({gate.author} authored this PR, so its own APPROVE is ignored)"
+    if gate.tier == 0:
+        others = (v for r, v in latest.items() if r in ROLES and r != gate.author)
+        if not any(v == (APPROVE, sha) for v in others):
+            who = author if gate.author else ""
+            reasons.append(
+                f"tier 0: no 'Verdict: {APPROVE}' on the head from another role file{who}"
+            )
+        return reasons
+    for role in gate.required():
+        found = latest.get(role)
+        if role == gate.author:
+            reasons.append(f"{role}: required for tier {gate.tier}, but{author}")
+        elif found != (APPROVE, sha):
+            # QA fills the senior slot; the CI-PR-GATE "senior reviewer" prefix is kept.
+            prefix, source = ("senior reviewer", f" from {QA}") if role == QA else (role, "")
+            reasons.append(
+                f"{prefix}: no latest 'Verdict: {APPROVE}' on the head{source} ({found})"
+            )
     return reasons
 
 
 def review_tier(files: Iterable[ChangedFile]) -> Classification:
     """The PR's review tier and flagged specialists, computed from its changed files by the
-    rules-as-data classifier (`review_tiers.py`, CI-TIERS-a); never read from a label.
-    CI-TIERS-b maps the tier to the verdicts this gate requires."""
+    rules-as-data classifier (`review_tiers.py`, CI-TIERS-a); never read from a label."""
     return classify(files)
+
+
+def _owner_rows(nn: str, data: bytes, branch: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """The rows of the Sprint `nn` owner file whose branch is `branch` or `branch`'s id followed
+    by "-<slug>" (lane branches carry a slug), or the problems with the file."""
+    path = OWNERS.format(nn=nn)
+    try:
+        doc = json.loads(data)
+        tickets = doc["tickets"]
+        if not isinstance(tickets, list) or not all(isinstance(t, dict) for t in tickets):
+            raise TypeError("tickets is not a list of rows")
+    except (ValueError, KeyError, TypeError) as exc:
+        return [], [f"{path} on main is malformed ({exc}): fail closed"]
+    rows = [
+        t
+        for t in tickets
+        if isinstance(t.get("branch"), str)
+        and (branch == t["branch"] or branch.startswith(t["branch"] + "-"))
+    ]
+    return rows, []
+
+
+def resolve_author(
+    branch: str, tier: int, load: Callable[[str], bytes | None]
+) -> tuple[str | None, list[str]]:
+    """(author role, problems) of a PR from its head branch; `load(nn)` returns the Sprint `nn`
+    owner file on main, or None when main has none. Bootstrap shapes are read first."""
+    for pattern, owner, max_tier in BOOTSTRAP_OWNERS:
+        m = re.fullmatch(pattern, branch)
+        if not m:
+            continue
+        if max_tier is not None and tier > max_tier:
+            return None, [
+                f"head branch {branch!r} may carry tier {max_tier} files only, this PR is tier "
+                f"{tier}: open an s<nn>/<id> ticket"
+            ]
+        nn = m.groupdict().get("nn")
+        data = load(nn) if nn else None
+        rows, problems = _owner_rows(nn, data, branch) if nn and data is not None else ([], [])
+        clash = sorted({str(r.get("owner")) for r in rows} - {owner})
+        if problems or clash:
+            return None, problems or [
+                f"head branch {branch!r}: bootstrap owner {owner} conflicts with "
+                f"{OWNERS.format(nn=nn)} row(s) naming {', '.join(clash)}: fail closed"
+            ]
+        return owner, []
+    m = _TICKET_BRANCH.fullmatch(branch)
+    if not m:
+        return None, [f"head branch {branch!r} is not s<nn>/<id>: the author role is unknown"]
+    nn = m.group(1)
+    path = OWNERS.format(nn=nn)
+    data = load(nn)
+    if data is None:
+        return None, [f"no {path} on main: merge s{nn}/plan first (bootstrap step)"]
+    rows, problems = _owner_rows(nn, data, branch)
+    if problems:
+        return None, problems
+    if not rows:
+        return None, [
+            f"no row for head branch {branch!r} in {path} on main: merge an "
+            f"s{nn}/owners-<slug> PR that adds it first"
+        ]
+    if len(rows) > 1:
+        named = ", ".join(sorted(f"{r.get('id')} ({r.get('branch')})" for r in rows))
+        return None, [f"{len(rows)} rows in {path} match head branch {branch!r}: {named}"]
+    row = rows[0]
+    if row.get("owner") not in ROLES:
+        return None, [
+            f"row {row.get('id')} ({row.get('branch')}) in {path}: owner {row.get('owner')!r} "
+            "is not a role file under .claude/agents/"
+        ]
+    return str(row["owner"]), []
+
+
+def gate_for(
+    pr: dict[str, Any], tiers: Classification, load: Callable[[str], bytes | None]
+) -> Gate:
+    """The Gate of a PR: its computed tier and specialists, and its author role from the head
+    branch. Only `head.ref` of the PR is read, never its body, labels or comments."""
+    author, problems = resolve_author(
+        str((pr.get("head") or {}).get("ref") or ""), tiers.tier, load
+    )
+    return Gate(tiers.tier, author, tiers.specialists, tuple(problems))
 
 
 def evaluate(
@@ -216,12 +377,15 @@ def evaluate(
     check_runs: list[dict[str, Any]],
     reviews: list[dict[str, Any]],
     workflow_runs: Sequence[dict[str, Any]] = (),
+    gate: Gate | None = None,
 ) -> list[str]:
     """Reasons the PR may not merge at `sha`; an empty list means merge-ready."""
+    gate = gate or Gate()
     return (
         head_reasons(pr, sha)
-        + check_reasons(check_runs, sha, workflow_runs)
-        + review_reasons(reviews, sha)
+        + list(gate.problems)
+        + check_reasons(check_runs, sha, workflow_runs, DOC_CHECK if gate.tier == 0 else GATE)
+        + review_reasons(reviews, sha, gate)
     )
 
 
@@ -246,6 +410,88 @@ def _all_pages(url: str, key: str | None = None) -> list[dict[str, Any]]:
     return items
 
 
+def _optional(url: str) -> Any | None:
+    """The JSON body at `url`, or None on 404 (the file is absent there)."""
+    try:
+        return _get(url)[0]
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+
+
+def _file(base: str, path: str, ref: str) -> bytes | None:
+    """`path` at `ref` through the contents API, or None when it is absent there. A file the
+    API returns without inline content (over 1 MB) raises, so the check fails closed."""
+    quoted = urllib.parse.quote(path, safe="/")
+    body = _optional(f"{base}/contents/{quoted}?ref={urllib.parse.quote(ref, safe='')}")
+    if body is None:
+        return None
+    if body.get("encoding") != "base64":
+        raise ValueError(f"{path}@{ref}: no inline content")
+    try:
+        return base64.b64decode(body["content"])
+    except binascii.Error as exc:
+        raise ValueError(f"{path}@{ref}: {exc}") from exc
+
+
+def _text(data: bytes | None) -> str | None:
+    try:
+        return None if data is None else data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def _tier_if(path: str, executable: bool) -> int:
+    return file_tier(ChangedFile(path, executable, executable, False))[0]
+
+
+FILES_CAP = 3000  # GET /pulls/{n}/files lists at most 3000 files
+
+
+def pr_files(base: str, pr: int, sha: str, changed_files: Any = None) -> list[ChangedFile]:
+    """The PR's changed files for the classifier. A renamed file counts under both names. The
+    executable bit, the shebang and a role file's front matter are read only where they can
+    change the tier; a truncated tree counts as executable. The files API stops at 3000 files,
+    so a PR whose `changed_files` is missing, differs from the files read, or reaches the cap
+    raises (exit 2): an unread file could be the gate itself (SEC-193-01)."""
+    listed = _all_pages(f"{base}/pulls/{pr}/files")
+    if not isinstance(changed_files, int) or isinstance(changed_files, bool):
+        raise ValueError(f"PR #{pr} has no changed_files count ({changed_files!r})")
+    if len(listed) != changed_files or changed_files >= FILES_CAP:
+        raise ValueError(
+            f"PR #{pr} changes {changed_files} files and the files API listed {len(listed)} "
+            f"(cap {FILES_CAP}): the tier cannot be computed from every file; split the PR"
+        )
+    paths: dict[str, bool] = {}  # path -> present at the head
+    for f in listed:
+        paths[f["filename"]] = f.get("status") != "removed"
+        if f.get("previous_filename"):
+            paths.setdefault(f["previous_filename"], False)
+    modes: dict[str, str] | None = None  # path -> mode at the head; None: tree not read yet
+    truncated = False
+    merge_base: str | None = None
+    files = []
+    for path, present in paths.items():
+        role_file = glob_match(AGENT_FILES, path)
+        if not role_file and len({_tier_if(path, x) for x in (False, True)}) == 1:
+            files.append(ChangedFile(path))  # the bit and the shebang cannot change its tier
+            continue
+        if modes is None:
+            body, _ = _get(f"{base}/git/trees/{sha}?recursive=1")
+            truncated = bool(body.get("truncated"))
+            modes = {e["path"]: e.get("mode", "") for e in body["tree"]}
+        head = _file(base, path, sha) if present else None
+        front: bool | None = None
+        if role_file:
+            if merge_base is None:
+                merge_base = _get(f"{base}/compare/main...{sha}")[0]["merge_base_commit"]["sha"]
+            front = front_matter_changed(_text(_file(base, path, merge_base)), _text(head))
+        executable = truncated or modes.get(path) == "100755"
+        files.append(ChangedFile(path, executable, (head or b"")[:2] == b"#!", front))
+    return files
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", required=True, help="OWNER/NAME")
@@ -259,12 +505,17 @@ def main(argv: list[str] | None = None) -> int:
         runs = _all_pages(f"{base}/commits/{args.sha}/check-runs", "check_runs")
         reviews = _all_pages(f"{base}/pulls/{args.pr}/reviews")
         wruns = _all_pages(f"{base}/actions/runs?head_sha={args.sha}", "workflow_runs")
-    except (OSError, ValueError, KeyError) as exc:  # URLError is an OSError
+        tiers = review_tier(pr_files(base, args.pr, args.sha, pr.get("changed_files")))
+        gate = gate_for(pr, tiers, lambda nn: _file(base, OWNERS.format(nn=nn), "main"))
+    except (OSError, ValueError, KeyError, TypeError) as exc:  # URLError is an OSError
         print(f"merge-ready: unknown (GitHub could not be read: {exc})")
         return 2
-    reasons = evaluate(pr, args.sha, runs, reviews, wruns)
+    reasons = evaluate(pr, args.sha, runs, reviews, wruns, gate)
     for reason in reasons:
         print(f"- {reason}")
+    flagged = ", ".join(sorted(gate.specialists)) or "none"
+    print(f"review-tier: {gate.tier} (specialists: {flagged})")
+    print(f"author-role: {gate.author or 'unknown'}")
     print(f"merge-ready: {'no' if reasons else 'yes'} (PR #{args.pr} at {args.sha})")
     return 1 if reasons else 0
 

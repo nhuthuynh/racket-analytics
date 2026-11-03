@@ -1,10 +1,13 @@
-"""A local stand-in for the four GitHub REST endpoints `scripts/ci/merge_ready.py` reads
-(CI-PR-GATE; labels: CI-POLICY-LIVE-LABELS). Real HTTP on 127.0.0.1, `Link: rel="next"` like
-GitHub, and records the requests, so the script is exercised over a real socket.
+"""A local stand-in for the GitHub REST endpoints `scripts/ci/merge_ready.py` reads
+(CI-PR-GATE; labels: CI-POLICY-LIVE-LABELS; CI-TIERS-b: the PR's files, the head tree, the
+merge base and file contents, which serve `docs/sprints/<nn>/ticket-owners.json` on `main`).
+Real HTTP on 127.0.0.1, `Link: rel="next"` like GitHub, and records the requests, so the
+script is exercised over a real socket.
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import threading
@@ -13,12 +16,16 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 REPO = "nhuthuynh/racket-analytics"
 PR_NUMBER = 7
 HEAD_SHA = "c2" * 20
 OLD_SHA = "c1" * 20
+BASE_SHA = "b0" * 20  # the merge base of the PR head and main
+HEAD_REF = "s05/ci-tiers-b"  # the PR's head branch; its owner row is in default_contents()
+TIER1_FILE = "backend/src/racket/analytics/x.py"
+OWNERS_05 = "docs/sprints/05/ticket-owners.json"
 # Runs created in the same second, like the two CI runs of PR #49 (CI-MERGE-READY-CANCELLED).
 SAME_SECOND = "2026-10-09T13:09:48Z"
 
@@ -114,14 +121,37 @@ def approvals(sha: str = HEAD_SHA) -> list[dict[str, Any]]:
     ]
 
 
+def owners_json(rows: list[tuple[str, str]], sprint: int = 5) -> bytes:
+    """A `docs/sprints/<nn>/ticket-owners.json` with one {id, branch, owner} row per pair."""
+    tickets = [{"id": b.split("/", 1)[1].upper(), "branch": b, "owner": o} for b, o in rows]
+    return json.dumps({"sprint": sprint, "schema": "test", "tickets": tickets}).encode()
+
+
+def default_contents() -> dict[tuple[str, str], bytes]:
+    """(path, ref) -> file bytes. The Sprint 5 owner file on main names the default head branch."""
+    rows = [
+        (HEAD_REF, "sre-devops-engineer"),
+        ("s05/qa-dor-check", "senior-qa-engineer"),
+        ("s05/st-075a", "senior-backend-engineer"),
+        ("s05/retro-05", "engineering-manager"),
+    ]
+    return {(OWNERS_05, "main"): owners_json(rows)}
+
+
+def changed(*paths: str, status: str = "modified") -> list[dict[str, Any]]:
+    """`GET /pulls/{n}/files` entries."""
+    return [{"filename": p, "status": status} for p in paths]
+
+
 @dataclass
 class GitHubStub:
     pr: dict[str, Any] = field(
         default_factory=lambda: {
             "number": PR_NUMBER,
             "state": "open",
-            "head": {"sha": HEAD_SHA},
+            "head": {"sha": HEAD_SHA, "ref": HEAD_REF},
             "base": {"ref": "main"},
+            "body": "",
         }
     )
     check_runs: list[dict[str, Any]] = field(default_factory=green_runs)
@@ -134,6 +164,38 @@ class GitHubStub:
     # CI-POLICY-LIVE-LABELS: the PR's current labels, as GET /issues/{n}/labels lists them.
     labels: list[str] = field(default_factory=list)
     labels_status: int = 200  # e.g. 500: the labels endpoint is down
+    # CI-TIERS-b: the PR's changed files, file contents by (path, ref), the head tree's modes.
+    files: list[dict[str, Any]] = field(default_factory=lambda: changed(TIER1_FILE))
+    contents: dict[tuple[str, str], bytes] = field(default_factory=default_contents)
+    modes: dict[str, str] = field(default_factory=dict)  # path -> git mode; default 100644
+    tree_truncated: bool = False
+
+    def content(self, path: str, ref: str) -> bytes | None:
+        """A changed file that is not removed has plain text at the head unless set."""
+        if (path, ref) in self.contents:
+            return self.contents[(path, ref)]
+        live = {f["filename"] for f in self.files if f.get("status") != "removed"}
+        return b"plain text\n" if ref == HEAD_SHA and path in live else None
+
+    def pr_body(self) -> dict[str, Any]:
+        """The PR as GitHub lists it: `head.ref` and `changed_files` are always there (a test's
+        bare {"sha"} head gets the default branch, as every older test meant; `changed_files`
+        defaults to the number of `files`)."""
+        body = dict(self.pr)
+        head = body.get("head")
+        if isinstance(head, dict) and "ref" not in head:
+            body["head"] = {**head, "ref": HEAD_REF}
+        # SEC-193-01: GitHub always sends `changed_files`; a test may set another count (or None).
+        body.setdefault("changed_files", len(self.files))
+        if body["changed_files"] is None:
+            del body["changed_files"]
+        return body
+
+    def tree(self) -> dict[str, Any]:
+        live = [f["filename"] for f in self.files if f.get("status") != "removed"]
+        paths = dict.fromkeys([*live, *(p for p, ref in self.contents if ref == HEAD_SHA)])
+        entries = [{"path": p, "mode": self.modes.get(p, "100644"), "type": "blob"} for p in paths]
+        return {"sha": HEAD_SHA, "tree": entries, "truncated": self.tree_truncated}
 
 
 def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
@@ -147,7 +209,7 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
             page = int(parse_qs(parts.query).get("page", ["1"])[0])
             base = f"/repos/{REPO}"
             if parts.path == f"{base}/pulls/{PR_NUMBER}":
-                return self._send_raw(stub.raw_pr) if stub.raw_pr else self._send(stub.pr)
+                return self._send_raw(stub.raw_pr) if stub.raw_pr else self._send(stub.pr_body())
             m = re.fullmatch(rf"{base}/commits/(\w+)/check-runs", parts.path)
             if m:
                 runs = [r for r in stub.check_runs if r.get("head_sha", HEAD_SHA) == m.group(1)]
@@ -164,6 +226,21 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
                 named = [{"id": i, "name": n} for i, n in enumerate(stub.labels)]
                 chunk, more = self._page(named, page)
                 return self._send(chunk, more, page)
+            if parts.path == f"{base}/pulls/{PR_NUMBER}/files":
+                chunk, more = self._page(stub.files, page)
+                return self._send(chunk, more, page)
+            if parts.path == f"{base}/git/trees/{HEAD_SHA}":
+                return self._send(stub.tree())
+            if parts.path == f"{base}/compare/main...{HEAD_SHA}":
+                return self._send({"merge_base_commit": {"sha": BASE_SHA}})
+            if parts.path.startswith(f"{base}/contents/"):
+                path = unquote(parts.path[len(f"{base}/contents/") :])
+                ref = parse_qs(parts.query).get("ref", [""])[0]
+                data = stub.content(path, ref)
+                if data is None:
+                    return self._send({"message": "Not Found"}, status=404)
+                b64 = base64.b64encode(data).decode()
+                return self._send({"type": "file", "encoding": "base64", "content": b64})
             if parts.path == f"{base}/pulls/{PR_NUMBER}/reviews":
                 chunk, more = self._page(stub.reviews, page)
                 return self._send(chunk, more, page)
