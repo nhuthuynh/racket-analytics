@@ -333,3 +333,15 @@ def test_working_agreement_section_10_calls_the_script_not_graphql() -> None:
     section = text.split("## 10. Metrics reviewed each sprint", 1)[1].split("\n## ", 1)[0]
     assert "gh pr list" not in section
     assert "scripts/measure/flow_metrics.py" in section
+
+
+@pytest.mark.integration
+def test_script_reads_commits_only_for_prs_in_the_window(tmp_path: Path) -> None:
+    """A sprint's run must not page the commits of every PR the repository ever merged."""
+    stub = sprint_stub()
+    stub.pulls.append(pr(8, "OLD-8", "2026-10-01T10:00:00Z", "2026-10-01T12:00:00Z"))
+    decisions(tmp_path, {"T-1": COST, "T-2": COST, "T-4": COST})
+    with serve(stub):
+        result = run_script(stub, tmp_path, "--since", "2026-11-03")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not [r for r in stub.requests if "/pulls/8/" in r], stub.requests
