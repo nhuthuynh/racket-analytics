@@ -1143,6 +1143,7 @@ Feature: Weakness ranking
     Then "unforced errors" ranks above "serve faults"
     And each weakness shows rallies lost on serve and on receive
 ```
+- **Wording note (business-analyst, BA-5, 2026-11-03; closes the COACH-4 note, `docs/sprints/04/decisions/COACH-4.md`):** "4 rallies on receive to serve faults" means 4 rallies Ivy's side lost while receiving, each tagged as a `fault` with subtype `serve` on her side (for example a wrong-receiver call; that rule is UNVERIFIED). The weakness catalogue counts what is tagged, so they stay "Serve faults" and cite AN-07 fault share, because AN-05 counts only serving-side faults (`docs/domain/weakness-catalogue.md` note (a)). The scenario text is **not** reworded. `tests/features/weakness_ranking.feature`, the catalogue's worked-example table and the QA reference ranking (`planlib`, `docs/sprints/04/decisions/QA-HARNESS-4a.md`) each read this example as written, and a rewording would have to change all three together for no change in behaviour. Coaching copy shown to players is out of scope for this note: the domain coach owns that wording.
 
 #### FR-121 Rules-only general training plan
 - **Description:** From the top 3 weaknesses, a deterministic workflow builds a 2-week plan (the spec allows 2-4). The plan must:
