@@ -76,6 +76,24 @@ def ticket_of(pr: dict[str, Any]) -> str | None:
     return m.group(1) if m else None
 
 
+def into_main(pr: dict[str, Any]) -> bool:
+    return (pr.get("base") or {}).get("ref") == "main"
+
+
+def counts_as_merged(pr: dict[str, Any], window: Window) -> bool:
+    """Merged into main, inside the number range and the merge window (PRC-5.2)."""
+    return bool(
+        pr.get("merged_at")
+        and into_main(pr)
+        and window.has_number(pr["number"])
+        and window.has_merge(ts(pr["merged_at"]))
+    )
+
+
+def counts_as_open(pr: dict[str, Any], window: Window) -> bool:
+    return into_main(pr) and window.has_number(pr["number"])
+
+
 def first_commit(commits: list[dict[str, Any]]) -> datetime | None:
     dates = [ts(c["commit"]["author"]["date"]) for c in commits]
     return min(dates) if dates else None
@@ -136,17 +154,7 @@ def measure(
     now: datetime,
     limits: tuple[int, ...] = DEFAULT_LIMITS,
 ) -> dict[str, Any]:
-    merged = sorted(
-        (
-            p
-            for p in closed
-            if p.get("merged_at")
-            and (p.get("base") or {}).get("ref") == "main"
-            and window.has_number(p["number"])
-            and window.has_merge(ts(p["merged_at"]))
-        ),
-        key=lambda p: p["number"],
-    )
+    merged = sorted((p for p in closed if counts_as_merged(p, window)), key=lambda p: p["number"])
     rows, cycles, to_merge = [], [], []
     for p in merged:
         start, end = first_commit(commits.get(p["number"], [])), ts(p["merged_at"])
@@ -166,7 +174,7 @@ def measure(
 
     ages = []
     for p in sorted(open_prs, key=lambda p: p["number"]):
-        if (p.get("base") or {}).get("ref") != "main" or not window.has_number(p["number"]):
+        if not counts_as_open(p, window):
             continue
         start = first_commit(commits.get(p["number"], [])) or ts(p["created_at"])
         age = hours(start, now)
@@ -284,8 +292,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         closed = _pages(f"{base}/pulls?state=closed")
         open_prs = _pages(f"{base}/pulls?state=open")
-        wanted = [p for p in closed if p.get("merged_at")] + open_prs
-        wanted = [p for p in wanted if window.has_number(p["number"])]
+        wanted = [p for p in closed if counts_as_merged(p, window)]
+        wanted += [p for p in open_prs if counts_as_open(p, window)]
         commits = {p["number"]: _pages(f"{base}/pulls/{p['number']}/commits") for p in wanted}
         oldest = min((ts(p["created_at"]) for p in wanted), default=datetime.now(UTC))
         day = (oldest - timedelta(days=1)).date().isoformat()
