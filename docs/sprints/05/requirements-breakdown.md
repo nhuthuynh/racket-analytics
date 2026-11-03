@@ -48,7 +48,7 @@ Burn-rate multipliers and windows are judgment (SRE workbook unverified, AQS Gap
 
 ### NFR-045 durability and recovery (R1, before beta) → story ST-076, tickets ST-076a/b/c
 
-Method for .1-.5 (.5 counts the drills this method ran in the quarter; BA-5 closes QA-DORCHECK-01 by naming the whole range): `python3 scripts/ops/restore_drill.py --project racket-drill05 --json <out>` on a fresh Compose project: seed demo data, take a backup with the ST-076a service, record before-state, destroy the Postgres and object-store volumes, restore, wait for API health, re-check.
+Method for .1-.5 (.5 counts the drills this method ran in the quarter; BA-5 closes QA-DORCHECK-01 by naming the whole range; the script is (planned) in ST-076c): `python3 scripts/ops/restore_drill.py --project racket-drill05 --json <out>` on a fresh Compose project: seed demo data, take a backup with the ST-076a service, record before-state, destroy the Postgres and object-store volumes, restore, wait for API health, re-check.
 
 | Id | Characteristic | Metric and unit | Target | Test level | Ticket | Scorecard |
 |---|---|---|---|---|---|---|
