@@ -1,0 +1,184 @@
+# Sprint 5 goal scorecard
+
+- **Written:** 2026-11-03 at Sprint 5 planning (ticket PLAN-05) by the engineering-manager, with the product-manager (goal wording, what counts as release-readiness), principal-engineer (latency, alerting and restore assumptions), business-analyst (atomic items, `requirements-breakdown.md`) and senior-qa-engineer (methods, fail-closed rules, planted-failure checks).
+- **Why:** PO standing rule. A sprint is done only when its **goal is shown to work on a live local stack**, each metric measured against its target. Human-only items are not goal metrics; they are the "not met: waiting on P-n" rows of §5 (PO P12 option b).
+- **Verifier fills in:** `Actual`, `Met` (yes / no) and `Evidence` (exact command, stack head SHA, result line or report path). Nothing else in this file changes without a row in a ticket's `decisions/<ID>.md`.
+- **Sources:** `docs/sprints/sprint-05.md` §1, §3, §8; `requirements-breakdown.md` (atomic items); NFR-010, NFR-024, NFR-036, NFR-041, NFR-042, NFR-045, NFR-049, NFR-050, NFR-063, NFR-067, NFR-069, NFR-070, NFR-073; ADR 0014 (fail closed), ADR 0033, ADR 0050, ADR 0055, ADR 0056.
+- **Order (ADR 0055 rule 1, retro 4 F1):** VERIFY-05 starts only when every build ticket in `sprint-05.md` §15 is merged. RETRO-05 starts only when `retro_ready.py` (EM-CLOSE-CHECKS) exits 0. One close PR.
+
+## 1. Sprint goal (sprint-05 §1)
+
+**R1 is a release candidate whose agent-measurable release gates are each proven live on the local stack, and every human gate has a ready kit and a dated PO ask.**
+
+## 2. Scorecard
+
+| ID | What is measured (atomic items) | Target | Method (detail in §4) | Actual | Met | Evidence |
+|---|---|---|---|---|---|---|
+| G05-01 | **R1 read latency at 50 RPS** (NFR-010.1-.9): match, score sheet, dashboard, plan; Compose stack, flags on | **every endpoint p95 ≤ 300 ms and p99 ≤ 800 ms; errors ≤ 0.5 %; achieved ≥ 49.5 RPS; 3 of 3 runs** | §4 G05-01 | | | |
+| G05-02 | **SLOs and burn-rate alerts** (NFR-041.1-.5, NFR-042.1-.5): promtool rule tests; live 5xx injection on the `obs` profile; SLI series present | **promtool 8 of 8 alert cases pass (4 firing, 4 negative not firing); live fast-burn alert firing ≤ 10 min; 0 alerts in a clean 10 min run; both SLI series > 0** | §4 G05-02 | | | |
+| G05-03 | **Restore drill** (NFR-045.1-.4) | **RPO ≤ 24 h; RTO ≤ 240 min; corrections count and SHA-256 equal; object count and hash equal; planted deleted row detected** | §4 G05-03 | | | |
+| G05-04 | **Browser matrix, automated** (NFR-024.1-.3): critical journeys per Playwright project | **100 % pass on `chromium`, `webkit`, `android-chrome`, 3 repeats, 0 flaky** | §4 G05-04 | | | |
+| G05-05 | **Fix a call in ≤ 2 taps** (NFR-036.4) | **max taps/keys ≤ 2 for each call type on `chromium` and `android-chrome`; planted 3-step path reported as 3** | §4 G05-05 | | | |
+| G05-06 | **Data protection** (NFR-063.1-.2, NFR-067.1-.3, NFR-069.1) | **unclassified stored types 0; incomplete classes 0; authenticated GETs without `no-store` 0; auth data after logout 0; SW-cached media 0; PII in metric labels or logs 0** | §4 G05-06 | | | |
+| G05-07 | **ASVS 5.0 L2 release review** (NFR-050.1-.8) | **applicable L2 rows not assessed 0 (V1-V17); `Fail` rows without owner 0; `Pass` rows without evidence 0; BOLA non-404 0; missing security headers 0; pre-hydration-submittable forms 0** | §4 G05-07 | | | |
+| G05-08 | **Tiered merge gate and doc checks** (PRC-2.1-2.7, PRC-3.1-3.4, PRC-4.1-4.2) | **`merge_ready.py` planted-fixture matrix 7 of 7 as expected; `doc-check` and `pr-policy` reconcile step present in `ci-gate` and green on the close head; planted breaks red 5 of 5** | §4 G05-08 | | | |
+| G05-09 | **The R1 prototype still runs, flags off and on** (DEMO-1.1, FR-055.R1, REL-1.2, REL-1.3) | **`make up` → `make demo` ×2 → `make down` rc 0 flags off and flags on; E2E full suite 100 %, 0 flaky over 3 runs; "unofficial scoring" notice on 4 page families; rollback redeploy healthy; migration down/up rc 0** | §4 G05-09 | | | |
+| G05-10 | **Test strength and budgets** | **every IT id passes (incl. new IT-05-*); integration ≤ 600 s in CI's parallel form; mutation ≥ 0.80 on `coaching/plan` and `coaching/weakness` and ≥ 0.85 on rules; rally-F1 matcher unit + property suite passes** | §4 G05-10 | | | |
+| G05-11 | **Flow and cost per PR are measured** (PRC-5.1-5.5; ADR 0056 decisions 1 and 3). The values are reported, **never targets** [ASB/AGL-02] | **`flow_metrics.py` rc 0 with cycle time (median, max), throughput, work item age, WIP breaches; 100 % of merged Sprint 5 ticket decisions files carry the cost table (uncaptured rounds say "not measured")** | §4 G05-11 | | | |
+| G05-12 | **CI, merge discipline, open defects, one close** | **CI green at the close head (push run, every job incl. `ci-gate`); every merged Sprint 5 PR has its tier's verdicts on the merged head; open blocker/major 0; merged-PR set equals `status.json` map; 1 RETRO PR** | §4 G05-12 | | | |
+
+**Overall:** the Sprint 5 goal is met only when all 12 rows are "yes". A row whose method could not run is "no", never "n/a" (fail closed, ADR 0014). Human-gated items (§5) never count as met or missed here.
+
+**Status at planning (engineering-manager, 2026-11-03; not a verifier result):** met 0 / 12. The SLO, restore, android-chrome, tier and doc-check work does not exist yet. CI at planning: push run 41643389454 on `main` at `04c6a826` → success (also 41639406875 at `785b4ab4` → success); scheduled CI run 41622904539 on `888760df` **cancelled** (Flaky-test report 55 min over its 45 min limit) and not noticed (PRC-1.1), so CI-NOTICE-CANCELLED goes first.
+
+## 3. Rules for the verifier
+
+1. Fresh worktree of `main` at the head named in the VERIFY-05 brief, own Compose project names (`racket-goal05-off`, `racket-goal05-on`, `racket-drill05`, `racket-obs05`), `bash scripts/disk-precheck.sh` rc 0 before each build (16 GB floor for builds, 10 GB otherwise); every stack torn down with `down -v --rmi local`; `df -h /` at start and end in `decisions/VERIFY-05.md`.
+2. Every method in §4 is run as written, in the configuration it names; a method changed by the verifier is a finding, not a pass.
+3. Re-run every row, not only rows that failed before (retro 4 §12).
+4. Findings use parseable ids `QA-VERIFY05R<n>-<nn>` and get ledger rows in `docs/sprints/05/review-rounds.md` in the same PR.
+5. The VERIFY PR is always merged (ADR 0055 rule 3), met or not.
+
+## 4. Methods
+
+Each method's author dry-runs it live, in the configuration it measures, and logs the rc in §6 and in the ticket's decisions file **before** VERIFY-05 (ADR 0055 rule 2, retro 4 E4). Each method also shows it can fail: the planted-failure line is part of the dry-run.
+
+### G05-01 (author: senior-backend-engineer, ST-074; pinned by QA-PIN-05)
+```
+make up FLAGS=on COMPOSE_PROJECT_NAME=racket-goal05-on && make demo
+for run in 1 2 3; do
+  uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \
+    -u 50 -r 50 -t 6m --csv reports/perf/r1-$run --only-summary
+  python3 scripts/ci/perf_verdict.py --stats reports/perf/r1-${run}_stats.csv --rps 50 \
+    --min-rps 49.5 --warmup-s 60 --p95-ms 300 --p99-ms 800 --max-error-pct 0.5 \
+    --per-endpoint match,score-sheet,dashboard,plan --json reports/perf/r1-$run.json
+done
+```
+Met when all three verdict files say `pass` for all 4 endpoints. Planted failure: `--p95-ms 1` → rc 1 naming the endpoint.
+
+### G05-02 (author: sre-devops-engineer, ST-075c)
+```
+docker run --rm -v "$PWD/infra/observability/alerts:/a" prom/prometheus:v2.53.2 \
+  promtool test rules /a/slo.test.yml           # 8 cases
+make up FLAGS=on PROFILES=obs COMPOSE_PROJECT_NAME=racket-obs05 && make demo
+python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
+  --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
+python3 scripts/ops/inject_5xx.py --rate 0 --minutes 10 --expect-no-alert --json reports/slo-clean.json
+curl -s 'http://localhost:9090/api/v1/query?query=racket_upload_sessions_total' | jq '.data.result|length'
+```
+Planted failure: a rule file with the fast-burn threshold at 100 % → the promtool case fails.
+
+### G05-03 (author: sre-devops-engineer, ST-076c; integrity check by senior-backend-engineer, ST-076b)
+```
+python3 scripts/ops/restore_drill.py --project racket-drill05 --flags on --json reports/restore-drill.json
+jq '{rpo_h:.rpo_hours, rto_min:.rto_minutes, corrections_equal:.corrections.equal, objects_equal:.objects.equal}' reports/restore-drill.json
+python3 scripts/ops/restore_drill.py --project racket-drill05b --plant-delete-correction --json reports/restore-drill-planted.json  # expect rc 1
+```
+
+### G05-04 (author: senior-frontend-engineer, ST-079)
+```
+cd web && for p in chromium webkit android-chrome; do
+  PW_PROJECTS=$p npx playwright test --repeat-each 3 --grep @critical --output ../reports/pw-$p \
+    --reporter json > ../reports/pw-$p.json; done
+python3 scripts/measure/browser_matrix.py reports/pw-*.json --require chromium,webkit,android-chrome
+```
+`webkit` evidence of record is the CI run on the head (local WebKit is not installed; never `playwright install`). Planted failure: `--require firefox` → rc 1 (missing project).
+
+### G05-05 (author: senior-qa-engineer, ST-080)
+```
+cd web && PW_PROJECTS=chromium,android-chrome npx playwright test e2e/sprint-05/fix-call-taps.spec.ts \
+  --reporter json > ../reports/taps.json
+jq '[.suites[]..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max' ../reports/taps.json
+```
+
+### G05-06 (authors: senior-backend-engineer ST-077, ST-078d, ST-075a; senior-frontend-engineer ST-078e)
+```
+cd backend && uv run pytest -q tests/integration/test_it_05_data_classification.py \
+  tests/integration/test_it_05_no_store.py tests/integration/test_it_05_pii_labels.py --junitxml ../reports/g06-be.xml
+cd ../web && PW_PROJECTS=chromium,webkit npx playwright test e2e/sprint-05/logout-hygiene.spec.ts && npm run test -- sw-cache
+python3 scripts/measure/junit_rate.py reports/g06-be.xml --require data_classification,no_store,pii_labels
+```
+
+### G05-07 (authors: security-privacy-engineer ST-078a-c assessment tool output; senior-backend-engineer ST-078d; senior-frontend-engineer ST-078e)
+```
+python3 docs/security/tools/asvs_status.py docs/security/asvs-l2-checklist.md --level 2 \
+  --fail-on not-assessed,fail-without-owner,pass-without-evidence --json reports/asvs.json
+cd backend && uv run pytest -q -k "bola_matrix or bola_routes_complete" && cd ..
+cd backend && uv run pytest -q tests/integration/test_it_05_security_headers.py && cd ../web && npm run test -- hydration-lock
+```
+
+### G05-08 (author: sre-devops-engineer, CI-TIERS-a/b, CI-DOC-CHECK, CI-RECON-ON-PR)
+```
+cd infra && uv run pytest -q tests/test_merge_ready_tiers.py tests/test_doc_check.py tests/test_reconcile_on_pr.py
+gh api repos/nhuthuynh/racket-analytics/actions/runs?branch=main\&event=push\&per_page=1 --jq '.workflow_runs[0].id' \
+  | xargs -I{} gh api repos/nhuthuynh/racket-analytics/actions/runs/{}/jobs --jq '.jobs[]|[.name,.conclusion]|@tsv' | grep -E 'doc-check|pr-policy|ci-gate'
+```
+Planted breaks (5): dangling path, unconfirmed ASB id, broken front matter, decisions-file "known gap" with no id, tier 1 fixture without QA.
+
+### G05-09 (author: senior-qa-engineer with sre-devops-engineer; demo by senior-backend-engineer, QA-VERIFY04R5-01; rollback by sre-devops-engineer, ST-082)
+```
+python3 scripts/measure/live_goal.py demo --flags off --project racket-goal05-off --runs 2
+python3 scripts/measure/live_goal.py demo --flags on  --project racket-goal05-on  --runs 2
+cd web && npx playwright test --repeat-each 3 --output ../reports/pw-full
+python3 scripts/measure/unofficial_notice.py --base-url https://localhost:3000 --families score-sheet,stats,plan,dashboard
+python3 scripts/ops/rollback_drill.py --project racket-goal05-on --to-previous-tag
+cd backend && uv run pytest -q tests/integration/test_it_05_migration_roundtrip.py
+```
+
+### G05-10 (author: senior-qa-engineer)
+CI's NFR-073 integration form (the FIX-04-4a block, pinned) and the nightly mutation job, plus `uv run pytest -q tests/unit/dataset/test_rally_f1.py -p hypothesis --hypothesis-profile ci`.
+
+### G05-11 (author: senior-qa-engineer, QA-FLOW-METRICS)
+```
+python3 scripts/measure/flow_metrics.py --repo nhuthuynh/racket-analytics --since 2026-11-03 \
+  --decisions docs/sprints/05/decisions --json reports/flow05.json
+```
+Values go to the sprint report; only the "measured and complete" condition is a goal target.
+
+### G05-12 (author: engineering-manager, EM-CLOSE-CHECKS)
+```
+python3 docs/sprints/05/close-checks/retro05_check.py --repo nhuthuynh/racket-analytics --status docs/sprints/05/status.json \
+  --ledger docs/sprints/05/review-rounds.md --blockers docs/sprints/05/blockers.md
+python3 scripts/measure/open_defects.py docs/sprints/05/review-rounds.md
+for n in $(merged Sprint 5 PRs); do python3 scripts/measure/merged_verdict.py --pr $n --tiered; done
+```
+
+## 5. Not met: waiting on P-n (PO P12 option b; not goal metrics)
+
+| Row | Item | Waits on | What the team prepares this sprint | How it is measured once supplied |
+|---|---|---|---|---|
+| S5-P9 | Moderated usability test, n ≥ 5 players on their own phones (NFR-036.1-.3) | **P9** (OQ-20 testers) | ST-083 kit (protocol, tasks, interim consent script, observation sheet), COACH-5 safety review, ST-080 (NFR-036.4) | Observation sheets tallied by `scripts/measure/usability_tally.py` (written when the session is booked) |
+| S5-P16 | Legal review (NFR-070, US + AU) of the age, footage, consent and retention texts; tester footage question | **P16** | SEC-5 open-question list and ADR skeleton; flags default-off for real users | ADR accepted by the PO; interim wording removed |
+| S5-P7 | Rulebook for official scoring and the side-out split | **P7** (OQ-01) | COACH-5 verification queue mapped to FR-nnn.Rk; "unofficial scoring" label (FR-055.R1) | `docs/domain/rules-verified.md` rows |
+| S5-P15 | Human coach review of drills (`verified`) | **P15** | ST-081b drills at `coach-reviewed`; checklist rows | `jq` count of `verified` |
+| S5-P8 | Budgets and storage quota (OQ-13); GPU for SPIKE-03 | **P8** | settings as interim values | settings hold PO values |
+| S5-P11 | Footage bucket and consented footage for SPIKE-02/05/07 and gold set QD-GD-04 v1 data; NFR-006.6 | **P11** (OQ-06) | ST-084a tolerance ADR, ST-084b matcher | spike reports |
+| S5-P6 | Screen-reader pass (NFR-027 b) on R1 screens | **P6** | axe, target and keyboard checks | `a11y_manual.py` tally |
+| S5-P10 | Repository visibility | **P10** | nothing private in git | `repo_visibility.py` |
+| S5-P17 | SLO commitment and error-budget policy acceptance (NFR-041.2, NFR-042.2, NFR-049.1) | **P17** (new) | ST-075c drafts | PO acceptance quoted in po-input |
+| S5-P18 | R1 release-candidate sign-off (REL-1.4) | **P18** (new) | ST-082 release notes; the PM's readiness recommendation after VERIFY-05 | PO acceptance |
+| S5-P19 | Residual-risk ADR for ASVS `Fail` rows and threat-note "Accepted residual" rows (NFR-050.9) | **P19** (new) | SEC-5 + ST-078a-c draft | ADR accepted by the PO |
+| S5-P20 | Real-device iOS Safari and Android Chrome, current and previous major (NFR-024.4-.5; OQ-17) | **P20** (new) | ST-079 emulation evidence; a device checklist | device checklist tally |
+| S5-S6 | Admin setting 6 (ADR 0053 part 2: draft upgrade PR) | **setting 6** | nothing | first draft upgrade PR |
+| S5-CAL | NFR-045.5 quarterly drill cadence; 30-day SLO windows | calendar time | first drill and first window start | next quarter |
+
+## 6. Dry-run rows (method authors, before VERIFY-05)
+
+One row per metric, rc 0 on the real method plus the planted-failure rc, in the configuration it measures (ADR 0055 rule 2; retro 4 E4). Rows are added by each author's ticket PR (this file is not a shared status file; each PR adds only its own row). VERIFY-05 refuses to start while any metric has no rc 0 row.
+
+| Metric | Author | Ticket | Date | Head | Command (as §4) | rc | Planted-failure rc |
+|---|---|---|---|---|---|---|---|
+| G05-01 | senior-backend-engineer | ST-074 | | | | | |
+| G05-02 | sre-devops-engineer | ST-075c | | | | | |
+| G05-03 | sre-devops-engineer | ST-076c | | | | | |
+| G05-04 | senior-frontend-engineer | ST-079 | | | | | |
+| G05-05 | senior-qa-engineer | ST-080 | | | | | |
+| G05-06 | senior-backend-engineer | ST-078d | | | | | |
+| G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | | | | | |
+| G05-08 | sre-devops-engineer | CI-TIERS-b | | | | | |
+| G05-09 | senior-qa-engineer | QA-PIN-05 | | | | | |
+| G05-10 | senior-qa-engineer | QA-PIN-05 | | | | | |
+| G05-11 | senior-qa-engineer | QA-FLOW-METRICS | | | | | |
+| G05-12 | engineering-manager | EM-CLOSE-CHECKS | | | | | |
+| G05-11 (planning dry-run) | engineering-manager | PLAN-05 | 2026-11-03 | `04c6a826` | `gh api 'repos/nhuthuynh/racket-analytics/pulls?state=closed&per_page=100'` (REST; the GraphQL form in working-agreement §10 returns 403 here) | 0 | n/a (tool not built) |
+| G05-12 (planning dry-run) | engineering-manager | PLAN-05 | 2026-11-03 | `04c6a826` | `python3 scripts/measure/open_defects.py docs/sprints/04/review-rounds.md` (Sprint 4 ledger; the Sprint 5 ledger does not exist yet) | 0 (`open 0`) | n/a |
