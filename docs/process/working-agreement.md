@@ -220,7 +220,7 @@ The format is in `docs/decisions/README.md` [EP/ENG-09, EP/ENG-10]. An accepted 
 - **Review and fix:** iterations per PR, and escalations (judgment).
 - **Quality:** model eval and coaching eval results.
 - **Cost:** GPU-seconds per match-minute.
-- **Flow metrics (ADR 0056 decision 3), per sprint, from the PR timestamps (`gh pr list --state merged --json number,createdAt,mergedAt`) and the stage counts in §3:**
+- **Flow metrics (ADR 0056 decision 3), per sprint, from `python3 scripts/measure/flow_metrics.py --repo nhuthuynh/racket-analytics --since <sprint start> --decisions docs/sprints/<nn>/decisions --json reports/flow<nn>.json` (REST only: PRs, their commits and Actions runs, plus the §3 stage counts in the decisions files; QA-FLOW-METRICS):**
   - **cycle time:** median and maximum hours from a ticket's first commit to its merge into `main`;
   - **throughput:** tickets merged into `main` per sprint;
   - **work item age:** hours since the first commit of each ticket still open, reported at every EM status step; an item older than the sprint's median cycle time is named at the next status step;

@@ -164,7 +164,8 @@ def test_work_item_age_of_each_open_ticket_pr_is_named_when_over_the_median(
 def test_a_stage_count_above_its_limit_is_a_breach_with_its_reason(tmp_path: Path) -> None:
     files = {
         "A": "## Stage counts\n\nIn progress 4 · in review 3 · awaiting QA 2 · awaiting merge 1.\n",
-        "B": "In progress 5 · in review 4 · awaiting QA 0 · awaiting merge 0. Reason: two hotfixes\n",
+        "B": "In progress 5 · in review 4 · awaiting QA 0 · awaiting merge 0."
+        " Reason: two hotfixes\n",
         "C": "in progress 1, in review 0, awaiting qa 3, awaiting merge 0\n",
     }
     report = measure(tmp_path, [], files=files)
