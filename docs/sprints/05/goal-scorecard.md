@@ -41,7 +41,7 @@
 
 ## 4. Methods
 
-Each method's author dry-runs it live, in the configuration it measures, and logs the rc in §6 and in the ticket's decisions file **before** VERIFY-05 (ADR 0055 rule 2, retro 4 E4). Each method also shows it can fail: the planted-failure line is part of the dry-run.
+Each method's author dry-runs it live, in the configuration it measures, and logs the rc in §6 and in the ticket's decisions file **before** VERIFY-05 (ADR 0055 rule 2, retro 4 E4). Each method also shows it can fail: the planted-failure line is part of the dry-run. Every block runs from the repository root, and every `cd` sits inside a `( … )` subshell, so the next line starts at the root again (PE-PLAN05-07 / PLAN05-QA-08; the same defect was in G05-04, G05-07 and G05-09).
 
 ### G05-01 (author: senior-backend-engineer, ST-074; pinned by QA-PIN-05)
 ```
@@ -74,7 +74,8 @@ APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.y
   -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
   --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
-python3 scripts/ops/inject_5xx.py --rate 0 --minutes 10 --expect-no-alert --json reports/slo-clean.json
+python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 0 --minutes 10 \
+  --expect-no-alert --prom http://localhost:9090 --json reports/slo-clean.json
 curl -s 'http://localhost:9090/api/v1/query?query=racket_upload_sessions_total' | jq '.data.result|length'
 ```
 Planted failure: a rule file with the fast-burn threshold at 100 % → the promtool case fails. Negative (NFR-041.6): `python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 100 --minutes 1 --expect-no-5xx --json reports/slo-seam-off.json` against a `make up` stack (`APP_ENV=dev`, no override) → 0 responses with status 500 (the seam is dropped outside `APP_ENV=test`).
@@ -83,44 +84,47 @@ Planted failure: a rule file with the fast-burn threshold at 100 % → the promt
 ```
 python3 scripts/ops/restore_drill.py --project racket-drill05 --flags on --json reports/restore-drill.json
 jq '{rpo_h:.rpo_hours, rto_min:.rto_minutes, corrections_equal:.corrections.equal, objects_equal:.objects.equal}' reports/restore-drill.json
-python3 scripts/ops/restore_drill.py --project racket-drill05b --plant-delete-correction --json reports/restore-drill-planted.json  # expect rc 1
+python3 scripts/ops/restore_drill.py --project racket-drill05b --flags on --plant-delete-correction \
+  --json reports/restore-drill-planted.json  # expect rc 1
 ```
 
 ### G05-04 (author: senior-frontend-engineer, ST-079)
 ```
-cd web && for p in chromium webkit android-chrome; do
+(cd web && for p in chromium webkit android-chrome; do
   PW_PROJECTS=$p npx playwright test --repeat-each 3 --grep @critical --output ../reports/pw-$p \
-    --reporter json > ../reports/pw-$p.json; done
+    --reporter json > ../reports/pw-$p.json; done)
 python3 scripts/measure/browser_matrix.py reports/pw-*.json --require chromium,webkit,android-chrome
 ```
 `webkit` evidence of record is the CI run on the head (local WebKit is not installed; never `playwright install`). Planted failure: `--require firefox` → rc 1 (missing project).
 
 ### G05-05 (author: senior-qa-engineer, ST-080)
 ```
-cd web && PW_PROJECTS=chromium,android-chrome npx playwright test e2e/sprint-05/fix-call-taps.spec.ts \
-  --reporter json > ../reports/taps.json
-jq '[.suites[]..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max' ../reports/taps.json
+(cd web && PW_PROJECTS=chromium,android-chrome npx playwright test e2e/sprint-05/fix-call-taps.spec.ts \
+  --reporter json > ../reports/taps.json)
+jq '[.suites[]..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max' reports/taps.json
 ```
 
 ### G05-06 (authors: senior-backend-engineer ST-077, ST-078d, ST-075a; senior-frontend-engineer ST-078e)
 ```
-cd backend && uv run pytest -q tests/integration/test_it_05_data_classification.py \
-  tests/integration/test_it_05_no_store.py tests/integration/test_it_05_pii_labels.py --junitxml ../reports/g06-be.xml
-cd ../web && PW_PROJECTS=chromium,webkit npx playwright test e2e/sprint-05/logout-hygiene.spec.ts && npm run test -- sw-cache
-python3 scripts/measure/junit_rate.py reports/g06-be.xml --require data_classification,no_store,pii_labels
+(cd backend && uv run pytest -q tests/integration/test_it_05_data_classification.py \
+  tests/integration/test_it_05_no_store.py tests/integration/test_it_05_pii_labels.py --junitxml ../reports/g06-be.xml)
+(cd web && PW_PROJECTS=chromium,webkit npx playwright test e2e/sprint-05/logout-hygiene.spec.ts && npm run test -- sw-cache)
+python3 scripts/measure/junit_rate.py reports/g06-be.xml --include 'test_it_05_' \
+  --require data_classification --require no_store --require pii_labels
 ```
+Planted failure: add `--require missing_suite` → rc 1. `junit_rate.py` needs `--include`, and `--require` takes one regex per flag, so the old `--require data_classification,no_store,pii_labels` form failed even from the root (argparse rc 2). Planning dry-run of this block: §6.
 
 ### G05-07 (authors: security-privacy-engineer ST-078a-c assessment tool output; senior-backend-engineer ST-078d; senior-frontend-engineer ST-078e)
 ```
 python3 docs/security/tools/asvs_status.py docs/security/asvs-l2-checklist.md --level 2 \
   --fail-on not-assessed,fail-without-owner,pass-without-evidence --json reports/asvs.json
-cd backend && uv run pytest -q -k "bola_matrix or bola_routes_complete" && cd ..
-cd backend && uv run pytest -q tests/integration/test_it_05_security_headers.py && cd ../web && npm run test -- hydration-lock
+(cd backend && uv run pytest -q tests/regression/test_bola_matrix.py)   # NFR-050.6: existing inventory test, PE-PLAN05-04
+(cd backend && uv run pytest -q tests/integration/test_it_05_security_headers.py) && (cd web && npm run test -- hydration-lock)
 ```
 
 ### G05-08 (author: sre-devops-engineer, CI-TIERS-a/b, CI-DOC-CHECK, CI-RECON-ON-PR)
 ```
-cd infra && uv run pytest -q tests/test_merge_ready_tiers.py tests/test_doc_check.py tests/test_reconcile_on_pr.py
+(cd infra && uv run pytest -q tests/test_merge_ready_tiers.py tests/test_doc_check.py tests/test_reconcile_on_pr.py)
 gh api repos/nhuthuynh/racket-analytics/actions/runs?branch=main\&event=push\&per_page=1 --jq '.workflow_runs[0].id' \
   | xargs -I{} gh api repos/nhuthuynh/racket-analytics/actions/runs/{}/jobs --jq '.jobs[]|[.name,.conclusion]|@tsv' | grep -E 'doc-check|pr-policy|ci-gate'
 ```
@@ -130,10 +134,10 @@ Planted breaks (5): dangling path, unconfirmed ASB id, broken front matter, deci
 ```
 python3 scripts/measure/live_goal.py demo --flags off --project racket-goal05-off --runs 2
 python3 scripts/measure/live_goal.py demo --flags on  --project racket-goal05-on  --runs 2
-cd web && npx playwright test --repeat-each 3 --output ../reports/pw-full
+(cd web && npx playwright test --repeat-each 3 --output ../reports/pw-full)
 python3 scripts/measure/unofficial_notice.py --base-url https://localhost:3000 --families score-sheet,stats,plan,dashboard
 python3 scripts/ops/rollback_drill.py --project racket-goal05-on --to-previous-tag
-cd backend && uv run pytest -q tests/integration/test_it_05_migration_roundtrip.py
+(cd backend && uv run pytest -q tests/integration/test_it_05_migration_roundtrip.py)
 ```
 
 ### G05-10 (author: senior-qa-engineer)
@@ -194,3 +198,4 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 | G05-11 (planning dry-run) | engineering-manager | PLAN-05 | 2026-11-03 | `04c6a826` | `gh api 'repos/nhuthuynh/racket-analytics/pulls?state=closed&per_page=100'` (REST; the GraphQL form in working-agreement §10 returns 403 here) | 0 | n/a (tool not built) |
 | G05-02 (planning dry-run, project name only) | engineering-manager | PLAN-05 | 2026-11-03 | `6c3ffcdd` | `docker compose -f infra/compose.yaml -p racket-obs05 up -d --no-deps web-tls`, then `COMPOSE_PROJECT_NAME=racket-obs05 make demo` (only web-tls running; the obs profile and `compose.fault-drill.yaml` do not exist yet) | 0 on the `cp web-tls` step (root.crt copied); the make rc is 2 only because the API is not running (`GET /dev/users: HTTP 502`) | 2 (`env -u COMPOSE_PROJECT_NAME make demo` → "the stack's web-tls service is not reachable; run 'make up' first"; the round 2 form of the method) |
 | G05-12 (planning dry-run) | engineering-manager | PLAN-05 | 2026-11-03 | `04c6a826` | `python3 scripts/measure/open_defects.py docs/sprints/04/review-rounds.md` (Sprint 4 ledger; the Sprint 5 ledger does not exist yet) | 0 (`open 0`) | n/a |
+| G05-06 (planning dry-run, paths and arguments; PE-PLAN05-07 / PLAN05-QA-08) | engineering-manager | PLAN-05 | 2026-11-03 | `244b8053` + the round 3 block text | the §4 G05-06 block, run from the repo root | step 1: 4 (pytest "file or directory not found": the three ITs are planned outputs of ST-077, ST-078d and ST-075a); `reports/g06-be.xml` was written at the root and the shell stayed at the root. Step 2: not run (`e2e/sprint-05/logout-hygiene.spec.ts` is an ST-078e output; `web/node_modules` is not installed in this worktree). Step 3 on that report: 1 (`selected 0`, all 3 `--require` patterns listed as missing, as expected before the tickets). Step 3 on a fixture report with the 3 ITs passing: **0** | 1 (`--require missing_suite`). The round 1-3 form: 2 from `web/` ("can't open file …/web/scripts/measure/junit_rate.py"), and 2 from the root too (argparse: `--include` is required) |

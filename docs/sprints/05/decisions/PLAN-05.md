@@ -77,3 +77,83 @@ Note: by the CI-TIERS-a rules this PR would be tier 2, because it adds `ticket-o
 | Migration glob | `git ls-files 'backend/src/racket/migrations/**' \| wc -l`; `git ls-files 'backend/migrations/**' \| wc -l` | 24; 0 |
 | Owner file parses, roles valid, no drift | `python3 -c 'json.load(...)'`; each `owner` ∈ `.claude/agents/*.md` stems; §15 `(id, branch, owner)` set == JSON set | 46 rows; all owners valid; drift none |
 | Paths exist | `[ -e "$p" ]` over the newly referenced paths | all exist (`backend/migrations` absent, as the finding says) |
+
+## Review round 3: one disposition per finding, all rounds (working-agreement §7.3b; fix iteration 3)
+
+Author: engineering-manager, with principal-engineer and senior-qa-engineer as co-authors. Fresh context, fix iteration 3 (working-agreement §7 step 5: the last iteration before escalation to the PO).
+
+Why TDD does not apply: this round still changes planning text only (`sprint-05.md`, `05/*.md`, this file). The doc checks and the G05-06 dry-run below stand in for a red test.
+
+**Finding ids (source: every review on PR #186).** The reviewers gave ids to every finding except the three principal-engineer nits of round 1, which get `PE-PLAN05-NIT-1..3` here. Repeated nits in later rounds re-check those ids or PLAN05-QA-01/02 and add no new id. The senior-qa-engineer's F-labels are aliases: round 2 F1 = PLAN05-QA-04, F2 = PLAN05-QA-05, F3 = PLAN05-QA-06; round 3 F1 = PLAN05-QA-07, F2 = PLAN05-QA-08.
+
+| Round, review | Ids |
+|---|---|
+| 1, principal-engineer 5753329182 | PE-PLAN05-01, -02, -03, -04, -05, -06, -07, PE-PLAN05-NIT-1, -NIT-2, -NIT-3 (10) |
+| 1, senior-qa-engineer 5753350564 | PLAN05-QA-01, -02, -03 (3) |
+| 2, principal-engineer 5753520871 | PE-PLAN05-R2-01, -R2-02, -R2-03, -R2-04 (4) |
+| 2, senior-qa-engineer 5753529573 | PLAN05-QA-04, -05, -06 (3) |
+| 3, senior-qa-engineer 5753632703 | PLAN05-QA-07, -08 (2) |
+| 3, principal-engineer 5753648007 | PE-PLAN05-R3-01, -R3-02, -R3-03 (3) |
+| **Total** | **25 ids** |
+
+| # | Finding | Severity | Disposition | Evidence (this head unless a commit is named) |
+|---|---|---|---|---|
+| 1 | PE-PLAN05-01 | major | **Fixed** in `6c3ffcdd` | CI-TIERS-a: highest tier wins, executable floor, `api-*.md` tier 2, negatives in PRC-2.2. Both reviewers confirmed it fixed in round 2 |
+| 2 | PE-PLAN05-02 | major | **Fixed** in `6c3ffcdd` and `244b8053` | security APPROVE on every tier 2 PR with 4 negatives (`6c3ffcdd`); author-role source moved to the tier 2 `ticket-owners.json` (`244b8053`, R2-02); bootstrap gap closed by R3-01 (row 23) |
+| 3 | PE-PLAN05-03 | major | **Fixed** in `6c3ffcdd` | ST-075d reuses `RACKET_FAULT_INJECTION` under `APP_ENV=test`; ST-075c tier 2; env and compose pin. Both reviewers confirmed it in round 2 |
+| 4 | PE-PLAN05-04 | minor | **Fixed** | `test_bola_routes_complete` is dropped. ST-078d, NFR-050.6, the §5 TDD table, IT-05-07 (retired) and the G05-07 method now use the existing `backend/tests/regression/test_bola_matrix.py::test_endpoint_inventory_has_no_route_missing_from_the_matrix` (line 145) and its negative `test_a_route_without_a_probe_is_reported` (line 158). ST-078d's red-first test is the `no-store` IT. `grep -rn bola_routes_complete docs/sprints` → only this table |
+| 5 | PE-PLAN05-05 | minor | **Fixed** | ST-076b: `corrections_fingerprint(session)` lives in `racket/matches/scorebook/integrity.py` (Match & Scoring owns corrections, context map C4; `racket/scoring/` holds only `__init__.py`) and is published through the context port `racket.matches.public`. The `racket-integrity` CLI in `racket.platform.integrity` imports only that port; a unit test fails on a direct `racket.matches.scorebook` import. §15 files updated |
+| 6 | PE-PLAN05-06 | minor | **Fixed** | ST-077 `depends_on` = SEC-5, ST-076a in §3.3, §3.8 DoR and §15. IT-05-05 and NFR-063.1 add the negative "zero backup artefacts found → fail", so the test cannot pass empty |
+| 7 | PE-PLAN05-07 | minor | **Fixed**, dry-run recorded | G05-06 runs every `cd` inside a `( … )` subshell, so `junit_rate.py` runs from the root. Dry-run in scorecard §6 (G05-06 row) and below |
+| 8 | PE-PLAN05-NIT-1 (process count 12 vs 11) | nit | **Fixed** | sprint-05 §2 "11 of 46 tickets (5 CI-*, 4 QA, 2 EM-*)"; kickoff PM-3 the same. Units stay 7.5 of 26 |
+| 9 | PE-PLAN05-NIT-2 (`inject_5xx.py` and `--flags` defaults) | nit | **Fixed** | G05-02's clean run now passes `--base-url` and `--prom` explicitly; G05-03's planted run passes `--flags on` |
+| 10 | PE-PLAN05-NIT-3 (`.claude/agents` `tools:` at tier 0) | nit | **Fixed** | CI-TIERS-a: a `.claude/agents/*.md` change to the front matter `tools:` line is tier 2; body-only edits stay tier 0. Fixtures for both; PRC-2.2 negative added |
+| 11 | PLAN05-QA-01 (62 vs 56 NFR rows) | nit | **Fixed** | §0.6 says "56 atomic NFR items" with the counting command; `grep -cE '^\| NFR-[0-9]+\.[0-9]' 05/requirements-breakdown.md` → 56 on this head |
+| 12 | PLAN05-QA-02 (12 vs 11) | nit | **Fixed** | same edit as row 8 |
+| 13 | PLAN05-QA-03 (shared files, not disjoint) | nit | **Fixed** | §3.6 item 4 names the shared files and their merge order (`ci.yml`: CI-NOTICE-CANCELLED → CI-DOC-CHECK → CI-RECON-ON-PR; `infra/compose.yaml`: ST-075b → ST-076a; `nightly-quality.yml`: ST-074 → ST-079 → ST-084b); the later PR merges `origin/main` and re-runs checks first. The §15 header no longer says "disjoint per lane" |
+| 14 | PE-PLAN05-R2-01 | major | **Fixed** in `244b8053` | `COMPOSE_PROJECT_NAME` exported for the G05-02 block; red/green dry-run in round 2 evidence. Both reviewers confirmed it in round 3 |
+| 15 | PE-PLAN05-R2-02 | major | **Fixed** in `244b8053` | `ticket-owners.json` (46 rows) is the gate's only input, tier 2, drift test planned. Both reviewers confirmed it in round 3; its bootstrap gap is row 23 |
+| 16 | PE-PLAN05-R2-03 | minor | **Fixed** | ST-075d: the fault middleware is registered before `app.add_middleware(HttpMetricsMiddleware)` (`app.py` line 83), so it sits inside it. Unit test pins the order (negative: fault middleware outermost fails). IT-05-12 and NFR-041.6 assert, with an `InMemoryMetricReader` (as `test_slis.py`), that the injected 500 is recorded in `http.server.request.duration` with `http.response.status_code=500` |
+| 17 | PE-PLAN05-R2-04 | minor | **Fixed** | ST-075c lists five test-mode differences on the drill stack: cookie not `__Host-`/Secure; `DEV_IDENTITY_ENABLED` default on in `Settings` (`settings.py` line 184) but set explicitly by `compose.yaml` line 11 from `.env`, with dev users seeded when on (`app.py` line 44); OpenAPI docs public (`app.py` line 63); no migrate-on-start (`app.py` line 42; the `migrate` service runs); the seam itself. SEC-5 and the security reviewer judge the stack on that list |
+| 18 | PLAN05-QA-04 | major | **Fixed** in `244b8053` | migration glob `backend/src/racket/migrations/**` + glob liveness test. Both reviewers confirmed it in round 3 |
+| 19 | PLAN05-QA-05 | minor | **Fixed** in `244b8053` | same fix as row 14; QA confirmed it in round 3 |
+| 20 | PLAN05-QA-06 (§7.3b, round 2) | minor | **Fixed** | this table: one row per id of every round |
+| 21 | PLAN05-QA-07 (§7.3b, round 3) | major | **Fixed** | this table; the count check is below |
+| 22 | PLAN05-QA-08 (G05-06 path) | major | **Fixed**, dry-run recorded | as row 7. The dry-run also found that the old `--require a,b,c` form failed from the root as well (author-found AF-PLAN05-01, below) |
+| 23 | PE-PLAN05-R3-01 (owner-file bootstrap) | major | **Fixed** | CI-TIERS-b and PRC-2.7: fixed `BOOTSTRAP_OWNERS` table in `scripts/ci/review_tiers.py` (tier 2) read first: (a) `s<nn>/plan` → engineering-manager; (b) `s<nn>/ci-fix-<slug>` → sre-devops-engineer, `s<nn>/owners-<slug>` → engineering-manager for a mid-sprint ticket's row; (c) `docs/<slug>` → engineering-manager at tier 0 only, and close PRs such as `s05/retro-05` keep their Sprint 5 row because the lookup uses the branch's sprint number and owner files are never deleted. A missing owner file without a bootstrap shape fails closed naming "merge s<nn>/plan first"; a conflicting JSON row fails closed; a PR adding its own row is still checked against `main`. One positive and one negative fixture per case |
+| 24 | PE-PLAN05-R3-02 (§7.3b, round 3) | major | **Fixed** | this table (rows 4-13, 16, 17, 19, 20 had no row before) |
+| 25 | PE-PLAN05-R3-03 (RETRO-05 tier vs `status.json`) | minor | **Fixed** | `docs/sprints/*/status.json` leaves the tier 2 list (no gate reads it since the cross-check was dropped) and is an explicit tier 0 data rule, so RETRO-05 stays tier 0 truthfully. Fixture "status.json only → 0"; PRC-2.2, PRC-2.3, §3.4 and §15 RETRO-05 rows updated. `ticket-owners.json` stays tier 2. (The round 2 table above says status.json is tier 2; that is superseded here) |
+
+**Count check (§7.3b):** 25 finding ids from the six reviews; 25 rows in this table (rows 1-25, one per id). Fixed 25, deferred 0, rejected 0. Open blocker/major after this round: 0 by the author's count, pending the reviewers' round 4 re-check.
+
+**Author-found (not reviewer ids, so not in the count):**
+
+| Id | Severity | Disposition |
+|---|---|---|
+| AF-PLAN05-01 | major | **Fixed.** `junit_rate.py` needs `--include` and takes one regex per `--require`, so the G05-06 form `--require data_classification,no_store,pii_labels` failed even from the root (rc 2). Now `--include 'test_it_05_' --require data_classification --require no_store --require pii_labels` |
+| AF-PLAN05-02 | minor | **Fixed.** The `cd` defect of PE-PLAN05-07 was also in G05-04 (`browser_matrix.py` ran from `web/`), G05-07 and G05-09 (`unofficial_notice.py`, `rollback_drill.py` ran from `web/`). Every `cd` in §4 now sits in a subshell |
+
+The structured ticket list changed in one dependency (ST-077 + ST-076a) and one file list (ST-076b). `ticket-owners.json` holds only `{id, branch, owner}`, and no id, branch or owner changed, so it needs no edit; the drift check below confirms it still equals §15.
+
+### Round 3 evidence
+
+| Check | Command | Result |
+|---|---|---|
+| G05-06 old form (red) | from `web/`: `python3 scripts/measure/junit_rate.py reports/g06-be.xml --require data_classification,no_store,pii_labels` | rc 2: can't open `web/scripts/measure/junit_rate.py` |
+| G05-06 old arguments from the root (red) | same command from the root | rc 2: "the following arguments are required: --include" |
+| G05-06 step 1 (corrected) | `(cd backend && uv run pytest -q tests/integration/test_it_05_data_classification.py tests/integration/test_it_05_no_store.py tests/integration/test_it_05_pii_labels.py --junitxml ../reports/g06-be.xml)` | rc 4 (files are planned outputs); `reports/g06-be.xml` written at the root; `pwd` still the root afterwards |
+| G05-06 step 3 on that report | `python3 scripts/measure/junit_rate.py reports/g06-be.xml --include 'test_it_05_' --require data_classification --require no_store --require pii_labels` | rc 1 (`selected 0`, 3 missing), as expected before the tickets |
+| G05-06 step 3 on a passing fixture | same command, fixture JUnit with the 3 IT files passing | **rc 0** (`selected 3, passed 3, ok true`) |
+| G05-06 planted failure | the same plus `--require missing_suite` | rc 1 |
+| Existing paths named this round | `[ -e ]` on `backend/tests/regression/test_bola_matrix.py`, `backend/tests/regression/bola.py`, `backend/src/racket/matches/public.py`, `backend/src/racket/matches/scorebook/`, `backend/src/racket/platform/app.py`, `backend/src/racket/platform/settings.py`, `backend/src/racket/platform/slis.py`, `backend/tests/unit/platform/test_slis.py`, `infra/compose.yaml`, `scripts/measure/junit_rate.py`, `docs/architecture/context-map.md` | all exist |
+| Code facts behind the fixes | `app.py` lines 42, 44, 63, 83; `settings.py` line 184; `compose.yaml` line 11; `test_bola_matrix.py` lines 145, 158; `bola.py` `EXEMPT`/`uncovered_routes`; context map C4 | as cited in rows 4, 5, 16, 17 |
+| Owner file vs §15 | JSON parse; owners ∈ `.claude/agents/*.md` stems; §15 `(id, branch)` set == JSON set | 46 JSON rows, 46 §15 rows, 0 bad owners, 46 unique branches, sets equal (drift none) |
+| Citations | no new `[ASB/…]` or `[EP/…]` id added this round | unchanged |
+
+### Cost per PR (ADR 0056 decision 1), review rounds
+
+| Round | Wall time (min) | total_cost_usd / tokens |
+|---|---|---|
+| Fix round 1 (`6c3ffcdd`) | not measured | not measured |
+| Fix round 2 (`244b8053`) | not measured | not measured |
+| Fix round 3 (this head) | about 40 | not measured (this invocation does not expose `total_cost_usd`) |

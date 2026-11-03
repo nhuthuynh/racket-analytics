@@ -47,7 +47,7 @@
 |---|---|---|
 | PM-1 | Create the roadmap "Product Goal" section | **Accepted → PM-5** |
 | PM-2 | Agent-measurable goal; human items as P12 rows; escalate the S5 "Done when" change | **Accepted**: goal in sprint-05 §1; the "Done when" change goes to the PO in EM-ESC-05 (not decided by the team) |
-| PM-3 | Explicit process budget (about 40 % process, ≤ 60 % release readiness) | **Accepted**: 12 of 46 tickets are process (§2 capacity table); FR-162 out |
+| PM-3 | Explicit process budget (about 40 % process, ≤ 60 % release readiness) | **Accepted**: 11 of 46 tickets are process (§2 capacity table: 5 CI-*, 4 QA, 2 EM-*); FR-162 out |
 | PM-4 | PM/BA cells for other roles become tickets | **Accepted (rule)**: no "left to other roles" rows; BA-5, PM-5, COACH-5 own their follow-ups |
 | PM-5 | Every product metric must be one the product can fail; dry-run before acceptance | **Accepted**: planted-failure column in scorecard §6 |
 | PM-6 | Re-send the PO list with need-by dates and defaults | **Accepted → EM-ESC-05** (with PM-5) |
