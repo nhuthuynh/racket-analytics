@@ -5,10 +5,12 @@ CI FIRST depends on someone noticing a red `main`; between agent sessions nobody
 M6: main red for about 6 days). .github/workflows/scheduled-red-notice.yml runs this for every
 completed run of a scheduled workflow and acts on --out-dir/action.txt:
 
-* ``open``  a scheduled run failed (failure, timed_out, startup_failure): open one issue per
-  workflow, assigned to the repository owner, or comment on the one already open;
+* ``open``  a scheduled run did not pass (failure, timed_out, startup_failure, cancelled): open
+  one issue per workflow, assigned to the repository owner, or comment on the one already open.
+  ``cancelled`` is red because GitHub reports a job that hits its ``timeout-minutes`` as a
+  cancelled run (run 41622904539; CI-NOTICE-CANCELLED, PRC-1.1);
 * ``close`` a scheduled run passed: close that workflow's open issue;
-* ``none``  anything else (not scheduled, cancelled, skipped, ...).
+* ``none``  anything else (not scheduled, skipped, neutral, ...).
 
 It writes title.txt and body.md (open/close) and summary.json, and never calls GitHub.
 Usage: scheduled_red_notice.py --workflow NAME --event EVENT --conclusion C --run-url URL
@@ -25,7 +27,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-RED = frozenset({"failure", "timed_out", "startup_failure"})
+RED = frozenset({"failure", "timed_out", "startup_failure", "cancelled"})
 TITLE = "[CI-RED] scheduled {workflow} run failed"
 RUN_URL = re.compile(r"^https://github\.com/[\w.-]+/[\w.-]+/actions/runs/\d+(/attempts/\d+)?$")
 FLAGS = ("workflow", "event", "conclusion", "run_url", "sha", "date", "out_dir")
@@ -47,11 +49,19 @@ def title(workflow: str) -> str:
     return TITLE.format(workflow=workflow)
 
 
+CANCELLED_NOTE = (
+    "A scheduled run is cancelled when one of its jobs exceeds its `timeout-minutes` (GitHub"
+    " reports the timeout as `cancelled`) or when someone cancels it; either way it did not pass."
+)
+
+
 def red_body(workflow: str, conclusion: str, url: str, sha: str, date: str) -> str:
+    note = [CANCELLED_NOTE, ""] if conclusion == "cancelled" else []
     return "\n".join(
         [
             f"The scheduled **{workflow}** run of {date} ended with `{conclusion}` on `main`.",
             "",
+            *note,
             f"- Run: {url}",
             f"- Commit: `{sha}`",
             "",

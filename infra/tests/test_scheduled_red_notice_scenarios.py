@@ -37,6 +37,7 @@ SUITE_STEP = "Run the backend suites three times"
 FAKE_UV = """#!/bin/sh
 [ "$1" = sync ] && exit 0
 echo "fake pass started: $*"
+echo "fake last line"
 exec sleep 600
 """
 
@@ -165,8 +166,8 @@ def passes_logged(hang: dict[str, Any], n: int) -> None:
         log = hang["reports"] / f"run-{i}.log"
         assert log.exists(), f"pass {i}: no {log.name}"
         assert "fake pass started" in log.read_text()
-        assert f"pass {i}: rc=124" in hang["res"].stdout, hang["res"].stdout
-    assert "fake pass started" not in hang["res"].stdout  # the suite's output stays out of the job log
+        assert f"pass {i}: rc=124 fake last line" in hang["res"].stdout, hang["res"].stdout
+    assert "fake pass started" not in hang["res"].stdout  # only each pass's last line is logged
 
 
 @then(
