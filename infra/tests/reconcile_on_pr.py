@@ -19,7 +19,8 @@ DECISIONS_HEAD = (
 
 def ledger_text(rows: list[tuple[str, str, str]]) -> str:
     body = "".join(f"| {f} | {sev} | {disp} | owner |\n" for f, sev, disp in rows)
-    return f"# Review rounds\n\n| Finding | Severity | Disposition | Owner |\n|---|---|---|---|\n{body}"
+    head = "| Finding | Severity | Disposition | Owner |\n|---|---|---|---|\n"
+    return f"# Review rounds\n\n{head}{body}"
 
 
 def decisions_text(*decisions: str) -> str:

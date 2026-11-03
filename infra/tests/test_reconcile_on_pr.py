@@ -29,7 +29,8 @@ from reconcile_on_pr import (
 
 def _load():
     spec = importlib.util.spec_from_file_location("reconcile_due_pr", SCRIPT)
-    assert spec is not None and spec.loader is not None, f"missing {SCRIPT}"
+    assert spec is not None, f"missing {SCRIPT}"
+    assert spec.loader is not None, f"missing {SCRIPT}"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -214,7 +215,7 @@ def test_cli_fails_on_a_gap_line_added_to_an_existing_decisions_file(tmp_path: P
     commit(repo, old, decisions_text("AF-OLD-01 (major): old", "this is not covered yet"))
     res = run_pr_check(repo, "--base", "main")
     assert res.returncode == 1, res.stdout + res.stderr
-    assert res.stdout.splitlines()[0] == f'{old}:6: "not covered" line names no finding id'
+    assert f'{old}:6: "not covered" line names no finding id' in res.stdout.splitlines()
 
 
 @pytest.mark.integration

@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import re
 import subprocess
 import sys
@@ -369,10 +370,11 @@ def decision_stems(decisions: Path, base: str | None) -> list[str]:
 
 
 _SEVERITY_WORD = r"blocker|blocking|major|minor|nit"
+_ID = r"((?:" + _FINDING_ID.pattern + r"))"
 _INLINE_FINDING = re.compile(
-    r"(?<![A-Za-z0-9-])((?:" + _FINDING_ID.pattern + r"))\**\s*\(\s*(?i:(" + _SEVERITY_WORD + r"))\b"
+    r"(?<![A-Za-z0-9-])" + _ID + r"\**\s*\(\s*(?i:(" + _SEVERITY_WORD + r"))\b"
 )
-_ALIAS = re.compile(r"(?:\balias\s+|/\s*)((?:" + _FINDING_ID.pattern + r"))")
+_ALIAS = re.compile(r"(?:\balias\s+|/\s*)" + _ID)
 _TABLE_SEVERITY = re.compile(r"^(?:" + _SEVERITY_WORD + r")$")
 _GAP_PHRASE = re.compile(r"known gap|can only|not covered", re.IGNORECASE)
 _MUST_LEDGER = {"blocker", "blocking", "major"}
@@ -424,27 +426,27 @@ def ledger_ids(text: str) -> set[str]:
     return {f for _, cells, _ in _severity_tables(text) for f in _FINDING_ID.findall(cells[0])}
 
 
-def judge_decisions(
-    path: str, text: str, lines: set[int] | None, ledger: set[str]
-) -> list[str]:
+def judge_decisions(path: str, text: str, lines: set[int] | None, ledger: set[str]) -> list[str]:
     """PRC-4.1/4.2 problems on ``lines`` of one decisions file (None: every line)."""
     declared = declared_findings(text)
     known = ledger | {f["id"] for f in declared}
     problems: list[tuple[int, str]] = []
+
+    def judged(number: int) -> bool:
+        return lines is None or number in lines
+
     for f in declared:
-        if f["severity"] in _MUST_LEDGER and f["id"] not in ledger:
-            if lines is None or f["line"] in lines:
-                problems.append((f["line"], f"{f['id']} ({f['severity']}) has no ledger row"))
+        if f["severity"] in _MUST_LEDGER and f["id"] not in ledger and judged(f["line"]):
+            problems.append((f["line"], f"{f['id']} ({f['severity']}) has no ledger row"))
     for number, line in enumerate(text.splitlines(), start=1):
         gap = _GAP_PHRASE.search(line)
-        if gap and (lines is None or number in lines):
-            if not set(_FINDING_ID.findall(line)) & known:
-                problems.append((number, f'"{gap.group(0).lower()}" line names no finding id'))
+        if gap and judged(number) and not set(_FINDING_ID.findall(line)) & known:
+            problems.append((number, f'"{gap.group(0).lower()}" line names no finding id'))
     return [f"{path}:{n}: {msg}" for n, msg in sorted(problems, key=lambda p: p[0])]
 
 
 def added_lines(diff: str) -> dict[str, set[int]]:
-    """New-side line numbers each file gains in a ``git diff --unified=0`` (files with none left out)."""
+    """New-side line numbers each file gains in a ``git diff --unified=0`` (none: left out)."""
     added: dict[str, set[int]] = {}
     path = None
     for line in diff.splitlines():
@@ -460,16 +462,22 @@ def added_lines(diff: str) -> dict[str, set[int]]:
 def pr_problems(root: Path, base: str | None, head: str, files: list[Path] | None) -> list[str]:
     """``--pr``: the lines a PR adds to decisions files (``base...head``), or whole ``files``."""
     if files is not None:
-        texts = {f.resolve().relative_to(root.resolve()).as_posix(): (f.read_text("utf-8"), None) for f in files}
+        top = root.resolve()
+        texts = {
+            f.resolve().relative_to(top).as_posix(): (f.read_text("utf-8"), None) for f in files
+        }
         ledgers = [p.read_text("utf-8") for p in sorted(root.glob(LEDGER_GLOB))]
     else:
         for ref in (base, head):
             if not ref or ref.startswith("-"):
                 raise ValueError(f"not a git ref: {ref}")
-        diff = _git(root, "diff", "--unified=0", "--no-renames", "--diff-filter=AM", f"{base}...{head}", "--", DECISIONS_GLOB)
-        texts = {p: (_git(root, "show", f"{head}:{p}"), lines) for p, lines in added_lines(diff).items()}
-        names = _git(root, "ls-tree", "-r", "--name-only", head, "--", "docs/sprints").splitlines()
-        ledgers = [_git(root, "show", f"{head}:{n}") for n in names if fnmatch.fnmatchcase(n, LEDGER_GLOB)]
+        span = f"{base}...{head}"
+        diff = _git(
+            root, "diff", "-U0", "--no-renames", "--diff-filter=AM", span, "--", DECISIONS_GLOB
+        )
+        texts = {p: (_git(root, "show", f"{head}:{p}"), n) for p, n in added_lines(diff).items()}
+        names = _git(root, "ls-tree", "-r", "--name-only", head, "--", "docs/sprints").split("\n")
+        ledgers = [_git(root, "show", f"{head}:{n}") for n in fnmatch.filter(names, LEDGER_GLOB)]
     ledger = set().union(*(ledger_ids(t) for t in ledgers)) if ledgers else set()
     problems = []
     for path in sorted(texts):
@@ -498,6 +506,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--files", type=Path, nargs="+", help="with --pr: whole files to judge")
     args = parser.parse_args(argv)
     if args.pr:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ci"))
+        from pr_labels import live_labels  # logs the labels like every pr-policy step
+
+        live_labels(os.environ, "reconcile-due")
+        print("reconcile-due: no label waives this check")
         try:
             problems = pr_problems(Path.cwd(), args.base, args.head, args.files)
         except (OSError, ValueError) as exc:
