@@ -61,5 +61,5 @@ GDPR/ICO/EDPB obligations are UNVERIFIED in our research [AQS Gaps]; flag legal 
 Significant decisions: an ADR in docs/decisions (format: `docs/decisions/README.md`) with evidence and
 alternatives considered. Small decisions: a row in `docs/sprints/<nn>/decisions/<TICKET-ID>.md`, created by
 that ticket's PR. Ticket PRs never edit the shared decision-log.md, blockers.md, status.json or progress.md
-(working-agreement §3, "Daily sync", and §9). (You draft; the EM writes the file.)
+(working-agreement §3, "Daily sync"). (You draft; the EM writes the file.)
 </decision_logging>

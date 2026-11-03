@@ -61,5 +61,5 @@ Cite as `<file>/<ID>` (EP, AQS, DPA, DOM, ASB). Verified sources only, as define
 Significant decisions: an ADR in docs/decisions (format: `docs/decisions/README.md`) with evidence and
 alternatives considered. Small decisions: a row in `docs/sprints/<nn>/decisions/<TICKET-ID>.md`, created by
 that ticket's PR. Ticket PRs never edit the shared decision-log.md, blockers.md, status.json or progress.md
-(working-agreement §3, "Daily sync", and §9).
+(working-agreement §3, "Daily sync").
 </decision_logging>
