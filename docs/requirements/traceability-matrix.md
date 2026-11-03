@@ -580,3 +580,43 @@ The §16 and §17 rows are now measured by **VERIFY-04-r4** (#178) at `c83145c`,
 | FR-141 Starter library | — | — | 31 reviewed drills; lint and coverage ok; scoped safety check empty | `verified` needs P15 |
 | Demo with flags on (`make demo`) | — (QA-VERIFY04R5-01, minor, Sprint 5) | — | `make demo` on a flag-on stack → 403 `age_confirmation_required` (not a goal metric) | QA-VERIFY04R5-01 |
 
+
+## 20. Sprint 5 requirement → story → scenario → test file (business-analyst, 2026-11-03, ticket BA-5)
+
+Baseline rows for Sprint 5, from `docs/sprints/05/requirements-breakdown.md` (atomic item ids) and `docs/sprints/sprint-05.md` §3.7 (test files). Each ticket PR updates its own row when its tests land (kickoff rule BA-5): it replaces "(planned)" with the merged path and adds its PR number. Rows marked (planned) name files that do not exist on `main` yet. "Human" items are scorecard §5 rows, never agent goals. DoR is the verdict in breakdown §6 at `7b71daa3`.
+
+| Requirement (atomic items) | Story | Ticket(s) | Scenario (feature file) | Test file(s) | Scorecard | DoR (BA-5) |
+|---|---|---|---|---|---|---|
+| NFR-010.1-.9 read latency at 50 RPS, flags on (planned) | ST-074 | ST-074 | `tests/features/r1_read_latency.feature` | `backend/tests/perf/locustfile_r1.py`, `infra/tests/test_perf_verdict_endpoints.py` | G05-01 | Ready after BA-5 |
+| NFR-041.1-.6, NFR-042.1-.5 SLIs, SLOs, burn-rate alerts, fault seam (planned) | ST-075 | ST-075b, ST-075c, ST-075d | `tests/features/slo_alerts.feature` | promtool rule tests; `backend/tests/unit/platform/test_fault_seam.py`, `backend/tests/integration/test_it_05_12_fault_seam.py`; `scripts/ops/inject_5xx.py` drill | G05-02 | Not Ready: PE-5a, SEC-5 |
+| NFR-069.1 pseudonymous metrics and logs (planned) | ST-075 | ST-075a | — (IT only) | `backend/tests/integration/test_it_05_pii_labels.py` | G05-06 | Not Ready: PE-5a, SEC-5 |
+| NFR-049.1 error-budget policy text (planned) | ST-075 | ST-075c | — (doc-check) | `docs/ops/error-budget-policy.md`; PO acceptance human (P17) | §5 P17 | Not Ready: PE-5a, SEC-5 |
+| NFR-045.1-.5 RPO, RTO, corrections, objects, cadence (planned) | ST-076 | ST-076a, ST-076b, ST-076c | `tests/features/restore_drill.feature` | `scripts/ops/restore_drill.py`; unit test of the backup-age function; corrections-integrity IT | G05-03 | Not Ready: PE-5b, SEC-5 |
+| NFR-063.1-.2 data classification (planned) | ST-077 | ST-077 | `tests/features/data_classification.feature` | `backend/tests/integration/test_it_05_data_classification.py` | G05-06 | Not Ready: SEC-5, ST-076a |
+| NFR-050.1-.5 ASVS L2 rows assessed (planned) | ST-078 | ST-078a, ST-078b, ST-078c | — (doc-check) | `docs/security/tools/asvs_status.py` and its unit tests | G05-07 | Not Ready: SEC-5 |
+| NFR-050.6 object-level authorisation | ST-078 | ST-078d | — (existing regression) | `backend/tests/regression/test_bola_matrix.py` (unchanged, PE-PLAN05-04) | G05-07 | Not Ready: SEC-5 |
+| NFR-067.1 `no-store` on authenticated GETs (planned) | ST-078 | ST-078d | — (IT only) | `backend/tests/integration/test_it_05_no_store.py` | G05-06 | Not Ready: SEC-5 |
+| NFR-067.2-.3, NFR-050.7-.8 client hygiene (planned) | ST-078 | ST-078e | — | `web/e2e/sprint-05/logout-hygiene.spec.ts`, `backend/tests/integration/test_it_05_security_headers.py`, SW and form component tests | G05-06, G05-07 | Not Ready: SEC-5 |
+| NFR-050.9 residual-risk ADR accepted | ST-078 | — | — | human (P19) | §5 P19 | — |
+| NFR-024.1-.3 browser matrix, emulated | ST-079 | ST-079 | Gherkin draft in breakdown §1 (the owner commits the feature file) | `web/tests/unit/e2e-helpers-projects.test.ts`, `web/playwright.config.ts` projects; `scripts/measure/browser_matrix.py` (planned) | G05-04 | Ready after BA-5 |
+| NFR-024.4-.5 real devices | ST-079 | — | — | human (P20, OQ-17); `docs/qa/device-checklist-r1.md` (planned) | §5 P20 | — |
+| NFR-036.4 fix a call in ≤ 2 taps or keys (planned) | ST-080 | ST-080 | — (E2E counter) | `web/e2e/sprint-05/fix-call-taps.spec.ts` and a planted 3-step helper unit test | G05-05 | Not Ready: COACH-5 |
+| NFR-036.1-.3 Quick Tag speed, mis-tags, upload → plan effort | ST-083 | ST-083 (kit) | — | human (P9, OQ-20); `docs/design/usability-test-kit-r1.md` (planned) | §5 P9 | Not Ready: PD-5, COACH-5, SEC-5 |
+| FR-124.R1-.R2, FR-141.R1 single-weakness swap and coverage (planned) | ST-081 | ST-081a, ST-081b | `tests/features/plan_follow_through.feature` (new rules), `tests/features/drill_coverage.feature` | `backend/tests/integration/test_it_05_swap_single_weakness.py`; unit test on the coverage rule | G05-09 | Not Ready: COACH-5 |
+| FR-055.R1, REL-1.1-.3 release notes, rollback, migration round trip (planned) | ST-082 | ST-082 | `tests/features/release_notes.feature` | `scripts/ci/check_release_notes.py`, `scripts/ops/rollback_drill.py`, `backend/tests/integration/test_it_05_migration_roundtrip.py` | G05-09 | Not Ready: PE-5b, COACH-5 |
+| REL-1.4 R1 release-candidate sign-off | ST-082 | — | — | human (P18) | §5 P18 | — |
+| NFR-006.1-.5 rally F1 matcher and tolerance ADR (planned) | ST-084 | ST-084a, ST-084b | `tests/features/rally_f1.feature` | `backend/tests/unit/dataset/test_rally_f1.py` (examples + Hypothesis property) | G05-10 | ST-084a Ready; ST-084b waits on ST-084a |
+| NFR-006.6 rally F1 ≥ 90 % on QD-GD-04 | ST-084 | — | — | human (P11 footage) | §5 P11 | — |
+| NFR-034.1-.3 focus return per close path (planned in ST-085) | ST-085 | ST-085 | — (component + E2E) | `web/tests/unit/plan-not-for-me-focus-return.test.tsx`, `web/e2e/sprint-04/swap-no-alternative.spec.ts` (E2E-04-04) | — | Ready after BA-5 |
+| FR-124.R3-.R4 offline plan read and sync once (planned in ST-085) | ST-085 | ST-085 | `web/tests/features/plan_offline_read.feature` (existing, .R3) | SW handler unit tests over `web/public/sw.js`; `web/e2e/sprint-04/offline-done.spec.ts` (existing, .R4) | — | Ready after BA-5 |
+| DEMO-1.1 flag-on `make demo` | — | QA-VERIFY04R5-01 | — | `infra/tests/test_seed_demo_plan.py` (flag-on case) | G05-09 | — |
+| PRC-1.1-.3 cancelled and timed-out scheduled runs | PRC-05 | CI-NOTICE-CANCELLED (#187) | `tests/features/scheduled_red_notice.feature` | merged with #187 | G05-12 | Ready (merged) |
+| PRC-2.1-.3 path → tier classifier | PRC-05 | CI-TIERS-a (#188) | `tests/features/review_tiers.feature` | merged with #188 | G05-08 | Ready (merged) |
+| PRC-2.4-.7 verdict sets per tier | PRC-05 | CI-TIERS-b (#193) | `tests/features/merge_tiers.feature` | merged with #193 | G05-08 | Ready (merged) |
+| PRC-3.1-.4 doc checks | PRC-05 | CI-DOC-CHECK (#189) | `tests/features/doc_check.feature` | merged with #189 | G05-08 | Ready (merged) |
+| PRC-4.1-.3 reconcile in `pr-policy` | PRC-05 | CI-RECON-ON-PR (#191) | `tests/features/reconcile_on_pr.feature` | merged with #191 | G05-12 | Ready (merged) |
+| PRC-5.1-.5 flow metrics | PRC-05 | QA-FLOW-METRICS (#195) | `tests/features/flow_metrics.feature` | merged with #195 | G05-11 | Ready (merged) |
+| PRC-6.1-.3 close checks (planned) | PRC-05 | EM-CLOSE-CHECKS | — | `docs/sprints/05/close-checks/retro_ready.py` and its tests | G05-12 | Ready |
+| PRC-7.1 atomic breakdown check | PRC-05 | QA-DOR-CHECK (#192) | `tests/features/atomic_breakdown.feature` | merged with #192 | G05-08 | Ready (merged) |
+| PRC-8.1 method pins (planned) | PRC-05 | QA-PIN-05 | — | `infra/tests/` pin tests | G05-10 | Ready |
+| NFR-070 legal gate | — | — | — | human (P16) | §5 P16 | — |
