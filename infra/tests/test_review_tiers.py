@@ -149,11 +149,31 @@ def test_an_empty_change_set_fails_closed_to_tier_2(rt: ModuleType) -> None:
         "docs/sprints/sprint-05.md",
         "docs/x.md",
         "README.md",
-        ".claude/agents/sre-devops-engineer.md",
     ],
 )
 def test_docs_and_process_text_alone_is_tier_0(rt: ModuleType, path: str) -> None:
     assert tier(rt, path) == 0
+
+
+def test_a_role_file_whose_front_matter_is_unchanged_is_tier_0(rt: ModuleType) -> None:
+    assert tier(rt, ".claude/agents/sre-devops-engineer.md", front_matter_changed=False) == 0
+
+
+# SEC-188-07, PE-CITA-06, QA-CITIERSA-R2-01: a caller that does not say whether a role file's
+# front matter changed (CI-TIERS-b without the blobs) gets tier 2, not tier 0.
+def test_a_role_file_with_an_unknown_front_matter_fails_closed(rt: ModuleType) -> None:
+    f = rt.ChangedFile(".claude/agents/sre-devops-engineer.md")
+    assert f.front_matter_changed is None
+    assert rt.file_tier(f) == (2, frozenset())
+
+
+def test_merge_ready_fails_closed_on_a_role_file_without_its_blobs(rt: ModuleType) -> None:
+    mr = _load("merge_ready", MERGE_READY)
+    assert mr.review_tier([rt.ChangedFile(".claude/agents/sre-devops-engineer.md")]).tier == 2
+
+
+def test_an_unknown_front_matter_flag_does_not_raise_other_files(rt: ModuleType) -> None:
+    assert tier(rt, "docs/x.md") == 0
 
 
 def test_a_nested_readme_outside_docs_is_not_tier_0(rt: ModuleType) -> None:
@@ -263,6 +283,65 @@ def test_an_added_role_file_fails_closed(rt: ModuleType) -> None:
 
 def test_a_deleted_role_file_fails_closed(rt: ModuleType) -> None:
     assert rt.front_matter_changed(ROLE, None) is True
+
+
+# PE-CITA-05, SBE-188-R2-01, SEC-188-06: lines are split on "\n" only (one trailing "\r" is
+# dropped), as a newline-based front matter reader and a YAML 1.2 parser do. str.splitlines()
+# also breaks at the separators below, so a fake closing fence behind one of them hid new keys.
+# A front matter block that holds a control character or U+2028/U+2029 fails closed.
+SEPARATORS = {
+    "lone CR": "\r",
+    "VT": "\x0b",
+    "FF": "\x0c",
+    "FS": "\x1c",
+    "GS": "\x1d",
+    "RS": "\x1e",
+    "NEL U+0085": "\x85",
+    "LS U+2028": "\u2028",
+    "PS U+2029": "\u2029",
+}
+HIDDEN_KEYS = "\npermissionMode: bypassPermissions\nmcpServers: [github]\n"
+
+
+def hide_keys_behind(sep: str) -> str:
+    """ROLE with a fake closing fence `<sep>---<sep>` on its last front matter line, then keys."""
+    return ROLE.replace("model: sonnet\n", f"model: sonnet{sep}---{sep}{HIDDEN_KEYS}", 1)
+
+
+@pytest.mark.parametrize("name", sorted(SEPARATORS))
+def test_a_fake_fence_behind_a_non_newline_separator_changes_it(rt: ModuleType, name: str) -> None:
+    assert rt.front_matter_changed(ROLE, hide_keys_behind(SEPARATORS[name])) is True
+
+
+@pytest.mark.parametrize("name", sorted(SEPARATORS))
+def test_a_fake_fence_on_both_sides_still_fails_closed(rt: ModuleType, name: str) -> None:
+    text = hide_keys_behind(SEPARATORS[name])
+    assert rt.front_matter_changed(text, text) is True
+
+
+@pytest.mark.parametrize("char", ["\x00", "\x1b", "\x7f", "\x85", "\x9b", "\u2028", "\u2029", "\r"])
+def test_a_control_character_in_the_front_matter_fails_closed(rt: ModuleType, char: str) -> None:
+    text = ROLE.replace("SRE / DevOps", f"SRE /{char} DevOps")
+    assert rt.front_matter_changed(text, text) is True
+
+
+def test_a_control_character_in_the_body_only_is_not_a_front_matter_change(
+    rt: ModuleType,
+) -> None:
+    head = ROLE.replace("Make shipping safe.", "Make shipping\x0c safe.\u2028")
+    assert rt.front_matter_changed(ROLE, head) is False
+
+
+def test_tab_and_non_ascii_text_in_the_front_matter_are_allowed(rt: ModuleType) -> None:
+    text = ROLE.replace("SRE / DevOps Engineer.", "SRE\t/ DevOps Engineer (§5, café).")
+    assert rt.front_matter_changed(text, text) is False
+
+
+def test_crlf_line_endings_are_read_as_newlines(rt: ModuleType) -> None:
+    crlf = ROLE.replace("\n", "\r\n")
+    assert rt.front_matter_changed(crlf, crlf) is False
+    assert rt.front_matter_changed(ROLE, crlf) is False
+    assert rt.front_matter_changed(crlf, crlf.replace("model: sonnet", "model: opus")) is True
 
 
 def test_every_tracked_role_file_has_closed_front_matter(rt: ModuleType) -> None:

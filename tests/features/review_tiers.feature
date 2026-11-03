@@ -83,6 +83,30 @@ Feature: The review tier of a pull request is computed from its changed paths
         | front matter no longer parses                  | 2    |
         | closing --- removed                            | 2    |
 
+    Scenario Outline: Front matter keys hidden behind a <separator> fake closing fence are tier 2
+      Given a repository on main
+      And a pull request that hides front matter keys behind a "<separator>" fake closing fence in ".claude/agents/sre-devops-engineer.md"
+      When the tier classifier runs on the pull request
+      Then the computed tier is 2
+
+      Examples: only "\n" ends a front matter line (PE-CITA-05, SBE-188-R2-01, SEC-188-06)
+        | separator  |
+        | lone CR    |
+        | VT         |
+        | FF         |
+        | FS         |
+        | GS         |
+        | RS         |
+        | NEL U+0085 |
+        | LS U+2028  |
+        | PS U+2029  |
+
+    Scenario: A role file with CRLF line endings and an unchanged front matter is tier 0
+      Given a repository on main with CRLF line endings in ".claude/agents/sre-devops-engineer.md"
+      And a pull request that edits only the body of ".claude/agents/sre-devops-engineer.md" keeping CRLF
+      When the tier classifier runs on the pull request
+      Then the computed tier is 0
+
     Scenario: An added role file is tier 2
       Given a repository on main
       And a pull request that adds the role file ".claude/agents/new-role.md"
