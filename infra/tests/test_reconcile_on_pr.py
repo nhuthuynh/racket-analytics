@@ -51,8 +51,8 @@ def test_an_inline_major_is_declared_with_its_severity_and_line() -> None:
 
 @pytest.mark.unit
 def test_an_inline_declaration_may_carry_words_after_the_severity() -> None:
-    text = "new ledger finding VERIFY04R4-01 (major by the RETRO-04 triage rule)\n"
-    assert [f["id"] for f in rd.declared_findings(text)] == ["VERIFY04R4-01"]
+    text = "new ledger finding QA-VERIFY04R4-01 (major by the RETRO-04 triage rule)\n"
+    assert [f["id"] for f in rd.declared_findings(text)] == ["QA-VERIFY04R4-01"]
 
 
 @pytest.mark.unit
@@ -67,6 +67,21 @@ def test_a_severity_table_row_declares_the_ids_left_of_its_severity_cell() -> No
         ("PE-PLAN05-01", "major", 3),
         ("QA-PLAN05-09", "major", 3),
         ("PLAN05-QA-01", "nit", 4),
+    ]
+
+
+@pytest.mark.unit
+def test_a_reference_in_a_finding_cell_is_not_declared_but_aliases_are() -> None:
+    text = (
+        "| # | Finding | Severity | Disposition |\n|---|---|---|---|\n"
+        "| 22 | PLAN05-QA-08 (G05-06 path) | major | Fixed |\n"
+        "| 23 | PE-R3-05 / QA-R3-05 (alias SQA-R3-07, see PRC-4.2) | major | Fixed |\n"
+    )
+    assert [f["id"] for f in rd.declared_findings(text)] == [
+        "PLAN05-QA-08",
+        "PE-R3-05",
+        "QA-R3-05",
+        "SQA-R3-07",
     ]
 
 

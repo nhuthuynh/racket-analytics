@@ -51,3 +51,29 @@ bash scripts/ci/evidence.sh down racket-goal02 "$RA_DEV_STATE/goal.env"; echo rc
 ```
 
 Tests: `cd infra && uv run pytest -q tests/test_evidence_wrapper.py tests/test_web_dockerfile_round2.py`.
+
+## Finding-id format (PRC-4.3)
+
+Owner: sre-devops-engineer. Ticket CI-RECON-ON-PR (retro 4 D3, E3, L13). The `pr-policy` step "Decisions findings joined to the ledger (PRC-4.1, PRC-4.2)" runs `python3 scripts/measure/reconcile_due.py --pr --base "origin/$BASE_REF" --head HEAD` on every ready ticket PR. It reads only the lines the PR adds to `docs/sprints/*/decisions/*.md`, and joins them to every `docs/sprints/*/review-rounds.md` on the PR head. Paste this section into every verifier and reviewer brief.
+
+**The id.** One token matched by `_FINDING_ID` in `scripts/measure/measurelib.py`: an upper-case role or source prefix, optional segments, then a number. Use `ROLE-CONTEXT-NN`, for example `PE-PLAN05-01`, `QA-VERIFY05R1-02`, `SEC-ST075C-01`, or `AF-<TICKET>-NN` for a finding the author found. A first segment of six or more letters never parses: `VERIFY04R4-01` is invisible to every tool, so write `QA-VERIFY04R4-01`. Do not use a requirement or metric id (`PRC-4.2`, `AN-02`, `G05-01`) as a finding id.
+
+**Declaring a finding** in a decisions file, in one of two forms:
+
+| Form | Example | Read as |
+|---|---|---|
+| Inline | `**AF-ST081-01 (major):** the solo-wall plan has one drill per metric` | id `AF-ST081-01`, severity major |
+| Severity table | `\| 3 \| PE-PLAN05-03 / QA-PLAN05-09 (see G05-02) \| major \| Fixed \|` under a header with a `Severity` column | the first id of the first id-bearing cell left of `Severity`, plus its aliases written `alias ID` or `/ ID`; any other id in that cell (`G05-02`) is a reference, not a finding |
+
+Severity is one of `blocker`, `blocking`, `major`, `minor`, `nit` (case and `**` ignored).
+
+**What fails `pr-policy`** (exit 1, one line per problem, `path:line: …`):
+
+| Rule | Failing line | Fix in the same PR |
+|---|---|---|
+| PRC-4.1 | `AF-ST081-01 (major) has no ledger row`: a blocker or major declared on an added line whose id (or an alias in the same first cell) is in no review-rounds table | Add the row to `docs/sprints/<nn>/review-rounds.md` (Finding, Severity, Disposition, Owner, Evidence) |
+| PRC-4.2 | `"can only" line names no finding id`: an added line containing one of the three gap phrases (`known gap`, `can only`, `not covered`, any case) with no finding id that is declared in the same file or has a ledger row | Declare the gap with an id on that line (`AF-<TICKET>-NN (minor): …`), or reword if it is not a gap |
+
+Minor and nit findings need no ledger row. A usage error (an unreadable or option-like ref) exits 2 (fail closed, ADR 0014).
+
+**Whole files** (QA and the EM status step): `python3 scripts/measure/reconcile_due.py --pr --files docs/sprints/04/decisions/*.md` judges every line of the named files. On the merged Sprint 4 decisions it names `ST-062-part2.md:12` ("can only"), the gap behind G04-01 step 9 (retro 4 M3).
