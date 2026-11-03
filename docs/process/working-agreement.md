@@ -15,8 +15,9 @@ Evidence is cited as `<file>/<ID>`:
 | AQS | `docs/research/architecture-quality-security.md` |
 | DPA | `docs/research/design-product-ai-agents.md` |
 | DOM | `docs/research/domain-pickleball-cv.md` |
+| ASB | `docs/research/agentic-sdlc-best-practices.md` (agentic SDLC research, 2026-10-31; source IDs ANT, AGL, REN, REQ, RPD, SDD keep their own names, e.g. `ASB/ANT-05`) |
 
-The prefix is mandatory because the same ID means different things in different files. For example, `AI-05` is the evals post in DPA but the Claude Code best-practices page in AQS. Only sources marked verified may be cited. Anything else is labelled **(judgment)**.
+The prefix is mandatory because the same ID means different things in different files. For example, `AI-05` is the evals post in DPA but the Claude Code best-practices page in AQS. Only sources marked verified may be cited. In ASB, a source counts as verified only when it is marked verified **and** its fact-check confirmed it; any other ASB source is cited with **(unverified)** after the ID. Anything else is labelled **(judgment)**.
 
 ## 1. The team
 
@@ -60,17 +61,19 @@ Agents follow explore -> plan -> implement -> commit inside a stage. They skip t
 
 ## 3. Sprint cadence
 
-- **Length:** 2 weeks of calendar time, or one sprint goal for agent-only bursts, whichever comes first (judgment). The Scrum Guide's timeboxes are unverified in our research [EP Gaps], so this is our own choice.
-- **Sprint planning (day 1):**
-  - The PM states the product goal.
-  - The EM writes the sprint goal as a short bullet list [EP/ENG-15].
-  - Only stories that meet the Definition of Ready are pulled in.
-  - Stories are sized relatively (t-shirt sizes) [EP/ENG-15].
-- **Daily sync (async):** each agent appends to `docs/sprints/<nn>/progress.md` with what it did, what it will do next, and blockers. `status.json` holds pass/fail per feature and test [EP/ENG-28].
+- **Length:** 2 weeks of calendar time, or one sprint goal for agent-only bursts, whichever comes first (judgment). The Scrum Guide 2020 sets a sprint of one month or less, with planning at most 8 h, review at most 4 h and retro at most 3 h for a one-month sprint, shorter for shorter sprints [ASB/AGL-01, a mirror of the Scrum Guide, not the official site]. Goal-bounded agent-only bursts are a deliberate deviation from that, which lightweight, goal-bounded cadences allow [ASB/AGL-11].
+- **Sprint planning (day 1).** The steps below put the PO's 2026-10-31 planning instruction into practice. That instruction is known only **as relayed by the orchestrator** and is not yet quoted in `docs/requirements/po-input-2026-10-05.md`; the PO's own words go there first (ADR 0047 rule 5). The wording of these steps is the team's, not the PO's.
+  1. **Kickoff:** read the previous retro's §5 (lessons) and §7 (action items) and the open rows in `review-rounds.md`. Each role states one lesson that applies to this sprint.
+  2. The PM states the product goal and where it lives. The team agrees one sprint-goal sentence with a bullet scorecard [EP/ENG-15].
+  3. The BA breaks the FRs and NFRs into atomic rules (`definition-of-ready.md`).
+  4. Stories are split into tickets, one PR each. A ticket too big for one PR becomes a story with smaller ticket tasks. Size unit: §5. Stories are sized relatively (t-shirt sizes) [EP/ENG-15].
+  5. The EM assigns each ticket to the role whose file fits it best, with disjoint file paths per lane. Each brief states the objective, the output, the files owned and the done-check [ASB/ANT-12, ASB/ANT-09]. Start with few lanes; a plan with more than 5 concurrent lanes says why [ASB/ANT-09, by analogy: it covers Claude Code agent teams].
+  6. Only stories that meet the Definition of Ready are pulled in. A ticket is done only when its PR meets the story-level Definition of Done and the senior-qa-engineer has tested it.
+- **Daily sync (async):** each ticket records its progress, decisions and evidence in its own `docs/sprints/<nn>/decisions/<TICKET-ID>.md` and in its PR description. Ticket PRs never edit `progress.md`, `status.json`, `decision-log.md` or `blockers.md`, because parallel PRs editing them conflict; only the sprint's DOCS/RETRO ticket consolidates them (`docs/sprints/sprint-04.md`, "Shared sprint files"). `status.json` holds pass/fail per goal item [EP/ENG-28].
 - **Design review:** held before implementation for any new component or UI flow [DPA/DESIGN-15].
 - **Sprint review (last day):**
   - Show working software against the sprint goal [EP/ENG-15].
-  - Show evidence: test reports, eval reports and DORA metrics [EP/ENG-21].
+  - Show evidence: test reports, eval reports and the DORA metrics in §10.
   - The human product owner accepts or rejects the increment.
 - **Retrospective (last day):**
   - Use the template in `docs/retros/TEMPLATE.md` and rotate the format.
@@ -108,15 +111,14 @@ R = Responsible, A = Accountable, C = Consulted, I = Informed. Human PO is the h
   - `feat` maps to a MINOR release, `fix` to PATCH, and `!` or `BREAKING CHANGE:` to MAJOR [EP/ENG-08].
   - Scope is the bounded context, e.g. `feat(scoring): ...`.
 - **Commit and PR descriptions:** an imperative first line. The body states the problem, the approach, the trade-offs, links (story, ADR) and the evidence (commands and output) [EP/ENG-07].
-- **PR size:** aim for about 100 changed lines. About 1000 lines is too large, and so is a small change spread over many files [EP/ENG-04]. The hard ceiling is about 400 lines (judgment, from AQS implications). Split anything larger.
+- **PR size:** aim for about 100 changed lines. About 1000 lines is too large, and so is a small change spread over many files [EP/ENG-04]. The hard ceiling is set in **Size unit** below.
 - **Only production code counts (PO 2026-10-28, ADR 0054).** The size limits above count production code only. Tests (`backend/tests`, `web/tests`, `infra/tests`, `e2e`, `tests/`, `*.feature`, `*.spec.ts`, `*.test.ts(x)`, `conftest.py`), docs (`docs/`, `*.md`), lockfiles, fixtures and snapshots are excluded; `check_pr_size.py` prints both the counted and the excluded totals. Over 400 production lines still needs the EM's `size-waiver`. Never split a red-first commit to fit the limit.
 - **Draft first, ready when green (2026-10-18, ADR 0052).** A ticket PR opens as a draft, and CI skips drafts. The PR-policy decisions (`size-waiver`, `qa-approved-test-change`) are made while it is a draft; red-first commits are pushed together with their green commit; the author marks it ready only when the local checks pass (`check_pr_size.py`, `check_test_immutability.py`, the touched suites). Reviews and merge start from the ready state.
 - **One concern per PR.** Tests ride with the logic they cover. Refactors go in separate PRs [EP/ENG-04].
-- Only the orchestrator (the main session) runs git commits and merges. Agents propose commit messages.
-- **Ticket branches from planning (2026-10-08, ADR 0047).** When tickets ship as PRs (ADR 0039), the plan's ticket map names each ticket's base. The orchestrator creates every base and ticket branch at planning, lanes commit on their ticket branch, and the PR opens with the first pushed commit. The sprint branch only takes merges from ticket branches (retro 3, M6).
+- **Commits and merges (orchestrator 2026-10-09).** Lanes commit on their own ticket branch, in their own git worktree, and never force-push or rewrite pushed history. Only the gated merge step merges, and only after `scripts/ci/merge_ready.py` exits 0. No other agent merges, enables auto-merge or marks a draft ready in order to merge it.
+- **Ticket branches from planning (2026-10-08, ADR 0047).** When tickets ship as PRs (ADR 0039), the plan's ticket map names each ticket's base. The orchestrator creates every base and ticket branch at planning, lanes commit on their ticket branch, and the PR opens with the first pushed commit. Each ticket branch starts from current `main` and merges into `main` through its own PR. There is no sprint branch (po-input decision table, row "One PR per ticket", 2026-10-07; P13).
 - **PO decisions are quoted, never written by agents (2026-10-08, ADR 0047).** In `po-input-*.md` and ADR 0023 notes, a PO decision is the PO's own words. Agent text there goes under a heading that names the role and says "not a PO decision" (retro 3, M7).
-- **Commit unit (2026-10-03, ADR 0022):** the orchestrator commits one story, or one PR-sized slice of a story, at a time, even without a remote. A commit over 400 changed lines needs an EM waiver row in `docs/sprints/<nn>/decision-log.md`. Sprint 0 landed as two ~15k-line commits (retro 0, M1).
-- **Slices are planned, waivers come first (2026-10-05, ADR 0030).** The EM's brief for an M or L story names its slices, each planned at 400 changed lines or less and green on its own (ST-020 is the model). A waiver row must exist **before** the commit. If no waiver row exists, the commit waits or is split. In Sprint 1, 12 of 82 commits were over 400 lines and 11 of them had no waiver at commit time (retro 1, M6).
+- **Size unit (canonical; ADR 0054 replaces the per-commit rules of ADR 0022 and ADR 0030):** one ticket = one PR, at 400 production lines or fewer as counted by `check_pr_size.py`. A PR over the limit needs the EM `size-waiver` label, decided while the PR is a draft (ADR 0052). The slices of an M or L story are planned at planning. Never split a red-first commit to fit the limit.
 
 ## 6. Code review rules
 
@@ -134,7 +136,8 @@ R = Responsible, A = Accountable, C = Consulted, I = Informed. Human PO is the h
 
 | Change touches | Required reviewers |
 |---|---|
-| Any code | senior-qa-engineer (tests vs acceptance criteria) plus one engineer peer or principal-engineer |
+| Every PR, by risk tier (PO 2026-11-03, ADR 0056) | **Tier 0, docs and process text:** one fresh-context reviewer plus automated doc checks. **Tier 1, ordinary code:** principal-engineer plus the senior-qa-engineer test review (it fills the senior slot) plus green CI. **Tier 2, security, personal data, schema or API contracts:** the full panel below. Until `scripts/ci/merge_ready.py` enforces the tiers, every PR still needs a principal-engineer and a senior-* APPROVE on its head SHA |
+| Any code | senior-qa-engineer tests the PR head against the acceptance criteria (PO 2026-10-31: "QA must test them first") |
 | New component, schema, API contract, cross-context interaction | principal-engineer |
 | Auth, uploads, storage, media URLs, secrets, logging, LLM calls, personal data | security-privacy-engineer |
 | UI | principal-designer (UX, WCAG 2.2 AA) |
@@ -160,21 +163,21 @@ The loop runs automatically in the background for every PR.
    - **Routing by owner (2026-10-03, ADR 0022).** Each finding goes to the role that can close it, in the same round: code to the owning engineer; API contract and ADR amendments to the principal-engineer; test-change approvals to the senior-qa-engineer; sprint artifacts (`status.json`, `progress.md`, retro) to the engineering-manager; environment, repo-admin and legal items to the human product owner via the EM. A finding marked "not my lane" is an EM routing defect, not a fix iteration (retro 0, M2/M3).
    - **Threat controls are acceptance criteria (2026-10-03, ADR 0022).** A threat-model control that names a story is an acceptance criterion of that story, with a red test (retro 0, M4).
 3b. **Disposition per finding (2026-10-05, ADR 0030).** Before the next round starts, every finding of the round has one row in `docs/sprints/<nn>/review-rounds.md` with exactly one disposition: **fixed** (with evidence), **deferred** (to a named backlog row with an owner and a sprint), or **rejected** (with a reason the reviewer accepts). Minors and nits may be deferred, but never left blank. The EM checks that the number of findings matches the number of rows (retro 1, M1).
-3c. **EM status step (2026-10-05, ADR 0030).** The last step of every fix round is the EM refreshing `status.json` and `progress.md` from the round's commits and runs. Re-review starts after it (retro 1, M2). *(2026-10-05, ADR 0033)* The step also runs `scripts/measure/open_defects.py` and states the count. When the scorecard or the open count changes, it rewrites `sprint-report.md` §1 (retro 1 final close, M14).
+3c. **EM status step (2026-10-05, ADR 0030).** The last step of every fix round is the EM recording the round's status. During the sprint that goes in the ticket's own `decisions/<TICKET-ID>.md` and PR description; `status.json` and `progress.md` are refreshed only in the sprint's DOCS/RETRO ticket (§3). Re-review starts after it (retro 1, M2). *(2026-10-05, ADR 0033)* The step also runs `scripts/measure/open_defects.py` and states the count. When the scorecard or the open count changes, it rewrites `sprint-report.md` §1 (retro 1 final close, M14).
 3d. **Reconciliation before the next step (2026-10-06, ADR 0037).** Every review or verification round ends with an EM reconciliation step. The orchestrator saves each reviewer's returned finding list. The EM checks that every returned id has a row in `review-rounds.md`, with a severity and a disposition column, and writes an Open row attributed to the reviewer for any id that is missing. This also covers reviewers that cannot write files. Goal verification and the next round start only after this step (retro 2, M1). The plan schedules each design-review decision cell as a task with a role, a brief and a date, like a lane, and a UI story whose flows are not approved does not start without a PO waiver recorded first (retro 2, M2). Goal items that depend on a human input due after the session are agreed with the PO at planning (retro 2, M3).
-3e. **Gates first, rounds in series, CI each round (2026-10-08, ADR 0047).** Sprint planning lists the gate tasks (design, contract, threat notes, decider cells, coach review). The orchestrator runs them first, each with its brief, and then briefs a build lane only on stories whose DoR is met. A goal round never routes a story whose gate is open; it asks the PO for a waiver, recorded before the work starts. A review round and a verification round never run on the same head at the same time, and the EM's reconciliation log row for one round is the entry condition of the next. A verifier that finds a finished round with no log row reports the open-defect metric as not measurable. Every EM status step, and the step before each verification round, pushes the sprint branch (fast-forward only) and dispatches CI; the run id goes in `ci-status.md` (retro 3, M1-M3, M5).
+3e. **Gates first, rounds in series, CI each round (2026-10-08, ADR 0047).** Sprint planning lists the gate tasks (design, contract, threat notes, decider cells, coach review). The orchestrator runs them first, each with its brief, and then briefs a build lane only on stories whose DoR is met. A goal round never routes a story whose gate is open; it asks the PO for a waiver, recorded before the work starts. A review round and a verification round never run on the same head at the same time, and the EM's reconciliation log row for one round is the entry condition of the next. A verifier that finds a finished round with no log row reports the open-defect metric as not measurable. Every EM status step, and the step before each verification round, confirms that CI on `main` and on every open ticket PR is green; the run ids go in `ci-status.md` (retro 3, M1-M3, M5).
 4. **Re-review.** The same reviewers re-check the changed lines and their findings. *(2026-10-05, ADR 0030)* They also re-check every earlier finding of theirs that is not dispositioned as fixed, or deferred, or rejected. Sprint 1 round-1 design blockers were never re-checked because their code did not change (retro 1, M1).
 5. **Iteration limit:**
    - Iterations 1 and 2 run in the same context.
    - If both fail, iteration 3 starts in a **fresh context with an improved prompt** [EP/ENG-24].
    - If iteration 3 also fails, the EM **escalates to the human product owner**.
    - The maximum is therefore **3 fix iterations per PR**. The limit is judgment, based on the two-failed-corrections rule.
-6. **Evidence.** Every iteration appends the commands run and their output to the PR description and to `progress.md` [EP/ENG-24].
+6. **Evidence.** Every iteration appends the commands run and their output to the PR description; the DOCS/RETRO ticket carries them into `progress.md` [EP/ENG-24].
 7. **CI review bot (optional).** Uses `anthropics/claude-code-action@v1` with:
    - least-privilege permissions;
    - `--max-turns`, timeouts and concurrency limits;
    - bots blocked from triggering runs [DPA/AI-11, DPA/AI-13].
-8. **Sandbox.** Autonomous runs are sandboxed at both the filesystem and the network boundary [DPA/AI-07].
+8. **Sandbox.** Autonomous runs should be sandboxed at both the filesystem and the network boundary [DPA/AI-07]. Today they rely on the host's sandbox (the cloud container and agent proxy); the repo does not configure one (`.claude/settings.json` has no sandbox settings). If a run is not sandboxed, the deny rules and hooks are guards against mistakes, not security boundaries [ASB/ANT-05].
 
 ## 8. Escalation to the human product owner
 
@@ -202,7 +205,7 @@ The format is in `docs/decisions/README.md` [EP/ENG-09, EP/ENG-10]. An accepted 
 
 ## 10. Metrics reviewed each sprint
 
-- **DORA four keys:** deployment frequency, lead time, change failure rate and time to restore [EP/ENG-21].
+- **DORA metrics (five; canonical list):** change lead time, deployment frequency, failed deployment recovery time, change fail rate and deployment rework rate. They are reported per service and never used as targets [ASB/AGL-02, ASB/AGL-03].
 - **PR time-to-merge** [EP/ENG-19].
 - **Review and fix:** iterations per PR, and escalations (judgment).
 - **Quality:** model eval and coaching eval results.
