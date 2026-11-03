@@ -85,6 +85,14 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
         run: python3 scripts/ci/check_red_first.py --base "origin/$BASE_REF" --head HEAD
+      # A blocker/major id the PR's decisions lines declare needs a ledger row, and a "known gap",
+      # "can only" or "not covered" line needs a finding id (CI-RECON-ON-PR; retro 4 D3, E3, L13).
+      - name: Decisions findings joined to the ledger (PRC-4.1, PRC-4.2)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/measure/reconcile_due.py --pr --base "origin/$BASE_REF" --head HEAD
 
   workflow-lint:
     name: Workflow lint (actionlint)
