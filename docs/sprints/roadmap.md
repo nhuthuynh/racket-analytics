@@ -8,6 +8,32 @@
 - **Detail level:** Sprints 0-2 are planned in detail in `sprint-00.md`, `sprint-01.md`, `sprint-02.md`. Later sprints have a goal and a backlog outline only; they are planned just in time at their own sprint planning, once the stories meet the Definition of Ready [EP/ENG-15].
 - **Citations:** `<file>/<ID>` per working-agreement §0. Anything not sourced is **(judgment)**.
 
+## Product Goal
+
+- **Owner:** product-manager (ticket PM-5, 2026-11-03; working-agreement §3, planning step 2). Kept current at each sprint planning. Decisions and the S5 priority record: [`05/decisions/PM-5.md`](05/decisions/PM-5.md).
+- **Status:** team text (ADR 0047). It restates the R1 exit criterion of §4 and does not change any milestone "Done when"; the S5 "Done when" change is a PO question in EM-ESC-05.
+- **Product Goal vs Sprint Goal:** the Product Goal is the long-term objective the sprints work towards; each Sprint Goal is one step to it, agreed at planning [ASB/AGL-01, a mirror of the Scrum Guide, not the official site].
+
+**Product Goal (R1, Sprints 0-5):** a real amateur pickleball player, on their own phone, goes from an uploaded match to a 2-week training plan in ≤ 15 min of median effort, and can trace every number and every drill back to the rallies behind it; the PO signs R1 off as a release candidate.
+
+**Why (judgment):** the "upload → stats → plan" chain is the north star (spec §7, M0 with subsets of M4 and M5). A player trusts a number only if the rallies behind it are one tap away (FR-103) and acts on a drill only if it says why (FR-122). Effort is the main reason a manual-first product fails, so the 15 min ceiling is part of the goal, not a nice-to-have (NFR-036).
+
+How it is measured (each measure is one the product can fail; human-only measures stay outside sprint goals as "not met: waiting on P-n" rows, PO decision P12):
+
+| Measure | Target | Method | Who can measure it |
+|---|---|---|---|
+| Median effort, upload → plan, 3-game match (NFR-036 c) | ≤ 15 min | Moderated usability test, ≥ 5 players on their own phones | Human: waits on **P9** (scorecard row S5-P9) |
+| Taps or keys to fix any call from where it is seen (NFR-036 d) | ≤ 2 | E2E | Agent (G05-05) |
+| Every metric shows n, an uncertainty band and its evidence rallies (FR-101, FR-103) | 100 % of metric cards | E2E and integration tests | Agent |
+| Every drill in a plan says why, with a linked metric (FR-122) | 100 % of plan drills | Plan eval at pass^3 = 100 % (NFR-005a) | Agent |
+| Score sheet says "unofficial scoring" until the rulebook is verified (FR-055) | label present while OQ-01 is open | E2E; release notes check (ST-082) | Agent; official scoring waits on **P7** |
+| Real users only after the legal review (NFR-070) | no real-user exposure before the ADR | flags default-off | Human: **P16** |
+| R1 release-candidate sign-off (release-level DoD) | PO accepts | PM readiness recommendation after VERIFY-05 | Human: **P18** |
+
+**Not part of this Product Goal:** payments and the pricing fake door (FR-162, see PM-5 recommendation), computer vision (R2), opponent scouting, sharing, live mode (functional-requirements §J).
+
+**Next Product Goal (outline, R2, S7-S10 after the S6 Go port):** the same player gets the same traceable stats and plan with half the Quick Tag effort, because the system finds rally boundaries itself (rally segmentation F1 ≥ 90 % on the frozen gold set, NFR-006; Quick Tag effort −50 %, PROD §11). It is restated at S7 planning.
+
 ## 1. Principles
 
 1. **Every sprint ends with something demonstrable**, shown against a bullet-list sprint goal at the review [EP/ENG-15].
@@ -83,7 +109,7 @@ Planned load per sprint (units; capacity in brackets is lanes × 16 × load fact
 | **S2** | Quick Tag → score sheet (spec M0 "Done when", unofficial) | Tag a match by touch or keyboard; score sheet with "unofficial scoring" label; corrections re-score, conflicts kept, undo; mid-game start; singles; rally row opens the video | FR-024, 027, 042 (a), 046 (a), 048, 049, 050, 051, 052, 053 (a), 055; stretch FR-047, FR-054 | NFR-001 (≥ 46 rows), 010 (baseline), 012, 013, 014, 017 (baseline), 055, 066 (d), 072 (gate), 075 |
 | **S3** | Starter stats with uncertainty and evidence; deletion; labelling tools | Stats dashboard for AN-01..AN-07 with n, Wilson interval and low-sample flag; "Show me" opens the rallies; delete a match or account; internal Full Tag tool; drill schema lint in CI | FR-006, 007, 100, 101, 102, 103, 109, 140, 150, 151; stretch FR-047 if not done | NFR-004, 011, 038, 039, 066 (a, b), 078 (gold sets) |
 | **S4** | Runnable R1 prototype: rules-only training plan and drill library; then R1 privacy and quotas behind flags (ADR 0051) | `make up` + `make demo` show a plan; weakness ranking by rallies lost (serve/receive, side-out part `@needs-verification`); 2-week plan within time, players and equipment, every drill citing metric, value, n and rallies; ≥ 20 coach-reviewed drills (`verified` waits on P15); mark done offline, "Not for me"; age gate, retention and consent settings, rate limits and quota behind default-off flags with interim wording; billing alert rules; E2E journey complete | FR-003, 008, 009, 120, 121, 122, 123, 124, 141, 160 | NFR-005 (a), 019 (rules-only), 022 (R1 alerts), 023, 066 (c) |
-| **S5** | R1 hardening and release readiness (shortened) | Moderated usability test with ≥ 5 players; SLOs and alerts; restore drill; ASVS L2 review; performance gates; browser matrix; R1 release candidate for PO sign-off; R2 spike ADRs | stretch FR-162 | NFR-010 (gate), 024 (gate), 036, 041, 042, 045, 049, 050, 063, 070 (human gate) |
+| **S5** | R1 hardening and release readiness (shortened) | Moderated usability test with ≥ 5 players; SLOs and alerts; restore drill; ASVS L2 review; performance gates; browser matrix; R1 release candidate for PO sign-off; R2 spike ADRs | — (FR-162 out of S5; PM-5) | NFR-010 (gate), 024 (gate), 036, 041, 042, 045, 049, 050, 063, 070 (human gate) |
 | **S6** | **Go port** (PO 2026-10-06) | Every Gherkin scenario, HTTP-level IT, Playwright E2E and live scorecard journey passes against the Go backend; no Python left | — (parity) | parity of every NFR measured so far |
 | **S7** | M1: court calibration, player tracking, identity, heatmaps | Calibration by tap or keys (no drag); 4 players tracked on a multi-court video; "who is who" with one-tap swap fix; position heatmaps with printed values (spec M1 "Done when") | FR-025 (court visibility), 031 (Could), 059, 080 (full lifecycle), 081 (normalise), 082, 083, 105, 106 | NFR-006 (calibration, HOTA), 009 (positioning), 025 (normalise), 030 (calibration), 062 (CV licences) |
 | **S8** | M2 part 1: ball, audio, hits, bounces; analysis levels | Ball track with "ball hidden" gaps; hits fused from audio and video; bounce landing spots; explicit analysis level; "analysis ready" notification; GPU-s per match-minute on a dashboard | FR-026, 029, 084, 085, 086, 090 (start) | NFR-006 (ball, hit, bounce), 008 (start), 018, 020, 022 (GPU alerts), 043, 044, 048 |
@@ -128,6 +154,8 @@ Backlog outline:
 
 ### S5: R1 hardening and release readiness (2026-12-14 → 2026-12-22, shortened)
 
+> **Planned in detail** in `sprint-05.md` on 2026-11-03 (PLAN-05), which replaces this outline: agent-measurable release gates proven live, human gates as "not met: waiting on P-n" rows, SPIKE-02/03/05/07 and the QD-GD-04 v1 freeze out of scope (P8, P11). The outline below is kept as history.
+
 **Goal:** R1 is a release candidate with evidence for every release-level DoD item, and the R2 spikes have reported.
 
 Backlog outline:
@@ -137,7 +165,7 @@ Backlog outline:
 - Performance gates at 50 RPS (NFR-010) and the browser matrix (NFR-024; OQ-17).
 - ASVS 5.0 L2 release review (NFR-050) [AQS/SEC-01]; data-classification map (NFR-063).
 - Legal gate (NFR-070): a human-owned legal/privacy review recorded as an ADR before any real-user beta.
-- Pricing fake door (FR-162, Could; OQ-14) as stretch.
+- ~~Pricing fake door (FR-162, Could; OQ-14) as stretch.~~ Out of S5 (sprint-05 §1; PM-5 recommends moving it to R2, after the legal review, as a PO question in EM-ESC-05).
 - R2 readiness: SPIKE-01 (done in S0), SPIKE-02, SPIKE-03, SPIKE-05, SPIKE-07 ADRs; regression-tolerance ADR for model evals (testing-strategy §6, ADR 0004 follow-up); vision gold set QD-GD-04 v1 frozen.
 - R1 release notes and rollback path; PO sign-off (release DoD).
 
