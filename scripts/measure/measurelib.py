@@ -155,6 +155,13 @@ def junit_rate(
     }
 
 
+# Finding-id format (PRC-4.3) for CI-RECON-ON-PR: ROLE-CONTEXT-NN, e.g. PE-PLAN05-01,
+# QA-VERIFY05R1-02, AF-ST081-01 (author-found). A first segment of 6+ letters never parses
+# (VERIFY04R4-01 is invisible; write QA-VERIFY04R4-01). Declare it with a severity, inline as
+# `ID (major)` / `**ID (minor):**` (also read: `ID, major`, `ID: major`, `ID opened as major`) or
+# in a table with a Severity column; `reconcile_due.py --pr` then needs a review-rounds row for
+# each blocker/major, and fails closed on an undeclared id next to a blocker/major word.
+# Full text: docs/ops/evidence-runs.md.
 # Any upper-case prefix, optional letter-bearing segments, then a number that may be dotted:
 # PE-R1-S1-02, QA-R2V-01, S-07, BLK-ASVS-6.3.3 (PE-R2-S1-02: the old pattern dropped the last two).
 # The prefix may mix digits and letters, so a verifier's id parses too: V04R1-01 (C4-RECON, M13).

@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import re
 import subprocess
 import sys
@@ -368,6 +369,177 @@ def decision_stems(decisions: Path, base: str | None) -> list[str]:
     return sorted(n[: -len(".md")] for n in names)
 
 
+_SEVERITY_WORD = r"blocker|blocking|major|minor|nit"
+_ID = r"((?:" + _FINDING_ID.pattern + r"))"
+# PE-CIRECON-R1-01: ``ID (major``, ``ID, major``, ``ID: major``, ``ID opened as major``
+_INLINE_FINDING = re.compile(
+    r"(?<![A-Za-z0-9-])" + _ID + r"[*\s]*"
+    r"(?:\(|[:,]|\s(?:re)?(?:opened|raised|filed|logged|rated|marked|triaged)(?:\s+as)?(?:\s+an?)?)"
+    r"[*\s]*(?i:(" + _SEVERITY_WORD + r"))\b"
+)
+_ANY_SEVERITY = re.compile(r"\b(" + _SEVERITY_WORD + r")\b", re.IGNORECASE)
+_MUST_WORD = re.compile(r"\b(?:blocker|blocking|major)\b", re.IGNORECASE)
+_ALIAS = re.compile(r"(?:\balias\s+|/\s*)" + _ID)
+_GAP_PHRASE = re.compile(r"known gap|can only|not covered", re.IGNORECASE)
+_MUST_LEDGER = {"blocker", "blocking", "major"}
+_HUNK = re.compile(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@")
+DECISIONS_GLOB = "docs/sprints/*/decisions/*.md"
+LEDGER_GLOB = "docs/sprints/*/review-rounds.md"
+
+
+def _severity_tables(text: str):
+    """(line number, cells, severity column, finding column or None) for each body row of a
+    table with a Severity column; the finding column is the one headed "Finding", if any."""
+    header: list[str] | None = None
+    sev_col: int | None = None
+    finding_col: int | None = None
+    for number, line in enumerate(text.splitlines(), start=1):
+        if not line.lstrip().startswith("|"):
+            header = None
+            continue
+        cells = _row_cells(line)
+        if header is None:
+            header = [c.lower() for c in cells]
+            sev_col = next((i for i, h in enumerate(header) if "severity" in h), None)
+            finding_col = next((i for i, h in enumerate(header) if "finding" in h), None)
+            continue
+        if sev_col is None or sev_col >= len(cells) or set("".join(cells)) <= set("-: "):
+            continue
+        yield number, cells, sev_col, finding_col
+
+
+def _cell_severity(cell: str) -> str | None:
+    """The severity a Severity cell gives: a blocker/major word anywhere wins (fail closed, so
+    ``minor, was major`` counts as major), else the first severity word; None without one."""
+    words = [w.lower() for w in _ANY_SEVERITY.findall(cell.replace("*", ""))]
+    return next((w for w in words if w in _MUST_LEDGER), words[0] if words else None)
+
+
+def _finding_cell(cells: list[str], col: int, finding_col: int | None) -> str | None:
+    """The cell that holds the row's finding: the "Finding" column, else the first id-bearing
+    cell left of Severity, else the first one right of it (Severity may come first)."""
+    if (
+        finding_col is not None
+        and finding_col < len(cells)
+        and _FINDING_ID.search(cells[finding_col])
+    ):
+        return cells[finding_col]
+    left = (c for c in cells[:col] if _FINDING_ID.search(c))
+    right = (c for c in cells[col + 1 :] if _FINDING_ID.search(c))
+    return next(left, None) or next(right, None)
+
+
+def declared_findings(text: str) -> list[dict[str, Any]]:
+    """Findings a decisions file declares (PRC-4.3): ``ID (severity``, ``ID, severity``,
+    ``ID: severity`` or ``ID opened as severity`` anywhere on a line, or a row of a table with a
+    Severity column: the first id of the "Finding" cell (else the first id-bearing cell left of
+    Severity, else right of it), plus its aliases (``alias ID`` or ``/ ID``); other ids in that
+    cell are references. A blocker/major word anywhere in the Severity cell wins."""
+    found: list[dict[str, Any]] = []
+    for number, cells, col, finding_col in _severity_tables(text):
+        severity = _cell_severity(cells[col])
+        cell = _finding_cell(cells, col, finding_col)
+        if cell is not None and severity is not None:
+            ids = [_FINDING_ID.search(cell).group(0), *_ALIAS.findall(cell)]
+            for finding in dict.fromkeys(ids):
+                found.append({"id": finding, "severity": severity, "line": number})
+    for number, line in enumerate(text.splitlines(), start=1):
+        for match in _INLINE_FINDING.finditer(line):
+            entry = {"id": match.group(1), "severity": match.group(2).lower(), "line": number}
+            if entry not in found:
+                found.append(entry)
+    return sorted(found, key=lambda f: f["line"])
+
+
+def ledger_ids(text: str) -> set[str]:
+    """Every finding id in the first cell of a ledger table row with a Severity column."""
+    return {f for _, cells, _, _ in _severity_tables(text) for f in _FINDING_ID.findall(cells[0])}
+
+
+def judge_decisions(path: str, text: str, lines: set[int] | None, ledger: set[str]) -> list[str]:
+    """PRC-4.1/4.2 problems on ``lines`` of one decisions file (None: every line)."""
+    declared = declared_findings(text)
+    known = ledger | {f["id"] for f in declared}
+    problems: list[tuple[int, str]] = []
+
+    def judged(number: int) -> bool:
+        return lines is None or number in lines
+
+    for f in declared:
+        if f["severity"] in _MUST_LEDGER and f["id"] not in ledger and judged(f["line"]):
+            problems.append((f["line"], f"{f['id']} ({f['severity']}) has no ledger row"))
+    for number, line in enumerate(text.splitlines(), start=1):
+        if judged(number) and _MUST_WORD.search(line):
+            problems += _undeclared(number, line, declared, ledger)
+        gap = _GAP_PHRASE.search(line)
+        if gap and judged(number) and not set(_FINDING_ID.findall(line)) & known:
+            problems.append((number, f'"{gap.group(0).lower()}" line names no finding id'))
+    return [f"{path}:{n}: {msg}" for n, msg in sorted(problems, key=lambda p: p[0])]
+
+
+def _undeclared(
+    number: int, line: str, declared: list[dict[str, Any]], ledger: set[str]
+) -> list[tuple[int, str]]:
+    """Fail closed (PE-CIRECON-R1-01): a line with a blocker/major word that declares no
+    blocker/major of its own may not carry an id that is neither declared on it nor ledgered."""
+    here = [f for f in declared if f["line"] == number]
+    if any(f["severity"] in _MUST_LEDGER for f in here):
+        return []
+    skip = ledger | {f["id"] for f in here}
+    ids = [fid for fid in dict.fromkeys(_FINDING_ID.findall(line)) if fid not in skip]
+    if not ids:
+        return []
+    verb = "sits" if len(ids) == 1 else "sit"
+    return [
+        (
+            number,
+            f"{', '.join(ids)} {verb} on a line with a blocker/major word but in no declared form "
+            f"(PRC-4.3); write `{ids[0]} (major)` or add its ledger row",
+        )
+    ]
+
+
+def added_lines(diff: str) -> dict[str, set[int]]:
+    """New-side line numbers each file gains in a ``git diff --unified=0`` (none: left out)."""
+    added: dict[str, set[int]] = {}
+    path = None
+    for line in diff.splitlines():
+        if line.startswith("+++ "):
+            path = line[len("+++ b/") :] if line.startswith("+++ b/") else None
+        elif path and (hunk := _HUNK.match(line)):
+            start, count = int(hunk.group(1)), int(hunk.group(2) or "1")
+            if count:
+                added.setdefault(path, set()).update(range(start, start + count))
+    return added
+
+
+def pr_problems(root: Path, base: str | None, head: str, files: list[Path] | None) -> list[str]:
+    """``--pr``: the lines a PR adds to decisions files (``base...head``), or whole ``files``."""
+    if files is not None:
+        top = root.resolve()
+        texts = {
+            f.resolve().relative_to(top).as_posix(): (f.read_text("utf-8"), None) for f in files
+        }
+        ledgers = [p.read_text("utf-8") for p in sorted(root.glob(LEDGER_GLOB))]
+    else:
+        for ref in (base, head):
+            if not ref or ref.startswith("-"):
+                raise ValueError(f"not a git ref: {ref}")
+        span = f"{base}...{head}"
+        diff = _git(
+            root, "diff", "-U0", "--no-renames", "--diff-filter=AM", span, "--", DECISIONS_GLOB
+        )
+        texts = {p: (_git(root, "show", f"{head}:{p}"), n) for p, n in added_lines(diff).items()}
+        names = _git(root, "ls-tree", "-r", "--name-only", head, "--", "docs/sprints").split("\n")
+        ledgers = [_git(root, "show", f"{head}:{n}") for n in fnmatch.filter(names, LEDGER_GLOB)]
+    ledger = set().union(*(ledger_ids(t) for t in ledgers)) if ledgers else set()
+    problems = []
+    for path in sorted(texts):
+        text, lines = texts[path]
+        problems += judge_decisions(path, text, lines, ledger)
+    return problems
+
+
 def exit_status(due: int, *, report_only: bool) -> int:
     """1 when a row is due, unless only reporting; usage errors are handled before this."""
     return 1 if due and not report_only else 0
@@ -375,7 +547,7 @@ def exit_status(due: int, *, report_only: bool) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("ledger", type=Path, help="review-rounds Markdown file")
+    parser.add_argument("ledger", type=Path, nargs="?", help="review-rounds Markdown file")
     parser.add_argument("--plan", type=Path, help="ADR with the per-ticket plan (ADR 0039)")
     parser.add_argument("--decisions", type=Path, help="the sprint's ticket decisions dir")
     parser.add_argument("--base", help="git ref; only decisions files on it count (merged)")
@@ -383,7 +555,28 @@ def main(argv: list[str] | None = None) -> int:
         "--report-only", action="store_true", help="print due rows but exit 0 for them"
     )
     parser.add_argument("--json", type=Path, help="also write the result here")
+    parser.add_argument("--pr", action="store_true", help="judge a PR's decisions lines")
+    parser.add_argument("--head", default="HEAD", help="with --pr: the PR head ref")
+    parser.add_argument("--files", type=Path, nargs="+", help="with --pr: whole files to judge")
     args = parser.parse_args(argv)
+    if args.pr:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ci"))
+        from pr_labels import live_labels  # logs the labels like every pr-policy step
+
+        live_labels(os.environ, "reconcile-due")
+        print("reconcile-due: no label waives this check")
+        try:
+            problems = pr_problems(Path.cwd(), args.base, args.head, args.files)
+        except (OSError, ValueError) as exc:
+            print(f"reconcile-due: {exc}", file=sys.stderr)
+            return 2
+        for problem in problems:
+            print(problem)
+        print(f"reconcile-due --pr: {len(problems)} problems")
+        return 1 if problems else 0
+    if args.ledger is None:
+        print("reconcile-due: a ledger is required without --pr", file=sys.stderr)
+        return 2
     try:
         text = args.ledger.read_text(encoding="utf-8")
         plan_text = args.plan.read_text(encoding="utf-8") if args.plan else ""
