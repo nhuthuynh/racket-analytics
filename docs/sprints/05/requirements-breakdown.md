@@ -26,7 +26,7 @@ Common method for .1-.9: Locust 2.46.7 (ADR 0008) at the client, open loop, **ac
 
 Label: pre-production evidence on a local stack, not production (sre-devops-engineer kickoff).
 
-### NFR-041 API availability and NFR-042 upload completion (R1) → story ST-075, tickets ST-075a/b/c
+### NFR-041 API availability and NFR-042 upload completion (R1) → story ST-075, tickets ST-075a/b/c/d
 
 Burn-rate multipliers and windows are judgment (SRE workbook unverified, AQS Gaps); the PE-5a ADR fixes them before ST-075c starts.
 
@@ -36,7 +36,8 @@ Burn-rate multipliers and windows are judgment (SRE workbook unverified, AQS Gap
 | NFR-041.2 | SLO record | target and window written | `docs/ops/slo.md` row | 99.5 % over 30 days, 429 excluded | doc-check | ST-075c | G05-02 |
 | NFR-041.3 | fast-burn alert | alert state on a synthetic 5xx series | promtool rule test | `ApiAvailabilityFastBurn` firing within the PE-5a window on a 10 % 5xx series; not firing on a 0.1 % series (negative) | promtool | ST-075c | G05-02 |
 | NFR-041.4 | slow-burn alert | as .3 | promtool | `ApiAvailabilitySlowBurn` firing on a 1 % series held 6 h; not firing on 0.3 % (negative) | promtool | ST-075c | G05-02 |
-| NFR-041.5 | live alert path | minutes from injected fault to alert `firing` in Prometheus `/api/v1/alerts` | ops-drill: `scripts/ops/inject_5xx.py` drives a 5xx burst through the API test hook on the Compose `obs` profile | firing ≤ 10 min; 0 alerts on a clean 10 min run (negative) | ops-drill | ST-075c | G05-02 |
+| NFR-041.5 | live alert path | minutes from injected fault to alert `firing` in Prometheus `/api/v1/alerts` | ops-drill: `scripts/ops/inject_5xx.py` drives a 5xx burst through the ADR 0012 seam (`RACKET_FAULT_INJECTION=api:5xx_on_header`, honoured only under `APP_ENV=test`) on the Compose `obs` profile | firing ≤ 10 min; 0 alerts on a clean 10 min run (negative) | ops-drill | ST-075c (drill), ST-075d (seam) | G05-02 |
+| NFR-041.6 | fault seam inert outside tests | 500 responses to `X-Racket-Fault: 5xx` with the seam value set and `APP_ENV` ≠ test | unit + IT-05-12 | 0 (negative); seam honoured only under `APP_ENV=test` | unit + integration | ST-075d | G05-02 |
 | NFR-042.1 | SLI definition | completed / (created − rejected − cancelled) | `slis.upload_completion()` unit test (exists) + promtool on a synthetic series | as NFR-041.1 | unit + promtool | ST-075c | G05-02 |
 | NFR-042.2 | SLO record | target and window | `docs/ops/slo.md` | 99.0 % over 30 days | doc-check | ST-075c | G05-02 |
 | NFR-042.3 | fast-burn alert | alert state | promtool | `UploadCompletionFastBurn` firing on a 20 % failure series; not on 0.5 % | promtool | ST-075c | G05-02 |
@@ -161,13 +162,13 @@ Rule: FR-055.R1 While the scoring preset is PROVISIONAL-UNVERIFIED, every score 
 | PRC-1.1 | A scheduled run with conclusion `cancelled` produces a red notice | unit (negative first: today `none`) | CI-NOTICE-CANCELLED |
 | PRC-1.2 | A scheduled run with conclusion `timed_out` produces a red notice; `success` and `skipped` do not (negative) | unit | CI-NOTICE-CANCELLED |
 | PRC-1.3 | The Flaky-test report job finishes within its 45 min budget on the scheduled run (root cause of run 41622904539 removed) | CI evidence (next scheduled run) | CI-NOTICE-CANCELLED |
-| PRC-2.1 | Changed paths map to a tier by a data table; a path that matches no rule is tier 2 (fail closed) | unit | CI-TIERS-a |
-| PRC-2.2 | A PR touching only `docs/**`, `*.md` or `.claude/agents/**` is tier 0; adding one `backend/src` file makes it tier ≥ 1 (negative) | unit | CI-TIERS-a |
+| PRC-2.1 | Changed paths map to a tier by a data table; a file gets the highest tier of every rule it matches and the PR the highest over its files; a path that matches no rule is tier 2 (fail closed) | unit | CI-TIERS-a |
+| PRC-2.2 | A PR touching only non-executable Markdown under `docs/**`, top-level `*.md` or `.claude/agents/*.md` is tier 0. Negatives: adding one `backend/src` file → ≥ 1; `docs/security/tools/check_threat_notes.py`, `docs/security/tools/asvs_status.py`, `docs/design/tools/check_flows.py`, `docs/domain/tools/*.py`, `docs/sprints/*/close-checks/*.py` and an extensionless shebang file under `docs/` → 1 (executable floor); `docs/architecture/api-*.md` → 2 although it also matches the tier 0 rule | unit | CI-TIERS-a |
 | PRC-2.3 | Tier 2 paths (auth, uploads, storage, media URLs, privacy/age/consent/retention, quotas, logging config, secrets, CI permissions, migrations, API contracts, `scripts/ci/merge_ready.py`) classify as tier 2 | unit (planted fixture per path) | CI-TIERS-a |
 | PRC-2.4 | Tier 0 passes with one fresh-context APPROVE on the head plus a green `doc-check`; fails without `doc-check` (negative) | unit (`infra/tests/github_stub.py`) | CI-TIERS-b |
 | PRC-2.5 | Tier 1 passes only with principal-engineer **and** `Reviewer: senior-qa-engineer` APPROVE on the head; PE + senior-backend-engineer only fails (negative) | unit | CI-TIERS-b |
-| PRC-2.6 | Tier 2 additionally needs `Reviewer: security-privacy-engineer` APPROVE on the head when a security path is touched; PE + QA only fails (negative) | unit | CI-TIERS-b |
-| PRC-2.7 | An APPROVE from the role that authored the PR is not counted | unit | CI-TIERS-b |
+| PRC-2.6 | Every tier 2 PR additionally needs `Reviewer: security-privacy-engineer` APPROVE on the head, whatever made it tier 2 (kickoff SEC-1); PE + QA only fails for a security path, a migration-only PR, an API-contract-only PR and an unmatched-path-only PR (4 negatives) | unit | CI-TIERS-b |
+| PRC-2.7 | An APPROVE from the role that authored the PR is not counted. The author role is computed from the head branch's row in the sprint plan §15 ticket map (`Owner`), cross-checked with `status.json` `ticket_prs`; PR body, labels and author comments are never read for it. A PR body claiming another role does not change it; a head branch with no row fails closed (negatives) | unit | CI-TIERS-b |
 | PRC-3.1 | `doc-check` fails when a changed Markdown file references a repo path that does not exist | unit + CI | CI-DOC-CHECK |
 | PRC-3.2 | `doc-check` fails when an `[ASB/<ID>]` citation names an id that is not a Confirmed row and lacks "(unverified)" | unit + CI | CI-DOC-CHECK |
 | PRC-3.3 | `doc-check` fails when a `.claude/agents/*.md` front matter does not parse or lacks `name`, `description`, `tools` | unit + CI | CI-DOC-CHECK |

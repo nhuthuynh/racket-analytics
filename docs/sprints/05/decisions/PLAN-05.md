@@ -45,3 +45,13 @@ In progress 0 · in review 0 · awaiting QA 0 · awaiting merge 0. PLAN-05 itsel
 | Round | Wall time (min) | total_cost_usd / tokens |
 |---|---|---|
 | Author build (planning) | about 45 | not measured (this invocation does not expose `total_cost_usd`) |
+
+## Review round 1 (principal-engineer, PR #186)
+
+| Finding | Severity | Fix |
+|---|---|---|
+| PE-PLAN05-01 | major | CI-TIERS-a no longer uses an ordered glob. A file gets the highest tier of every rule it matches, and the PR gets the highest tier over its files. An executable file (`*.py`, `*.sh`, `*.js`, `*.ts`, `.github/workflows/*`, `Makefile`, `Dockerfile*`, a shebang line or the executable bit) is at least tier 1 wherever it lives. So `docs/security/tools/*.py`, `docs/design/tools/*.py`, `docs/domain/tools/*.py` and `docs/sprints/*/close-checks/*` are tier 1, and `docs/architecture/api-*.md` stays tier 2. PRC-2.1 and PRC-2.2 now carry these negative cases, and the CI-TIERS-a test list names them |
+| PE-PLAN05-02 | major | CI-TIERS-b and PRC-2.6 require the security-privacy-engineer APPROVE on every tier 2 PR, whatever made it tier 2 (kickoff SEC-1). This now also covers migration-only, API-contract-only and unmatched-path-only PRs, with one negative test each. PRC-2.7 computes the author role from the head branch's row in the §15 ticket map, cross-checked with `status.json` `ticket_prs`. The PR body, labels and author comments are never read for it. A head branch with no matching row fails closed |
+| PE-PLAN05-03 | major | `RA_FAULT_INJECTION` is gone. The new ticket ST-075d (senior-backend-engineer, tier 2, security-privacy-engineer + principal-engineer, XS) adds one value, `api:5xx_on_header`, to the existing ADR 0012 seam `RACKET_FAULT_INJECTION`. That seam is kept only under `APP_ENV=test` (`settings.py` line 248, pinned by `test_settings.py::test_fault_injection_is_dropped_outside_test`). ST-075c is now tier 2 with no `backend/src` change. It gets `APP_ENV=test` from the shell for its own Compose project, plus a drill-only override `infra/compose.fault-drill.yaml`. A test pins `infra/env.example` at `APP_ENV=dev` and keeps the seam out of `infra/compose.yaml`. New items: NFR-041.6 and IT-05-12. BE lane 6 → 6.5 units, total 46 tickets / 26 units |
+
+Why TDD does not apply: this round still changes planning text only, so the doc checks were re-run (below).

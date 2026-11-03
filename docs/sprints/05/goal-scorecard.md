@@ -60,13 +60,16 @@ Met when all three verdict files say `pass` for all 4 endpoints. Planted failure
 ```
 docker run --rm -v "$PWD/infra/observability/alerts:/a" prom/prometheus:v2.53.2 \
   promtool test rules /a/slo.test.yml           # 8 cases
-make up FLAGS=on PROFILES=obs COMPOSE_PROJECT_NAME=racket-obs05 && make demo
+# drill-only stack: APP_ENV=test from the shell overrides infra/.env for this project only; shipped
+# infra/env.example (APP_ENV=dev) and infra/compose.yaml are unchanged; the override adds only the seam value
+APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml --env-file infra/.env \
+  -p racket-obs05 --profile obs up -d --build --wait && make demo
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
   --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
 python3 scripts/ops/inject_5xx.py --rate 0 --minutes 10 --expect-no-alert --json reports/slo-clean.json
 curl -s 'http://localhost:9090/api/v1/query?query=racket_upload_sessions_total' | jq '.data.result|length'
 ```
-Planted failure: a rule file with the fast-burn threshold at 100 % → the promtool case fails.
+Planted failure: a rule file with the fast-burn threshold at 100 % → the promtool case fails. Negative (NFR-041.6): `python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 100 --minutes 1 --expect-no-5xx --json reports/slo-seam-off.json` against a `make up` stack (`APP_ENV=dev`, no override) → 0 responses with status 500 (the seam is dropped outside `APP_ENV=test`).
 
 ### G05-03 (author: sre-devops-engineer, ST-076c; integrity check by senior-backend-engineer, ST-076b)
 ```
