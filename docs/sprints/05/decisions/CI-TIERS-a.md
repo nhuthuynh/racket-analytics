@@ -1,0 +1,25 @@
+# CI-TIERS-a decisions
+
+Per-ticket decision file (working-agreement §3, "Daily sync"). Ticket: CI-TIERS-a, story PRC-05 "The process rules are enforced by checks", atomic items PRC-2.1, PRC-2.2, PRC-2.3. Owner: sre-devops-engineer. Review tier 2 (ADR 0056): principal-engineer, the senior-qa-engineer test review, security-privacy-engineer, green CI. The classifier agrees: `python3 scripts/ci/review_tiers.py --base origin/main --head HEAD` on this branch prints `review-tier: 2`, because the change set includes `scripts/ci/merge_ready.py` and `scripts/ci/review_tiers.py`.
+
+## Decisions
+
+| Date | Who | Decision | Evidence | Why |
+|---|---|---|---|---|
+| 2026-11-03 | sre-devops-engineer | **The executable floor counts as a matched tier 1 rule.** An executable file that no rule names (an extensionless shebang script under `docs/`) is tier 1, not tier 2. A non-executable file that no rule names is tier 2 | `test_an_extensionless_file_with_a_shebang_under_docs_is_tier_1`; scenario row `docs/tools/run-check (shebang)` → 1; `test_a_path_no_rule_matches_is_tier_2` | The acceptance matrix asks for 1 in this case. Fail-closed still covers every non-executable unknown path, for example `docs/unknown/thing.bin` |
+| 2026-11-03 | sre-devops-engineer | **`.github/workflows/**` is tier 2 as a whole.** The rule does not read the diff for `permissions:` | `test_a_tier_2_path_is_tier_2[.github/workflows/ci.yml]` | The plan says the `tools:` line is the only rule that reads the diff. A workflow can widen token permissions or secret use in several ways (`permissions:`, `secrets:`, `pull_request_target`), so tier 2 on the whole path is the stricter reading of SEC-1 (judgment) |
+| 2026-11-03 | sre-devops-engineer | **Pending globs still classify.** A `PENDING_GLOBS` entry acts as a tier 2 rule, so ST-075d's `backend/src/racket/platform/fault*` file is tier 2 from its first PR. It is exempt only from the liveness test until a tracked path matches it | `test_a_tier_2_path_is_tier_2[backend/src/racket/platform/fault_injection.py]`; `test_a_pending_glob_that_now_matches_fails` | Without this, the `backend/**` tier 1 rule would classify the new fault seam as tier 1 until someone moves the glob |
+| 2026-11-03 | sre-devops-engineer | **The `tools:` rule fails closed.** Any added or removed diff line `tools:` counts, including one in the body. A missing patch (GitHub leaves it out for large diffs) also counts as changed | `test_a_missing_patch_fails_closed`; scenario "A changed tools: line in a role file is tier 2" | Reading the front matter boundaries out of hunks is fragile. A false tier 2 costs one extra review; a false tier 0 would let a role grant itself merge tools (audit item 13) |
+| 2026-11-03 | sre-devops-engineer | **An empty change set is tier 2** | `test_an_empty_change_set_fails_closed_to_tier_2` | Nothing to classify means nothing is known (fail closed) |
+| 2026-11-03 | sre-devops-engineer | **A git CLI comes with the classifier** (`review_tiers.py --base --head [--json]`). `merge_ready.py` imports the pure `classify` through `review_tier()`. Fetching `pulls/{n}/files` and mapping tiers to verdict sets is left to CI-TIERS-b | `infra/tests/test_review_tiers_scenarios.py` (31 scenarios on a real git repo); `test_merge_ready_computes_the_tier_with_the_classifier` | Authors can see their PR's tier and reviewers before review. The scenarios test the executable bit, the shebang and the `tools:` diff against real git objects. The current `merge_ready.py` gate (principal + a senior) does not change in this ticket |
+| 2026-11-03 | sre-devops-engineer | **The specialist flags only add roles.** Flags: `web/src/app/**`, `web/src/components/**`, `web/src/**/*.css` and `web/public/**` → principal-designer. `coaching/drills/**`, `content/drills/**`, `sports/**` and `matches/scorebook/**` → pickleball-domain-coach. `worker/**`, `dataset/**` and `**/evals/**` → senior-ml-cv-engineer. `web/src/lib/security/**`, `web/src/middleware.ts`, `web/next.config.ts` and `web/public/sw.js` → senior-frontend-engineer | `test_a_path_flags_its_specialist`; `test_every_flagged_role_is_a_role_file` | Tier and specialist are separate questions. A path's tier comes only from the tier 0/1/2 tables |
+
+## Test change request (TCR)
+
+None. This PR adds new test files only (`infra/tests/test_review_tiers.py`, `infra/tests/test_review_tiers_scenarios.py`, `tests/features/review_tiers.feature`). The green commit changed only their formatting (line length), and those files are not on `main`.
+
+## Evidence
+
+- Red (commit `64d65f25`): `cd infra && uv run pytest tests/test_review_tiers.py tests/test_review_tiers_scenarios.py -q` → `27 failed, 88 errors`. Unit tests failed with `FileNotFoundError: [Errno 2] No such file or directory: '.../scripts/ci/review_tiers.py'` (the classifier did not exist yet). Every scenario failed with `can't open file '.../scripts/ci/review_tiers.py'`, rc 2.
+- Liveness red check: `test_a_tier2_glob_matching_nothing_is_named` adds `backend/migrations/**` to the rules and asserts that the failure names it.
+- Green: see the PR description (commands and counts).

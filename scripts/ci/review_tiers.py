@@ -113,6 +113,7 @@ _TIER1 = (
     ".dockerignore",
 )
 
+# Specialist flags only add roles; a path's tier still comes from the tier 0/1/2 tables above.
 _SPECIALISTS = (
     Rule("web/src/app/**", 1, (DESIGNER,)),
     Rule("web/src/components/**", 1, (DESIGNER,)),
@@ -125,8 +126,8 @@ _SPECIALISTS = (
     Rule("backend/src/racket/worker/**", 1, (ML,)),
     Rule("backend/src/racket/dataset/**", 1, (ML,)),
     Rule("backend/src/racket/**/evals/**", 1, (ML,)),
-    Rule("web/src/lib/security/**", 2, (FRONTEND,)),
-    Rule("web/src/middleware.ts", 2, (FRONTEND,)),
+    Rule("web/src/lib/security/**", 1, (FRONTEND,)),
+    Rule("web/src/middleware.ts", 1, (FRONTEND,)),
     Rule("web/next.config.ts", 1, (FRONTEND,)),
     Rule("web/public/sw.js", 1, (FRONTEND,)),
 )
