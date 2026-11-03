@@ -23,7 +23,7 @@ A story is done only when every box is checked and the evidence is attached to t
 
 **Build and code quality**
 - [ ] The build has no errors. Lint (Ruff/ESLint) and type checks are clean [EP/ENG-16, AQS/STACK-05].
-- [ ] The PR is one concern and about 100 changed lines, with anything near 400 split. Refactors are separate [EP/ENG-04].
+- [ ] The PR is one concern, aims for about 100 production lines, and passes `check_pr_size.py`: 400 production lines or fewer, or the EM `size-waiver` decided while the PR is a draft. The size unit is defined in working-agreement §5 (ADR 0054, ADR 0052). Refactors are separate [EP/ENG-04].
 - [ ] Conventional Commit message and a complete PR description (what, why, trade-offs, evidence) [EP/ENG-08, EP/ENG-07].
 
 **Security and privacy (when applicable)**
@@ -48,13 +48,14 @@ A story is done only when every box is checked and the evidence is attached to t
 - [ ] The GPU cost metric is recorded [DOM/CV-08, DOM/CV-01].
 
 **Review, decisions and merge**
-- [ ] Fresh-context review is done by the required reviewers (working-agreement §6), with no open Blocking findings [EP/ENG-03].
-- [ ] Each significant decision is recorded as an ADR with evidence and the alternatives considered.
-- [ ] Merged to `main` [EP/ENG-16].
+- [ ] `scripts/ci/merge_ready.py` exits 0 on the PR head SHA, and the gated merge step merges the PR into `main`. The script checks `ci-gate` and every check run on that SHA (PO rule "CI first", 2026-10-08) and the latest principal-engineer and senior-* verdicts on it (PO decision 2026-10-07: "Merge only when both latest verdicts approve the current head SHA"). Who must review is set in working-agreement §6 [EP/ENG-03, EP/ENG-16].
+- [ ] The senior-qa-engineer has tested the PR head: ran the suites and checked each acceptance criterion against the sprint goal, and posted the result on the PR. This item is guidance, not enforced: `merge_ready.py` does not yet require a senior-qa-engineer verdict, and whether it should, and whether that verdict also fills the senior slot, are open PO questions. Source: the PO's 2026-10-31 instruction, as relayed by the orchestrator; it is not yet quoted in `docs/requirements/po-input-2026-10-05.md`.
+- [ ] Each significant decision is an ADR with evidence and the alternatives considered. Smaller decisions go in `docs/sprints/<nn>/decisions/<TICKET-ID>.md`.
 
 ## Sprint level
 
 - [ ] Every story in the sprint meets the story-level DoD [EP/ENG-16].
+- [ ] A ticket that misses any story-level item is not reported as done or partly done and is not demoed. It returns to the backlog with its open items listed [ASB/AGL-01, a mirror of the Scrum Guide 2020]. An item that only a human can supply is reported as "not met: waiting on P-n" (PO decision P12).
 - [ ] Functional, integration, performance and end-to-end suites pass on `main` [EP/ENG-16].
 - [ ] Model and coaching regression eval suites pass, where relevant [EP/ENG-27].
 - [ ] The sprint goal is demonstrated against its bullet list [EP/ENG-15].

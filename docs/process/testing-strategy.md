@@ -33,7 +33,7 @@ Martin Fowler's test pyramid and Google's test-size ratios are unverified in our
 | Unit | One behaviour of one unit. No I/O, sleeps or network. Arrange/Act/Assert. Third-party dependencies sit behind interfaces [EP/ENG-17] | pytest, Vitest/Jest (judgment) | Every edit (hook) and every PR | Each test runs in milliseconds; the whole suite in seconds [EP/ENG-17] |
 | Integration | Real Postgres, S3-compatible store and queue in Docker Compose; never SQLite [AQS/OPS-05]. API tests use the httpx async client with `dependency_overrides` [AQS/STACK-01] | pytest, Testcontainers or Compose (judgment) | Every PR | Under 10 minutes (judgment) |
 | Scenario (BDD) | Gherkin acceptance criteria executed against the API or UI | pytest-bdd (judgment) | Every PR | — |
-| End-to-end | upload -> analysis (fixture clip) -> score sheet -> plan | Playwright [AQS/STACK-03] | On merge to `main`, nightly | — |
+| End-to-end | upload -> analysis (fixture clip) -> score sheet -> plan | Playwright [AQS/STACK-03] | Every ready PR (job `e2e` in `ci-gate`, `ci-cd.md` §2), on `main`, and nightly | — |
 | Accessibility | axe-core automated checks plus a manual keyboard and screen-reader pass [DPA/DESIGN-14] | axe-core | Every UI PR; manual pass each sprint | — |
 | Performance | API latency, upload throughput, pipeline minutes per match-minute [DPA/DESIGN-16] | Locust (ADR 0008; k6 rejected as AGPL-3.0) | Each sprint | — |
 | Model quality | CV metrics on frozen gold sets (§6) | TrackEval, custom harness | Each sprint, and on any model change | — |

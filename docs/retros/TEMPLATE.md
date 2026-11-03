@@ -2,14 +2,14 @@
 
 <!--
 Copy to docs/retros/<YYYY-MM-DD>-sprint-<NN>.md.
-Facilitator: engineering-manager. Participants: every agent that worked in the sprint; the human product owner is invited.
+Facilitator: engineering-manager, or a neutral role (business-analyst or the main session) when the retro's focus is the EM-owned process after a difficult period [ASB/RPD-12]. Participants: every agent that worked in the sprint; the human product owner is invited.
 Rules [EP/ENG-15]: pick one focus area per retro; rotate the format; every action item has an owner and a
 deadline and goes into the backlog, prioritised for completion before the next retro. Blameless: discuss
 systems, prompts and process, not individuals (judgment).
 Citation prefixes: see docs/process/working-agreement.md §0. Label opinions "(judgment)".
 -->
 
-- **Sprint goal:** <copy from docs/sprints/<NN>/plan.md>
+- **Sprint goal:** <copy from docs/sprints/sprint-<NN>.md>
 - **Goal met?** Yes / Partly / No. <one line, with evidence>
 - **Format used:** Timeline | 5 Whys | Fishbone | Focus | Mad/Sad/Glad [EP/ENG-15]
 - **Focus area this retro:** <e.g. review loop, eval stability, estimation>
@@ -26,10 +26,11 @@ Citation prefixes: see docs/process/working-agreement.md §0. Label opinions "(j
 | Measure | This sprint | Last sprint | Source |
 |---|---|---|---|
 | Stories committed / done | | | `docs/sprints/<NN>/status.json` |
-| Deployment frequency | | | [EP/ENG-21] |
-| Lead time for changes (median) | | | [EP/ENG-21] |
-| Change failure rate | | | [EP/ENG-21] |
-| Time to restore service | | | [EP/ENG-21] |
+| Change lead time (median) | | | working-agreement §10 [ASB/AGL-02] |
+| Deployment frequency | | | working-agreement §10 [ASB/AGL-02] |
+| Change fail rate | | | working-agreement §10 [ASB/AGL-02] |
+| Failed deployment recovery time | | | working-agreement §10 [ASB/AGL-02] |
+| Deployment rework rate | | | working-agreement §10 [ASB/AGL-02] |
 | PR time-to-merge (avg) | | | [EP/ENG-19] |
 | Median PR size (changed lines) | | | [EP/ENG-04] |
 | Auto-fix iterations per PR (avg / max) | | | working-agreement §7 |
@@ -75,6 +76,22 @@ State each lesson as a rule we will follow from now on, and say whether it chang
 | # | Action | Owner (agent / human) | Due date | Backlog ID | Success measure |
 |---|---|---|---|---|---|
 | | | | | | |
+
+## 7a. Requirement breakdown
+
+Which FRs or NFRs reached development non-atomic or unmeasurable (see the atomic-breakdown items in `docs/process/definition-of-ready.md`), and what should the DoR change?
+
+| # | FR/NFR ID | What was missing (rule split, negative example, metric, window, open clarification) | Found by (PR, review, test) | DoR change proposed |
+|---|---|---|---|---|
+| | | | | |
+
+## 7b. Rules to remove
+
+For each process rule added in the last two retros: is it still load-bearing (it prevented a failure this sprint, with evidence), or can it be dropped or moved into a hook, script or CI job? Every harness rule encodes an assumption that can go stale [ASB/ANT-18].
+
+| # | Rule (file, section) | Added in | Prevented a failure this sprint? (evidence) | Keep / drop / move to a check |
+|---|---|---|---|---|
+| | | | | |
 
 ## 8. Decisions taken in this retro
 

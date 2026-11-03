@@ -66,7 +66,7 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 
 | Job | Gate (sprint-00 §8) | Threshold |
 |---|---|---|
-| `pr-policy` | Test and gold immutability; PR size | No unapproved change under protected paths; > 400 lines needs `size-waiver` |
+| `pr-policy` | Test and gold immutability; PR size | No unapproved change under protected paths; > 400 production lines (tests, docs, lockfiles and fixtures excluded; ADR 0054, working-agreement §5) needs `size-waiver` |
 | `workflow-lint` | actionlint + shellcheck on workflows | 0 findings |
 | `python-lint` | `ruff check`, `ruff format --check` | 0 errors [AQS/STACK-05] |
 | `python-types` | mypy, strict on `scoring`, `analytics`, `coaching`, `sports`, `dataset` | 0 errors (NFR-077) |
@@ -96,7 +96,7 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 3. **Secret `ANTHROPIC_API_KEY`** (Settings → Secrets and variables → Actions → New repository secret) for the review bot (§4). Without it, the review job logs a notice and passes.
 4. **Actions → General:** set "Workflow permissions" to "Read repository contents" (the workflows request what they need per job).
 5. **Nightly publish (ADR 0026):** if rule 1 requires PRs, add `github-actions[bot]` (the GitHub Actions app) as a bypass actor so the nightly `publish` job can commit `docs/sprints/*/status.json`; otherwise that job fails and the results stay in its job summary.
-6. **Dependency audit PR (ADR 0053):** in Actions → General → Workflow permissions, tick "Allow GitHub Actions to create and approve pull requests" (off by default). Without it the daily `dependency-audit` job pushes `deps/security-audit` but `gh pr create` fails, the job goes red and no upgrade PR is opened. The job never approves a PR; branch protection still needs two reviews and `ci-gate`.
+6. **Dependency audit PR (ADR 0053):** in Actions → General → Workflow permissions, tick "Allow GitHub Actions to create and approve pull requests" (off by default). Without it the daily `dependency-audit` job pushes `deps/security-audit` but `gh pr create` fails, the job goes red and no upgrade PR is opened. The job never approves a PR. Like any PR, it needs `ci-gate` green and the principal-engineer and senior verdicts checked by `scripts/ci/merge_ready.py` (`docs/ops/branch-protection.md` §3). Branch protection requires 0 approvals, because all agents post as one GitHub account.
 
 ## 3. Agent hooks (ST-003, DPA/AI-10)
 
@@ -108,7 +108,7 @@ Wired in `.claude/settings.json`; scripts in `.claude/hooks/`; tests in `infra/t
 | PostToolUse `Write\|Edit\|MultiEdit` | `post_tool_use.py` | Python: `ruff check --fix`, `ruff format`, then `ruff check`. Exit 2 reports what is left to Claude. TS/JS: `eslint --fix` from `web/node_modules` |
 | Stop | `stop.py` | Runs `scripts/test-unit.sh` (unit, not slow, not `red_until`). Exit 2 with the failure tail blocks the end of the turn. Skips when `stop_hook_active` (loop guard), under GitHub Actions (CI is the gate), or when the tree and command are unchanged since the last green run |
 
-`permissions.deny` also blocks *reading* `.env*`, keys and `infra/secrets/**`.
+`permissions.deny` blocks the Read tool on `.env*`, keys and `infra/secrets/**`. It does not stop a Bash command (for example `cat .env`) from reading them: `pre_tool_use.py` blocks Bash *writes* to those paths, not reads. Blocking reads needs the sandbox or an added Bash check in `pre_tool_use.py` [ASB/ANT-05].
 
 **Defensive rules (ADR 0013):** stdlib only, and no network. Malformed input or an internal hook error allows the call and warns on stderr, so a hook bug never wedges a session. Missing linters skip with a note, because CI is the gate. The Stop hook's time budget is 180 s (internal) inside a 240 s hook timeout.
 
