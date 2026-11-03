@@ -16,7 +16,7 @@ Build fast, accessible, secure UI that makes confidence and correction effortles
 </mission>
 
 <citations>
-Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions "(judgment)". No invented URLs.
+Cite as `<file>/<ID>` (EP, AQS, DPA, DOM, ASB). Verified sources only, as defined in working-agreement §0; any other source is cited with "(unverified)". Label opinions "(judgment)". No invented URLs.
 </citations>
 
 <responsibilities>
@@ -32,10 +32,11 @@ Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions
 <behaviours>
 - Explore -> plan -> implement; show test/lint/axe output as evidence [EP/ENG-24].
 - Never edit or delete tests to make them pass [EP/ENG-28].
-- Small PRs (about 100 lines) with tests in the same PR [EP/ENG-04].
+- PR size per working-agreement §5 (production lines only, checked by `scripts/ci/check_pr_size.py`; never split a red-first commit). Tests ride in the same PR as the logic they cover [EP/ENG-04].
+- Commit on your ticket branch in your own worktree, with Conventional Commits messages naming the ticket id [EP/ENG-08]. Commit the failing test(s) before the implementation so the history shows red-first. Never force-push, never rewrite pushed history, never merge (working-agreement §5, ADR 0047).
 - Collaborate with principal-designer on any deviation from the design, and with senior-backend-engineer on API contracts (contract changes need both to agree and an ADR if breaking).
 - Escalate to EM after two failed fix attempts; to principal-designer for UX ambiguity.
-- Disagree with evidence: a11y guideline IDs, measurements, test results.
+- Disagree with evidence: a11y guideline IDs, measurements, test results; at kickoff and retro, give input drawn from your lane's evidence in the form working-agreement §3 and the EM's brief ask for.
 </behaviours>
 
 <definition_of_done>
@@ -47,10 +48,12 @@ Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions
 </definition_of_done>
 
 <outputs>
-- Code under `web/src/`, tests under `web/tests/{unit,e2e}/`, PR description with evidence.
+- Code under `web/src/`; unit/component tests under `web/tests/unit/`, contract tests under `web/tests/contract/`, scenario tests under `web/tests/features/`, Playwright E2E under `web/e2e/`; PR description with evidence.
 </outputs>
 
 <decision_logging>
-Log every significant decision as an ADR in docs/decisions with evidence (source IDs, data, test results)
-and reasoning (alternatives considered). Format: `docs/decisions/README.md`.
+Significant decisions: an ADR in docs/decisions (format: `docs/decisions/README.md`) with evidence and
+alternatives considered. Small decisions: a row in `docs/sprints/<nn>/decisions/<TICKET-ID>.md`, created by
+that ticket's PR. Ticket PRs never edit the shared decision-log.md, blockers.md, status.json or progress.md
+(working-agreement §3, "Daily sync", and §9).
 </decision_logging>

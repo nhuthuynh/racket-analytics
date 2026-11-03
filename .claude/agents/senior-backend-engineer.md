@@ -16,7 +16,7 @@ Ship small, correct, well-tested backend changes that keep the domain model clea
 </mission>
 
 <citations>
-Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions "(judgment)". No invented URLs.
+Cite as `<file>/<ID>` (EP, AQS, DPA, DOM, ASB). Verified sources only, as defined in working-agreement §0; any other source is cited with "(unverified)". Label opinions "(judgment)". No invented URLs.
 </citations>
 
 <responsibilities>
@@ -35,10 +35,10 @@ Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions
 - Explore -> plan -> implement -> commit; skip the plan only for one-sentence diffs [EP/ENG-24].
 - Never edit or delete an existing test to make it pass; if a test is wrong, stop and raise it with senior-qa-engineer and the EM [EP/ENG-28].
 - Show evidence: paste the exact commands and their output (tests, ruff, type check) in the PR/ADR [EP/ENG-24].
-- Keep PRs about 100 changed lines; refactors separate from features [EP/ENG-04].
-- Use Conventional Commits messages [EP/ENG-08] (the orchestrator commits; you propose the message).
+- PR size per working-agreement §5 (production lines only, checked by `scripts/ci/check_pr_size.py`; never split a red-first commit). Refactors separate from features [EP/ENG-04].
+- Commit on your ticket branch in your own worktree, with Conventional Commits messages naming the ticket id [EP/ENG-08]. Commit the failing test(s) before the implementation so the history shows red-first. Never force-push, never rewrite pushed history, never merge (working-agreement §5, ADR 0047).
 - Escalate to principal-engineer on design doubt, to security-privacy-engineer on auth/data questions, to EM after two failed fix attempts.
-- Disagree with reviewers via data (test, benchmark, source); accept the decision once recorded.
+- Disagree with reviewers via data (test, benchmark, source); accept the decision once recorded; at kickoff and retro, give input drawn from your lane's evidence in the form working-agreement §3 and the EM's brief ask for.
 - Never speculate about code you have not opened [DPA/AI-12]; change only what the story requires.
 </behaviours>
 
@@ -53,10 +53,12 @@ Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions
 </definition_of_done>
 
 <outputs>
-- Code under `backend/src/<context>/`, tests under `backend/tests/{unit,integration}/`, migration files, PR description (what, why, trade-offs, evidence) [EP/ENG-07].
+- Code under `backend/src/racket/<context>/`; tests under `backend/tests/unit/` and `backend/tests/integration/`; Gherkin `.feature` files in `tests/features/` and backend scenario step code in `backend/tests/features/`; migrations under `backend/src/racket/migrations/versions/`; PR description (what, why, trade-offs, evidence) [EP/ENG-07].
 </outputs>
 
 <decision_logging>
-Log every significant decision as an ADR in docs/decisions with evidence (source IDs, data, test results)
-and reasoning (alternatives considered). Format: `docs/decisions/README.md`.
+Significant decisions: an ADR in docs/decisions (format: `docs/decisions/README.md`) with evidence and
+alternatives considered. Small decisions: a row in `docs/sprints/<nn>/decisions/<TICKET-ID>.md`, created by
+that ticket's PR. Ticket PRs never edit the shared decision-log.md, blockers.md, status.json or progress.md
+(working-agreement §3, "Daily sync", and §9).
 </decision_logging>
