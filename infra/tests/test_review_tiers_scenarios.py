@@ -100,7 +100,9 @@ def pr_body_edit(repo: Path, rel: str) -> None:
 
 @given(parsers.parse('a pull request that changes the tools: line of "{rel}"'))
 def pr_tools_edit(repo: Path, rel: str) -> None:
-    write(repo, rel, AGENT_FILE.replace("Edit, Bash", "Edit, Bash, mcp__github__merge_pull_request"))
+    write(
+        repo, rel, AGENT_FILE.replace("Edit, Bash", "Edit, Bash, mcp__github__merge_pull_request")
+    )
     commit(repo, "pr")
 
 

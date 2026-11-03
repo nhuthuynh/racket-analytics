@@ -75,7 +75,7 @@ def test_a_workflow_file_is_never_below_tier_1(rt: ModuleType) -> None:
     assert tier(rt, ".github/workflows/notes.md") >= 1
 
 
-# ------------------------------------------------------------------ tier 2 and fail closed (PRC-2.1, 2.3)
+# ------------------------------------------------- tier 2 and fail closed (PRC-2.1, 2.3)
 @pytest.mark.parametrize(
     "path",
     [
@@ -289,7 +289,7 @@ def test_the_fault_seam_is_pending_on_st_075d(rt: ModuleType) -> None:
     assert rt.PENDING_GLOBS.get("backend/src/racket/platform/fault*") == "ST-075d"
 
 
-# ------------------------------------------------------------------ merge_ready imports the classifier
+# ------------------------------------------------- merge_ready imports the classifier
 def test_merge_ready_computes_the_tier_with_the_classifier(rt: ModuleType) -> None:
     mr = _load("merge_ready", MERGE_READY)
     got = mr.review_tier([rt.ChangedFile("docs/x.md"), rt.ChangedFile("scripts/ci/merge_ready.py")])
