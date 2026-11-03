@@ -37,6 +37,19 @@ Per-ticket decisions file (PO rule 2026-10-07). Ticket: `flow_metrics.py` over R
 | Cycle time (first commit → merge) | median 2.6 h, max 255.8 h (ST-065 #152) | not reported | n/a |
 | CI minutes (workflow-run wall time) | 1696.5 over 57 PRs | not reported | n/a |
 
+## Traceability (PRC-5.1-5.5 → scenario → test)
+
+The matrix in `docs/requirements/traceability-matrix.md` is written per sprint at the close (RETRO-05); these rows are its input.
+
+| Item | Scenario (`tests/features/flow_metrics.feature`) | Tests (`infra/tests/`) |
+|---|---|---|
+| PRC-5.1 cycle time, REST only | — | `test_flow_metrics.py::test_cycle_time_runs_from_the_earliest_commit_to_the_merge`, `::test_a_merged_pr_without_commits_has_no_cycle_time_and_is_named`, `::test_script_measures_over_rest_pages_and_writes_the_json` |
+| PRC-5.2 throughput | "A pull request closed without a merge is not throughput" | `::test_a_pr_with_no_merge_time_is_excluded_from_throughput`, `::test_throughput_counts_only_merges_into_main_inside_the_window` |
+| PRC-5.3 work item age | — | `::test_work_item_age_of_each_open_ticket_pr_is_named_when_over_the_median` |
+| PRC-5.4 WIP breaches | "A stage count above its WIP limit is a breach" | `::test_a_stage_count_above_its_limit_is_a_breach_with_its_reason` |
+| PRC-5.5 cost-table completeness | "A merged ticket without a cost table makes the measurement incomplete"; "GitHub cannot be read" | `::test_cost_table_completeness_names_missing_tables_and_not_measured_rounds`, `::test_the_report_is_complete_only_when_every_merged_ticket_has_a_cost_table`, `::test_script_exits_1_when_a_merged_ticket_has_no_cost_table`, `::test_script_exits_2_when_github_cannot_be_read` |
+| CI minutes per PR (card) | — | `::test_ci_minutes_per_pr_sum_its_branch_runs_between_open_and_merge` |
+
 ## Stage counts
 
 In progress 1 · in review 0 · awaiting QA 0 · awaiting merge 0. QA-FLOW-METRICS goes into review once ready.
