@@ -6,14 +6,17 @@ API contracts and the merge gate itself (kickoff SEC-1). The rules are data (`RU
 order: a file gets the HIGHEST tier of every rule it matches, so a broader rule never lowers a
 tier; the PR gets the highest tier over its files; a path that matches no rule, or an empty
 change set, is tier 2 (fail closed). An executable file is at least tier 1 wherever it lives
-(`EXEC_*`, a shebang line or the executable bit). A `.claude/agents/*.md` file whose front
-matter (the text between its first two `---` lines; lines end at "\n" only) differs between the
-merge base and head is tier 2, as is an added or deleted role file, one without a closed front
-matter block, one whose front matter holds a control character or U+2028/U+2029, and one whose
-front matter state the caller did not compute: the only rule that reads content, not just the
-path (separation of duties, audit item 13).
+(`EXEC_*`, a shebang line or the executable bit); one that no rule names is tier 1 under `docs/`
+and tier 2 elsewhere (CI-TIERS-b, sprint-05 §7 "an unclassified path is tier 2").
+A `.claude/agents/*.md` file whose front matter (the text between its first two `---` lines;
+lines end at "\n" only) differs between the merge base and head is tier 2, as is an added or
+deleted role file, one without a closed front matter block, one whose front matter holds a
+control character or U+2028/U+2029, and one whose front matter state the caller did not
+compute: the only rule that reads content, not just the path (separation of duties, audit
+item 13).
 The tier is always computed here, never read from a label or the PR body.
-`merge_ready.py` imports this module; CI-TIERS-b maps the tier to the required verdicts.
+`merge_ready.py` imports this module and maps the tier to the required verdicts (CI-TIERS-b);
+it reads `BOOTSTRAP_OWNERS` before `docs/sprints/<nn>/ticket-owners.json` for the author role.
 
 Usage: review_tiers.py --base REF --head REF [--json]   (in a git checkout; prints the tier,
 the flagged specialist roles and each file's tier). Exit 0, or 2 when git cannot be read.

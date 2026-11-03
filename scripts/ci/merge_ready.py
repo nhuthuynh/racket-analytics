@@ -267,11 +267,10 @@ def review_reasons(reviews: list[dict[str, Any]], sha: str, gate: Gate | None = 
         if role == gate.author:
             reasons.append(f"{role}: required for tier {gate.tier}, but{author}")
         elif found != (APPROVE, sha):
-            label = "senior reviewer" if role == QA else role  # CI-PR-GATE message prefix kept
+            # QA fills the senior slot; the CI-PR-GATE "senior reviewer" prefix is kept.
+            prefix, source = ("senior reviewer", f" from {QA}") if role == QA else (role, "")
             reasons.append(
-                f"{label}: no latest 'Verdict: {APPROVE}' on the head from {role} ({found})"
-                if label != role
-                else f"{role}: no latest 'Verdict: {APPROVE}' on the head ({found})"
+                f"{prefix}: no latest 'Verdict: {APPROVE}' on the head{source} ({found})"
             )
     return reasons
 
@@ -449,7 +448,8 @@ def pr_files(base: str, pr: int, sha: str) -> list[ChangedFile]:
         paths[f["filename"]] = f.get("status") != "removed"
         if f.get("previous_filename"):
             paths.setdefault(f["previous_filename"], False)
-    tree: dict[str, str] | None = None
+    modes: dict[str, str] | None = None  # path -> mode at the head; None: tree not read yet
+    truncated = False
     merge_base: str | None = None
     files = []
     for path, present in paths.items():
@@ -457,18 +457,17 @@ def pr_files(base: str, pr: int, sha: str) -> list[ChangedFile]:
         if not role_file and len({_tier_if(path, x) for x in (False, True)}) == 1:
             files.append(ChangedFile(path))  # the bit and the shebang cannot change its tier
             continue
-        if tree is None:
+        if modes is None:
             body, _ = _get(f"{base}/git/trees/{sha}?recursive=1")
             truncated = bool(body.get("truncated"))
-            tree = {} if truncated else {e["path"]: e.get("mode", "") for e in body["tree"]}
-            tree["\0truncated"] = "1" if truncated else ""
+            modes = {e["path"]: e.get("mode", "") for e in body["tree"]}
         head = _file(base, path, sha) if present else None
-        executable = bool(tree["\0truncated"]) or tree.get(path) == "100755"
         front: bool | None = None
         if role_file:
             if merge_base is None:
                 merge_base = _get(f"{base}/compare/main...{sha}")[0]["merge_base_commit"]["sha"]
             front = front_matter_changed(_text(_file(base, path, merge_base)), _text(head))
+        executable = truncated or modes.get(path) == "100755"
         files.append(ChangedFile(path, executable, (head or b"")[:2] == b"#!", front))
     return files
 
