@@ -1,6 +1,6 @@
 # Sprint 5 requirements breakdown (atomic items)
 
-- **Written:** 2026-11-03 at Sprint 5 planning (ticket PLAN-05) by the engineering-manager, from the business-analyst's kickoff breakdown advice and the per-role advice in [`kickoff.md`](kickoff.md). The business-analyst owns this file from here: ticket **BA-5** re-checks every row against the Definition of Ready and records the DoR verdict per story (§5).
+- **Written:** 2026-11-03 at Sprint 5 planning (ticket PLAN-05) by the engineering-manager, from the business-analyst's kickoff breakdown advice and the per-role advice in [`kickoff.md`](kickoff.md). The business-analyst owns this file from here: ticket **BA-5** re-checks every row against the Definition of Ready and records the DoR verdict per story (§6).
 - **Rules applied:** `docs/process/definition-of-ready.md` "Atomic breakdown (stories pulled from Sprint 5 on)" [ASB/REQ-01, ASB/REQ-12, ASB/REQ-19, ASB/REQ-07]. One item = one observable behaviour **or** one measurable threshold. FR items are Gherkin `Rule:` lines `FR-nnn.Rk` with a happy and a negative Example. NFR items are numbered `NFR-nnn.<n>` under the existing register id (no new register rows) and name characteristic, metric and unit, method (tool, load, measuring point, configuration), target and sample or window. Process items have no FR/NFR id; they use `PRC-<story>.<n>`, release items `REL-1.<n>`, demo items `DEMO-1.<n>`.
 - **Id format** (agreed with the senior-qa-engineer for `measurelib._FINDING_ID`, retro 4 M15): `<PREFIX>-<number>.<n>` or `FR-nnn.R<k>`. `QA-DOR-CHECK` parses this file and fails on any row that breaks it.
 - **Test levels:** unit, component, integration (IT, with the boundary named), E2E (Playwright project named), perf (Locust), ops-drill (scripted run on a Compose project), promtool (Prometheus rule unit test), doc-check (`CI-DOC-CHECK` job), human (a "not met: waiting on P-n" row; never an agent goal).
@@ -48,7 +48,7 @@ Burn-rate multipliers and windows are judgment (SRE workbook unverified, AQS Gap
 
 ### NFR-045 durability and recovery (R1, before beta) → story ST-076, tickets ST-076a/b/c
 
-Method for .1-.3: `python3 scripts/ops/restore_drill.py --project racket-drill05 --json <out>` on a fresh Compose project: seed demo data, take a backup with the ST-076a service, record before-state, destroy the Postgres and object-store volumes, restore, wait for API health, re-check.
+Method for .1-.5 (.5 counts the drills this method ran in the quarter; BA-5 closes QA-DORCHECK-01 by naming the whole range): `python3 scripts/ops/restore_drill.py --project racket-drill05 --json <out>` on a fresh Compose project: seed demo data, take a backup with the ST-076a service, record before-state, destroy the Postgres and object-store volumes, restore, wait for API health, re-check.
 
 | Id | Characteristic | Metric and unit | Target | Test level | Ticket | Scorecard |
 |---|---|---|---|---|---|---|
@@ -69,6 +69,25 @@ Critical journeys: E2E-04-01..05, sign-in (E2E-01-*), tus upload resume. Each it
 | NFR-024.3 | Android phone emulation (`android-chrome`, `devices['Pixel 7']`, new) | 100 % | E2E | G05-04 |
 | NFR-024.4 | real iOS Safari, current and previous major | 100 % | **human (P20, OQ-17)** | §5 |
 | NFR-024.5 | real Android Chrome, current and previous major | 100 % | **human (P20, OQ-17)** | §5 |
+
+Acceptance criteria draft for ST-079 (business-analyst, BA-5; the senior-frontend-engineer commits the `.feature` file with the ticket). Written as scenarios, not `Rule:` lines, because an NFR item id is not an `FR-nnn.R<k>` rule id (`check_atomic_breakdown.py`):
+
+```gherkin
+Feature: R1 critical journeys pass on the emulated phones players use
+  Scenario Outline: The critical journeys pass in one Playwright project (NFR-024.1-.3)
+    Given the specs tagged "@critical" (E2E-04-01..05, sign-in, upload resume)
+    When they run in the "<project>" project 3 times with retries off
+    Then every run passes and no spec is flaky
+    Examples:
+      | project        |
+      | chromium       |
+      | webkit         |
+      | android-chrome |
+  Scenario: An unknown project name is refused (negative)
+    Given PW_PROJECTS names "android-firefox"
+    When the project list is resolved
+    Then it fails naming "android-firefox"
+```
 
 ### NFR-036 effort to get value (R1 gate) → stories ST-080 (agent) and ST-083 (kit)
 
@@ -116,6 +135,16 @@ Critical journeys: E2E-04-01..05, sign-in (E2E-01-*), tus upload resume. Each it
 | NFR-006.5 | Each NFR-006 metric has a regression-tolerance row and a regression/capability label in an ADR | doc-check | ST-084a |
 | NFR-006.6 | Rally F1 ≥ 90 % on frozen gold set QD-GD-04 | **human (P11 footage)**; no measurement this sprint | — |
 
+### NFR-034 keyboard focus (part a) → story ST-085, ticket ST-085
+
+Added by BA-5: ST-085 had no atomic item. One item per close path of the "Not for me" swap dialog (P-03; `docs/design/flows-sprint-04.md` §4 and §10 "focus trapped, returned"; defect QA-ST065-01, already fixed in `web/src/components/plan/PlanView.tsx`). The register's WCAG references are judgment (NFR-034 source column). Existing coverage: the table-driven component test `web/tests/unit/plan-not-for-me-focus-return.test.tsx` and E2E-04-04 in `web/e2e/sprint-04/swap-no-alternative.spec.ts`, which loops over the three paths in one case, so its failure does not name the path. ST-085 names each path in its own E2E case.
+
+| Id | Characteristic | Metric and unit | Method | Target | Test level | Ticket |
+|---|---|---|---|---|---|---|
+| NFR-034.1 | focus return, **Close** (no-alternative alert) | element focused after close; failing runs out of 3 | Vitest + Testing Library on the P-01 drill row, one test per path; E2E-04-04 on `chromium` | focus on that row's "Not for me"; a dialog removed without restoring focus fails (negative) | component + E2E | ST-085 |
+| NFR-034.2 | focus return, **Cancel** | as .1 | as .1 | as .1 | component + E2E | ST-085 |
+| NFR-034.3 | focus return, **Esc** | as .1 | as .1 | as .1; Esc with focus left on `<body>` fails (negative, sprint-05 §4 first negative case) | component + E2E | ST-085 |
+
 ## 2. FR rules
 
 ### FR-124 / FR-141 single-weakness swap → story ST-081, tickets ST-081a/b
@@ -143,6 +172,21 @@ Rule: FR-055.R1 While the scoring preset is PROVISIONAL-UNVERIFIED, every score 
   Example: preset unverified → notice shown once before the first card (happy)
   Example: release notes draft without the notice → `check_release_notes.py` rc 1 (negative)
 ```
+
+### FR-124 offline part → story ST-085, ticket ST-085
+
+Added by BA-5 (ST-085 had no atomic rule). FR-124: "marking done works offline and syncs later"; P-01 offline state in `docs/design/flows-sprint-04.md` §2 ("You are offline. This is your plan as of <time>."). Numbered after ST-081's FR-124.R1-R2.
+
+```gherkin
+Rule: FR-124.R3 While the device is offline and a plan is cached, the plan page shows the cached plan with the line "This is your plan as of <time>"
+  Example: plan cached at 18:05, device offline → the "as of 18:05" line and the cached sessions are shown (happy)
+  Example: no plan cached on this device → "You are offline and this plan is not saved on this device yet" and no sessions (negative)
+Rule: FR-124.R4 A session marked done while offline is sent to the API exactly once after the connection returns
+  Example: one session marked done offline, connection returns → one request and the session stays done (happy)
+  Example: the connection drops and returns twice before the queue drains → still one request for that session (negative)
+```
+
+Test levels: FR-124.R3 and .R4 unit (Vitest over the service-worker handler in `web/public/sw.js` with mocked `fetch` and cache; this is the ST-085 gap). Existing coverage stays unchanged: `web/tests/features/plan_offline_read.feature` (component level, .R3) and `web/e2e/sprint-04/offline-done.spec.ts` (.R4).
 
 ## 3. Release and demo items
 
@@ -205,5 +249,31 @@ Rule: FR-055.R1 While the scoring preset is PROVISIONAL-UNVERIFIED, every score 
 | A6 | FR-162 pricing fake door (Could, OQ-14) is out of Sprint 5 | out | product-manager; PO may override |
 | A7 | NFR-036.4 call types: rally winner, fault, rally ending | coach confirms in COACH-5 | pickleball-domain-coach |
 | A8 | Sprint 5 counts the in-progress WIP limit as 4 (task brief), under working-agreement §3's 5 | 4 | engineering-manager |
+| A9 | ST-085 tests behaviour that already exists, so its red step is a planted defect in the code under test, reverted in the green commit, with the red output recorded (BA-5, judgment) | planted-defect red | senior-qa-engineer |
+| A10 | FR-124.R3/.R4 and NFR-034.1-.3 are new atomic items under existing register ids (no new register rows), added by BA-5 so that ST-085 meets the atomic-breakdown items of the DoR | added | product-manager, senior-frontend-engineer |
 
 No `[NEEDS CLARIFICATION]` marker remains on scope, security or a domain rule. Rules that rest on an unverified pickleball rule are not in this sprint.
+
+## 6. Definition of Ready verdict per story (business-analyst, BA-5, 2026-11-03)
+
+Checked against every item of `docs/process/definition-of-ready.md` on `main` at `7b71daa3`. Merged gate PRs at that head: PLAN-05 #186, CI-NOTICE-CANCELLED #187, CI-TIERS-a #188, CI-DOC-CHECK #189, QA-TCR-04 #190, CI-RECON-ON-PR #191, QA-DOR-CHECK #192, CI-TIERS-b #193, PM-5 #194, QA-FLOW-METRICS #195. PE-5a, PE-5b, SEC-5, PD-5 and COACH-5 have no merged PR yet. Rule BA-1 (kickoff): there is no "Ready on condition". A story is Ready only when every gate it names has merged. "After BA-5" means Ready once this PR merges, because the items it adds are in this PR.
+
+The NFR register has no milestone column, so NFR stories are linked to their register release (R1 gate, R2 entry). FR milestones come from `functional-requirements.md`. The value statement and priority are in `sprint-05.md` §3.5. Files, interfaces and the end-to-end check are in its §3.7 ticket specifications.
+
+| Story | Release / milestone | Atomic items (this file) | Acceptance criteria | Out of scope (stated by BA-5) | Domain truth | Design and security | Gates (merged PR) | DoR verdict |
+|---|---|---|---|---|---|---|---|---|
+| ST-074 | NFR-010 R1 gate | NFR-010.1-.9: metric, method, target, window | Gherkin `r1_read_latency.feature` draft (sprint-05 §7: NFR-010.7, with a happy and a negative Example); the negative case is named in sprint-05 §4 | production-load evidence (a local stack only); making `perf-r1` PR-blocking; write endpoints | none | match, scoring, analytics and coaching read paths; Locust tooling is ADR 0008; no UI; not security-relevant | none | **Ready after BA-5** |
+| ST-075 | NFR-041, -042, -049, -069 R1 | NFR-041.1-.6, NFR-042.1-.5, NFR-069.1, NFR-049.1 | Gherkin `slo_alerts.feature` (sprint-05 §7); a negative per alert | a paid metrics service (A3); paging a human; PO acceptance of the error-budget policy (P17) | none | platform; new component (obs profile) needs the PE-5a ADR; personal data in labels and logs needs SEC-5 threat notes | PE-5a, SEC-5 (none merged) | **Not Ready: waiting on PE-5a, SEC-5** |
+| ST-076 | NFR-045 R1 (before beta) | NFR-045.1-.5 (.5 is a first measurement only) | Gherkin `restore_drill.feature` (sprint-05 §7); a negative per check | WAL archiving (A4); off-site copies; the quarterly cadence as "met" | none | platform and storage; backup design needs the PE-5b ADR; backup encryption and deletion inside backups need SEC-5 | PE-5b, SEC-5 (none merged) | **Not Ready: waiting on PE-5b, SEC-5** |
+| ST-077 | NFR-063 R1 gate (before beta) | NFR-063.1-.2 | IT negatives: a planted unclassified column, a planted unclassified backup artefact, zero artefacts found | legal adequacy of the retention periods (P16) | none | all contexts' storage; the classes are decided in review by the security-privacy-engineer | SEC-5, ST-076a (none merged) | **Not Ready: waiting on SEC-5, ST-076a** |
+| ST-078 | NFR-050, NFR-067 R1 gate | NFR-050.1-.9, NFR-067.1-.3 | tool and IT negatives per item (planted `Not assessed`, `Fail` without owner, GET without `no-store`) | ASVS L3; a penetration test; the PO's residual-risk acceptance (P19) | none | platform and web; threat notes from SEC-5; ST-078e UI states reviewed by the principal-designer | SEC-5 (not merged) | **Not Ready: waiting on SEC-5** |
+| ST-079 | NFR-024 R1 gate | NFR-024.1-.3 (.4-.5 human, P20) | Gherkin draft in §1 above (Scenario Outline over 3 projects, negative: an unknown project name) | real devices (P20); local WebKit runs (CI is the evidence of record); browsers other than Chrome and Safari | none | web test tooling only; no new UI; not security-relevant | none | **Ready after BA-5** |
+| ST-080 | NFR-036 R1 gate | NFR-036.4 (.1-.3 human, P9) | tap counter per call type with a planted 3-step path (negative) | the moderated sessions (P9); Quick Tag speed | the call types to count (A7) are a coaching fact | web E2E; the principal-designer reviews | COACH-5 (not merged) | **Not Ready: waiting on COACH-5** |
+| ST-081 | FR-124 M5 subset; FR-141 M5 subset | FR-124.R1-.R2, FR-141.R1 (players × equipment × weakness count) | Gherkin in §2 above, with a happy and a negative Example per rule | drill efficacy claims (P15); LLM plans (R2) | drill content is a coaching fact; the drills stay `coach-reviewed` | coaching and drill library; no new contract | COACH-5 (not merged) | **Not Ready: waiting on COACH-5** |
+| ST-082 | FR-055 M0; release items | REL-1.1-.3, FR-055.R1 (REL-1.4 human, P18) | Gherkin FR-055.R1 in §2; negatives: notes without the notice, a migration without `downgrade` | the PO's sign-off (P18); a production deployment | the "unofficial scoring" wording touches a domain claim (COACH-5) | release tooling; rollback design needs the PE-5b ADR | PM-5 #194 merged; PE-5b, COACH-5 not merged | **Not Ready: waiting on PE-5b, COACH-5** |
+| ST-083 | NFR-036 R1 gate (kit) | USAB-1.1 | doc-check of the kit's parts | running the sessions (P9); final consent wording (P16) | drill safety for testers (COACH-5) | the kit design needs PD-5; tester data needs SEC-5 | PD-5, COACH-5, SEC-5 (none merged) | **Not Ready: waiting on PD-5, COACH-5, SEC-5** |
+| ST-084 | NFR-006 R2 entry | NFR-006.1-.5 (.6 human, P11) | Gherkin `rally_f1.feature` (sprint-05 §7); a negative per rule | any F1 measurement on footage (P11); model training | none (the ±1.0 s rule is ADR 0004, not a pickleball rule) | dataset (evaluation); ST-084a is the ADR the matcher needs | ST-084a for ST-084b | **ST-084a Ready; ST-084b Not Ready: waiting on ST-084a** |
+| ST-085 | NFR-034 R1 gate; FR-124 M5 subset | NFR-034.1-.3, FR-124.R3-.R4 (added by BA-5, A10) | Gherkin FR-124.R3-.R4 in §2; NFR-034 negatives per close path | new UI behaviour; offline "Not for me" (disabled offline by design, flows-sprint-04 §2) | none | web; existing flows-sprint-04 §2 and §4; no new component | none | **Ready after BA-5** |
+| PRC-05 | process (ADR 0056) | PRC-1.1-8.1 | unit negatives per item (§4) | — | none | CI and process tooling; tiered review per ticket | none | **Ready** (CI-NOTICE-CANCELLED, CI-TIERS-a/b, CI-DOC-CHECK, CI-RECON-ON-PR, QA-DOR-CHECK and QA-FLOW-METRICS are already merged) |
+
+INVEST "Small" holds for every Ready story: each ticket is sized S or XS in sprint-05 §3.3, which is within working-agreement §5. Every item names its test level (the "Test level" columns, agreed with the senior-qa-engineer at PLAN-05). BA-5 found no item without one. A "Not Ready" story becomes Ready when its gate PRs merge. The ticket owner then names those PR numbers in its decisions file, and no new BA ticket is needed unless a gate changes an atomic item.
