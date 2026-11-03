@@ -45,7 +45,12 @@ Each method's author dry-runs it live, in the configuration it measures, and log
 
 ### G05-01 (author: senior-backend-engineer, ST-074; pinned by QA-PIN-05)
 ```
-make up FLAGS=on COMPOSE_PROJECT_NAME=racket-goal05-on && make demo
+# one Compose project for the whole block: infra/compose.yaml:6 sets name: racket-analytics and the
+# Makefile's COMPOSE has no -p, so every make target (up, demo, down) reads COMPOSE_PROJECT_NAME from the shell;
+# the four flags come from the shell too (shell values override infra/.env; make has no FLAGS variable)
+export COMPOSE_PROJECT_NAME=racket-goal05-on FEATURE_AGE_GATE=true FEATURE_RETENTION_SETTING=true \
+  FEATURE_TRAINING_CONSENT=true FEATURE_QUOTAS=true
+make up && make demo
 for run in 1 2 3; do
   uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \
     -u 50 -r 50 -t 6m --csv reports/perf/r1-$run --only-summary
@@ -62,8 +67,11 @@ docker run --rm -v "$PWD/infra/observability/alerts:/a" prom/prometheus:v2.53.2 
   promtool test rules /a/slo.test.yml           # 8 cases
 # drill-only stack: APP_ENV=test from the shell overrides infra/.env for this project only; shipped
 # infra/env.example (APP_ENV=dev) and infra/compose.yaml are unchanged; the override adds only the seam value
+# one Compose project for the whole block (PE-PLAN05-R2-01): infra/compose.yaml:6 sets name: racket-analytics and
+# the Makefile's COMPOSE has no -p, so `make demo` without this export copies web-tls from the wrong project
+export COMPOSE_PROJECT_NAME=racket-obs05
 APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml --env-file infra/.env \
-  -p racket-obs05 --profile obs up -d --build --wait && make demo
+  -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
   --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
 python3 scripts/ops/inject_5xx.py --rate 0 --minutes 10 --expect-no-alert --json reports/slo-clean.json
@@ -184,4 +192,5 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 | G05-11 | senior-qa-engineer | QA-FLOW-METRICS | | | | | |
 | G05-12 | engineering-manager | EM-CLOSE-CHECKS | | | | | |
 | G05-11 (planning dry-run) | engineering-manager | PLAN-05 | 2026-11-03 | `04c6a826` | `gh api 'repos/nhuthuynh/racket-analytics/pulls?state=closed&per_page=100'` (REST; the GraphQL form in working-agreement §10 returns 403 here) | 0 | n/a (tool not built) |
+| G05-02 (planning dry-run, project name only) | engineering-manager | PLAN-05 | 2026-11-03 | `6c3ffcdd` | `docker compose -f infra/compose.yaml -p racket-obs05 up -d --no-deps web-tls`, then `COMPOSE_PROJECT_NAME=racket-obs05 make demo` (only web-tls running; the obs profile and `compose.fault-drill.yaml` do not exist yet) | 0 on the `cp web-tls` step (root.crt copied); the make rc is 2 only because the API is not running (`GET /dev/users: HTTP 502`) | 2 (`env -u COMPOSE_PROJECT_NAME make demo` → "the stack's web-tls service is not reachable; run 'make up' first"; the round 2 form of the method) |
 | G05-12 (planning dry-run) | engineering-manager | PLAN-05 | 2026-11-03 | `04c6a826` | `python3 scripts/measure/open_defects.py docs/sprints/04/review-rounds.md` (Sprint 4 ledger; the Sprint 5 ledger does not exist yet) | 0 (`open 0`) | n/a |

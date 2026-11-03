@@ -55,3 +55,25 @@ In progress 0 · in review 0 · awaiting QA 0 · awaiting merge 0. PLAN-05 itsel
 | PE-PLAN05-03 | major | `RA_FAULT_INJECTION` is gone. The new ticket ST-075d (senior-backend-engineer, tier 2, security-privacy-engineer + principal-engineer, XS) adds one value, `api:5xx_on_header`, to the existing ADR 0012 seam `RACKET_FAULT_INJECTION`. That seam is kept only under `APP_ENV=test` (`settings.py` line 248, pinned by `test_settings.py::test_fault_injection_is_dropped_outside_test`). ST-075c is now tier 2 with no `backend/src` change. It gets `APP_ENV=test` from the shell for its own Compose project, plus a drill-only override `infra/compose.fault-drill.yaml`. A test pins `infra/env.example` at `APP_ENV=dev` and keeps the seam out of `infra/compose.yaml`. New items: NFR-041.6 and IT-05-12. BE lane 6 → 6.5 units, total 46 tickets / 26 units |
 
 Why TDD does not apply: this round still changes planning text only, so the doc checks were re-run (below).
+
+## Review round 2 (principal-engineer and senior-qa-engineer, PR #186)
+
+| Finding | Severity | Fix |
+|---|---|---|
+| PE-PLAN05-R2-01 | major | Accepted. G05-02 now does `export COMPOSE_PROJECT_NAME=racket-obs05` for the whole block, so `make demo` copies `web-tls` from the drill project. G05-01 had the same defect (`make up FLAGS=on COMPOSE_PROJECT_NAME=... && make demo`: `make demo` ran without the project name, and make has no `FLAGS` variable). It now exports the project name and the four `FEATURE_*=true` values from the shell, which override `infra/.env`. Sprint plan §12 step 1 had the same defect (`FLAGS=on PROFILES=obs`) and now uses `COMPOSE_PROJECT_NAME`/`COMPOSE_PROFILES` and `FEATURE_*` exports. The dry-run is below and is in the scorecard §6 |
+| PE-PLAN05-R2-02 | major | Accepted. The branch-to-owner map moves to `docs/sprints/05/ticket-owners.json` (this PR creates it from §15: 46 rows, each `{id, branch, owner}`, `owner` a role file name). CI-TIERS-a classifies `docs/sprints/*/ticket-owners.json` and `docs/sprints/*/status.json` as tier 2. CI-TIERS-b reads only the JSON and fails closed when a row is missing, duplicated or names a bad role. The `status.json` cross-check is dropped because `ticket_prs` holds no owner or branch. A drift test keeps the §15 table equal to the JSON. New fixtures: owner-file-only PR → tier 2; §15-only PR → tier 0, author role unchanged, drift test fails. PRC-2.3 and PRC-2.7 are updated |
+| PLAN05-QA-04 | major | Accepted. The tier 2 migration glob is now `backend/src/racket/migrations/**` (`git ls-files` → 24 paths; `backend/migrations/**` → 0). The CI-TIERS-b negative fixture uses `versions/`. A glob liveness test (`test_every_tier2_glob_matches_a_tracked_path`) fails on any tier 2 glob that matches no tracked path, except `PENDING_GLOBS` entries that name the ticket that creates the path. It is red first against the old glob |
+
+Note: by the CI-TIERS-a rules this PR would be tier 2, because it adds `ticket-owners.json`. It merges under the interim rule (sprint-05 §11 rule 1). The engineering-manager asks the security-privacy-engineer to read the owner file. That read is not a merge gate.
+
+### Round 2 evidence
+
+| Check | Command | Result |
+|---|---|---|
+| Wrong project, round 2 form (red) | `docker compose -f infra/compose.yaml -p racket-obs05 up -d --no-deps web-tls` (rc 0), then `env -u COMPOSE_PROJECT_NAME make demo` | rc 2: "make demo: the stack's web-tls service is not reachable; run 'make up' first" |
+| Project name exported (green on the `cp` step) | `COMPOSE_PROJECT_NAME=racket-obs05 make demo` | `root.crt` was copied from `racket-obs05-web-tls-1`. make rc 2 only at `seed_demo.py` (`GET /dev/users: HTTP 502`), because only `web-tls` was started. The obs profile and `compose.fault-drill.yaml` do not exist until ST-075b/c |
+| Project-name resolution | `docker compose -f infra/compose.yaml config --format json \| jq -r .name` with and without `COMPOSE_PROJECT_NAME=racket-obs05` | `racket-analytics` / `racket-obs05` |
+| Teardown | `docker compose -f infra/compose.yaml -p racket-obs05 down -v --rmi local` | rc 0 |
+| Migration glob | `git ls-files 'backend/src/racket/migrations/**' \| wc -l`; `git ls-files 'backend/migrations/**' \| wc -l` | 24; 0 |
+| Owner file parses, roles valid, no drift | `python3 -c 'json.load(...)'`; each `owner` ∈ `.claude/agents/*.md` stems; §15 `(id, branch, owner)` set == JSON set | 46 rows; all owners valid; drift none |
+| Paths exist | `[ -e "$p" ]` over the newly referenced paths | all exist (`backend/migrations` absent, as the finding says) |

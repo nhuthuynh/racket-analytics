@@ -1,0 +1,236 @@
+{
+  "sprint": 5,
+  "schema": "one row per ticket: id, head branch, owner role (a file name under .claude/agents/ without .md). Read by merge_ready.py (CI-TIERS-b) to compute the PR author role; tier 2 (CI-TIERS-a). sprint-05.md section 15 is the human view and must match (drift check in CI-TIERS-b).",
+  "tickets": [
+    {
+      "id": "CI-NOTICE-CANCELLED",
+      "branch": "s05/ci-notice-cancelled",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "CI-DOC-CHECK",
+      "branch": "s05/ci-doc-check",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "CI-TIERS-a",
+      "branch": "s05/ci-tiers-a",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "CI-TIERS-b",
+      "branch": "s05/ci-tiers-b",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "CI-RECON-ON-PR",
+      "branch": "s05/ci-recon-on-pr",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "QA-TCR-04",
+      "branch": "s05/qa-tcr-04",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "QA-DOR-CHECK",
+      "branch": "s05/qa-dor-check",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "QA-FLOW-METRICS",
+      "branch": "s05/qa-flow-metrics",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "PM-5",
+      "branch": "s05/pm-5",
+      "owner": "product-manager"
+    },
+    {
+      "id": "BA-5",
+      "branch": "s05/ba-5",
+      "owner": "business-analyst"
+    },
+    {
+      "id": "PE-5a",
+      "branch": "s05/pe-5a",
+      "owner": "principal-engineer"
+    },
+    {
+      "id": "PE-5b",
+      "branch": "s05/pe-5b",
+      "owner": "principal-engineer"
+    },
+    {
+      "id": "SEC-5",
+      "branch": "s05/sec-5",
+      "owner": "security-privacy-engineer"
+    },
+    {
+      "id": "PD-5",
+      "branch": "s05/pd-5",
+      "owner": "principal-designer"
+    },
+    {
+      "id": "PD-DR04",
+      "branch": "s05/pd-dr04",
+      "owner": "principal-designer"
+    },
+    {
+      "id": "COACH-5",
+      "branch": "s05/coach-5",
+      "owner": "pickleball-domain-coach"
+    },
+    {
+      "id": "EM-ESC-05",
+      "branch": "s05/em-esc-05",
+      "owner": "engineering-manager"
+    },
+    {
+      "id": "QA-VERIFY04R5-01",
+      "branch": "s05/qa-verify04r5-01",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-074",
+      "branch": "s05/st-074",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-075a",
+      "branch": "s05/st-075a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-075b",
+      "branch": "s05/st-075b",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "ST-075c",
+      "branch": "s05/st-075c",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "ST-075d",
+      "branch": "s05/st-075d",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-076a",
+      "branch": "s05/st-076a",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "ST-076b",
+      "branch": "s05/st-076b",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-076c",
+      "branch": "s05/st-076c",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "ST-077",
+      "branch": "s05/st-077",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-078a",
+      "branch": "s05/st-078a",
+      "owner": "security-privacy-engineer"
+    },
+    {
+      "id": "ST-078b",
+      "branch": "s05/st-078b",
+      "owner": "security-privacy-engineer"
+    },
+    {
+      "id": "ST-078c",
+      "branch": "s05/st-078c",
+      "owner": "security-privacy-engineer"
+    },
+    {
+      "id": "ST-078d",
+      "branch": "s05/st-078d",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-078e",
+      "branch": "s05/st-078e",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "id": "ST-079",
+      "branch": "s05/st-079",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "id": "ST-080",
+      "branch": "s05/st-080",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "ST-081a",
+      "branch": "s05/st-081a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-081b",
+      "branch": "s05/st-081b",
+      "owner": "pickleball-domain-coach"
+    },
+    {
+      "id": "ST-082",
+      "branch": "s05/st-082",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "ST-083",
+      "branch": "s05/st-083",
+      "owner": "principal-designer"
+    },
+    {
+      "id": "ST-084a",
+      "branch": "s05/st-084a",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "ST-084b",
+      "branch": "s05/st-084b",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "ST-085",
+      "branch": "s05/st-085",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "id": "QA-PIN-05",
+      "branch": "s05/qa-pin-05",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "EM-CLOSE-CHECKS",
+      "branch": "s05/em-close-checks",
+      "owner": "engineering-manager"
+    },
+    {
+      "id": "VERIFY-05",
+      "branch": "s05/verify-05-r1",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "SMOKE-05",
+      "branch": "s05/smoke-05",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "RETRO-05",
+      "branch": "s05/retro-05",
+      "owner": "engineering-manager"
+    }
+  ]
+}
