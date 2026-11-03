@@ -95,7 +95,8 @@ def bad_threat_rows(text: str) -> list[str]:
 def is_accepted_adr(decisions: Path, number: str) -> bool:
     for adr in decisions.glob(f"{number}-*.md"):
         status = ADR_STATUS.search(adr.read_text(encoding="utf-8"))
-        if status and status.group(1).startswith("Accepted"):
+        # Some ADRs bold the value ("- **Status:** **Accepted (PO, ...)**", e.g. ADR 0031).
+        if status and status.group(1).lstrip("* \t").startswith("Accepted"):
             return True
     return False
 
