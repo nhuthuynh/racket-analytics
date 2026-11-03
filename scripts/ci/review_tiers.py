@@ -6,8 +6,10 @@ API contracts and the merge gate itself (kickoff SEC-1). The rules are data (`RU
 order: a file gets the HIGHEST tier of every rule it matches, so a broader rule never lowers a
 tier; the PR gets the highest tier over its files; a path that matches no rule, or an empty
 change set, is tier 2 (fail closed). An executable file is at least tier 1 wherever it lives
-(`EXEC_*`, a shebang line or the executable bit). A `.claude/agents/*.md` change to its
-front-matter `tools:` line is tier 2: the only rule that reads the diff, not just the path.
+(`EXEC_*`, a shebang line or the executable bit). A `.claude/agents/*.md` file whose front
+matter (the text between its first two `---` lines) differs between the merge base and head is
+tier 2, as is an added or deleted role file or one without a closed front matter block: the only
+rule that reads content, not just the path (separation of duties, audit item 13).
 The tier is always computed here, never read from a label or the PR body.
 `merge_ready.py` imports this module; CI-TIERS-b maps the tier to the required verdicts.
 
@@ -75,6 +77,7 @@ _TIER2 = (
     ".gitleaks.toml",
     ".gitleaksignore",
     ".claude/settings.json",
+    ".claude/hooks/**",  # pre_tool_use.py refuses writes to secret paths (SEC-188-03)
     # client security (also flags the frontend engineer below)
     "web/src/lib/security/**",
     "web/src/middleware.ts",
@@ -101,7 +104,6 @@ _TIER1 = (
     "tests/**",
     "content/**",
     "fixtures/**",
-    ".claude/hooks/**",
     ".github/**",
     "docs/security/tools/**",
     "docs/design/tools/**",
@@ -143,7 +145,7 @@ RULES: tuple[Rule, ...] = (
 )
 
 EXEC_SUFFIXES = (".py", ".sh", ".js", ".mjs", ".ts", ".tsx", ".sql")
-_TOOLS_LINE = re.compile(r"^[+-](?![+-]{2} )\s*tools\s*:", re.MULTILINE)
+_FENCE = "---"
 
 
 @dataclass(frozen=True)
@@ -151,7 +153,7 @@ class ChangedFile:
     path: str
     executable: bool = False  # the executable bit in the PR's tree
     shebang: bool = False  # the file starts with "#!"
-    tools_line_changed: bool = False  # only read for .claude/agents/*.md
+    front_matter_changed: bool = False  # only read for .claude/agents/*.md
 
 
 @dataclass(frozen=True)
@@ -208,13 +210,13 @@ def _matches(path: str, rules: Sequence[Rule]) -> list[Rule]:
 
 def file_tier(f: ChangedFile, rules: Sequence[Rule] = RULES) -> tuple[int, frozenset[str]]:
     """(tier, specialist roles) of one changed file: the highest matching rule, tier 2 when
-    none matches, raised to 1 for an executable file and to 2 for a role file's tools: line."""
+    none matches, raised to 1 for an executable file and to 2 for a role file's front matter."""
     hits = _matches(f.path, rules)
     # The executable floor counts as a matched tier 1 rule, so an executable file no rule names
     # (a shebang script under docs/) is tier 1; a file nothing matches at all fails closed.
     tiers = [r.tier for r in hits] + ([1] if is_executable(f) else [])
     tier = max(tiers, default=FAIL_CLOSED)
-    if f.tools_line_changed and glob_match(AGENT_FILES, f.path):
+    if f.front_matter_changed and glob_match(AGENT_FILES, f.path):
         tier = 2
     return tier, frozenset(role for r in hits for role in r.roles)
 
@@ -229,10 +231,25 @@ def classify(files: Iterable[ChangedFile], rules: Sequence[Rule] = RULES) -> Cla
     return Classification(max(tiers.values(), default=FAIL_CLOSED), frozenset(roles), tiers)
 
 
-def tools_line_changed(patch: str | None) -> bool:
-    """True when a unified diff adds or removes a `tools:` line. A missing patch (GitHub omits
-    it for large diffs) fails closed."""
-    return patch is None or _TOOLS_LINE.search(patch) is not None
+def _front_matter(text: str) -> list[str] | None:
+    """The lines between the first line `---` and the next `---` line, or None when the file
+    does not start with `---` or the block is never closed."""
+    lines = text.splitlines()
+    if not lines or lines[0] != _FENCE or _FENCE not in lines[1:]:
+        return None
+    return lines[1 : lines.index(_FENCE, 1)]
+
+
+def front_matter_changed(base: str | None, head: str | None) -> bool:
+    """True when a role file's front matter text differs between the base and head blobs. Any
+    key can change a role's powers (`tools`, a block-list item or a continuation line under it,
+    `permissionMode`, `mcpServers`, `hooks`, `skills`, a removed `disallowedTools`), so any
+    change counts. An added or deleted file (a side is None) and a side without a closed front
+    matter block fail closed (PE-CITA-01, SEC-188-01, SEC-188-02)."""
+    if base is None or head is None:
+        return True
+    old, new = _front_matter(base), _front_matter(head)
+    return old is None or new is None or old != new
 
 
 def dead_tier2_globs(
@@ -260,10 +277,23 @@ def _git(*args: str) -> bytes:
     return subprocess.run(["git", *args], capture_output=True, check=True).stdout
 
 
+def _blob_text(rev: str, path: str) -> str | None:
+    """`path` at `rev` as text, or None when it is absent there or is not UTF-8."""
+    proc = subprocess.run(["git", "cat-file", "blob", f"{rev}:{path}"], capture_output=True)
+    if proc.returncode != 0:
+        return None
+    try:
+        return proc.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
 def changed_files(base: str, head: str) -> list[ChangedFile]:
     """The PR's changed files (merge base of `base` to `head`), with the executable bit and the
-    shebang read from `head`'s tree and, for role files, whether the tools: line changed."""
+    shebang read from `head`'s tree and, for role files, whether the front matter changed
+    between the merge base blob and the head blob."""
     rng = f"{base}...{head}"
+    merge_base = _git("merge-base", base, head).decode().strip()
     paths = [
         p for p in _git("diff", "--name-only", "--no-renames", "-z", rng).decode().split("\0") if p
     ]
@@ -274,10 +304,10 @@ def changed_files(base: str, head: str) -> list[ChangedFile]:
         head_bytes = (
             _git("cat-file", "blob", f"{head}:{path}")[:2] if mode.startswith("100") else b""
         )
-        tools = glob_match(AGENT_FILES, path) and tools_line_changed(
-            _git("diff", "--no-renames", rng, "--", path).decode()
+        front = glob_match(AGENT_FILES, path) and front_matter_changed(
+            _blob_text(merge_base, path), _blob_text(head, path)
         )
-        files.append(ChangedFile(path, mode == "100755", head_bytes == b"#!", tools))
+        files.append(ChangedFile(path, mode == "100755", head_bytes == b"#!", front))
     return files
 
 
