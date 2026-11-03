@@ -73,6 +73,7 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 | `python-unit` | Domain unit suite; backend unit suite | 100% pass; < 10 s; ≤ 60 s (NFR-073) |
 | `integration` | IT-00-16 object-store parity; unit + integration + scenario + regression suites on Compose services, with coverage; changed-lines coverage | 100% pass; < 10 min; ≥ 85% on changed lines (testing-strategy §8) |
 | `fixture-integrity` | `racket-manifest-check` on every `fixtures/**/manifest.json`, against the merge-base manifest | Intact (FR-151, NFR-078) |
+| `doc-check` | `scripts/ci/check_docs.py` on the change's `*.md` files (CI-DOC-CHECK, ADR 0056): repo paths named on added lines exist (placeholders, git-ignored paths and lines marked `(planned)` are skipped); `[ASB/<ID>]` citations name a Confirmed row of `docs/research/agentic-sdlc-best-practices.md` or carry `(unverified)` after them; `.claude/agents/*.md` front matter parses with `name`, `description`, `tools`; `docs/design/tools/check_flows.py --decider` on the current sprint's flows file once it exists. Runs on tier 0 PRs too | 0 problems; < 60 s |
 | `infra-tests` | Tests for hooks, CI scripts, launchers and compose | 100% pass |
 | `web-checks` | ESLint, `tsc --noEmit`, Vitest coverage, changed-lines coverage, `next build`, first-route JS | 0 errors; ≥ 80%; ≤ 200 KB gzipped (NFR-015) |
 | `e2e` | Playwright (Chromium + WebKit projects) on the full Compose stack, with axe-core | 0 serious or critical violations (NFR-027) |
