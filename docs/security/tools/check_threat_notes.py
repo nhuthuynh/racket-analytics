@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate checks for a security threat-notes file (SEC-4; ADR 0047 rule 2).
+"""Gate checks for a security threat-notes file (SEC-4, SEC-5; ADR 0047 rule 2).
 
 Owner: security-privacy-engineer. Documentation tooling, not product code. It checks one file:
 
@@ -8,8 +8,14 @@ Owner: security-privacy-engineer. Documentation tooling, not product code. It ch
 3. every route named with ``--route "METHOD /path"`` has a row in the section whose heading
    contains ``BOLA matrix``: ``| `METHOD /path` | <kind> | <attacker status> | ...`` with a
    non-empty kind and an attacker status of 404;
-4. every threat row (first cell ``T4-XX-n``) has 8 cells and a non-empty Test and Status cell;
-5. with ``--disclaimer``, one line says "not legal advice" and names both US and AU.
+4. every threat row (first cell ``T<sprint>-XX-n``, e.g. T4-PL-1, T5-BK-2) has 8 cells and a
+   non-empty Test and Status cell;
+5. every threat row whose Status cell says "Accepted residual" names an ADR id (``ADR 0023``,
+   ``ADR-0023`` or a link to ``0023-*.md``) that resolves to an ADR in ``--decisions`` whose
+   ``**Status:**`` line starts with "Accepted" (SEC-5; NFR-050.9: risk acceptance needs a human
+   decider recorded in an ADR). A residual still waiting on that ADR is written
+   "Residual, waiting on P-n", not "Accepted residual";
+6. with ``--disclaimer``, one line says "not legal advice" and names both US and AU.
 
 Usage:
     python3 docs/security/tools/check_threat_notes.py docs/security/threat-notes-sprint-04.md \
@@ -27,7 +33,10 @@ import sys
 from pathlib import Path
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
-THREAT_ROW = re.compile(r"^\| (T4-[A-Z]{2}-\d+) \|.*$", re.M)
+THREAT_ROW = re.compile(r"^\| (T\d+-[A-Z]{2}-\d+) \|.*$", re.M)
+ADR_ID = re.compile(r"\bADR[ -](\d{4})\b|\b(\d{4})-[\w.-]*\.md\b")
+ADR_STATUS = re.compile(r"^- \*\*Status:\*\*\s*(.*)$", re.M)
+DECISIONS = Path(__file__).resolve().parents[3] / "docs" / "decisions"
 
 
 def cells(row: str) -> list[str]:
@@ -83,6 +92,31 @@ def bad_threat_rows(text: str) -> list[str]:
     return out
 
 
+def is_accepted_adr(decisions: Path, number: str) -> bool:
+    for adr in decisions.glob(f"{number}-*.md"):
+        status = ADR_STATUS.search(adr.read_text(encoding="utf-8"))
+        # Some ADRs bold the value ("- **Status:** **Accepted (PO, ...)**", e.g. ADR 0031).
+        if status and status.group(1).lstrip("* \t").startswith("Accepted"):
+            return True
+    return False
+
+
+def unaccepted_residuals(text: str, decisions: Path) -> list[str]:
+    out = []
+    for match in THREAT_ROW.finditer(text):
+        row = cells(match.group(0))
+        if not row[-1].strip("*").lower().startswith("accepted residual"):
+            continue
+        tid, ids = match.group(1), [a or b for a, b in ADR_ID.findall(match.group(0))]
+        if not ids:
+            out.append(f"FAIL residual: {tid} is 'Accepted residual' but names no ADR id")
+        elif not any(is_accepted_adr(decisions, n) for n in ids):
+            named = ", ".join(f"ADR {n}" for n in dict.fromkeys(ids))
+            msg = f"names {named}, which is not an Accepted ADR in {decisions.name}"
+            out.append(f"FAIL residual: {tid} {msg}")
+    return out
+
+
 def missing_disclaimer(text: str) -> list[str]:
     for line in text.splitlines():
         if "not legal advice" in line.lower() and re.search(r"\bUS\b", line) and "AU" in line:
@@ -96,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--topic", action="append", default=[])
     parser.add_argument("--route", action="append", default=[])
     parser.add_argument("--disclaimer", action="store_true")
+    parser.add_argument("--decisions", type=Path, default=DECISIONS)
     args = parser.parse_args(argv)
     if not args.file.is_file():
         print(f"FAIL file: {args.file} does not exist")
@@ -103,6 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     text = args.file.read_text(encoding="utf-8")
     problems = broken_links(args.file, text) + missing_topics(text, args.topic)
     problems += missing_routes(text, args.route) + bad_threat_rows(text)
+    problems += unaccepted_residuals(text, args.decisions)
     if args.disclaimer:
         problems += missing_disclaimer(text)
     for problem in problems:
