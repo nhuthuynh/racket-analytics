@@ -177,6 +177,14 @@ class GitHubStub:
         live = {f["filename"] for f in self.files if f.get("status") != "removed"}
         return b"plain text\n" if ref == HEAD_SHA and path in live else None
 
+    def pr_body(self) -> dict[str, Any]:
+        """The PR as GitHub lists it: `head.ref` is always there (a test's bare {"sha"} head
+        gets the default branch, as every older test meant)."""
+        head = self.pr.get("head")
+        if isinstance(head, dict) and "ref" not in head:
+            return {**self.pr, "head": {**head, "ref": HEAD_REF}}
+        return self.pr
+
     def tree(self) -> dict[str, Any]:
         live = [f["filename"] for f in self.files if f.get("status") != "removed"]
         paths = dict.fromkeys([*live, *(p for p, ref in self.contents if ref == HEAD_SHA)])
@@ -195,7 +203,7 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
             page = int(parse_qs(parts.query).get("page", ["1"])[0])
             base = f"/repos/{REPO}"
             if parts.path == f"{base}/pulls/{PR_NUMBER}":
-                return self._send_raw(stub.raw_pr) if stub.raw_pr else self._send(stub.pr)
+                return self._send_raw(stub.raw_pr) if stub.raw_pr else self._send(stub.pr_body())
             m = re.fullmatch(rf"{base}/commits/(\w+)/check-runs", parts.path)
             if m:
                 runs = [r for r in stub.check_runs if r.get("head_sha", HEAD_SHA) == m.group(1)]

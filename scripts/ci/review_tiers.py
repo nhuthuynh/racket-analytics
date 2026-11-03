@@ -137,6 +137,18 @@ _SPECIALISTS = (
     Rule("web/public/sw.js", 1, (FRONTEND,)),
 )
 
+EM, SRE = "engineering-manager", "sre-devops-engineer"
+# CI-TIERS-b bootstrap (PE-PLAN05-R3-01): head-branch shapes whose author role is fixed here,
+# read by merge_ready.py BEFORE docs/sprints/<nn>/ticket-owners.json, for PRs that cannot have a
+# row on main yet: (regex over the whole head branch, owner role, highest tier it may carry or
+# None). An optional "-<slug>" suffix follows the id, as on every lane branch.
+BOOTSTRAP_OWNERS: tuple[tuple[str, str, int | None], ...] = (
+    (r"s(?P<nn>\d{2})/plan(?:-[a-z0-9][a-z0-9-]*)?", EM, None),  # creates the owner file
+    (r"s(?P<nn>\d{2})/ci-fix-[a-z0-9][a-z0-9-]*", SRE, None),  # CI FIRST red-main fix
+    (r"s(?P<nn>\d{2})/owners-[a-z0-9][a-z0-9-]*", EM, None),  # adds a mid-sprint row
+    (r"docs/[a-z0-9][a-z0-9-]*", EM, 0),  # docs and process text only
+)
+
 AGENT_FILES = ".claude/agents/*.md"
 _TIER0 = ("docs/**/*.md", "*.md", AGENT_FILES, "docs/sprints/*/status.json")
 
@@ -216,9 +228,10 @@ def file_tier(f: ChangedFile, rules: Sequence[Rule] = RULES) -> tuple[int, froze
     """(tier, specialist roles) of one changed file: the highest matching rule, tier 2 when
     none matches, raised to 1 for an executable file and to 2 for a role file's front matter."""
     hits = _matches(f.path, rules)
-    # The executable floor counts as a matched tier 1 rule, so an executable file no rule names
-    # (a shebang script under docs/) is tier 1; a file nothing matches at all fails closed.
-    tiers = [r.tier for r in hits] + ([1] if is_executable(f) else [])
+    # The executable floor counts as a matched tier 1 rule under docs/ (a shebang script there
+    # is tier 1); any other file no rule names fails closed, code included (CI-TIERS-b, §7).
+    floor = is_executable(f) and (bool(hits) or f.path.startswith("docs/"))
+    tiers = [r.tier for r in hits] + ([1] if floor else [])
     tier = max(tiers, default=FAIL_CLOSED)
     if f.front_matter_changed is not False and glob_match(AGENT_FILES, f.path):
         tier = 2  # changed, or unknown (SEC-188-07): fail closed
