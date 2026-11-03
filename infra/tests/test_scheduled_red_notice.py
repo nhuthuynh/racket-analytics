@@ -139,7 +139,7 @@ def test_main_writes_the_action_and_only_the_files_it_needs(
     assert summary == {"action": action, "workflow": "CI", "conclusion": conclusion}
 
 
-# ------------------------------------------------------------------ CI-NOTICE-CANCELLED (PRC-1.1-1.2)
+# ------------------------------------------------ CI-NOTICE-CANCELLED (PRC-1.1, PRC-1.2)
 EVERY_CONCLUSION = {
     "failure": "open",
     "timed_out": "open",

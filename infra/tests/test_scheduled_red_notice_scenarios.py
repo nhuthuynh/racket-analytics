@@ -1,3 +1,4 @@
+# ruff: noqa: F811  (the step functions take the imported `ctx` fixture)
 """Binds tests/features/scheduled_red_notice.feature (CI-NOTICE-CANCELLED; story PRC-05).
 
 The notice scenarios run the REAL `run:` scripts of .github/workflows/scheduled-red-notice.yml
@@ -59,23 +60,23 @@ def seconds(limit: str) -> int:
 
 # ------------------------------------------------------------------ notice
 @given("no notice issue is open")
-def no_issue(ctx: dict[str, Any]) -> None:  # noqa: F811
+def no_issue(ctx: dict[str, Any]) -> None:
     ctx["env"]["FAKE_GH_ISSUE"] = ""
 
 
 @given(parsers.parse("notice issue {number:d} is open"))
-def issue_open(ctx: dict[str, Any], number: int) -> None:  # noqa: F811
+def issue_open(ctx: dict[str, Any], number: int) -> None:
     ctx["env"]["FAKE_GH_ISSUE"] = str(number)
 
 
 @when(parsers.parse('the scheduled "{name}" run ends with "{conclusion}"'))
-def scheduled_ends(ctx: dict[str, Any], name: str, conclusion: str) -> None:  # noqa: F811
+def scheduled_ends(ctx: dict[str, Any], name: str, conclusion: str) -> None:
     res = run_notice(ctx, event(name, "schedule", conclusion))
     assert res.returncode == 0, res.stdout + res.stderr
 
 
 @then(parsers.parse('gh opened an issue titled "{title}" assigned to the repository owner'))
-def opened_issue(ctx: dict[str, Any], title: str) -> None:  # noqa: F811
+def opened_issue(ctx: dict[str, Any], title: str) -> None:
     (create,) = [c for c in gh_calls(ctx) if c["args"][:2] == ["issue", "create"]]
     args = create["args"]
     assert args[args.index("--title") + 1] == title
@@ -96,19 +97,19 @@ def commented(ctx: dict[str, Any], number: int) -> None:
 
 
 @then("gh opened no new issue")
-def no_new_issue(ctx: dict[str, Any]) -> None:  # noqa: F811
+def no_new_issue(ctx: dict[str, Any]) -> None:
     assert not [c for c in gh_calls(ctx) if c["args"][:2] == ["issue", "create"]]
 
 
 @then("gh was not asked to open, comment on or close an issue")
-def no_issue_writes(ctx: dict[str, Any]) -> None:  # noqa: F811
+def no_issue_writes(ctx: dict[str, Any]) -> None:
     writes = {"create", "comment", "close", "edit", "reopen"}
     assert not [c for c in gh_calls(ctx) if c["args"][0] == "issue" and c["args"][1] in writes]
 
 
 # ------------------------------------------------------------------ flaky-report bound
 @given("each pass of the flaky-report suites hangs")
-def hanging_tree(tmp_path: Path) -> dict[str, Path]:
+def hanging_tree(tmp_path: Path) -> None:
     tree = tmp_path / "repo"
     (tree / "backend").mkdir(parents=True)
     (tree / "infra").mkdir()
@@ -117,7 +118,6 @@ def hanging_tree(tmp_path: Path) -> dict[str, Path]:
     fake.mkdir()
     (fake / "uv").write_text(FAKE_UV)
     (fake / "uv").chmod(0o755)
-    return {"tree": tree, "bin": fake}
 
 
 @pytest.fixture
@@ -156,11 +156,7 @@ def ends_within(hang: dict[str, Any], limit: int) -> None:
     assert hang["elapsed"] < limit, hang["elapsed"]
 
 
-@then(
-    parsers.parse(
-        "all {n:d} passes were started, each with its output in its own log file"
-    )
-)
+@then(parsers.parse("all {n:d} passes were started, each with its output in its own log file"))
 def passes_logged(hang: dict[str, Any], n: int) -> None:
     for i in range(1, n + 1):
         log = hang["reports"] / f"run-{i}.log"
