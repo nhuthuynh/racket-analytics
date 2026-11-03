@@ -102,7 +102,7 @@ def test_ledger_ids_ignore_tables_without_a_severity_column() -> None:
     assert rd.ledger_ids("| Ticket | PR |\n|---|---|\n| ST-001-01 | #1 |\n") == set()
 
 
-# ------------------------------------------------------------------ unit: other forms (PE-CIRECON-R1-01)
+# ------------------------------------------------------------- unit: other forms (PE-CIRECON-R1-01)
 
 
 @pytest.mark.unit

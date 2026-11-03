@@ -58,12 +58,12 @@ Owner: sre-devops-engineer. Ticket CI-RECON-ON-PR (retro 4 D3, E3, L13). The `pr
 
 **The id.** One token matched by `_FINDING_ID` in `scripts/measure/measurelib.py`: an upper-case role or source prefix, optional segments, then a number. Use `ROLE-CONTEXT-NN`, for example `PE-PLAN05-01`, `QA-VERIFY05R1-02`, `SEC-ST075C-01`, or `AF-<TICKET>-NN` for a finding the author found. A first segment of six or more letters never parses: `VERIFY04R4-01` is invisible to every tool, so write `QA-VERIFY04R4-01`. Do not use a requirement or metric id (`PRC-4.2`, `AN-02`, `G05-01`) as a finding id.
 
-**Declaring a finding** in a decisions file, in one of two forms:
+**Declaring a finding** in a decisions file, in one of two forms (write the inline form as `ID (severity)`; the other inline forms are read too, so a finding is never lost):
 
 | Form | Example | Read as |
 |---|---|---|
-| Inline | `**AF-ST081-01 (major):** the solo-wall plan has one drill per metric` | id `AF-ST081-01`, severity major |
-| Severity table | `\| 3 \| PE-PLAN05-03 / QA-PLAN05-09 (see G05-02) \| major \| Fixed \|` under a header with a `Severity` column | the first id of the first id-bearing cell left of `Severity`, plus its aliases written `alias ID` or `/ ID`; any other id in that cell (`G05-02`) is a reference, not a finding |
+| Inline | `**AF-ST081-01 (major):** the solo-wall plan has one drill per metric`; also read: `AF-ST081-01, major`, `(AF-ST081-01, major)`, `AF-ST081-01: major`, `AF-ST081-01 opened as major` (or `raised`, `filed`, `logged`, `rated`, `marked`, `triaged`) | id `AF-ST081-01`, severity major |
+| Severity table | `\| 3 \| PE-PLAN05-03 / QA-PLAN05-09 (see G05-02) \| major \| Fixed \|` under a header with a `Severity` column | the first id of the cell under a `Finding` header (else the first id-bearing cell left of `Severity`, else right of it), plus its aliases written `alias ID` or `/ ID`; any other id in that cell (`G05-02`) is a reference, not a finding. A blocker or major word anywhere in the Severity cell wins (`Major (fixed in abc1234)`, `minor, was major` are major) |
 
 Severity is one of `blocker`, `blocking`, `major`, `minor`, `nit` (case and `**` ignored).
 
@@ -72,6 +72,7 @@ Severity is one of `blocker`, `blocking`, `major`, `minor`, `nit` (case and `**`
 | Rule | Failing line | Fix in the same PR |
 |---|---|---|
 | PRC-4.1 | `AF-ST081-01 (major) has no ledger row`: a blocker or major declared on an added line whose id (or an alias in the same first cell) is in no review-rounds table | Add the row to `docs/sprints/<nn>/review-rounds.md` (Finding, Severity, Disposition, Owner, Evidence) |
+| PRC-4.1 (fail closed) | `AF-ST081-02 sits on a line with a blocker/major word but in no declared form (PRC-4.3)`: an added line with `blocker`, `blocking` or `major` that declares no blocker or major, and carries an id that is neither declared on that line nor in a ledger (PE-CIRECON-R1-01) | Declare it (`AF-ST081-02 (major)`) and add its ledger row; or, if the id is only a reference (`FR-100`, `G05-01`), reword so the line does not carry the severity word |
 | PRC-4.2 | `"can only" line names no finding id`: an added line containing one of the three gap phrases (`known gap`, `can only`, `not covered`, any case) with no finding id that is declared in the same file or has a ledger row | Declare the gap with an id on that line (`AF-<TICKET>-NN (minor): …`), or reword if it is not a gap |
 
 Minor and nit findings need no ledger row. A usage error (an unreadable or option-like ref) exits 2 (fail closed, ADR 0014).
