@@ -1,6 +1,6 @@
 # Agentic SDLC Best Practices: Sources and Practices
 
-- **Status:** DRAFT for the product owner to read. Nothing in this file is approved, and no practice here is adopted until the PO says so.
+- **Status:** Accepted as the research register by the PO on 2026-11-03 (`docs/requirements/po-input-2026-10-05.md`, addendum "Audit decisions"; ADR 0056). A practice listed here is an input, not a rule: it applies only where a process doc or ADR adopts it.
 - **Research date:** 2026-10-31 (six researchers, read-only). Independent fact-check after that. Live link check: 2026-11-03.
 - **Citation prefix:** `ASB`. Cite a source as `[ASB/<ID>]`, for example [ASB/ANT-01]. See the citation table in `docs/process/working-agreement.md` §0.
 - **Product context:** `docs/specs/2026-10-02-racket-analytics-design.md`. PO decisions are in `docs/requirements/po-input-2026-10-05.md` and take precedence over anything here.
@@ -23,7 +23,7 @@ Source IDs are local to this file. `ANT-05` here is not the same as any ID in EP
 
 1. **Researcher check (2026-10-31).** The researcher opened each page and read it. Pages were opened with WebFetch, curl, raw.githubusercontent.com, or a git clone of the publisher's own source repository when the website host was blocked (for example `dora-team/dora.dev`, `google/eng-practices`, `vercel/next.js` docs, `OWASP/CheatSheetSeries`). A source was marked *verified* only if its key point was on the page. Sources found only through web search were marked *not verified*.
 2. **Independent fact-check.** A separate fact-checker re-opened every verified source and confirmed or rejected each key point, usually with line numbers and quotes. It also recorded redirects, overstatements and nuances. Its notes are reproduced in §4.
-3. **Live link check (2026-11-03).** Every URL was requested again from the build container. The result is in the *Live check* column:
+3. **Live link check (2026-11-03).** Every URL except ASB/REN-41 was requested again from the build container. The result is in the *Live check* column:
    - `200` means the URL answered.
    - `403` or `000` means the container's network policy blocked it. That does not mean the page is gone.
    - `github.com` web pages (`/blob/...`) answer `403` here, while raw and git access to the same files works. Those sources were read through raw or git.
@@ -2077,6 +2077,8 @@ The research and fact-check sessions could not reach the hosts below (DNS failur
 The GitHub API (`gh api`) was also refused for several repositories, so GitHub content was read through raw.githubusercontent.com or `git clone`.
 
 ### 6.2 Gaps and notes by area
+
+> **Update 2026-11-03:** the PO decided three of these challenges in ADR 0056: team shape (keep 12 roles, measure cost per PR), review depth (tiered by risk) and cadence (keep sprints with WIP limits). The rest stay open.
 
 These are the researchers' own notes, verbatim except that source IDs are written in `ASB/` form. Practice IDs such as P-ANT-24 or RE-09 refer to §5. Repo observations were measured on `origin/main` on 2026-10-31 and may have changed since.
 
