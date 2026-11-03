@@ -50,7 +50,10 @@ def test_planted_accepted_residual_row_without_an_adr_id_fails(decisions: Path):
 
 
 def test_bold_accepted_residual_status_is_still_checked(decisions: Path):
-    assert len(ctn.unaccepted_residuals(_row("T4-RT-5", "14.2.1", "**Accepted residual**"), decisions)) == 1
+    assert (
+        len(ctn.unaccepted_residuals(_row("T4-RT-5", "14.2.1", "**Accepted residual**"), decisions))
+        == 1
+    )
 
 
 def test_adr_id_that_does_not_exist_fails(decisions: Path):
@@ -71,7 +74,12 @@ def test_three_digit_number_is_not_an_adr_id(decisions: Path):
 
 @pytest.mark.parametrize(
     "source",
-    ["ADR 0101", "ADR-0101", "[ADR 0101](../decisions/0101-accepted-residuals.md)", "[0101](x/0101-a.md)"],
+    [
+        "ADR 0101",
+        "ADR-0101",
+        "[ADR 0101](../decisions/0101-accepted-residuals.md)",
+        "[0101](x/0101-a.md)",
+    ],
 )
 def test_accepted_adr_by_id_or_link_passes(decisions: Path, source: str):
     assert ctn.unaccepted_residuals(_row("T5-BK-9", source), decisions) == []

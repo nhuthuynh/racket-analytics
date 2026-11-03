@@ -111,7 +111,8 @@ def unaccepted_residuals(text: str, decisions: Path) -> list[str]:
             out.append(f"FAIL residual: {tid} is 'Accepted residual' but names no ADR id")
         elif not any(is_accepted_adr(decisions, n) for n in ids):
             named = ", ".join(f"ADR {n}" for n in dict.fromkeys(ids))
-            out.append(f"FAIL residual: {tid} names {named}, which is not an Accepted ADR in {decisions.name}")
+            msg = f"names {named}, which is not an Accepted ADR in {decisions.name}"
+            out.append(f"FAIL residual: {tid} {msg}")
     return out
 
 

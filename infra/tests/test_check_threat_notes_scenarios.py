@@ -1,6 +1,7 @@
-"""Binds tests/features/check_threat_notes.feature (SEC-5): docs/security/tools/check_threat_notes.py
-run as a process, as a reviewer runs it, on planted notes files and on the real
-docs/security/threat-notes-sprint-05.md, with ADR ids resolved against the real docs/decisions."""
+"""Binds tests/features/check_threat_notes.feature (SEC-5): check_threat_notes.py
+(docs/security/tools/) run as a process, as a reviewer runs it, on planted notes files and
+on the real docs/security/threat-notes-sprint-05.md, with ADR ids resolved against the real
+docs/decisions."""
 
 from __future__ import annotations
 
@@ -28,7 +29,8 @@ def ctx(tmp_path: Path) -> dict:
 
 @given(parsers.parse('a threat-notes file with the row "{row}"'))
 def planted(ctx: dict, row: str) -> None:
-    head = "| ID | STRIDE | Threat | Control | Source | Story | Test | Status |\n|---|---|---|---|---|---|---|---|\n"
+    head = "| ID | STRIDE | Threat | Control | Source | Story | Test | Status |\n"
+    head += "|---|---|---|---|---|---|---|---|\n"
     ctx["file"].write_text(head + row + "\n", encoding="utf-8")
 
 
