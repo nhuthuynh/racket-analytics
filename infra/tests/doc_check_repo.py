@@ -22,9 +22,9 @@ REGISTER_TEXT = """# Register
 
 | ID | Title | Publisher | URL | Official? | Status | Live check 2026-11-03 |
 |---|---|---|---|---|---|---|
-| ASB/ANT-01 | Subagents | Anthropic | https://example.invalid/a | yes | Confirmed | 200 reachable |
-| ASB/ANT-03 | Hooks | Anthropic | https://example.invalid/b | yes | Not confirmed: partly | 200 reachable |
-| ASB/AGL-20 | Flow | Someone | https://example.invalid/c | no | Unverified: blocked host | 403 blocked |
+| ASB/ANT-01 | Subagents | Anthropic | https://x.invalid/a | yes | Confirmed | 200 |
+| ASB/ANT-03 | Hooks | Anthropic | https://x.invalid/b | yes | Not confirmed: partly | 200 |
+| ASB/AGL-20 | Flow | Someone | https://x.invalid/c | no | Unverified: blocked | 403 |
 """
 
 AGENT_OK = """---
@@ -47,9 +47,16 @@ def flows_text(cell: str, sprint: str = "05") -> str:
 
 
 def git(root: Path, *args: str) -> str:
-    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t"}
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@t",
+        "GIT_COMMITTER_NAME": "t",
+    }
     env["GIT_COMMITTER_EMAIL"] = "t@t"
-    out = subprocess.run(["git", *args], cwd=root, env=env, capture_output=True, text=True, check=True)
+    out = subprocess.run(
+        ["git", *args], cwd=root, env=env, capture_output=True, text=True, check=True
+    )
     return out.stdout.strip()
 
 
@@ -69,7 +76,11 @@ def make_repo(root: Path) -> str:
     write(root, ".gitignore", "/.local/\ninfra/.env\n")
     write(root, "backend/tests/unit/test_x.py", "def test_x():\n    pass\n")
     write(root, "scripts/ci/tool.py", "print('x')\n")
-    write(root, "docs/sprints/sprint-05.md", "# Sprint 5\n\nOld line: `scripts/ci/gone.py` was removed.\n")
+    write(
+        root,
+        "docs/sprints/sprint-05.md",
+        "# Sprint 5\n\nOld line: `scripts/ci/gone.py` was removed.\n",
+    )
     write(root, "docs/notes.md", "# Notes\n\nSee `scripts/ci/tool.py`.\n")
     (root / "docs/design/tools").mkdir(parents=True, exist_ok=True)
     shutil.copy(FLOWS_TOOL, root / "docs/design/tools/check_flows.py")

@@ -95,9 +95,15 @@ def test_unchanged_files_are_not_checked(repo: tuple[Path, str]) -> None:
 @pytest.mark.parametrize(
     ("line", "expected"),
     [
-        ("Hooks run [ASB/ANT-03].", "FAIL citation: docs/planted.md:1: ASB/ANT-03 is Not confirmed"),
+        (
+            "Hooks run [ASB/ANT-03].",
+            "FAIL citation: docs/planted.md:1: ASB/ANT-03 is Not confirmed",
+        ),
         ("Flow [ASB/AGL-20], see.", "FAIL citation: docs/planted.md:1: ASB/AGL-20 is Unverified"),
-        ("Ghost [ASB/ANT-99].", "FAIL citation: docs/planted.md:1: ASB/ANT-99 is not in the register"),
+        (
+            "Ghost [ASB/ANT-99].",
+            "FAIL citation: docs/planted.md:1: ASB/ANT-99 is not in the register",
+        ),
         ("Pair [ASB/ANT-01, ASB/ANT-03].", "FAIL citation: docs/planted.md:1: ASB/ANT-03"),
         ("Late (unverified) [ASB/ANT-03].", "FAIL citation: docs/planted.md:1: ASB/ANT-03"),
     ],
@@ -146,7 +152,10 @@ def test_missing_register_is_a_failure_not_a_pass(repo: tuple[Path, str]) -> Non
     [
         (AGENT_OK.replace("tools: Read, Grep, Bash\n", ""), "lacks tools"),
         (AGENT_OK.replace("name: sre-devops-engineer\n", ""), "lacks name"),
-        (AGENT_OK.replace("description: SRE / DevOps Engineer.\n", "description:\n"), "lacks description"),
+        (
+            AGENT_OK.replace("description: SRE / DevOps Engineer.\n", "description:\n"),
+            "lacks description",
+        ),
         (AGENT_OK.replace("tools: Read", "tools: [Read"), "does not parse"),
         (AGENT_OK.split("---\n", 2)[2], "has no front matter"),
         (AGENT_OK.replace("model: sonnet\n---", "model: sonnet\n"), "has no front matter"),
@@ -181,7 +190,9 @@ def test_front_matter_is_checked_only_on_agent_files(repo: tuple[Path, str]) -> 
 
 
 # ------------------------------------------------------------------ PRC-3.4 flows --decider
-def test_pending_decider_cell_in_the_current_sprint_flows_file_fails(repo: tuple[Path, str]) -> None:
+def test_pending_decider_cell_in_the_current_sprint_flows_file_fails(
+    repo: tuple[Path, str],
+) -> None:
     root, base = repo
     write(root, "docs/design/flows-sprint-05.md", flows_text("pending"))
     commit(root)
@@ -197,7 +208,10 @@ def test_decided_cells_pass_and_the_run_is_reported(repo: tuple[Path, str]) -> N
     commit(root)
     rc, out = check(root, base)
     assert rc == 0, out
-    assert "flows: docs/design/flows-sprint-05.md --review DR-05 --decider product-manager: rc 0" in out
+    assert (
+        "flows: docs/design/flows-sprint-05.md --review DR-05 --decider product-manager: rc 0"
+        in out
+    )
 
 
 def test_flows_check_runs_even_when_the_flows_file_is_unchanged(repo: tuple[Path, str]) -> None:
@@ -222,7 +236,9 @@ def test_older_sprint_flows_file_is_not_the_current_one(repo: tuple[Path, str]) 
 
 def test_flows_file_without_a_decider_table_fails(repo: tuple[Path, str]) -> None:
     root, base = repo
-    write(root, "docs/design/flows-sprint-05.md", "# Flows\n\n## 14. Design review (DR-05)\n\nTBD\n")
+    write(
+        root, "docs/design/flows-sprint-05.md", "# Flows\n\n## 14. Design review (DR-05)\n\nTBD\n"
+    )
     commit(root)
     rc, out = check(root, base)
     assert rc == 1, out
@@ -240,7 +256,9 @@ def test_explicit_files_are_checked_whole(repo: tuple[Path, str]) -> None:
     root, _ = repo
     proc = run_check(root, "docs/sprints/sprint-05.md")
     assert proc.returncode == 1, proc.stdout
-    assert "FAIL path: docs/sprints/sprint-05.md:3: scripts/ci/gone.py does not exist" in proc.stdout
+    assert (
+        "FAIL path: docs/sprints/sprint-05.md:3: scripts/ci/gone.py does not exist" in proc.stdout
+    )
 
 
 # ------------------------------------------------------------------ ci.yml wiring
