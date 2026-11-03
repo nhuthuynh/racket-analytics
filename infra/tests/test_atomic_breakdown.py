@@ -2,6 +2,7 @@
 small breakdown text, one break per rule, negative first; the command-line contract; and the ci.yml
 wiring (the check is a step of the draft-skipped `doc-check` job)."""
 
+# ruff: noqa: E501, RUF001  (GOOD mirrors the real breakdown's table rows and characters)
 from __future__ import annotations
 
 from pathlib import Path
@@ -127,14 +128,18 @@ def test_an_nfr_row_with_an_empty_attribute_cell_fails(
 
 
 def test_a_dash_counts_as_an_empty_cell(tmp_path: Path) -> None:
-    text = GOOD.replace("| NFR-010.1 | latency | p95 ms | ≤ 300 |", "| NFR-010.1 | latency | — | ≤ 300 |")
+    text = GOOD.replace(
+        "| NFR-010.1 | latency | p95 ms | ≤ 300 |", "| NFR-010.1 | latency | — | ≤ 300 |"
+    )
     rc, out = check(tmp_path, text)
     assert rc == 1, out
     assert any("NFR-010.1 has no metric" in line for line in fail_lines(out)), out
 
 
 def test_an_nfr_table_without_a_method_column_or_section_method_fails(tmp_path: Path) -> None:
-    text = GOOD.replace("Common method for .1-.2: Locust at the client, 5 min window, 3 runs.\n", "")
+    text = GOOD.replace(
+        "Common method for .1-.2: Locust at the client, 5 min window, 3 runs.\n", ""
+    )
     rc, out = check(tmp_path, text)
     assert rc == 1, out
     assert [line.rsplit(": ", 1)[1] for line in fail_lines(out)] == [
@@ -155,7 +160,9 @@ def test_a_section_method_does_not_reach_the_next_section(tmp_path: Path) -> Non
     text = GOOD.replace(
         "Burn-rate multipliers are judgment.", "Method for .3: promtool on a synthetic series."
     )
-    text = text.replace("Common method for .1-.2: Locust at the client, 5 min window, 3 runs.\n", "")
+    text = text.replace(
+        "Common method for .1-.2: Locust at the client, 5 min window, 3 runs.\n", ""
+    )
     rc, out = check(tmp_path, text)
     assert rc == 1, out
     assert any("NFR-010.1 has no method" in line for line in fail_lines(out)), out
@@ -268,7 +275,9 @@ def test_without_arguments_it_checks_the_current_sprints_breakdown(tmp_path: Pat
     (sprints / "07").mkdir(parents=True)
     (sprints / "sprint-06.md").write_text("# 6\n")
     (sprints / "sprint-07.md").write_text("# 7\n")
-    (sprints / "07" / "requirements-breakdown.md").write_text(blank_cell(GOOD, "NFR-010.1", "Target"))
+    (sprints / "07" / "requirements-breakdown.md").write_text(
+        blank_cell(GOOD, "NFR-010.1", "Target")
+    )
     proc = run_check("--root", str(tmp_path))
     assert proc.returncode == 1, proc.stdout
     assert "docs/sprints/07/requirements-breakdown.md" in proc.stdout, proc.stdout

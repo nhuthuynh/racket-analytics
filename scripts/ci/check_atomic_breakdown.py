@@ -33,10 +33,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "measure"))
-from measurelib import _FINDING_ID  # noqa: E402
+from measurelib import _FINDING_ID
 
 ATTRIBUTES = ("metric", "method", "target", "test level")
-_EMPTY = {"", "—", "–", "-"}
+_EMPTY = {"", "\u2014", "\u2013", "-"}  # em dash, en dash, hyphen
 _SECTION_METHOD = re.compile(r"(?:^|\.\s+)(?:Common method|Method)\b[^:\n]*:", re.I)
 _SECTION_EACH_ITEM = re.compile(r"\bEach item\s*=")
 _RULE_ID = re.compile(r"(FR-\d{3})\.R\d+")
@@ -61,8 +61,7 @@ def _column_attribute(header: str) -> set[str]:
     h = header.lower()
     if h.startswith("rule"):
         return {"metric", "method", "target"}
-    found = {a for a in ATTRIBUTES if a in h}
-    return found
+    return {a for a in ATTRIBUTES if a in h}
 
 
 def _sections(lines: list[str]) -> Iterator[Section]:
