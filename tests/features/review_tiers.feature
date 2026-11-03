@@ -5,7 +5,7 @@
 # against the plan (writer/reviewer split).
 # Binding: infra/tests/test_review_tiers_scenarios.py. It commits the planted files to a throwaway
 # git repository and runs `scripts/ci/review_tiers.py --base <base> --head <head>` on it, so the
-# executable bit, the shebang line and the agent `tools:` diff come from real git objects.
+# executable bit, the shebang line and the role-file front matter come from real git objects.
 @story-PRC-05 @ticket-CI-TIERS-a @prc-2.1 @prc-2.2 @prc-2.3
 Feature: The review tier of a pull request is computed from its changed paths
 
@@ -38,6 +38,7 @@ Feature: The review tier of a pull request is computed from its changed paths
         | scripts/ci/merge_ready.py                                                   | 2    |
         | scripts/ci/review_tiers.py                                                  | 2    |
         | backend/src/racket/video_ingest/service.py                                  | 2    |
+        | .claude/hooks/pre_tool_use.py                                               | 2    |
 
       Examples: tier 0, docs and process text only
         | paths                                                                       | tier |
@@ -49,7 +50,8 @@ Feature: The review tier of a pull request is computed from its changed paths
         | paths                                                                       | tier |
         | docs/x.md, backend/src/racket/analytics/service.py                          | 1    |
 
-  Rule: A role file is tier 0 unless the change touches its front matter tools: line, which is tier 2
+  Rule: A role file is tier 0 unless the text between its first two --- lines changes, which is
+        tier 2; an added or deleted role file, or one without a closed front matter block, is tier 2
 
     Scenario: A body-only edit of a role file is tier 0
       Given a repository on main
@@ -60,6 +62,36 @@ Feature: The review tier of a pull request is computed from its changed paths
     Scenario: A changed tools: line in a role file is tier 2
       Given a repository on main
       And a pull request that changes the tools: line of ".claude/agents/sre-devops-engineer.md"
+      When the tier classifier runs on the pull request
+      Then the computed tier is 2
+
+    Scenario Outline: A role file front matter edit "<edit>" is tier <tier>
+      Given a repository on main
+      And a pull request that makes the front matter edit "<edit>" to ".claude/agents/sre-devops-engineer.md"
+      When the tier classifier runs on the pull request
+      Then the computed tier is <tier>
+
+      Examples: any front matter change can widen or narrow the role's powers
+        | edit                                           | tier |
+        | description reworded                           | 2    |
+        | block-list tool item under an unchanged tools: | 2    |
+        | continuation line under an unchanged tools:    | 2    |
+        | permissionMode bypassPermissions added         | 2    |
+        | hooks added                                    | 2    |
+        | mcpServers added                               | 2    |
+        | disallowedTools removed                        | 2    |
+        | front matter no longer parses                  | 2    |
+        | closing --- removed                            | 2    |
+
+    Scenario: An added role file is tier 2
+      Given a repository on main
+      And a pull request that adds the role file ".claude/agents/new-role.md"
+      When the tier classifier runs on the pull request
+      Then the computed tier is 2
+
+    Scenario: A deleted role file is tier 2
+      Given a repository on main
+      And a pull request that deletes ".claude/agents/sre-devops-engineer.md"
       When the tier classifier runs on the pull request
       Then the computed tier is 2
 

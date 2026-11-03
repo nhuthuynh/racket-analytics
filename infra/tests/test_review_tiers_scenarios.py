@@ -2,7 +2,7 @@
 
 Each scenario commits planted files to a throwaway git repository (base on `main`, the PR on a
 branch) and runs `scripts/ci/review_tiers.py --base main --head pr --json` there, so the
-executable bit, the shebang line and the role-file `tools:` diff come from real git objects."""
+executable bit, the shebang line and the role-file front matter come from real git objects."""
 
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ AGENT_FILE = """\
 name: sre-devops-engineer
 description: SRE / DevOps Engineer.
 tools: Read, Grep, Glob, Write, Edit, Bash
+disallowedTools: mcp__github__merge_pull_request
 model: sonnet
 ---
 
@@ -103,6 +104,50 @@ def pr_tools_edit(repo: Path, rel: str) -> None:
     write(
         repo, rel, AGENT_FILE.replace("Edit, Bash", "Edit, Bash, mcp__github__merge_pull_request")
     )
+    commit(repo, "pr")
+
+
+MERGE = "mcp__github__merge_pull_request"
+TOOLS_LINE = "tools: Read, Grep, Glob, Write, Edit, Bash\n"
+FRONT_MATTER_EDITS = {
+    "description reworded": ("SRE / DevOps Engineer.", "SRE and DevOps Engineer."),
+    "continuation line under an unchanged tools:": (TOOLS_LINE, f"{TOOLS_LINE}  , {MERGE}\n"),
+    "permissionMode bypassPermissions added": (
+        "model: sonnet",
+        "model: sonnet\npermissionMode: bypassPermissions",
+    ),
+    "hooks added": ("model: sonnet", "model: sonnet\nhooks:\n  PreToolUse:\n    - command: 'true'"),
+    "mcpServers added": ("model: sonnet", "model: sonnet\nmcpServers:\n  - github"),
+    "disallowedTools removed": (f"disallowedTools: {MERGE}\n", ""),
+    "front matter no longer parses": ("model: sonnet", "model: [sonnet"),
+    "closing --- removed": ("model: sonnet\n---\n", "model: sonnet\n"),
+}
+
+
+@given(parsers.parse('a pull request that makes the front matter edit "{edit}" to "{rel}"'))
+def pr_front_matter_edit(repo: Path, edit: str, rel: str) -> None:
+    if edit == "block-list tool item under an unchanged tools:":
+        block = AGENT_FILE.replace(TOOLS_LINE, "tools:\n  - Read\n  - Bash\n")
+        write(repo, rel, block)
+        commit(repo, "role file uses a block list, on main")
+        git(repo, "branch", "-f", "main", "HEAD")
+        write(repo, rel, block.replace("  - Bash\n", f"  - Bash\n  - {MERGE}\n"))
+    else:
+        old, new = FRONT_MATTER_EDITS[edit]
+        assert old in AGENT_FILE
+        write(repo, rel, AGENT_FILE.replace(old, new))
+    commit(repo, "pr")
+
+
+@given(parsers.parse('a pull request that adds the role file "{rel}"'))
+def pr_add_role(repo: Path, rel: str) -> None:
+    write(repo, rel, AGENT_FILE.replace("sre-devops-engineer", "new-role"))
+    commit(repo, "pr")
+
+
+@given(parsers.parse('a pull request that deletes "{rel}"'))
+def pr_delete(repo: Path, rel: str) -> None:
+    git(repo, "rm", "-q", rel)
     commit(repo, "pr")
 
 

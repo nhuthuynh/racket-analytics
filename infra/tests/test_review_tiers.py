@@ -102,6 +102,8 @@ def test_a_workflow_file_is_never_below_tier_1(rt: ModuleType) -> None:
         ".gitleaksignore",
         "infra/env.example",
         ".claude/settings.json",
+        ".claude/hooks/pre_tool_use.py",
+        ".claude/hooks/post_tool_use.py",
     ],
 )
 def test_a_tier_2_path_is_tier_2(rt: ModuleType, path: str) -> None:
@@ -158,45 +160,124 @@ def test_a_nested_readme_outside_docs_is_not_tier_0(rt: ModuleType) -> None:
     assert tier(rt, "web/README.md") >= 1
 
 
-def test_a_changed_tools_line_in_a_role_file_is_tier_2(rt: ModuleType) -> None:
-    assert tier(rt, ".claude/agents/sre-devops-engineer.md", tools_line_changed=True) == 2
+def test_a_changed_front_matter_in_a_role_file_is_tier_2(rt: ModuleType) -> None:
+    assert tier(rt, ".claude/agents/sre-devops-engineer.md", front_matter_changed=True) == 2
 
 
-# ------------------------------------------------------------------ the tools: diff rule
-BODY_ONLY = """\
---- a/.claude/agents/sre-devops-engineer.md
-+++ b/.claude/agents/sre-devops-engineer.md
-@@ -10,3 +10,3 @@
- <mission>
--Make shipping safe.
-+Make shipping safe, fast and observable.
- </mission>
+def test_the_front_matter_flag_only_raises_role_files(rt: ModuleType) -> None:
+    assert tier(rt, "docs/x.md", front_matter_changed=True) == 0
+
+
+# ------------------------------------------------------------------ the role-file front matter rule
+# PE-CITA-01, SEC-188-01, SEC-188-02: any change to the text between the first two `---` lines of
+# a role file is tier 2 (separation of duties, audit item 13), compared on the base and head blobs.
+# A missing side (added or deleted file) or a missing closing `---` fails closed.
+ROLE = """\
+---
+name: sre-devops-engineer
+description: SRE / DevOps Engineer.
+tools: Read, Grep, Glob, Bash
+disallowedTools: mcp__github__merge_pull_request
+model: sonnet
+---
+
+<mission>
+Make shipping safe.
+</mission>
 """
-TOOLS = """\
---- a/.claude/agents/sre-devops-engineer.md
-+++ b/.claude/agents/sre-devops-engineer.md
-@@ -3,3 +3,3 @@
- description: SRE
--tools: Read, Grep, Glob, Write, Edit, Bash
-+tools: Read, Grep, Glob, Write, Edit, Bash, mcp__github__merge_pull_request
- model: sonnet
-"""
+MERGE = "mcp__github__merge_pull_request"
+CHANGED = {
+    "tools line edited": ROLE.replace("Glob, Bash", f"Glob, Bash, {MERGE}"),
+    "tools line removed": ROLE.replace("tools: Read, Grep, Glob, Bash\n", ""),
+    "continuation line under an unchanged tools: line": ROLE.replace(
+        "Glob, Bash\n", f"Glob, Bash\n  , {MERGE}\n"
+    ),
+    "permissionMode added": ROLE.replace(
+        "model: sonnet", "model: sonnet\npermissionMode: bypassPermissions"
+    ),
+    "hooks added": ROLE.replace(
+        "model: sonnet", "model: sonnet\nhooks:\n  PreToolUse:\n    - command: 'true'"
+    ),
+    "mcpServers added": ROLE.replace("model: sonnet", "model: sonnet\nmcpServers:\n  - github"),
+    "skills added": ROLE.replace("model: sonnet", "model: sonnet\nskills: [deploy]"),
+    "disallowedTools removed": ROLE.replace(f"disallowedTools: {MERGE}\n", ""),
+    "model changed": ROLE.replace("model: sonnet", "model: opus"),
+    "description reworded": ROLE.replace("SRE / DevOps", "SRE and DevOps"),
+    "invalid YAML": ROLE.replace("model: sonnet", "model: [sonnet"),
+}
+MALFORMED = {
+    "no front matter": ROLE.replace("---\nname", "name", 1),
+    "closing --- missing": ROLE.replace("model: sonnet\n---\n", "model: sonnet\n"),
+    "leading blank line": "\n" + ROLE,
+}
 
 
-def test_a_body_only_patch_does_not_change_the_tools_line(rt: ModuleType) -> None:
-    assert rt.tools_line_changed(BODY_ONLY) is False
+def test_a_body_only_edit_does_not_change_the_front_matter(rt: ModuleType) -> None:
+    head = ROLE.replace("Make shipping safe.", "Make shipping safe, fast and observable.")
+    assert rt.front_matter_changed(ROLE, head) is False
 
 
-def test_a_patch_that_edits_the_tools_line_changes_it(rt: ModuleType) -> None:
-    assert rt.tools_line_changed(TOOLS) is True
+def test_a_body_edit_that_adds_a_later_fence_does_not_change_the_front_matter(
+    rt: ModuleType,
+) -> None:
+    assert rt.front_matter_changed(ROLE, ROLE + "\n---\n\nfooter\n") is False
 
 
-def test_an_added_tools_line_changes_it(rt: ModuleType) -> None:
-    assert rt.tools_line_changed("@@ -2,0 +3 @@\n+tools: Bash\n") is True
+@pytest.mark.parametrize("case", sorted(CHANGED))
+def test_any_front_matter_edit_changes_it(rt: ModuleType, case: str) -> None:
+    assert rt.front_matter_changed(ROLE, CHANGED[case]) is True
 
 
-def test_a_missing_patch_fails_closed(rt: ModuleType) -> None:
-    assert rt.tools_line_changed(None) is True
+@pytest.mark.parametrize("case", sorted(CHANGED))
+def test_the_reverse_front_matter_edit_also_changes_it(rt: ModuleType, case: str) -> None:
+    assert rt.front_matter_changed(CHANGED[case], ROLE) is True
+
+
+def test_a_block_list_item_added_under_an_unchanged_tools_key_changes_it(rt: ModuleType) -> None:
+    base = ROLE.replace("tools: Read, Grep, Glob, Bash\n", "tools:\n  - Read\n  - Bash\n")
+    head = base.replace("  - Bash\n", f"  - Bash\n  - {MERGE}\n")
+    assert rt.front_matter_changed(base, head) is True
+
+
+@pytest.mark.parametrize("case", sorted(MALFORMED))
+def test_a_malformed_head_fails_closed(rt: ModuleType, case: str) -> None:
+    assert rt.front_matter_changed(ROLE, MALFORMED[case]) is True
+
+
+@pytest.mark.parametrize("case", sorted(MALFORMED))
+def test_a_malformed_base_fails_closed(rt: ModuleType, case: str) -> None:
+    assert rt.front_matter_changed(MALFORMED[case], ROLE) is True
+
+
+@pytest.mark.parametrize("case", sorted(MALFORMED))
+def test_a_body_edit_of_a_role_file_without_closed_front_matter_fails_closed(
+    rt: ModuleType, case: str
+) -> None:
+    text = MALFORMED[case]
+    assert rt.front_matter_changed(text, text.replace("safe.", "safe, fast.")) is True
+
+
+def test_an_added_role_file_fails_closed(rt: ModuleType) -> None:
+    assert rt.front_matter_changed(None, ROLE) is True
+
+
+def test_a_deleted_role_file_fails_closed(rt: ModuleType) -> None:
+    assert rt.front_matter_changed(ROLE, None) is True
+
+
+def test_every_tracked_role_file_has_closed_front_matter(rt: ModuleType) -> None:
+    """Otherwise every body edit of that role file would be a false tier 2."""
+    out = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "ls-files", "-z", ".claude/agents/"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    paths = [p for p in out.split("\0") if rt.glob_match(rt.AGENT_FILES, p)]
+    assert paths
+    for path in paths:
+        text = (REPO_ROOT / path).read_text()
+        assert rt.front_matter_changed(text, text) is False, path
 
 
 # ------------------------------------------------------------------ specialists
