@@ -21,6 +21,11 @@ Feature: The threat-notes checker accepts a residual risk only when an Accepted 
       When the threat-notes checker runs on it
       Then the threat-notes checker exits 0 with "0 problem(s)"
 
+    Scenario: A residual row naming ADR 0031, whose Accepted status is written in bold, passes
+      Given a threat-notes file with the row "| T5-UT-9 | I | threat | control | ADR 0031 | ST-083 | test | Accepted residual |"
+      When the threat-notes checker runs on it
+      Then the threat-notes checker exits 0 with "0 problem(s)"
+
   Rule: The Sprint 5 threat notes pass their own gate
 
     Scenario: The Sprint 5 notes cover the S5 topics, have a disclaimer and no unaccepted residual

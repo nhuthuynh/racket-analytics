@@ -39,6 +39,14 @@ def decisions(tmp_path: Path) -> Path:
     (d / "0102-proposed-residuals.md").write_text(
         "# 0102. Residuals\n\n- **Status:** Proposed (PO decides, P19)\n", encoding="utf-8"
     )
+    (d / "0103-bold-accepted-residuals.md").write_text(
+        "# 0103. Residuals\n\n"
+        "- **Status:** **Accepted (PO, 2026-10-06): option 1**, with conditions\n",
+        encoding="utf-8",
+    )
+    (d / "0104-bold-proposed-residuals.md").write_text(
+        "# 0104. Residuals\n\n- **Status:** **Proposed** (PO decides, P19)\n", encoding="utf-8"
+    )
     return d
 
 
@@ -66,6 +74,17 @@ def test_adr_that_is_only_proposed_fails(decisions: Path):
     assert ctn.unaccepted_residuals(_row("T5-BK-9", "ADR 0102"), decisions) == [
         "FAIL residual: T5-BK-9 names ADR 0102, which is not an Accepted ADR in decisions"
     ]
+
+
+def test_adr_whose_status_is_written_in_bold_counts_as_accepted(decisions: Path):
+    # PE-SEC5-R1-01: ADR 0031 writes "- **Status:** **Accepted (PO, ...)**".
+    assert ctn.is_accepted_adr(decisions, "0103")
+    assert ctn.unaccepted_residuals(_row("T5-BK-9", "ADR 0103"), decisions) == []
+
+
+def test_bold_proposed_status_still_fails(decisions: Path):
+    assert not ctn.is_accepted_adr(decisions, "0104")
+    assert len(ctn.unaccepted_residuals(_row("T5-BK-9", "ADR 0104"), decisions)) == 1
 
 
 def test_three_digit_number_is_not_an_adr_id(decisions: Path):
