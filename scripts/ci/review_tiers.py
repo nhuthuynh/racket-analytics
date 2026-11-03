@@ -7,9 +7,11 @@ order: a file gets the HIGHEST tier of every rule it matches, so a broader rule 
 tier; the PR gets the highest tier over its files; a path that matches no rule, or an empty
 change set, is tier 2 (fail closed). An executable file is at least tier 1 wherever it lives
 (`EXEC_*`, a shebang line or the executable bit). A `.claude/agents/*.md` file whose front
-matter (the text between its first two `---` lines) differs between the merge base and head is
-tier 2, as is an added or deleted role file or one without a closed front matter block: the only
-rule that reads content, not just the path (separation of duties, audit item 13).
+matter (the text between its first two `---` lines; lines end at "\n" only) differs between the
+merge base and head is tier 2, as is an added or deleted role file, one without a closed front
+matter block, one whose front matter holds a control character or U+2028/U+2029, and one whose
+front matter state the caller did not compute: the only rule that reads content, not just the
+path (separation of duties, audit item 13).
 The tier is always computed here, never read from a label or the PR body.
 `merge_ready.py` imports this module; CI-TIERS-b maps the tier to the required verdicts.
 
@@ -24,6 +26,7 @@ import json
 import re
 import subprocess
 import sys
+import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cache
@@ -153,7 +156,8 @@ class ChangedFile:
     path: str
     executable: bool = False  # the executable bit in the PR's tree
     shebang: bool = False  # the file starts with "#!"
-    front_matter_changed: bool = False  # only read for .claude/agents/*.md
+    # Only read for .claude/agents/*.md: None (not computed, e.g. no blobs) is tier 2 there.
+    front_matter_changed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -216,8 +220,8 @@ def file_tier(f: ChangedFile, rules: Sequence[Rule] = RULES) -> tuple[int, froze
     # (a shebang script under docs/) is tier 1; a file nothing matches at all fails closed.
     tiers = [r.tier for r in hits] + ([1] if is_executable(f) else [])
     tier = max(tiers, default=FAIL_CLOSED)
-    if f.front_matter_changed and glob_match(AGENT_FILES, f.path):
-        tier = 2
+    if f.front_matter_changed is not False and glob_match(AGENT_FILES, f.path):
+        tier = 2  # changed, or unknown (SEC-188-07): fail closed
     return tier, frozenset(role for r in hits for role in r.roles)
 
 
@@ -231,13 +235,25 @@ def classify(files: Iterable[ChangedFile], rules: Sequence[Rule] = RULES) -> Cla
     return Classification(max(tiers.values(), default=FAIL_CLOSED), frozenset(roles), tiers)
 
 
+def _unsafe(ch: str) -> bool:
+    """A C0/C1 control character other than tab, DEL, or U+2028/U+2029: a line break to some
+    reader but not to another (PE-CITA-05, SEC-188-06). Other non-ASCII text (`§`) is fine."""
+    return ch != "\t" and unicodedata.category(ch) in ("Cc", "Zl", "Zp")
+
+
 def _front_matter(text: str) -> list[str] | None:
     """The lines between the first line `---` and the next `---` line, or None when the file
-    does not start with `---` or the block is never closed."""
-    lines = text.splitlines()
-    if not lines or lines[0] != _FENCE or _FENCE not in lines[1:]:
+    does not start with `---`, the block is never closed, or the block holds an unsafe
+    character. Lines end at "\n" only, with one trailing "\r" dropped, as a newline-based
+    reader and a YAML 1.2 parser read them; `str.splitlines()` also breaks at VT, FF, FS-RS,
+    NEL, U+2028, U+2029 and a lone CR, which let a fake closing fence hide new keys."""
+    lines = [line.removesuffix("\r") for line in text.split("\n")]
+    if lines[0] != _FENCE or _FENCE not in lines[1:]:
         return None
-    return lines[1 : lines.index(_FENCE, 1)]
+    block = lines[1 : lines.index(_FENCE, 1)]
+    if any(_unsafe(ch) for line in block for ch in line):
+        return None
+    return block
 
 
 def front_matter_changed(base: str | None, head: str | None) -> bool:
