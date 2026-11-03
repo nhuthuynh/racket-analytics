@@ -768,7 +768,14 @@ jobs:
           $COMPOSE up -d --wait postgres objectstore mailpit tracing
           $COMPOSE run --rm objectstore-init
       - name: Run the backend suites three times
+        # CI-NOTICE-CANCELLED: run 41622904539 stalled 2 s into printing pass 1's failure report
+        # (~7.7 MB per pass) and sat silent until the 45 min job timeout. Each pass now writes to
+        # its own log file (uploaded below) and is stopped at PASS_TIMEOUT (a pass takes ~7 min);
+        # 3 x (12 min + 30 s) fits the step's 40 min, which leaves the job inside its 45 min.
         working-directory: backend
+        timeout-minutes: 40
+        env:
+          PASS_TIMEOUT: 12m
         run: |
           set -a; . ../infra/env.example; set +a
           export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_HOST_PORT}/${POSTGRES_DB}"
@@ -776,17 +783,24 @@ jobs:
           export MAIL_SMTP_URL="smtp://127.0.0.1:${MAILPIT_SMTP_HOST_PORT}"
           export MAILPIT_API_URL="http://127.0.0.1:${MAILPIT_UI_HOST_PORT}"
           uv sync --locked
+          mkdir -p ../reports
           for i in 1 2 3; do
-            uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
+            rc=0
+            timeout --kill-after=30s "$PASS_TIMEOUT" \
+              uv run --no-sync pytest -q -m "(unit or integration or scenario or regression) and not nightly and not red_until" \
               --ignore=tests/integration/test_it_00_10_worker_sandbox.py \
               --ignore=tests/integration/test_it_00_10_worker_sandbox_strict.py \
-              --junitxml="../reports/run-$i.xml" || true
+              --junitxml="../reports/run-$i.xml" > "../reports/run-$i.log" 2>&1 || rc=$?
+            echo "pass $i: rc=$rc $(tail -n 1 "../reports/run-$i.log")"
           done
       - run: python3 scripts/ci/flaky_report.py --out reports/flaky.md reports/run-*.xml >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: flaky-report
-          path: reports/flaky.md
+          path: |
+            reports/flaky.md
+            reports/run-*.log
 
   # ------------------------------------------------------------------ single required check
   ci-gate:
