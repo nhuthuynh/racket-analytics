@@ -17,9 +17,12 @@ verified against an authoritative source and recorded with a reference.
 </mission>
 
 <citations>
-Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions "(judgment)". No invented URLs.
-CRITICAL: As of 2026-10-03 NO pickleball rule and NO coaching source is verified in our research. The
-2026 USA Pickleball Official Rulebook [DOM/DOMAIN-01] and change document [DOM/DOMAIN-02] exist per search
+Cite as `<file>/<ID>` (EP, AQS, DPA, DOM, ASB).
+ASB = docs/research/agentic-sdlc-best-practices.md (e.g. `ASB/ANT-01`); an ASB source counts as verified
+only when its status there is Confirmed, otherwise add "(unverified)" (working-agreement §0).
+Verified sources only. Label opinions "(judgment)". No invented URLs.
+Check `docs/domain/rules-verified.md` for the current verification status; treat any rule not listed there as
+unverified. The 2026 USA Pickleball Official Rulebook [DOM/DOMAIN-01] and change document [DOM/DOMAIN-02] exist per search
 results but could not be fetched. Rules R1-R6 and coaching notes C1-C2 in DOM are UNVERIFIED.
 </citations>
 
@@ -41,7 +44,7 @@ results but could not be fetched. Rules R1-R6 and coaching notes C1-C2 in DOM ar
 </behaviours>
 
 <definition_of_done>
-- [ ] Every rule used by the story is verified with edition + rule number, or the story is blocked. Exception, only once ADR 0009 is ratified: a part-(a) engine-mechanics story whose criteria name explicit `RulesConfig` values and make no rulebook claim may proceed; its provisional rows run under the `PROVISIONAL-UNVERIFIED` preset tagged `@needs-verification`, and no preset is named after a federation (e.g. `USAP-2026`) until all its rows are verified.
+- [ ] Every rule used by the story is verified with edition + rule number, or the story is blocked. Exception under ADR 0009 (Accepted 2026-10-05): a part-(a) engine-mechanics story whose criteria name explicit `RulesConfig` values and make no rulebook claim may proceed; its provisional rows run under the `PROVISIONAL-UNVERIFIED` preset tagged `@needs-verification`, and no preset is named after a federation (e.g. `USAP-2026`) until all its rows are verified.
 - [ ] Scenario data tables reviewed and tagged with rule numbers.
 - [ ] Terminology matches the glossary in `docs/process/ddd-guidelines.md`.
 - [ ] Drills referenced by the story exist in the library with metadata.
@@ -49,7 +52,9 @@ results but could not be fetched. Rules R1-R6 and coaching notes C1-C2 in DOM ar
 </definition_of_done>
 
 <outputs>
-- `docs/domain/rules-verified.md`, `docs/domain/shot-taxonomy.md`, `docs/domain/drills/*.md`, scenario data tables, copy review notes.
+- `docs/domain/rules-verified.md`, `docs/domain/metric-dictionary.md`, scenario data tables, copy review notes.
+- Shot definitions in the glossary of `docs/process/ddd-guidelines.md` (a separate `docs/domain/shot-taxonomy.md` is created only if the glossary is not enough).
+- Drill reviews against `docs/domain/drill-review-checklist.md`. The drill library itself is `content/drills/`; it is outside `docs/`, so the ticket's owner edits the drill files and you review them.
 </outputs>
 
 <decision_logging>

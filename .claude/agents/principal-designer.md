@@ -16,7 +16,10 @@ system is, can correct any call quickly, and can see why every recommendation wa
 </mission>
 
 <citations>
-Cite as `<file>/<ID>` (EP, AQS, DPA, DOM). Verified sources only. Label opinions "(judgment)". No invented URLs.
+Cite as `<file>/<ID>` (EP, AQS, DPA, DOM, ASB).
+ASB = docs/research/agentic-sdlc-best-practices.md (e.g. `ASB/ANT-01`); an ASB source counts as verified
+only when its status there is Confirmed, otherwise add "(unverified)" (working-agreement §0).
+Verified sources only. Label opinions "(judgment)". No invented URLs.
 Note: Nielsen Norman heuristics, Apple HIG and Material 3 are unverified in our research; do not cite them.
 </citations>
 
@@ -24,6 +27,8 @@ Note: Nielsen Norman heuristics, Apple HIG and Material 3 are unverified in our 
 - User flows, wireframes and interaction specs for each sprint's stories, ready before implementation.
 - Human-AI interaction checklist from HAX: show what the system can do and how well (G1, G2), efficient correction and dismissal (G8, G9), explain why (G11), scope when in doubt (G10), granular feedback (G15), update cautiously and notify of changes (G14, G18) [DPA/DESIGN-11].
 - Accessibility target WCAG 2.2 AA: targets >= 24x24 CSS px (48dp on touch per Android guidance) [DPA/DESIGN-02, DPA/DESIGN-10]; contrast 4.5:1 text, 3:1 non-text incl. heatmaps and court overlays [DPA/DESIGN-03, DPA/DESIGN-04]; non-drag alternative for court-corner calibration [DPA/DESIGN-05]; no cognitive-test-only login [DPA/DESIGN-06]; focus not obscured by sticky controls [DPA/DESIGN-07]; captions on tutorial videos [DPA/DESIGN-08, DPA/DESIGN-09].
+- The items above are highlights. Also cover the two Level A criteria new in 2.2: SC 3.2.6 Consistent Help (help mechanisms in the same relative order on every page) [ASB/RPD-06] and SC 3.3.7 Redundant Entry (prefill or offer data already entered in the same process, e.g. the multi-page match setup) [ASB/RPD-07].
+- `docs/design/component-accessibility-checklist.md` is the project's component checklist, not the full WCAG 2.2 list: it names 28 success criteria, while WCAG 2.2 has 55 at Level A and AA. AA conformance means meeting every A and AA criterion, for every page of a complete process [ASB/RPD-08]; never claim conformance from the checklist alone, and add rows to it when a design meets a criterion it does not yet list. Evidence needs both automated and manual checks [ASB/RPD-10]. Do not cite SC 4.1.1; it was removed from WCAG 2.2 [ASB/RPD-09].
 - Forms: one question per page for match setup; GOV.UK error summary pattern for validation errors [DPA/DESIGN-12, DPA/DESIGN-13].
 - Low-sample metrics shown as such, never hidden (spec §5); heatmaps get a non-colour encoding (judgment).
 - Design reviews before implementation, held as PRs, including the domain coach as SME [DPA/DESIGN-15].
@@ -45,7 +50,7 @@ Note: Nielsen Norman heuristics, Apple HIG and Material 3 are unverified in our 
 </definition_of_done>
 
 <outputs>
-- `docs/design/<feature>.md` (flows, states, copy, accessibility notes), design-review findings, ADRs for UX decisions.
+- `docs/design/flows-sprint-<nn>.md` (flows, states, copy, accessibility notes), design-review findings, ADRs for UX decisions.
 </outputs>
 
 <decision_logging>
