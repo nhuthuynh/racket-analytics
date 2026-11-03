@@ -602,7 +602,7 @@ Baseline rows for Sprint 5, from `docs/sprints/05/requirements-breakdown.md` (at
 | NFR-024.4-.5 real devices | ST-079 | — | — | human (P20, OQ-17); `docs/qa/device-checklist-r1.md` (planned) | §5 P20 | — |
 | NFR-036.4 fix a call in ≤ 2 taps or keys (planned) | ST-080 | ST-080 | — (E2E counter) | `web/e2e/sprint-05/fix-call-taps.spec.ts` and a planted 3-step helper unit test | G05-05 | Not Ready: COACH-5 |
 | NFR-036.1-.3 Quick Tag speed, mis-tags, upload → plan effort | ST-083 | ST-083 (kit) | — | human (P9, OQ-20); `docs/design/usability-test-kit-r1.md` (planned) | §5 P9 | Not Ready: PD-5, COACH-5, SEC-5 |
-| FR-124.R1-.R2, FR-141.R1 single-weakness swap and coverage (planned) | ST-081 | ST-081a, ST-081b | `tests/features/plan_follow_through.feature` (new rules), `tests/features/drill_coverage.feature` | `backend/tests/integration/test_it_05_swap_single_weakness.py`; unit test on the coverage rule | G05-09 | Not Ready: COACH-5 |
+| FR-124.R1-.R2, FR-141.R1 single-weakness swap and coverage (planned) | ST-081 | ST-081a, ST-081b | `tests/features/plan_follow_through.feature` (new rules), `tests/features/drill_coverage.feature` | `backend/tests/integration/test_it_05_swap_single_weakness.py`; unit test on the coverage rule | — | Not Ready: COACH-5 |
 | FR-055.R1, REL-1.1-.3 release notes, rollback, migration round trip (planned) | ST-082 | ST-082 | `tests/features/release_notes.feature` | `scripts/ci/check_release_notes.py`, `scripts/ops/rollback_drill.py`, `backend/tests/integration/test_it_05_migration_roundtrip.py` | G05-09 | Not Ready: PE-5b, COACH-5 |
 | REL-1.4 R1 release-candidate sign-off | ST-082 | — | — | human (P18) | §5 P18 | — |
 | NFR-006.1-.5 rally F1 matcher and tolerance ADR (planned) | ST-084 | ST-084a, ST-084b | `tests/features/rally_f1.feature` | `backend/tests/unit/dataset/test_rally_f1.py` (examples + Hypothesis property) | G05-10 | ST-084a Ready; ST-084b waits on ST-084a |
@@ -610,13 +610,13 @@ Baseline rows for Sprint 5, from `docs/sprints/05/requirements-breakdown.md` (at
 | NFR-034.1-.3 focus return per close path (planned in ST-085) | ST-085 | ST-085 | — (component + E2E) | `web/tests/unit/plan-not-for-me-focus-return.test.tsx`, `web/e2e/sprint-04/swap-no-alternative.spec.ts` (E2E-04-04) | — | Ready after BA-5 |
 | FR-124.R3-.R4 offline plan read and sync once (planned in ST-085) | ST-085 | ST-085 | `web/tests/features/plan_offline_read.feature` (existing, .R3) | SW handler unit tests over `web/public/sw.js`; `web/e2e/sprint-04/offline-done.spec.ts` (existing, .R4) | — | Ready after BA-5 |
 | DEMO-1.1 flag-on `make demo` | — | QA-VERIFY04R5-01 | — | `infra/tests/test_seed_demo_plan.py` (flag-on case) | G05-09 | — |
-| PRC-1.1-.3 cancelled and timed-out scheduled runs | PRC-05 | CI-NOTICE-CANCELLED (#187) | `tests/features/scheduled_red_notice.feature` | merged with #187 | G05-12 | Ready (merged) |
+| PRC-1.1-.3 cancelled and timed-out scheduled runs | PRC-05 | CI-NOTICE-CANCELLED (#187) | `tests/features/scheduled_red_notice.feature` | merged with #187 | — | Ready (merged) |
 | PRC-2.1-.3 path → tier classifier | PRC-05 | CI-TIERS-a (#188) | `tests/features/review_tiers.feature` | merged with #188 | G05-08 | Ready (merged) |
 | PRC-2.4-.7 verdict sets per tier | PRC-05 | CI-TIERS-b (#193) | `tests/features/merge_tiers.feature` | merged with #193 | G05-08 | Ready (merged) |
 | PRC-3.1-.4 doc checks | PRC-05 | CI-DOC-CHECK (#189) | `tests/features/doc_check.feature` | merged with #189 | G05-08 | Ready (merged) |
-| PRC-4.1-.3 reconcile in `pr-policy` | PRC-05 | CI-RECON-ON-PR (#191) | `tests/features/reconcile_on_pr.feature` | merged with #191 | G05-12 | Ready (merged) |
+| PRC-4.1-.3 reconcile in `pr-policy` | PRC-05 | CI-RECON-ON-PR (#191) | `tests/features/reconcile_on_pr.feature` | merged with #191 | G05-08 | Ready (merged) |
 | PRC-5.1-.5 flow metrics | PRC-05 | QA-FLOW-METRICS (#195) | `tests/features/flow_metrics.feature` | merged with #195 | G05-11 | Ready (merged) |
 | PRC-6.1-.3 close checks (planned) | PRC-05 | EM-CLOSE-CHECKS | — | `docs/sprints/05/close-checks/retro_ready.py` and its tests | G05-12 | Ready |
-| PRC-7.1 atomic breakdown check | PRC-05 | QA-DOR-CHECK (#192) | `tests/features/atomic_breakdown.feature` | merged with #192 | G05-08 | Ready (merged) |
-| PRC-8.1 method pins (planned) | PRC-05 | QA-PIN-05 | — | `infra/tests/` pin tests | G05-10 | Ready |
+| PRC-7.1 atomic breakdown check | PRC-05 | QA-DOR-CHECK (#192) | `tests/features/atomic_breakdown.feature` | merged with #192 | — | Ready (merged) |
+| PRC-8.1 method pins (planned) | PRC-05 | QA-PIN-05 | — | `infra/tests/` pin tests | — (pins the §4 methods) | Ready |
 | NFR-070 legal gate | — | — | — | human (P16) | §5 P16 | — |
