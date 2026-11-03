@@ -31,6 +31,18 @@ Feature: A ticket PR cannot leave a finding in its decisions file outside the le
       When the PR policy checks run on the merge ref
       Then the reconcile step passes
 
+    Scenario: A major written as "ID, major:" still needs a ledger row
+      Given the pull request adds a decisions file line "AF-PLANT05-01, major: the drill library is thin"
+      When the PR policy checks run on the merge ref
+      Then the reconcile step fails
+      And it names AF-PLANT05-01 as a major with no ledger row
+
+    Scenario: An id next to a major word in no declared form fails closed
+      Given the pull request adds a decisions file line "AF-PLANT05-04 was raised in review and triaged a major"
+      When the PR policy checks run on the merge ref
+      Then the reconcile step fails
+      And it names AF-PLANT05-04 as in no declared form
+
   Rule: A gap phrase in a decisions file must carry a finding id
 
     Scenario: A "can only" line without a finding id fails pr-policy

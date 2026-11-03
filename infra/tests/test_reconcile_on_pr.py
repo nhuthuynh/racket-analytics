@@ -102,6 +102,73 @@ def test_ledger_ids_ignore_tables_without_a_severity_column() -> None:
     assert rd.ledger_ids("| Ticket | PR |\n|---|---|\n| ST-001-01 | #1 |\n") == set()
 
 
+# ------------------------------------------------------------------ unit: other forms (PE-CIRECON-R1-01)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "line",
+    [
+        "AF-X05-01, major: thin library",
+        "(AF-X05-01, major) thin library",
+        "**AF-X05-01 opened as major** (PR #27 merged with no verdict)",
+        "AF-X05-01: major, thin library",
+        "review finding AF-X05-01, Major: thin library",
+    ],
+)
+def test_a_major_written_in_another_inline_form_is_declared(line: str) -> None:
+    found = rd.declared_findings(decisions_text(line))
+    assert [(f["id"], f["severity"]) for f in found] == [("AF-X05-01", "major")]
+    assert rd.judge_decisions("d.md", decisions_text(line), None, set()) == [
+        "d.md:5: AF-X05-01 (major) has no ledger row"
+    ]
+
+
+@pytest.mark.unit
+def test_a_severity_cell_with_words_after_the_severity_is_declared() -> None:
+    text = (
+        "| Finding | Severity | Disposition |\n|---|---|---|\n"
+        "| PE-R3S3-04 | Major (fixed in abc1234) | Fixed |\n"
+        "| PE-R3S3-05 | minor, was major before triage | Fixed |\n"
+    )
+    found = rd.declared_findings(text)
+    assert [(f["id"], f["severity"]) for f in found] == [
+        ("PE-R3S3-04", "major"),
+        ("PE-R3S3-05", "major"),
+    ]
+
+
+@pytest.mark.unit
+def test_a_severity_column_left_of_the_finding_column_still_declares_the_finding() -> None:
+    text = (
+        "| Severity | Finding | Disposition |\n|---|---|---|\n"
+        "| major | QA-ACC3-01 (alias SQA-ACC3-02) | Fixed |\n"
+    )
+    found = rd.declared_findings(text)
+    assert [(f["id"], f["severity"]) for f in found] == [
+        ("QA-ACC3-01", "major"),
+        ("SQA-ACC3-02", "major"),
+    ]
+
+
+@pytest.mark.unit
+def test_an_id_with_a_major_word_in_no_declared_form_fails_closed() -> None:
+    text = decisions_text("AF-X05-07 was raised in review and triaged a blocker by the EM")
+    assert rd.judge_decisions("d.md", text, None, set()) == [
+        "d.md:5: AF-X05-07 sits on a line with a blocker/major word but in no declared form "
+        "(PRC-4.3); write `AF-X05-07 (major)` or add its ledger row"
+    ]
+
+
+@pytest.mark.unit
+def test_a_major_word_next_to_ledger_or_declared_ids_only_is_fine() -> None:
+    text = decisions_text(
+        "**AF-X05-08 (minor):** not a major issue",
+        "PE-OLD05-01 was the major one and is fixed",
+    )
+    assert rd.judge_decisions("d.md", text, None, rd.ledger_ids(LEDGER)) == []
+
+
 # ------------------------------------------------------------------ unit: judging
 
 
@@ -262,6 +329,22 @@ def test_cli_on_the_merged_sprint_4_decisions_flags_st_062_part2() -> None:
     assert flagged == [
         'docs/sprints/04/decisions/ST-062-part2.md:12: "can only" line names no finding id'
     ]
+
+
+@pytest.mark.integration
+def test_cli_reads_the_other_major_forms_in_the_merged_sprint_3_decisions(tmp_path: Path) -> None:
+    """PE-CIRECON-R1-01: the four lines the review named, judged without their ledger rows."""
+    lines = {"C3-03.md": 3, "PE-R3S3-04.md": 3, "QA-ACC-3.md": 16, "RETRO-03.md": 10}
+    out_dir = tmp_path / "docs/sprints/03/decisions"
+    out_dir.mkdir(parents=True)
+    for name in lines:
+        src = REPO_ROOT / "docs/sprints/03/decisions" / name
+        (out_dir / name).write_text(src.read_text("utf-8"), "utf-8")
+    res = run_pr_check(tmp_path, "--files", *sorted(str(out_dir / n) for n in lines))
+    assert res.returncode == 1, res.stdout + res.stderr
+    for name, number in lines.items():
+        where = f"docs/sprints/03/decisions/{name}:{number}: "
+        assert any(where in line for line in res.stdout.splitlines()), where
 
 
 # ------------------------------------------------------------------ the pr-policy job

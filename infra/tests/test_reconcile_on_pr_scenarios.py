@@ -83,3 +83,10 @@ def names_major(results: Results, finding: str) -> None:
 def names_gap(results: Results, phrase: str) -> None:
     out = results[RECONCILE_STEP].stdout
     assert f'"{phrase}" line names no finding id' in out
+
+
+@then(parsers.parse("it names {finding} as in no declared form"))
+def names_undeclared(results: Results, finding: str) -> None:
+    out = results[RECONCILE_STEP].stdout
+    assert f"{DECISIONS_FILE}:" in out
+    assert f"{finding} sits on a line with a blocker/major word but in no declared form" in out
