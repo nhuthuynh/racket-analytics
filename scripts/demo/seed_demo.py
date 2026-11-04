@@ -5,7 +5,9 @@ Through the public HTTP API only, as the browser does (https://localhost:3000/ap
 
  1. refuses unless the stack is the dev profile: APP_ENV=dev in the env file, and the API
     answers GET /dev/users (the /dev/* routes exist only with dev sign-in enabled);
- 2. signs in as the dev user Ivy (the "Sign in as Ivy" button);
+ 2. signs in as the dev user Ivy (the "Sign in as Ivy" button); on a stack with the age gate on
+    (FEATURE_AGE_GATE, FR-003) answers the age question once through POST /me/age-confirmation
+    with {"is_adult": true}, as the player does (QA-VERIFY04R5-01; never a database write);
  3. reuses a complete "Demo match" if Ivy has one (re-running adds nothing); otherwise creates
     a doubles match, uploads the 60 s H.264 fixture by tus and waits for "Video received";
  4. starts game 1 and tags the 12 rallies of demoplan.rally_plan (POST .../games and
@@ -69,6 +71,19 @@ def sign_in(c: Client, username: str) -> str | None:
         return f"no dev user {username!r} on this stack (found {names})"
     _expect(c.request("POST", "/dev/sign-in", json_body={"username": username}), 204, "sign-in")
     return None
+
+
+def confirm_age(c: Client) -> bool:
+    """Answer the age question when the age gate holds the demo user; True when answered."""
+    me = c.request("GET", "/me")
+    try:
+        needed = plan.needs_age_confirmation(me.status, me.json() if me.body else None)
+    except ValueError as e:
+        raise StepFailed(f"read the demo user: {e}") from e
+    if needed:
+        _expect(c.request("POST", "/me/age-confirmation", json_body=plan.age_answer()), 200,
+                "confirm the demo user's age")  # fmt: skip
+    return needed
 
 
 def demo_matches(c: Client) -> list[plan.DemoMatch]:
@@ -196,6 +211,8 @@ def main(argv: list[str] | None = None) -> int:
         if why:
             print(f"make demo refused: {why}", file=sys.stderr)
             return REFUSED
+        if confirm_age(c):
+            print(f"{plan.DEMO_USER_LABEL}'s age confirmed through the age-confirmation API.")
         seeded = seed(c, args)
         metrics = check_stats(c, seeded.match_id)
         demo_plan = ensure_plan(c)

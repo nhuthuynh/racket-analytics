@@ -6,7 +6,10 @@ a Quick Tag: its time on the video, the *ending*, the *winning side* and, where 
 so, the *responsible player* and *fault kind*. The demo only says what a player would tap; the
 API decides the score and the stats (no product rule is copied here). ST-064 (Coaching context):
 the demo player's *preferences* go to ``POST /me/plan``; the API ranks and assembles the *plan*.
-Tests: infra/tests/test_demo_plan.py, infra/tests/test_demo_plan_step.py.
+QA-VERIFY04R5-01 (Players context, FR-003): with the age gate on, the demo player *answers the
+age question* through ``POST /me/age-confirmation``, as a player does; the API stores the answer.
+Tests: infra/tests/test_demo_plan.py, infra/tests/test_demo_plan_step.py,
+infra/tests/test_demo_plan_age.py.
 """
 
 from __future__ import annotations
@@ -168,3 +171,29 @@ def plan_to_keep(status: int, body: Any) -> str | None:
 
 def plan_url(origin: str) -> str:
     return f"{origin.rstrip('/')}/plan"
+
+
+AGE_CONFIRMATION_REQUIRED = "age_confirmation_required"
+
+
+def needs_age_confirmation(status: int, body: Any) -> bool:
+    """From ``GET /me`` right after the dev sign-in: True when the age gate holds the demo user
+    (403 ``age_confirmation_required``), False when the user is admitted (flag off, or already
+    confirmed). Anything else, a refused answer (``under_age``) included, is a ValueError: the
+    demo answers only the question the API asks, and only for a dev user."""
+    error = body.get("error") if isinstance(body, dict) else None
+    code = error.get("code") if isinstance(error, dict) else None
+    if status == 403 and code == AGE_CONFIRMATION_REQUIRED:
+        return True
+    if status != 200:
+        raise ValueError(f"GET /me: HTTP {status} {code!r}")
+    account_id = body.get("id") if isinstance(body, dict) else None
+    if not isinstance(account_id, str) or not account_id:
+        raise ValueError("GET /me answered 200 with no account id")
+    return False
+
+
+def age_answer() -> dict[str, Any]:
+    """The ``POST /me/age-confirmation`` body of the demo player, an adult (api-sprint-04 §4):
+    the closed ``{"is_adult": true}``; never a birth date; a fresh dict per call."""
+    return {"is_adult": True}
