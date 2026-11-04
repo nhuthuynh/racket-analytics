@@ -100,15 +100,24 @@ def check(env_path: Path, compose_path: Path, settings_path: Path) -> list[str]:
     return list(dict.fromkeys(problems))  # a merged anchor repeats a fallback per service
 
 
-def overlay_problems(overlay_path: Path, env_path: Path) -> list[str]:
-    """The obs overlay (infra/observability/obs.env) only overrides env.example settings (ST-075b).
+def overlay_problems(overlay_path: Path, env_path: Path, compose_path: Path) -> list[str]:
+    """The obs overlay (infra/observability/obs.env) stays inside the env contract (ST-075b).
 
-    Appended to infra/.env, a name env.example does not declare would be a setting no parity
-    rule above covers; one line per such name; [] when none.
+    Appended to infra/.env, each overlay name must be an env.example setting, a Compose
+    variable (``COMPOSE_VARS``) or a setting compose.yaml reads with its own fallback
+    (``${NAME:-x}``, e.g. PURGE_INTERVAL_S, which env.example leaves unset on purpose).
+    One line per other name; [] when none.
     """
     example = env_example(env_path)
+    compose = yaml.safe_load(compose_path.read_text())
+    defaulted = {
+        m["name"]
+        for service in compose["services"]
+        for value in service_env(compose, service).values()
+        if (m := _FALLBACK.match(value))
+    }
     return [
         f"{name}: in the obs overlay but not in env.example"
         for name in env_example(overlay_path)
-        if name not in example and name not in COMPOSE_VARS
+        if name not in example and name not in COMPOSE_VARS and name not in defaulted
     ]

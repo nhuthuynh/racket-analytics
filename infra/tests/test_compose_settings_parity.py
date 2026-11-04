@@ -88,8 +88,23 @@ def test_host_only_cannot_hide_a_setting_the_backend_reads(tmp_path: Path) -> No
 def test_an_obs_overlay_setting_missing_from_env_example_fails(tmp_path: Path) -> None:
     overlay = tmp_path / "obs.env"
     overlay.write_text(OBS_OVERLAY.read_text() + "PLANTED_OBS_THING=1\n")
-    assert overlay_problems(overlay, ENV_EXAMPLE) == [
+    assert overlay_problems(overlay, ENV_EXAMPLE, COMPOSE) == [
         "PLANTED_OBS_THING: in the obs overlay but not in env.example"
+    ]
+
+
+@pytest.mark.unit
+def test_an_obs_overlay_may_override_a_setting_compose_defaults(tmp_path: Path) -> None:
+    # PURGE_INTERVAL_S stays out of env.example (purge_compose_service.feature: "With no
+    # interval set, the purge job is scheduled once a day"); compose.yaml defaults it.
+    compose = tmp_path / "compose.yaml"
+    compose.write_text(
+        "services:\n  purge:\n    environment:\n      PLANTED_DEFAULTED: ${PLANTED_DEFAULTED:-1}\n"
+    )
+    overlay = tmp_path / "obs.env"
+    overlay.write_text("PLANTED_DEFAULTED=2\nPLANTED_UNREAD=3\n")
+    assert overlay_problems(overlay, ENV_EXAMPLE, compose) == [
+        "PLANTED_UNREAD: in the obs overlay but not in env.example"
     ]
 
 
@@ -97,7 +112,7 @@ def test_an_obs_overlay_setting_missing_from_env_example_fails(tmp_path: Path) -
 def test_shipped_env_example_and_compose_are_in_parity() -> None:
     assert check(ENV_EXAMPLE, COMPOSE, SETTINGS_PY) == []
     # ST-075b: the obs overlay appended to infra/.env stays inside the same contract.
-    assert overlay_problems(OBS_OVERLAY, ENV_EXAMPLE) == []
+    assert overlay_problems(OBS_OVERLAY, ENV_EXAMPLE, COMPOSE) == []
 
 
 @pytest.mark.unit

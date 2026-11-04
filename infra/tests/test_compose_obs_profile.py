@@ -178,7 +178,9 @@ def test_env_example_ships_the_export_off_and_the_prometheus_port() -> None:
     example = env_example(ENV_EXAMPLE)
     assert example["OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"] == ""
     assert example["PROMETHEUS_HOST_PORT"] == "9090"
-    assert example["PURGE_INTERVAL_S"] == "86400"
+    # Unset, so Compose's daily default applies (purge_compose_service.feature, ADR 0038);
+    # only the obs overlay shortens it.
+    assert "PURGE_INTERVAL_S" not in example
 
 
 @pytest.mark.unit
