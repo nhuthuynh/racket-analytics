@@ -71,6 +71,18 @@ class LiveStack:
         args = ["--base-url", self.base_url]
         return [*args, "--cacert", self.cacert] if self.cacert else args
 
+    def public_features(self) -> dict[str, bool]:
+        """``GET /config/public`` (no session, ST-067): which R1 feature flags are on."""
+        livehttp = _load("livehttp")
+        c = livehttp.Client(f"{self.base_url}/api", self.base_url,
+                            livehttp.ssl_context(self.cacert, False))  # fmt: skip
+        try:
+            r = c.request("GET", "/config/public")
+        finally:
+            c.close()
+        assert r.status == 200, f"GET /config/public: {r.status}"
+        return dict(r.json()["features"])
+
     def client(self, username: str = "ivy") -> Any:
         """A client of the stack's public API, signed in as a dev user."""
         livehttp = _load("livehttp")
