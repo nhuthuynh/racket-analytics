@@ -59,7 +59,8 @@ class FakeApi:
         if body != {"is_adult": True}:
             return 422, _error("validation_failed")
         self.age_confirmed_at = self.age_confirmed_at or "2026-11-04T10:00:00Z"
-        return 200, {"id": "u-ivy", "display_name": "Ivy", "age_confirmed_at": self.age_confirmed_at}
+        me = {"id": "u-ivy", "display_name": "Ivy", "age_confirmed_at": self.age_confirmed_at}
+        return 200, me
 
     def answer(self, method: str, path: str, body: Any) -> tuple[int, Any]:
         if (method, path) == ("POST", AGE_CONFIRMATION):

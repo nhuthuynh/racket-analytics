@@ -1,10 +1,11 @@
 """IT-04-11 (ST-064): `make demo` creates one plan for Ivy; running it again keeps it.
-IT-05-11 (QA-VERIFY04R5-01, DEMO-1.1): on a flag-on stack the demo confirms Ivy's age through
-``POST /me/age-confirmation`` (the service the player uses, never SQL), once, and seeds.
+IT-05-11 (QA-VERIFY04R5-01, DEMO-1.1): on a flag-on stack the demo confirms Ivy's age
+through ``POST /me/age-confirmation`` (the service the player uses, never SQL), once.
 
-Binds tests/features/demo_seed_plan.feature and demo_seed_flags_on.feature too. The real scripts/demo/seed_demo.py over HTTP,
-always against the loopback fake of the public API (demo_fake_api.py), and against the live
-Compose stack named by RA_DEMO_BASE_URL (and RA_DEMO_CACERT) when set. Negative cases first.
+Binds tests/features/demo_seed_plan.feature and demo_seed_flags_on.feature too. The real
+scripts/demo/seed_demo.py over HTTP, always against the loopback fake of the public API
+(demo_fake_api.py), and against the live Compose stack named by RA_DEMO_BASE_URL (and
+RA_DEMO_CACERT) when set. Negative cases first.
 """
 
 from __future__ import annotations
