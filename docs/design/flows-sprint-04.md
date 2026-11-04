@@ -1,6 +1,6 @@
 # Sprint 4 flows: training plan (P), age question (A), privacy settings (R), over-limit messages (Q)
 
-- **Status:** Draft v0.1, 2026-10-17 (principal-designer, gate ticket PD-4). **Written before any Sprint 4 UI was built** (`ls web/src/app` → no `plan`, no `settings/privacy`, no age page). Design review **DR-04 is opened in §14 and is not yet held.** Until §14 records "held", this file is a proposal, and no Sprint 4 UI ticket (ST-063a/b/c, ST-068b, ST-071, ST-072b) starts without a PO waiver (sprint-04 §0.1, §3.8; ADR 0047 rule 2).
+- **Status:** v0.2, 2026-11-03 (principal-designer, ticket PD-DR04): DR-04 **still not held**; Sprint 5 hold attempt, the shipped-vs-spec re-read and the PO waiver request are in §14.3-§14.5. No change to §0-§13. Draft v0.1, 2026-10-17 (principal-designer, gate ticket PD-4). **Written before any Sprint 4 UI was built** (`ls web/src/app` → no `plan`, no `settings/privacy`, no age page). Design review **DR-04 is opened in §14 and is not yet held.** Until §14 records "held", this file is a proposal, and no Sprint 4 UI ticket (ST-063a/b/c, ST-068b, ST-071, ST-072b) starts without a PO waiver (sprint-04 §0.1, §3.8; ADR 0047 rule 2).
 - **Stories:** ST-063a plan page, ST-063b preferences, ST-063c done offline and "Not for me" (family P); ST-068b age question and footage notice (A); ST-071 privacy settings (R); ST-072b over-limit messages (Q).
 - **Requirements:** FR-003, FR-008, FR-009, FR-120..FR-124, FR-160; NFR-019, NFR-023, NFR-027, NFR-028, NFR-034, NFR-039, NFR-058.
 - **Design sources:** DES FR-UX-03, FR-UX-80, FR-UX-81, FR-UX-90 and the §4 plan states in [`brainstorm-design.md`](../requirements/brainstorm-design.md); HAX [DPA/DESIGN-11]; question pages [DPA/DESIGN-12]; error summary [DPA/DESIGN-13]; targets [DPA/DESIGN-02, DPA/DESIGN-10]; contrast [DPA/DESIGN-03, DPA/DESIGN-04]; focus not obscured [DPA/DESIGN-07]. Everything else is (judgment).
@@ -284,10 +284,50 @@ One row per decider; the decider replaces "pending" with its cells for the items
 | Role | Items | Opened | Due | Cell |
 |---|---|---|---|---|
 | principal-designer | R4-1..R4-8 | 2026-10-17 | — | accept (2026-10-17, author) |
-| senior-frontend-engineer | R4-1, R4-2, R4-3, R4-4, R4-7, R4-8 | 2026-10-17 | 2026-10-18 | pending |
-| pickleball-domain-coach | R4-1, R4-2, R4-3 | 2026-10-17 | 2026-10-18 | pending |
-| product-manager | R4-2, R4-4, R4-5, R4-6, R4-7 | 2026-10-17 | 2026-10-18 | pending |
-| security-privacy-engineer | R4-4, R4-5, R4-6 | 2026-10-17 | 2026-10-18 | pending |
-| business-analyst | R4-1, R4-3, R4-5, R4-6, R4-7, R4-8 | 2026-10-17 | 2026-10-18 | pending |
+| senior-frontend-engineer | R4-1, R4-2, R4-3, R4-4, R4-7, R4-8 | 2026-10-17 | 2026-10-18; re-opened 2026-11-03, due 2026-11-05 (§14.3) | pending |
+| pickleball-domain-coach | R4-1, R4-2, R4-3 | 2026-10-17 | 2026-10-18; re-opened 2026-11-03, due 2026-11-05 (§14.3) | pending |
+| product-manager | R4-2, R4-4, R4-5, R4-6, R4-7 | 2026-10-17 | 2026-10-18; re-opened 2026-11-03, due 2026-11-05 (§14.3) | pending |
+| security-privacy-engineer | R4-4, R4-5, R4-6 | 2026-10-17 | 2026-10-18; re-opened 2026-11-03, due 2026-11-05 (§14.3) | pending |
+| business-analyst | R4-1, R4-3, R4-5, R4-6, R4-7, R4-8 | 2026-10-17 | 2026-10-18; re-opened 2026-11-03, due 2026-11-05 (§14.3) | pending |
 
 **Hold status, 2026-10-17 (chair).** All five deciders are agent roles (`.claude/agents/<role>.md` exists for each), none is human-only, so no "not met: waiting on P-n" row applies. The chair's step could not reach them: `ListAgents` on 2026-10-17 → "No reachable agents". Under ADR 0037 rule 2 the chair does not write their cells, so they stay "pending" and DR-04 is **not yet held**. Next step: the orchestrator invokes each decider role with §14.1-§14.2 as its brief; each commits its own cell ("accept/reject (YYYY-MM-DD): reason") on this branch or on a follow-up PR. The check `check_flows.py --review DR-04 --decider <role>` (ticket PD-4b) turns green per role when its cell is written.
+
+### 14.3 Sprint 5 hold attempt (chair, ticket PD-DR04, 2026-11-03)
+
+- **Result: DR-04 is not held.** Read at `origin/main` `8c37e98`: `python3 docs/design/tools/check_flows.py docs/design/flows-sprint-04.md --review DR-04 --decider senior-frontend-engineer --decider pickleball-domain-coach --decider product-manager --decider security-privacy-engineer --decider business-analyst` → five `FAIL cell` lines, rc 1. No open PR and no remote branch changes this file (`git diff --quiet origin/main...<branch> -- docs/design/flows-sprint-04.md` over every `origin/*` branch → no change).
+- **Why the chair could not collect them:** `ListAgents` on 2026-11-03 → "No reachable agents". The chair does not write another role's cell (ADR 0037 rule 2); a cell the decider did not write would close the gate on paper only. This is the retro-04 M5 pattern (cells left to other roles were never invoked), so this time the request goes to the PO the same day (§14.5) instead of waiting.
+- **Re-opened, not re-dated:** the Opened column keeps 2026-10-17; the Due column now also says "re-opened 2026-11-03, due 2026-11-05" (sprint-05 §3.6 Wave 1 merge-by). The questions change: the Sprint 4 UI shipped without DR-04 (waiver-free, retro-04), so each decider now judges the **shipped** screens against §14.1, with the gaps in §14.4 in view.
+- **Not a human-only item:** every decider is an agent role (`.claude/agents/<role>.md` exists for all five). No "not met: waiting on P-n" row applies to the cells themselves; only the waiver choice in §14.5 is the PO's.
+
+### 14.4 Shipped-vs-spec re-read (chair, 2026-11-03) and decider brief
+
+Each decider reads its §14.1 items against the screens on `origin/main` and writes "accept / reject (YYYY-MM-DD): one line" in its §14.2 cell. A reject returns to the chair the same day and becomes a ledger row in `docs/sprints/05/review-rounds.md`. Gaps the chair found by reading the Sprint 4 decision files and `web/src` (no live walk; that is the deciders' and P6's):
+
+| Ledger id | Item | Spec | Shipped (evidence) | Severity (chair, judgment) |
+|---|---|---|---|---|
+| PD-DR04-01 | R4-6 | R-01 shorter-retention dialog "Change to 30 days?" before videos are deleted (§6, HAX G16) | Not built: deferred by ST-071 because PM-4 has no words (`docs/sprints/04/decisions/ST-071.md` row of 2026-10-29 "Deferred"); no Sprint 5 ticket names it (`grep -n -i 'shorter-retention' docs/sprints/sprint-05.md` → no match) | major: an irreversible deletion within a day, with no confirmation, once `feature_retention_setting` is on |
+| PD-DR04-02 | R4-5 | A-12 "Delete your account?" / A-13 for an existing unconfirmed account answering "No" (§5) | Not built: `docs/sprints/04/decisions/ST-068b.md` row 8 "A-12/A-13 … are not in this PR"; `ls web/src/app/welcome/age` → `page.tsx` only; the 422 shows W-A06/W-A07/W-A08 and the account stays gated | minor: the server keeps the account gated (api-sprint-04 §4); the player has no in-flow way to delete it |
+| PD-DR04-03 | R4-6, §1 flow map | "Privacy settings" link on X-00 and the account menu (§6) | Not built: ST-071 deferred row (2) "→ EM to ticket"; `grep -rn '/settings/privacy' web/src --include=*.tsx` (tests excluded) → no link | minor: R-01 is reachable only by typing the URL |
+
+Brief per decider (one invocation each, as DR-03 §13.2):
+
+- **senior-frontend-engineer** (R4-1, R4-2, R4-3, R4-4, R4-7, R4-8): your shipped P-01/P-02/P-03/Q-10 against §2-§4, §7-§11; the ST-063a citation-null row and the PM-4 texts on Q-10 (ST-072b) are accepted divergences unless you say otherwise.
+- **pickleball-domain-coach** (R4-1, R4-2, R4-3): weakness lines, "Points given away", drill "Why" and the human-coach notice as shipped on P-01.
+- **product-manager** (R4-2, R4-4, R4-5, R4-6, R4-7): include PD-DR04-01 (the dialog words are yours, PD-FL4-04), PD-DR04-02 (A-12/A-13 words, PD-FL4-06) and PD-DR04-03.
+- **security-privacy-engineer** (R4-4, R4-5, R4-6): device outbox holds ids only and is cleared on sign-out; PD-DR04-01 and PD-DR04-02 as data-protection questions.
+- **business-analyst** (R4-1, R4-3, R4-5, R4-6, R4-7, R4-8): FR-003, FR-008, FR-009, FR-120, FR-121, FR-123, FR-160 acceptance against what shipped, including the three gaps above.
+
+### 14.5 PO waiver request (for EM-ESC-05; its escalation file is not on `origin/main` yet)
+
+The chair asks the engineering-manager to carry this item in the EM-ESC-05 note (working-agreement §8); the chair does not write that file.
+
+- **Question:** DR-04 was never held and the Sprint 4 UI shipped. Do we hold DR-04 on the shipped screens, or does the PO record a waiver?
+- **Options:** (a) **hold**: the orchestrator invokes the five decider roles with the §14.4 brief by 2026-11-05; the chair records "held" in §14 when `check_flows.py … --decider <all five>` exits 0, and every reject becomes a ledger row. (b) **waiver**: the PO records in `docs/requirements/po-input-2026-10-05.md` that DR-04 is waived for the shipped Sprint 4 screens; the three §14.4 rows stay Open in the ledger with their owners, and DR-05 (PD-5) is held before its UI starts, so this does not repeat. (c) **wait** past Sprint 5: not recommended, as it repeats retro-04 M5.
+- **Recommendation (chair):** (a), because all five deciders are agent roles and the cost is five short invocations; (b) only if a cell is still empty at the deadline.
+- **Default if no answer by the deadline:** (b) is **not** assumed; the review stays "not held" and the gaps stay Open in the ledger (a waiver is the PO's to give, not the chair's).
+- **Deadline:** 2026-11-05 (EM-ESC-05 is sent by then, sprint-05 §3.6).
+- **Evidence:** §14.3 command and output; §14.4 table; retro `docs/retros/2026-12-11-sprint-04.md` M5.
+
+### 14.6 DR-01..DR-03 re-read (chair, 2026-11-03)
+
+No pending cell is left. `flows-sprint-01.md` §10 (DR-01) and `flows-sprint-02.md` §13 (DR-02): **Held** 2026-10-10 (ticket DR-HELD-03), every cell an accept. `flows-sprint-03.md` §13 (DR-03): **Held** 2026-10-17 (ticket C4-G12), the last cell being the business-analyst's R3-9 of 2026-10-15. Check: `grep -n '^|' docs/design/flows-sprint-0{1,2,3}.md | grep -i pending | grep -iv 'pending sign-in'` → one line only, `flows-sprint-03.md:264` (PD-FL3-03, an open item about a metric name "pending COACH-1", not a decider cell).
