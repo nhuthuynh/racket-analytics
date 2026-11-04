@@ -58,15 +58,41 @@ The coach does not keep retrying. Unblocking needs the human product owner: **OQ
 
 All entries are **UNVERIFIED**. The "provisional value" column restates what the team assumes today, so that the comparison is quick when the rulebook arrives. It is **not** a claim about the rules.
 
-| Priority | Product need | Provisional value (UNVERIFIED) | Research ref | Blocks |
-|---|---|---|---|---|
-| 1 | Side-out scoring: only the serving side scores | as stated | DOM G1 R2 | FR-041; SOD rows; AN-01..AN-03 definitions |
-| 2 | Game target and margin | 11, win by 2 | DOM G1 R2 | FR-040 preset; SOD-07..SOD-11 |
-| 3 | Doubles server number and first-service exception | game starts "0-0-2"; server 1 then server 2; then side-out | DOM G1 R6 | SOD-01..SOD-04, SOD-10; AN-03 "service turn" |
-| 4 | Score call format | three numbers in doubles: serving score, receiving score, server number | DOM G1 R6 | FR-048 (Sprint 2, ST-029) |
-| 5 | Faults end the rally against the faulting side; subtype does not change the score | as stated | DOM G1 R4-R6; QD-RE-09 | FR-044; F-01..F-06; AN-05, AN-07 |
-| 6 | Serving position follows the serving side's score (even = right) | as stated | DOM G1 R6 | "Server changes court" scenario (sprint-01 §7.8) |
-| 7 | Singles serving court parity | serve from the right on an even score | DOM G1 R6 (by analogy, judgment) | FR-042 (Sprint 2, ST-035) |
-| 8 | Match formats: best of 1 / 3; who serves first in game 2; end switches | inputs today (no rule claim) | — | FR-045 (b) |
-| 9 | Rally scoring (provisional rule in 2026): target, rotation, game point | not modelled; option disabled | DOM G1 R3 | FR-043 (R2) |
-| 10 | Two-bounce rule; NVZ volley rule; line calls | as stated | DOM G1 R4, R5, R6 | Fault subtype labels; R2 automatic fault detection |
+| Priority | Product need | Provisional value (UNVERIFIED) | Research ref | Blocks | FR rule ids (COACH-5) |
+|---|---|---|---|---|---|
+| 1 | Side-out scoring: only the serving side scores | as stated | DOM G1 R2 | FR-041; SOD rows; AN-01..AN-03 definitions | FR-041.R1 (SOD-01..05); FR-042.R1 |
+| 2 | Game target and margin | 11, win by 2 | DOM G1 R2 | FR-040 preset; SOD-07..SOD-11 | FR-041.R2 (SOD-07..11); FR-040.R1 ("game already over"); FR-046.R2; FR-053.R1 |
+| 3 | Doubles server number and first-service exception | game starts "0-0-2"; server 1 then server 2; then side-out | DOM G1 R6 | SOD-01..SOD-04, SOD-10; AN-03 "service turn" | FR-041.R3 (SOD-01..04, SOD-10); FR-046.R1, FR-046.R2 |
+| 4 | Score call format | three numbers in doubles: serving score, receiving score, server number | DOM G1 R6 | FR-048 (Sprint 2, ST-029) | FR-048.R1; FR-042.R1 |
+| 5 | Faults end the rally against the faulting side; subtype does not change the score | as stated | DOM G1 R4-R6; QD-RE-09 | FR-044; F-01..F-06; AN-05, AN-07 | FR-044.R1 (F-01..F-06) |
+| 6 | Serving position follows the serving side's score (even = right) | as stated | DOM G1 R6 | "Server changes court" scenario (sprint-01 §7.8) | FR-041.R4 |
+| 7 | Singles serving court parity | serve from the right on an even score | DOM G1 R6 (by analogy, judgment) | FR-042 (Sprint 2, ST-035) | FR-042.R2 |
+| 8 | Match formats: best of 1 / 3; who serves first in game 2; end switches | inputs today (no rule claim) | — | FR-045 (b) | FR-045.R1 |
+| 9 | Rally scoring (provisional rule in 2026): target, rotation, game point | not modelled; option disabled | DOM G1 R3 | FR-043 (R2) | FR-043.R1 |
+| 10 | Two-bounce rule; NVZ volley rule; line calls | as stated | DOM G1 R4, R5, R6 | Fault subtype labels; R2 automatic fault detection | FR-044.R2; FR-050.R1 (fault subtype labels) |
+
+### 5.1 Rule ids used in the queue (COACH-5, 2026-11-03)
+
+The goal scorecard row S5-P7 asks for the queue to be mapped to `FR-nnn.Rk`. The Gherkin in `docs/requirements/functional-requirements.md` has `Rule:` lines without numbers, and some FRs have scenarios only. The ids below number them in the order they appear there. Where an FR has no `Rule:` line, the id names the scenario's behaviour. These ids are labels for the verification work. They make no rule claim, and every row stays **UNVERIFIED**. The business-analyst keeps the atomic breakdown. FR-055.R1 is the only id already in `docs/sprints/05/requirements-breakdown.md`, and it keeps that meaning.
+
+| Id | Behaviour (as written in the FR) | Queue rows |
+|---|---|---|
+| FR-040.R1 | A rally applied after the game ended is refused ("game already over") | 2 |
+| FR-041.R1 | Only the serving side scores (side-out doubles) | 1 |
+| FR-041.R2 | A game is won at the target score by the win-by margin | 2 |
+| FR-041.R3 | Doubles service order: the game starts at 0-0-2; server 1, then server 2, then side-out | 3 |
+| FR-041.R4 | The server serves from the right on an even serving-side score ("Server changes court", sprint-01 §7.8) | 6 |
+| FR-042.R1 | Singles side-out: a two-number call and no server 2 | 1, 4 |
+| FR-042.R2 | Singles: the server's court follows the parity of the server's score | 7 |
+| FR-043.R1 | Rally scoring: every counted rally scores for its winner (R2, disabled) | 9 |
+| FR-044.R1 | A fault ends the rally against the faulting side; the subtype never changes the score | 5 |
+| FR-044.R2 | The fault subtypes are serve, NVZ, two-bounce, foot and other (analytics labels) | 10 |
+| FR-045.R1 | A match is best of 1 or 3 and ends when a side wins a majority of games; who serves first and end switches are inputs | 8 |
+| FR-046.R1 | A declared mid-game start is scored from that state | 3 |
+| FR-046.R2 | An impossible start (server number outside 1-2, or a score already over) is refused | 2, 3 |
+| FR-048.R1 | The score is called in the verified call format (three numbers in doubles) | 4 |
+| FR-050.R1 | Quick Tag endings and the optional fault subtype (labels only) | 10 |
+| FR-053.R1 | A correction that changes a game's end keeps the later rallies as "needs your decision" | 2 |
+| FR-055.R1 | While the preset is `PROVISIONAL-UNVERIFIED`, the "unofficial scoring" notice is shown (requirements-breakdown §2) | all |
+
+When the rulebook arrives (P7; the fallback request is in `docs/domain/po-fallback-p7-p15.md`), the coach verifies in the order of the queue. Every scenario that relies on a verified row gets `@rule-<number>`, as §2 step 4 requires. FR-055.R1 stays in force until **every** row that a preset relies on is verified.
