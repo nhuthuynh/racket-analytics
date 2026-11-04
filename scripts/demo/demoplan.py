@@ -181,8 +181,8 @@ def needs_age_confirmation(status: int, body: Any) -> bool:
     (403 ``age_confirmation_required``), False when the user is admitted (flag off, or already
     confirmed). Anything else, a refused answer (``under_age``) included, is a ValueError: the
     demo answers only the question the API asks, and only for a dev user."""
-    code = ((body or {}).get("error") or {}) if isinstance(body, dict) else None
-    code = code.get("code") if isinstance(code, dict) else None
+    error = body.get("error") if isinstance(body, dict) else None
+    code = error.get("code") if isinstance(error, dict) else None
     if status == 403 and code == AGE_CONFIRMATION_REQUIRED:
         return True
     if status != 200:
