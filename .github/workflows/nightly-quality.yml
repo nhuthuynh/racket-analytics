@@ -5,6 +5,9 @@
 #             >= 85% gate starts in Sprint 2. Since SRE-VERIFY04R3-03 (sprint-04 §8, retro C5) also
 #             coaching/plan and coaching/weakness, each gated at >= 0.80 and from an empty
 #             mutants/ (mutmut 3 keeps earlier results there).
+# * perf-r1:  R1 reads at 50 RPS per endpoint on a flags-on Compose stack (ST-074; NFR-010.1-.9;
+#             G05-01): the goal-scorecard §4 G05-01 command, 3 runs, every run must pass. Not
+#             PR-blocking at first (sprint-05 §8.4, judgment) and not needed by publish.
 # * publish:  writes both results with the run date into the current sprint's status.json on
 #             the default branch. Only this job can write, and it never runs test code.
 # Reports pass between jobs as job outputs (small JSON), so no artifact download is needed.
@@ -125,6 +128,54 @@ jobs:
         with:
           name: nightly-mutation
           path: reports/mutation*.json
+          if-no-files-found: warn
+
+  perf-r1:
+    name: R1 reads at 50 RPS per endpoint, flags on (NFR-010; G05-01)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      # goal-scorecard §4 G05-01: all four flags on; shell values override infra/.env
+      COMPOSE_PROJECT_NAME: racket-goal05-on
+      FEATURE_AGE_GATE: "true"
+      FEATURE_RETENTION_SETTING: "true"
+      FEATURE_TRAINING_CONSENT: "true"
+      FEATURE_QUOTAS: "true"
+      # 50 fresh accounts per run, 3 runs, one client IP (as perf-baseline raises the auth limits)
+      AUTH_LINK_LIMIT_PER_IP: "1000"
+      AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
+      MATCH_CREATIONS_PER_IP_PER_HOUR: "1000"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "uv==${UV_VERSION}"
+      - name: Start the stack and seed the demo (make up, make demo)
+        run: |
+          make up && make demo
+      - name: Locust and verdict, 3 runs of 6 min (1 min warm-up excluded)
+        run: |
+          mkdir -p reports/perf
+          for run in 1 2 3; do
+            uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \
+              -u 50 -r 50 -t 6m --csv reports/perf/r1-$run --only-summary || echo "locust rc=$?"
+            python3 scripts/ci/perf_verdict.py --stats reports/perf/r1-${run}_stats.csv --rps 50 \
+              --min-rps 49.5 --warmup-s 60 --p95-ms 300 --p99-ms 800 --max-error-pct 0.5 \
+              --per-endpoint match,score-sheet,dashboard,plan --json reports/perf/r1-$run.json \
+              --summary "$GITHUB_STEP_SUMMARY" || status=1
+          done
+          exit "${status:-0}"
+      - name: Service logs on failure
+        if: failure()
+        run: docker compose -f infra/compose.yaml logs --no-color --tail=200
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-perf-r1
+          path: reports/perf/
           if-no-files-found: warn
 
   publish:

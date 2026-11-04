@@ -30,8 +30,11 @@ T0 = 1_793_000_000
 
 
 def stats_rows(
-    *, requests: int = 3000, p95: dict[str, object] | None = None,
-    p99: dict[str, object] | None = None, failures: dict[str, int] | None = None,
+    *,
+    requests: int = 3000,
+    p95: dict[str, object] | None = None,
+    p99: dict[str, object] | None = None,
+    failures: dict[str, int] | None = None,
     omit: tuple[str, ...] = (),
 ) -> list[list[object]]:
     """One row per R1 name (``requests`` each, p95 120 ms, p99 400 ms, no failures unless
@@ -53,8 +56,14 @@ def stats_rows(
     return rows
 
 
-def history_rows(*, seed_s: int = 20, warmup_s: int = 60, window_s: int = WINDOW_S,
-                 rps: float = 50.0, reset: bool = True) -> list[list[object]]:
+def history_rows(
+    *,
+    seed_s: int = 20,
+    warmup_s: int = 60,
+    window_s: int = WINDOW_S,
+    rps: float = 50.0,
+    reset: bool = True,
+) -> list[list[object]]:
     """One Aggregated sample per second: seeding (no reads), the warm-up at ``rps``, then the
     reset (the total drops to 0) and ``window_s`` measured seconds at ``rps``."""
     rows: list[list[object]] = []
@@ -69,8 +78,9 @@ def history_rows(*, seed_s: int = 20, warmup_s: int = 60, window_s: int = WINDOW
     return rows
 
 
-def write_run(tmp: Path, prefix: str = "r1-1", *, history: list | None = None,
-              **stats: object) -> Path:
+def write_run(
+    tmp: Path, prefix: str = "r1-1", *, history: list | None = None, **stats: object
+) -> Path:
     """Write ``<prefix>_stats.csv`` (and ``<prefix>_stats_history.csv`` unless ``history``
     is ``[]``); return the stats path."""
     path = tmp / f"{prefix}_stats.csv"

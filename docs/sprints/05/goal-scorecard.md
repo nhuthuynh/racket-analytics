@@ -48,8 +48,11 @@ Each method's author dry-runs it live, in the configuration it measures, and log
 # one Compose project for the whole block: infra/compose.yaml:6 sets name: racket-analytics and the
 # Makefile's COMPOSE has no -p, so every make target (up, demo, down) reads COMPOSE_PROJECT_NAME from the shell;
 # the four flags come from the shell too (shell values override infra/.env; make has no FLAGS variable)
+# ST-074: each Locust user seeds its own account, so the per-IP sign-in and match-creation limits
+# are raised for 3 runs x 50 accounts from one client (as the CI perf-baseline job raises them)
 export COMPOSE_PROJECT_NAME=racket-goal05-on FEATURE_AGE_GATE=true FEATURE_RETENTION_SETTING=true \
-  FEATURE_TRAINING_CONSENT=true FEATURE_QUOTAS=true
+  FEATURE_TRAINING_CONSENT=true FEATURE_QUOTAS=true AUTH_LINK_LIMIT_PER_IP=1000 \
+  AUTH_EXCHANGE_LIMIT_PER_IP=1000 MATCH_CREATIONS_PER_IP_PER_HOUR=1000
 make up && make demo
 for run in 1 2 3; do
   uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \

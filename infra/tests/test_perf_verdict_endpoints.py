@@ -118,12 +118,11 @@ def test_errors_over_the_limit_on_one_endpoint_fail_it(tmp_path: Path) -> None:
 
 
 def test_errors_over_the_limit_overall_fail_the_run(tmp_path: Path) -> None:
-    rc, body, _, _ = verdict(
-        write_run(tmp_path, failures=dict.fromkeys(("match", "plan"), 16)), *R1
-    )
+    names = ("match", "score-sheet", "dashboard:stats", "dashboard:evidence", "plan")
+    rc, body, _, _ = verdict(write_run(tmp_path, failures=dict.fromkeys(names, 16)), *R1)
     assert rc == 1
     assert body["checks"]["error_pct"] is False
-    assert body["error_pct"] == pytest.approx(32 / 15000 * 100, abs=0.001)
+    assert body["error_pct"] == pytest.approx(80 / 15000 * 100, abs=0.001)
 
 
 def test_a_rate_under_min_rps_is_not_a_pass(tmp_path: Path) -> None:
@@ -251,15 +250,17 @@ def test_the_nightly_perf_r1_job_runs_the_g05_01_command_on_a_flags_on_stack() -
     job = yaml.safe_load(NIGHTLY.read_text())["jobs"]["perf-r1"]
     env = job.get("env", {})
     assert {f: env.get(f) for f in FLAGS} == dict.fromkeys(FLAGS, "true")
-    script = "\n".join(s.get("run", "") for s in job["steps"])
-    ran = _commands(script)
+    exported = next(c for c in _commands(_scorecard_block()) if c.startswith("export "))
+    for pair in exported.split()[1:]:
+        name, value = pair.split("=", 1)
+        assert str(env.get(name)) == value, name
+    ran = " ".join(_commands("\n".join(s.get("run", "") for s in job["steps"])))
     wanted = [c for c in _commands(_scorecard_block())
               if "locustfile_r1.py" in c or "perf_verdict.py" in c]  # fmt: skip
     assert len(wanted) == 2
     for command in wanted:
         assert command in ran, command
-    assert "make up" in ran
-    assert "make demo" in ran
+    assert "make up && make demo" in ran
 
 
 @pytest.mark.unit
