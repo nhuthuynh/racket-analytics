@@ -17,7 +17,7 @@
 | R7 | Quick Tag and score-sheet endings (`ENDING_LABELS`) | Winner · Unforced error · Forced error · Fault · Replay | **Accept** | Standard coaching words (judgment). They are endings, not rule claims. "Replay" is used instead of "let", because what counts as a let is a rule question (queue row 10) |
 | R8 | Full Tag fault kinds (`web/src/lib/label/view.ts`) | "Two bounce", "Kitchen (non-volley zone)" | **Accept** | Gives the player word and the rulebook term. Labeller role only |
 | R9 | stats metric definition line (`web/src/lib/stats/view.ts` `versionLine`) | "Definition version N, checked by our coach." | **Change (minor, COACH-S5-02)** | "Our coach" is the AI coaching role, but next to R5 ("not yet checked by a human coach") a player reads it as a human. Proposed wording: "Definition version N, reviewed by our coaching team; not yet checked by a human coach." Keep "and verified" only for `verified` entries. The final words depend on the P15 answer (`docs/domain/po-fallback-p7-p15.md`) |
-| R10 | "Not for me" with no alternative (`web/src/components/plan/PlanFollowThrough.tsx`) | "No other drill fits your setup for this. Your plan is unchanged." | **Accept** | True for both FR-124 rules. ST-081a/b make it rare for `solo+wall` (checklist §3.1.1) |
+| R10 | "Not for me" with no alternative (`web/src/components/plan/PlanFollowThrough.tsx`) | "No other drill fits your setup for this. Your plan is unchanged." | **Accept** | True for both FR-124 rules: a drill the player turned down is not offered again, so it does not "fit" either. ST-081a/b guarantee only the **first** "Not for me" per target per plan for `solo+wall` (checklist §3.1.1). With 3 drills of a target, the second press of that target in a plan shows this message, so it is an expected answer, not a rare one (PE-COACH5-1) |
 
 No text in the RC presents a rule number, an official score or a drill's effect as verified.
 
@@ -29,10 +29,12 @@ ST-082 may shorten the words, but not the claims. Each item names its P-n, as RE
 2. **Known limitation, scoring (P7):** side-out doubles and singles scoring, the game target and the win-by margin, the server number and the score call follow provisional values. Rally scoring is not offered. A match keeps the preset it was scored under.
 3. **Known limitation, coaching (P7):** the plan's split between serving and receiving weaknesses depends on the unverified side-out rule. So the plan page also carries the notice.
 4. **Known limitation, drills (P15):** every drill is `coach-reviewed` by the team's coaching role, not by a human coach. No drill claims to improve a metric. Warm up first, and stop any drill that hurts.
-5. **Known limitation, what the app does not do:** it makes no line calls, no automatic fault detection and no refereeing. The player marks every rally.
+5. **Known limitation, "Not for me" (COACH-S5-04):** the first "Not for me" for a weakness in a plan always offers another drill for a player alone with a wall. A second one for the same weakness may answer "No other drill fits your setup for this", because a drill the player turned down is not offered again in that plan.
+6. **Known limitation, what the app does not do:** it makes no line calls, no automatic fault detection and no refereeing. The player marks every rally.
 
 ## 3. Follow-ups
 
 | Id | What | Owner | Waits on |
 |---|---|---|---|
+| COACH-S5-04 (minor) | Second "Not for me" per target per plan can answer 409 (R10; checklist §3.1.1) | pickleball-domain-coach; product-owner | Sprint 6 refinement |
 | COACH-S5-02 (minor) | R9 wording | principal-designer decides the words; senior-frontend-engineer changes `versionLine` and its test in the ticket the EM assigns | P15 answer (EM-ESC-05, need-by 2026-11-10) |
