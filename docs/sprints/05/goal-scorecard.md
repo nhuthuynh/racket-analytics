@@ -53,7 +53,9 @@ Each method's author dry-runs it live, in the configuration it measures, and log
 export COMPOSE_PROJECT_NAME=racket-goal05-on FEATURE_AGE_GATE=true FEATURE_RETENTION_SETTING=true \
   FEATURE_TRAINING_CONSENT=true FEATURE_QUOTAS=true AUTH_LINK_LIMIT_PER_IP=1000 \
   AUTH_EXCHANGE_LIMIT_PER_IP=1000 MATCH_CREATIONS_PER_IP_PER_HOUR=1000
-make up && make demo
+# make up only: `make demo` fails with FEATURE_AGE_GATE on (seed_demo.py has no age confirmation;
+# ST-074 finding), and locustfile_r1.py seeds its own accounts
+make up
 for run in 1 2 3; do
   uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \
     -u 50 -r 50 -t 6m --csv reports/perf/r1-$run --only-summary

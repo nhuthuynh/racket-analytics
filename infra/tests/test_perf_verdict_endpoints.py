@@ -242,7 +242,8 @@ def _scorecard_block() -> str:
 def _commands(script: str) -> list[str]:
     """Shell lines with continuations joined and whitespace collapsed."""
     joined = re.sub(r"\\\n\s*", " ", script)
-    return [" ".join(line.split()) for line in joined.splitlines() if line.strip()]
+    lines = (" ".join(line.split()) for line in joined.splitlines())
+    return [line for line in lines if line and not line.startswith("#")]
 
 
 @pytest.mark.unit
@@ -260,7 +261,7 @@ def test_the_nightly_perf_r1_job_runs_the_g05_01_command_on_a_flags_on_stack() -
     assert len(wanted) == 2
     for command in wanted:
         assert command in ran, command
-    assert "make up && make demo" in ran
+    assert "make up" in ran
 
 
 @pytest.mark.unit

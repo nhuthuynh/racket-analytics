@@ -332,7 +332,8 @@ def endpoint_failures(v: dict) -> list[str]:
         }
         if e["failed"]:
             detail = "; ".join(why[r] for r in e["failed"])
-            lines.append(f"perf_verdict: FAIL {group}: {detail} (routes {', '.join(e['routes'])})")
+            routes = ", ".join(e["routes"]) or "none"
+            lines.append(f"perf_verdict: FAIL {group}: {detail} (routes {routes})")
     for check, ok in v["checks"].items():
         if not ok and check not in ("endpoints", "all_endpoints"):
             lines.append(f"perf_verdict: FAIL run: {check}")

@@ -153,9 +153,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}"
-      - name: Start the stack and seed the demo (make up, make demo)
+      - name: Start the stack (make up; each Locust user seeds its own account)
         run: |
-          make up && make demo
+          make up
       - name: Locust and verdict, 3 runs of 6 min (1 min warm-up excluded)
         run: |
           mkdir -p reports/perf
