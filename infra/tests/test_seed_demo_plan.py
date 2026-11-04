@@ -1,6 +1,8 @@
 """IT-04-11 (ST-064): `make demo` creates one plan for Ivy; running it again keeps it.
+IT-05-11 (QA-VERIFY04R5-01, DEMO-1.1): on a flag-on stack the demo confirms Ivy's age through
+``POST /me/age-confirmation`` (the service the player uses, never SQL), once, and seeds.
 
-Binds tests/features/demo_seed_plan.feature too. The real scripts/demo/seed_demo.py over HTTP,
+Binds tests/features/demo_seed_plan.feature and demo_seed_flags_on.feature too. The real scripts/demo/seed_demo.py over HTTP,
 always against the loopback fake of the public API (demo_fake_api.py), and against the live
 Compose stack named by RA_DEMO_BASE_URL (and RA_DEMO_CACERT) when set. Negative cases first.
 """
@@ -20,6 +22,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 pytestmark = pytest.mark.integration
 scenarios("demo_seed_plan.feature")
+scenarios("demo_seed_flags_on.feature")
 
 PLAN_LINE = re.compile(r"^Plan ([A-Za-z0-9_-]+):", re.MULTILINE)
 DEMO_PREFERENCES = {"minutes_per_session": 30, "sessions_per_week": 3, "players_available": 1,
@@ -78,6 +81,39 @@ def test_it_04_11_the_plan_is_generated_after_the_match_and_its_stats(stack: Sta
     assert res.stdout.index("/stats") < res.stdout.index("/plan"), res.stdout
 
 
+# ---------------------------------------------------------------- IT-05-11 (fake API, flags on)
+AGE = "POST /api/me/age-confirmation"
+
+
+def test_it_05_11_a_refused_age_answer_fails_the_demo_before_anything_is_seeded(
+    stack: Stack,
+) -> None:
+    stack.fake.age_gate, stack.fake.refuse_age = True, "under_age"
+    res = stack.demo()
+    assert res.returncode == 1, (res.stdout, res.stderr)
+    assert "make demo failed: confirm the demo user's age: HTTP 403" in res.stderr, res.stderr
+    assert not [p for p in stack.paths() if "/matches" in p or "/me/plan" in p], stack.paths()
+
+
+def test_it_05_11_flag_off_sends_no_age_answer(stack: Stack) -> None:
+    res = stack.demo()
+    assert res.returncode == 0, res.stderr
+    assert stack.fake.age_posts() == [], stack.paths()
+
+
+def test_it_05_11_flag_on_confirms_ivy_once_through_the_api_then_seeds_twice(
+    stack: Stack,
+) -> None:
+    stack.fake.age_gate = True
+    first, again = stack.demo(), stack.demo()
+    assert (first.returncode, again.returncode) == (0, 0), (first.stderr, again.stderr)
+    assert stack.fake.age_posts() == [{"is_adult": True}], stack.paths()
+    paths = stack.paths()
+    assert paths.index(AGE) < paths.index("GET /api/matches?limit=50"), paths
+    assert "age_confirmation_required" not in first.stderr + again.stderr
+    assert plan_id_in(first.stdout) == plan_id_in(again.stdout) is not None, first.stdout
+
+
 # ---------------------------------------------------------------- IT-04-11 (live stack)
 def test_it_04_11_live_stack_one_plan_and_a_rerun_keeps_its_id() -> None:
     live = live_stack()
@@ -97,6 +133,20 @@ def test_it_04_11_live_stack_one_plan_and_a_rerun_keeps_its_id() -> None:
 @given("a dev stack where Ivy has a complete demo match", target_fixture="world")
 def dev_stack(stack: Stack) -> Stack:
     return stack
+
+
+@given(
+    "a dev stack with the age gate on where Ivy has not confirmed her age",
+    target_fixture="world",
+)
+def age_gated_stack(stack: Stack) -> Stack:
+    stack.fake.age_gate = True
+    return stack
+
+
+@given(parsers.parse('the age-confirmation API refuses the answer with "{code}"'))
+def age_refused(world: Stack, code: str) -> None:
+    world.fake.refuse_age = code
 
 
 @given(parsers.parse('the plan API refuses to generate a plan with "{code}"'))
@@ -143,3 +193,21 @@ def same_plan_id(world: Stack) -> None:
     assert ids[0] is not None, world.runs[0].stdout
     assert ids == [ids[0], ids[0]], ids
     assert "already generated" in world.runs[-1].stdout, world.runs[-1].stdout
+
+
+@then("no match or plan was requested")
+def nothing_seeded(world: Stack) -> None:
+    paths = world.paths()
+    assert not [p for p in paths if "/matches" in p or "/me/plan" in p], paths
+
+
+@then("no age answer was sent")
+def no_age_answer(world: Stack) -> None:
+    assert world.fake.age_posts() == [], world.paths()
+
+
+@then("Ivy's age was confirmed once with the adult answer before any match was read")
+def confirmed_once(world: Stack) -> None:
+    assert world.fake.age_posts() == [{"is_adult": True}], world.paths()
+    paths = world.paths()
+    assert paths.index(AGE) < paths.index("GET /api/matches?limit=50"), paths
