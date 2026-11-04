@@ -52,7 +52,9 @@ def names(csv: str) -> list[str]:
     return [n.strip() for n in csv.split(",")]
 
 
-@given(parsers.parse('a copy of compose.yaml whose prometheus port is "{port}"'), target_fixture="ctx")
+@given(
+    parsers.parse('a copy of compose.yaml whose prometheus port is "{port}"'), target_fixture="ctx"
+)
 def planted_port(tmp_path: Path, port: str) -> dict:
     copy = tmp_path / "compose.yaml"
     copy.write_text(

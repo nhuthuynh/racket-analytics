@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from compose_env_parity import env_example
 from compose_obs import (
     ALERTS_DIR,
     ALLOWED_ATTRIBUTES,
@@ -21,9 +22,10 @@ from compose_obs import (
     PROMETHEUS_YML,
     check,
 )
-from compose_env_parity import env_example
 from test_compose import COMPOSE, ENV_EXAMPLE
 
+ENDPOINT = "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
+API_NAME = "      OTEL_SERVICE_NAME: racket-api"
 needs_docker = pytest.mark.skipif(shutil.which("docker") is None, reason="docker CLI missing")
 
 
@@ -58,7 +60,10 @@ def test_a_prometheus_port_on_every_interface_fails(tmp_path: Path) -> None:
 @pytest.mark.unit
 def test_a_published_collector_port_fails(tmp_path: Path) -> None:
     problems = planted(
-        tmp_path, "compose", "    profiles: [obs]\n", '    profiles: [obs]\n    ports: ["127.0.0.1:4318:4318"]\n'
+        tmp_path,
+        "compose",
+        "    profiles: [obs]\n",
+        '    profiles: [obs]\n    ports: ["127.0.0.1:4318:4318"]\n',
     )
     assert any(p.startswith("otel-collector: publishes a port") for p in problems), problems
 
@@ -82,8 +87,14 @@ def test_an_image_without_a_digest_fails(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 def test_an_app_service_that_needs_an_obs_service_fails(tmp_path: Path) -> None:
-    old = "      mailpit:\n        condition: service_healthy\n    healthcheck:\n      test: [\"CMD\", \"python\""
-    new = old.replace("      mailpit:\n", "      prometheus:\n        condition: service_healthy\n      mailpit:\n")
+    old = (
+        "      mailpit:\n        condition: service_healthy\n"
+        '    healthcheck:\n      test: ["CMD", "python"'
+    )
+    new = old.replace(
+        "      mailpit:\n",
+        "      prometheus:\n        condition: service_healthy\n      mailpit:\n",
+    )
     problems = planted(tmp_path, "compose", old, new)
     assert "api: depends on prometheus, which only runs with the obs profile" in problems
 
@@ -93,8 +104,8 @@ def test_a_hard_coded_metrics_endpoint_fails(tmp_path: Path) -> None:
     problems = planted(
         tmp_path,
         "compose",
-        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}\n      OTEL_SERVICE_NAME: racket-api",
-        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://otel-collector:4318/v1/metrics\n      OTEL_SERVICE_NAME: racket-api",
+        f"{ENDPOINT}: ${{{ENDPOINT}:-}}\n{API_NAME}",
+        f"{ENDPOINT}: http://otel-collector:4318/v1/metrics\n{API_NAME}",
     )
     assert any(p.startswith("api: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT must be") for p in problems)
 
@@ -110,7 +121,10 @@ def test_a_rule_file_glob_fails(tmp_path: Path) -> None:
 @pytest.mark.unit
 def test_a_promtool_test_file_in_rule_files_fails(tmp_path: Path) -> None:
     problems = planted(
-        tmp_path, "prometheus", "/etc/prometheus/rules/billing.yml", "/etc/prometheus/rules/billing.test.yml"
+        tmp_path,
+        "prometheus",
+        "/etc/prometheus/rules/billing.yml",
+        "/etc/prometheus/rules/billing.test.yml",
     )
     assert any("billing.test.yml is not a rule file" in p for p in problems), problems
 
@@ -118,7 +132,10 @@ def test_a_promtool_test_file_in_rule_files_fails(tmp_path: Path) -> None:
 @pytest.mark.unit
 def test_a_rule_file_that_does_not_exist_fails(tmp_path: Path) -> None:
     problems = planted(
-        tmp_path, "prometheus", "/etc/prometheus/rules/billing.yml", "/etc/prometheus/rules/nope.yml"
+        tmp_path,
+        "prometheus",
+        "/etc/prometheus/rules/billing.yml",
+        "/etc/prometheus/rules/nope.yml",
     )
     assert any("nope.yml has no file" in p for p in problems), problems
 
@@ -191,9 +208,13 @@ def test_the_collector_accepts_the_shipped_config_and_has_the_components() -> No
     )  # fmt: skip
     assert valid.returncode == 0, valid.stdout + valid.stderr
     comps = yaml.safe_load(
-        subprocess.run([*run, "components"], capture_output=True, text=True, timeout=180, check=True).stdout
+        subprocess.run(
+            [*run, "components"], capture_output=True, text=True, timeout=180, check=True
+        ).stdout
     )
-    names = {kind: {c["name"] for c in comps[kind]} for kind in ("receivers", "processors", "exporters")}
+    names = {
+        kind: {c["name"] for c in comps[kind]} for kind in ("receivers", "processors", "exporters")
+    }
     assert "otlp" in names["receivers"]
     assert {"deltatocumulative", "transform", "batch"} <= names["processors"]
     assert "prometheus" in names["exporters"]

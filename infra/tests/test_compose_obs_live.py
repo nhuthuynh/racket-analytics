@@ -121,7 +121,9 @@ def send_planted(ctx: dict, attribute: str) -> None:
     }  # fmt: skip
     body = {
         "resourceMetrics": [{
-            "resource": {"attributes": [{"key": "service.name", "value": {"stringValue": "it0502"}}]},
+            "resource": {"attributes": [
+                {"key": "service.name", "value": {"stringValue": "it0502"}},
+            ]},
             "scopeMetrics": [{"metrics": [{"name": name, "sum": {
                 "dataPoints": [point], "aggregationTemporality": 2, "isMonotonic": True,
             }}]}],

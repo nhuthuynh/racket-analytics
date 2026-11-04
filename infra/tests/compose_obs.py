@@ -75,7 +75,9 @@ def _compose_problems(compose: dict) -> list[str]:
         if "healthcheck" not in svc:
             problems.append(f"{name}: no healthcheck")
     if services.get("otel-collector", {}).get("ports"):
-        problems.append("otel-collector: publishes a port; OTLP and the exporter stay on the network")
+        problems.append(
+            "otel-collector: publishes a port; OTLP and the exporter stay on the network"
+        )
     command = [str(c) for c in services.get("prometheus", {}).get("command") or []]
     problems += [f"prometheus: {f} missing" for f in RETENTION_FLAGS if f not in command]
     for name, svc in services.items():
@@ -88,14 +90,18 @@ def _compose_problems(compose: dict) -> list[str]:
         env = _env(svc)
         endpoint = env.get("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
         if name in EXPORTERS and endpoint != ENDPOINT_PASSTHROUGH:
-            problems.append(f"{name}: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT must be {ENDPOINT_PASSTHROUGH}")
+            problems.append(
+                f"{name}: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT must be {ENDPOINT_PASSTHROUGH}"
+            )
         if name not in EXPORTERS and endpoint is not None:
             problems.append(f"{name}: exports metrics but is not an SLI emitter")
         if env.get("OTEL_METRICS_EXPORTER", "none") != "none":
             problems.append(f"{name}: OTEL_METRICS_EXPORTER must stay none (C-13)")
         temporality = env.get("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE")
         if name == "purge" and temporality != "delta":
-            problems.append("purge: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE must be delta")
+            problems.append(
+                "purge: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE must be delta"
+            )
         if name != "purge" and temporality is not None:
             problems.append(f"{name}: only purge exports delta (ADR 0057 C4)")
     return problems
