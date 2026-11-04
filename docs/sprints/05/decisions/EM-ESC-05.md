@@ -21,6 +21,7 @@ This is the per-ticket decision file (working-agreement §3, "Daily sync").
 | 2026-11-03 | engineering-manager | **Drill size data:** 34 drill files, 1429 lines in total (≈ 41 per drill), so the 400-line limit allows about 9 drills per PR | `find content/drills -name '*.json' -exec cat {} + \| wc -l` → 1429; `ls content/drills \| wc -l` → 35 (34 drills + `library.lock`) | Gives the PO a number for item SZ |
 | 2026-11-03 | engineering-manager | **P10 fact checked against the source**, not the record: the repository is public | `gh api repos/nhuthuynh/racket-analytics --jq '{private,visibility}'` → `{"private":false,"visibility":"public"}` | Retro-02 L5 |
 | 2026-11-03 | engineering-manager | **COACH-5 has not yet drafted its P7/P15 fallback request** (no branch on origin). The EM wrote P7 and P15 from sprint-05 §0.4 and the Sprint 4 report. COACH-5 can add a ledger row if its fallback wording differs | `git ls-remote --heads origin \| grep -i coach-5` → nothing | The send-by date of 2026-11-05 does not wait for COACH-5 |
+| 2026-11-04 | engineering-manager | **P7 and P15 now carry the COACH-5 request unchanged** (options A/B/C, recommendation A plus B as soon as possible), replacing the EM's earlier (a)/(b)/(c) wording | PR #202 (open), `git show origin/s05/coach-5-domain-review-of-rc-copy-and-notices-led:docs/domain/po-fallback-p7-p15.md` | The coach owns the domain fallback; one wording reaches the PO |
 
 ## 2. Cost per PR (ADR 0056 decision 1)
 
@@ -34,3 +35,4 @@ This is the per-ticket decision file (working-agreement §3, "Daily sync").
 |---|---|---|
 | First draft | `python3 scripts/ci/check_docs.py --base origin/main --head HEAD` | rc 1: `FAIL path: docs/sprints/05/po-escalations.md:110: .claude/skills does not exist` (A12 option (c) names a folder that does not exist yet) |
 | Fix | A12 names the folder without backticks and says that it does not exist yet. Evidence lines added for P11 and P18, so that every item has question, recommendation, default, deadline and evidence | rc 0: `doc-check: 0 problem(s) in 2 file(s)` |
+| P7/P15 aligned with PR #202 | `python3 scripts/ci/check_docs.py --base origin/main --head HEAD` | rc 1: three `FAIL path` lines, docs/domain/po-fallback-p7-p15.md is not on main; fixed by naming it without backticks, then rc 0: `doc-check: 0 problem(s) in 2 file(s)` |

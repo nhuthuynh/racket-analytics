@@ -7,7 +7,7 @@
 
 ## 1. Summary: what we need from you, by date
 
-The quickest way to reply is one line per item, for example "E1: a; E3: a; P7: b". The `#` column is the id to answer with.
+The quickest way to reply is one line per item, for example "E1: a; E3: A; P7: A". The `#` column is the id to answer with.
 
 | # | Question (short) | Recommended | Default if no answer | Deadline |
 |---|---|---|---|---|
@@ -21,8 +21,8 @@ The quickest way to reply is one line per item, for example "E1: a; E3: a; P7: b
 | A15 | Is the sprint goal one sentence or a bullet list? | a: one sentence plus bullet scorecard | (a) as in working-agreement §3; EM role file unchanged | 2026-11-10 |
 | SZ | Should drill JSON count towards the 400-line PR size limit? | a: keep counting, revisit at RETRO-05 | (a): it counts (ADR 0054 as written) | 2026-11-10 |
 | S6 | Admin setting 6 (ADR 0053 draft upgrade PR) | a: tick it | nothing; the upgrade job goes red when it has a fix to open | 2026-11-10 |
-| P7 | Rulebook, or accept "R1 ships unofficial scoring" | b: accept the fallback for R1 | stays unofficial; S5-P7 not met | **2026-11-10** |
-| P15 | Human coach review of drills, or accept `coach-reviewed` for R1 | b: accept the fallback for R1 | stays `coach-reviewed`; S5-P15 not met | **2026-11-10** |
+| P7 | Rulebook, or accept "R1 ships unofficial scoring" | A: accept the fallback; B (rulebook) as soon as possible | stays unofficial; S5-P7 not met | **2026-11-10** |
+| P15 | Human coach review of drills, or accept `coach-reviewed` for R1 | A: accept the fallback; B (human coach) before any public beta | stays `coach-reviewed`; S5-P15 not met | **2026-11-10** |
 | P8 | Budgets, storage quota, GPU (OQ-13) | a: give values | interim settings; no paid spend | **2026-11-10** |
 | P17 | SLO commitment and error-budget policy | a: accept the ST-075c drafts | drafts are internal targets only | **2026-11-12** |
 | P19 | Residual-risk ADR | a: review and decide | ADR stays Proposed; no real users | **2026-11-12** |
@@ -147,20 +147,30 @@ Each of these is a `goal-scorecard.md` §5 row, not a goal metric. Need-by dates
 
 ### P7. Rulebook (OQ-01) and side-out verification
 
-- **Question:** can you supply the rulebook for official scoring and the side-out split? If not, do you accept the fallback "R1 ships unofficial scoring"?
-- **Options:** (a) supply the rulebook, and the coach maps it to rule ids in `docs/domain/rules-verified.md`; (b) accept the fallback for R1: the score sheet, stats and plan carry the "unofficial scoring" label (FR-055), and the serve/receive split stays `@needs-verification`; (c) both: the fallback for R1, and the rulebook before R2.
-- **Recommendation:** (c). Choose (b) if the rulebook cannot come before R2 planning.
+The pickleball-domain-coach drafted this request in PR #202 (COACH-5, file docs/domain/po-fallback-p7-p15.md on that branch; the file is not on main yet). The options and recommendation below are the coach's, unchanged.
+
+- **Question:** the rulebook is still not supplied. Do you accept that **R1 ships as "unofficial scoring"** if it does not arrive in time?
+- **Options:**
+  - (A) **Accept the fallback.** R1 ships with the `PROVISIONAL-UNVERIFIED` preset and the "unofficial scoring (rules not yet verified)" notice on the score sheet, stats, plan and release notes (FR-055.R1). Official scoring becomes an R2 item and starts the day the PDF arrives. Cost: R1 cannot be used for official or tournament scoring, which was never an R1 promise.
+  - (B) **Supply the 2026 rulebook PDF and the change document** by 2026-11-10. The coach verifies queue rows 1-7. Every row that differs from the provisional value is a requirement change and may not fit Sprint 5.
+  - (C) **No decision.** P18 (R1 sign-off) then has no PO statement on scoring.
+- **Recommendation:** (A), and (B) as soon as possible. (A) keeps R1 honest; (B) is still the only way to official scoring (judgment).
 - **Default if no answer:** the product stays as it is today (labelled unofficial, split unverified), and S5-P7 stays not met. That is the current state of the product, not an acceptance on your behalf.
-- **Evidence:** `docs/sprints/04/sprint-report.md` §1.2, row S4-DoD-P7; FR-055.
+- **Evidence:** PR #202 (file po-fallback-p7-p15.md, not on main yet); `docs/domain/rules-verified.md` §1 (the agent proxy refuses the rulebook host); `docs/sprints/04/sprint-report.md` §1.2, row S4-DoD-P7; FR-055.
 - **Deadline:** 2026-11-10, so ST-082's release notes can state it.
 
 ### P15. Human coach review of drills
 
-- **Question:** can a human pickleball coach review the starter drills so they can move to `verified`? If not, do you accept R1 shipping drills at `coach-reviewed` (reviewed by the agent coach) with the human-coach notice?
-- **Options:** (a) supply a coach; (b) accept the fallback for R1; (c) both: the fallback for R1, and the coach before real users.
-- **Recommendation:** (c).
+Also drafted by the coach in PR #202; options and recommendation unchanged.
+
+- **Question:** no human coach has reviewed the drills at `coach-reviewed`. Do you accept that **R1 ships with drills reviewed only by the coaching role (agent)**, with the plan-page notice ("These drills have not yet been checked by a human coach. Warm up first, and stop any drill that hurts.") and the safety notes, until a human coach reviews them?
+- **Options:**
+  - (A) **Accept the fallback.** R1 drills stay `coach-reviewed`; the notice and safety notes stay. The stats wording changes as finding COACH-S5-02 proposes, so that "our coach" is not read as a human. Cost: drill quality is the agent's judgment; injury risk is reduced, not removed.
+  - (B) **Name a human coach** (certified, or an experienced club coach) who reviews the library against `docs/domain/drill-review-checklist.md` §1. Reviewed drills move to `verified`. About 5 minutes per drill (judgment).
+  - (C) **Hide drills in R1** until P15 is answered. The R1 plan then has no content and the Product Goal fails.
+- **Recommendation:** (A) for R1, and (B) before any public beta. Please confirm the COACH-S5-02 stats wording with this answer.
 - **Default if no answer:** drills stay `coach-reviewed` with the notice, and S5-P15 stays not met.
-- **Evidence:** `docs/sprints/04/sprint-report.md` §1.2, row S4-DoD-P15 (23 drills at `coach-reviewed`, 0 `verified`); ADR 0051 decision 3.
+- **Evidence:** PR #202 (file po-fallback-p7-p15.md, not on main yet); `docs/sprints/04/sprint-report.md` §1.2, row S4-DoD-P15 (0 drills `verified`); ADR 0051 decision 3.
 - **Deadline:** 2026-11-10.
 
 ### P8. Budgets, storage quota, GPU (OQ-13)
