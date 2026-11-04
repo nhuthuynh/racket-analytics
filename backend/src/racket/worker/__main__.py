@@ -21,6 +21,7 @@ from sqlalchemy.exc import DBAPIError
 from racket.analysis_jobs.stage import ShutdownRequested
 from racket.platform.logs import configure_logging
 from racket.platform.settings import ConfigurationError, Settings
+from racket.platform.slis import configure_metrics
 from racket.platform.tracing import configure_tracing
 from racket.video_ingest.probe import ffprobe_version
 from racket.worker.runner import Runner, new_worker_id
@@ -48,6 +49,7 @@ def main() -> int:
         return 2
     configure_logging(settings.log_level)
     configure_tracing("racket-worker", settings.otel_exporter_otlp_endpoint)
+    configure_metrics("racket-worker", settings.otel_exporter_otlp_metrics_endpoint)  # ST-075a
     runner = Runner(settings, stages, worker_id=new_worker_id())
     heartbeat = Path(os.environ.get("WORKER_HEARTBEAT_FILE", "/tmp/worker-heartbeat"))  # noqa: S108
 
