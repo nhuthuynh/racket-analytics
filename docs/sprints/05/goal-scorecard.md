@@ -58,9 +58,9 @@ export COMPOSE_PROJECT_NAME=racket-goal05-on FEATURE_AGE_GATE=true FEATURE_RETEN
 make up
 for run in 1 2 3; do
   uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \
-    -u 50 -r 50 -t 6m --csv reports/perf/r1-$run --only-summary
+    -u 50 -r 50 -t 8m --csv reports/perf/r1-$run --only-summary
   python3 scripts/ci/perf_verdict.py --stats reports/perf/r1-${run}_stats.csv --rps 50 \
-    --min-rps 49.5 --warmup-s 60 --p95-ms 300 --p99-ms 800 --max-error-pct 0.5 \
+    --min-rps 49.5 --warmup-s 60 --p95-ms 300 --p99-ms 800 --max-error-pct 0.5 --min-window 300 \
     --per-endpoint match,score-sheet,dashboard,plan --json reports/perf/r1-$run.json
 done
 ```

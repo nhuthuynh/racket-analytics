@@ -259,6 +259,9 @@ def test_the_nightly_perf_r1_job_runs_the_g05_01_command_on_a_flags_on_stack() -
     wanted = [c for c in _commands(_scorecard_block())
               if "locustfile_r1.py" in c or "perf_verdict.py" in c]  # fmt: skip
     assert len(wanted) == 2
+    # NFR-010 common method: 1 min warm-up excluded, a 5 min measured window, 3 runs
+    assert "--warmup-s 60" in wanted[1]
+    assert "--min-window 300" in wanted[1]
     for command in wanted:
         assert command in ran, command
     assert "make up" in ran
