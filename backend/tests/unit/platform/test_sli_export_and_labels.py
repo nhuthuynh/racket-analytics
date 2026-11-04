@@ -100,7 +100,11 @@ def test_the_worker_configures_the_metric_exporter_from_the_standard_variable(
     monkeypatch.setattr(worker_entry, "ffprobe_version", lambda: "stub")
     monkeypatch.setattr(worker_entry.signal, "signal", lambda *a: None)  # keep pytest's handlers
     monkeypatch.setattr(worker_entry, "configure_tracing", lambda *a: None)
-    monkeypatch.setattr(worker_entry, "configure_metrics", lambda *a: calls.append(a), raising=False)
+    # main() shuts down the global tracer provider on exit; keep the session's in-memory one.
+    monkeypatch.setattr(worker_entry.trace, "get_tracer_provider", lambda: object())
+    monkeypatch.setattr(
+        worker_entry, "configure_metrics", lambda *a: calls.append(a), raising=False
+    )
 
     assert worker_entry.main() == 0
     assert calls == [("racket-worker", expected)]

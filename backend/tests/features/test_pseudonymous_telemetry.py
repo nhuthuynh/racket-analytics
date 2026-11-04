@@ -96,6 +96,7 @@ def nothing_personal(
     logs = out.splitlines() + err.splitlines() + [caplog.handler.format(r) for r in caplog.records]
     logs += [json.dumps(r.__dict__, default=str) for r in caplog.records]
     attributes = metric_lines(ctx["reader"].get_metrics_data())
-    assert logs and attributes
+    assert logs, "nothing was logged; the log scan would be vacuous"
+    assert attributes, "no metric data point; the attribute scan would be vacuous"
     assert scan(attributes, nicknames=NICKNAMES) == []
     assert scan(logs, nicknames=NICKNAMES) == []

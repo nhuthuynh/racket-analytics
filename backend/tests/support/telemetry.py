@@ -100,7 +100,7 @@ def otlp_receiver() -> Iterator[tuple[str, Received]]:
     lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
-        def do_POST(self) -> None:  # noqa: N802 - http.server API
+        def do_POST(self) -> None:
             body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
             with lock:
                 received.paths.append(self.path)
@@ -156,7 +156,9 @@ sys.exit(entry.main())
 """
 
 
-def run_service(script: str, endpoint: str, timeout: float = 60) -> subprocess.CompletedProcess[str]:
+def run_service(
+    script: str, endpoint: str, timeout: float = 60
+) -> subprocess.CompletedProcess[str]:
     env = {
         **os.environ,
         "APP_ENV": "test",
@@ -165,7 +167,7 @@ def run_service(script: str, endpoint: str, timeout: float = 60) -> subprocess.C
         "WORKER_HEARTBEAT_FILE": os.devnull,
     }
     env.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)  # traces are not this test's subject
-    return subprocess.run(  # noqa: S603 - fixed interpreter and script
+    return subprocess.run(
         [sys.executable, "-c", script],
         cwd=BACKEND,
         env=env,
