@@ -188,7 +188,7 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 
 | Metric | Author | Ticket | Date | Head | Command (as §4) | rc | Planted-failure rc |
 |---|---|---|---|---|---|---|---|
-| G05-01 | senior-backend-engineer | ST-074 | | | | | |
+| G05-01 | senior-backend-engineer | ST-074 | 2026-11-04 | `ea22fe1c` | the §4 G05-01 block: its `export`, `make up`, then the 3-run locust + verdict loop (`-t 8m`, `--min-window 300`). One deviation: `DOCKERHUB_REGISTRY=mirror.gcr.io` (Docker Hub answered 429). Default ports, all 3 runs, one stack; load average sampled each second (mean 3.2-3.8, max 6.0-7.3 on 4 CPUs: Locust, the stack and other lanes' test containers) | **0, 0, 0** (3 of 3): p95/p99 ms per run, match 63/140, 130/220, 96/190; score-sheet 67/140, 130/220, 100/190; dashboard 78/180, 150/240, 110/200; plan 65/140, 130/210, 95/170; 0 failures of 19,125 / 19,246 / 19,190; 50.08 / 49.97 / 49.93 RPS; windows 381 / 385 / 384 s (98 / 95 / 96 s excluded). Earlier failing runs are kept in `decisions/ST-074.md` ("Dry runs"): r1-1 (moved ports, second stack), QA runs 1-2 | 1 (`--p95-ms 1` on run 3's CSV: `FAIL` match, score-sheet, dashboard, plan) |
 | G05-02 | sre-devops-engineer | ST-075c | | | | | |
 | G05-03 | sre-devops-engineer | ST-076c | | | | | |
 | G05-04 | senior-frontend-engineer | ST-079 | | | | | |

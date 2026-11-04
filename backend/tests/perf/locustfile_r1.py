@@ -21,7 +21,7 @@ history file shows the reset. ``scripts/ci/perf_verdict.py --per-endpoint
 match,score-sheet,dashboard,plan --warmup-s 60`` checks that and gates each read.
 
     uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \\
-      -u 50 -r 50 -t 6m --csv reports/perf/r1-1 --only-summary
+      -u 50 -r 50 -t 8m --csv reports/perf/r1-1 --only-summary
 
 Defaults fit ``make up``: API ``RA_API`` = http://127.0.0.1:8000 (``--host`` overrides),
 origin ``RA_ORIGIN`` = https://localhost:3000, CA ``RA_CACERT``, else ``.local/demo/root.crt``
