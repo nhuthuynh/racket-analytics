@@ -15,8 +15,10 @@ from compose_env_parity import (
     SETTINGS_READERS,
     check,
     env_example,
+    overlay_problems,
     settings_names,
 )
+from compose_obs import OBS_OVERLAY
 from conftest import REPO_ROOT
 from test_compose import COMPOSE, ENV_EXAMPLE
 
@@ -83,8 +85,19 @@ def test_host_only_cannot_hide_a_setting_the_backend_reads(tmp_path: Path) -> No
 
 # ---------------------------------------------------------------- the shipped files
 @pytest.mark.unit
+def test_an_obs_overlay_setting_missing_from_env_example_fails(tmp_path: Path) -> None:
+    overlay = tmp_path / "obs.env"
+    overlay.write_text(OBS_OVERLAY.read_text() + "PLANTED_OBS_THING=1\n")
+    assert overlay_problems(overlay, ENV_EXAMPLE) == [
+        "PLANTED_OBS_THING: in the obs overlay but not in env.example"
+    ]
+
+
+@pytest.mark.unit
 def test_shipped_env_example_and_compose_are_in_parity() -> None:
     assert check(ENV_EXAMPLE, COMPOSE, SETTINGS_PY) == []
+    # ST-075b: the obs overlay appended to infra/.env stays inside the same contract.
+    assert overlay_problems(OBS_OVERLAY, ENV_EXAMPLE) == []
 
 
 @pytest.mark.unit
