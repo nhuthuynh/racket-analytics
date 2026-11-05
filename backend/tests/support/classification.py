@@ -146,13 +146,17 @@ def _leaves(value: Any) -> Iterator[Any]:
 
 
 def _as_time(leaf: Any) -> tuple[datetime, timedelta] | None:
-    """An RFC 3339 string (ms precision, the match read model) or an HTTP-date (tus headers)."""
+    """An RFC 3339 string or an HTTP-date (tus headers), with the precision of its format:
+    ms for the match read model, whole seconds (truncated) for ``retry_at``/``next_slot_at``."""
     if not isinstance(leaf, str):
         return None
     try:
-        return datetime.fromisoformat(leaf.replace("Z", "+00:00")), timedelta(milliseconds=1)
+        at = datetime.fromisoformat(leaf.replace("Z", "+00:00"))
     except ValueError:
         pass
+    else:
+        whole_seconds = "." not in leaf.split("T")[-1]
+        return at, timedelta(seconds=1) if whole_seconds else timedelta(milliseconds=1)
     try:
         return email.utils.parsedate_to_datetime(leaf), timedelta(seconds=1)
     except (TypeError, ValueError, IndexError):
