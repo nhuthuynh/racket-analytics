@@ -151,7 +151,7 @@ def test_chapter_range_selects_only_those_chapters():
 
 @pytest.mark.parametrize("spec", ["V5-V1", "X1", "V0", "V18", "V1-"])
 def test_a_bad_chapter_spec_is_refused(spec: str):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="bad chapter spec"):
         asvs.parse_chapters(spec)
 
 

@@ -34,7 +34,9 @@ def ctx(tmp_path: Path) -> dict:
 def _write(ctx: dict) -> None:
     body = "# ASVS checklist (planted)\n\n## Checklist\n\n"
     for chapter, rows in ctx["rows"].items():
-        body += f"### {chapter} {TITLES[chapter]}\n\n{HEAD}" + "".join(r + "\n" for r in rows) + "\n"
+        body += (
+            f"### {chapter} {TITLES[chapter]}\n\n{HEAD}" + "".join(r + "\n" for r in rows) + "\n"
+        )
     ctx["file"].write_text(body, encoding="utf-8")
 
 
