@@ -1,45 +1,29 @@
-# OWASP ASVS 5.0 Level 2 checklist (skeleton)
+# OWASP ASVS 5.0 Level 2 checklist
 
-- **Status:** Skeleton v0 (NFR-050). Owner: security-privacy-engineer. Written into `docs/` by the principal-engineer's session, because the security role is read-only. Generated from the ASVS 5.0 chapter files listed under "Sources" with `scratchpad/asvs/gen.py` (the generator is not part of the repo), then annotated by hand.
-- **Date:** 2026-10-03
+- **Status:** v1 release review in progress (NFR-050; story ST-078). V1-V5 assessed by ST-078a (2026-11-05); V6-V10 by ST-078b; V11-V17 by ST-078c. Owner: security-privacy-engineer. Skeleton v0 (2026-10-03) was generated from the ASVS 5.0 chapter files listed under "Sources" with `scratchpad/asvs/gen.py` (not part of the repo), then annotated by hand.
+- **Date:** 2026-11-05 (V1-V5); 2026-10-03 (skeleton, V6-V17 until their tickets merge)
 - **Scope:** API, worker and PWA client, ASVS 5.0 **L1 + L2** [AQS/SEC-01], plus the L3 items we adopt: 5.2.4 and 5.2.6 (AQS Implications [AQS/SEC-02]) and 14.2.7 (NFR-066 [AQS/SEC-05]). Rows: 256.
-- **Release gate:** at each release review, every applicable L2 row is either passing with evidence, or covered by an accepted-risk ADR with a human decider (NFR-050).
+- **Release gate:** at each release review, every applicable L2 row is either passing with evidence, or covered by an accepted-risk ADR with a human decider (NFR-050). The PO decides the `Fail` rows in the P19 residual-risk ADR (ST-078c drafts it).
 
 ## How to read this
 
 - **Requirement text** is abridged from the fetched chapter, with "Verify that" removed. Read the full text in the source before you claim a pass.
-- **Applies:**
-  - `Yes`;
-  - `N/A` (with the reason in Verification);
-  - `S1` (applies once Sprint 1 introduces the feature);
-  - `TBD` (not yet assessed).
-- **Status:**
-  - `S0 planned`: the control is specified (API contract, ADR 0011, threat model) and a Sprint 0 story builds it. Where a test is named, it already exists as a red-first test (ADR 0012).
-  - `S0 partial`: part of the control lands in Sprint 0.
-  - `S0 documented`: a documentation requirement is satisfied by a named doc.
-  - `S1` or `Later`: a future sprint or the first deployment.
-  - `Open (F-n)`: a finding in `threat-model-v0.md` §5.
-  - `N/A`.
-  - `Not assessed`.
-- **No row says "Pass" yet.** Sprint 0 code is still being written. A row moves to `Pass` only with a command and its result, or a CI link (working agreement: evidence for every success claim).
+- **Applies:** `Yes`; `N/A` (with the reason in Verification); `S1` and `TBD` are skeleton values that mean "not decided".
+- **Status after the release review** (what `docs/security/tools/asvs_status.py` accepts):
+  - `Pass`: the control is in place, and Verification names the evidence: a test id (`test_...`, a test file, `IT-nn-nn`) or a command in backticks with its result. Commands run from the repository root.
+  - `Fail`: the control is missing or unproven. Owner names the fix ticket id or the residual-risk owner (`P19`, or the ADR id once it exists) and the finding id; the PO decides it (NFR-050.4).
+  - `N/A`: only with Applies `N/A` and the reason.
+- **Skeleton statuses** (`S0 planned`, `S0 partial`, `S0 documented`, `S1`, `Later`, `Open (F-n)`, `Not assessed`) are planning notes from Sprint 0. The tool counts every one of them as **not assessed**, so a chapter passes only when none is left.
+- **Evidence run for V1-V5:** every named backend test passed against local Postgres 16 and SeaweedFS (and Mailpit for the sign-in tests) at `bf0afb16`; the E2E specs passed in CI run 41929624496 (E2E chromium job) at the same commit; the commands were run on that tree. Details and the exact commands: `docs/sprints/05/decisions/ST-078a.md`.
 
-### Status summary
+### Status counts
 
-| Status | Rows |
-|---|---|
-| N/A | 77 |
-| S0 planned | 65 |
-| Not assessed | 48 |
-| S1 | 28 |
-| S0 partial | 14 |
-| Later (first deploy) | 9 |
-| S0 documented | 4 |
-| Later | 3 |
-| Open (F-3) | 2 |
-| Later (playback) | 2 |
-| Open (F-1) | 2 |
-| Open (F-2) | 1 |
-| Open | 1 |
+The counts are printed by the tool, so they cannot drift from the rows (the hand-kept summary of the skeleton did):
+
+```
+python3 docs/security/tools/asvs_status.py docs/security/asvs-l2-checklist.md --level 2 \
+  --fail-on not-assessed,fail-without-owner,pass-without-evidence --chapters V1-V5
+```
 
 ## Sources
 
@@ -71,104 +55,104 @@ The verified research registered only V2, V5, V8, V13, V14 and V16 (AQS/SEC-02 t
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 1.1.1 | 2 | input is decoded or unescaped into a canonical form only once, it is only decoded when encoded data in that form is e… | TBD | Not assessed | security | — |
-| 1.1.2 | 2 | the application performs output encoding and escaping either as a final step before being used by the interpreter for… | TBD | Not assessed | security | — |
-| 1.2.1 | 1 | output encoding for an HTTP response, HTML document, or XML document is relevant for the context required, such as en… | TBD | Not assessed | security | — |
-| 1.2.2 | 1 | when dynamically building URLs, untrusted data is encoded according to its context (e.g., URL encoding or base64url e… | TBD | Not assessed | security | — |
-| 1.2.3 | 1 | output encoding or escaping is used when dynamically building JavaScript content (including JSON), to avoid changing … | TBD | Not assessed | security | — |
-| 1.2.4 | 1 | data selection or database queries (e.g., SQL, HQL, NoSQL, Cypher) use parameterized queries, ORMs, entity frameworks… | Yes | S0 planned | BE ST-005/006 | SQLAlchemy bound parameters only; code review |
-| 1.2.5 | 1 | the application protects against OS command injection and that operating system calls use parameterized OS queries or… | Yes | S0 planned | ML ST-009 | ffprobe argv without shell; unit test on argv (T-WS-3) |
+| 1.1.1 | 2 | input is decoded or unescaped into a canonical form only once, it is only decoded when encoded data in that form is e… | Yes | Pass | BE | no hand decoding of request data; Starlette decodes once. `grep -rn unquote backend/src web/src` → no match |
+| 1.1.2 | 2 | the application performs output encoding and escaping either as a final step before being used by the interpreter for… | Yes | Pass | BE, FE | encoding at the last step only: React escapes at render, FastAPI serialises JSON at the response; `grep -rn dangerouslySetInnerHTML web/src` → no match; `web/e2e/sprint-01/threat-controls.spec.ts` T-UV-10 |
+| 1.2.1 | 1 | output encoding for an HTTP response, HTML document, or XML document is relevant for the context required, such as en… | Yes | Pass | FE ST-010 | `web/e2e/sprint-01/threat-controls.spec.ts` T-UV-10 (markup in a nickname and a file name renders as text); `grep -rn dangerouslySetInnerHTML web/src` → no match |
+| 1.2.2 | 1 | when dynamically building URLs, untrusted data is encoded according to its context (e.g., URL encoding or base64url e… | Yes | Pass | FE | ids enter paths only after `isPublicId`/`METRIC_ID_RE` checks, cursors through `encodeURIComponent` (`web/src/lib/api/client.ts` `matchPath`, `metricPath`); `grep -rn encodeURIComponent web/src/lib` → cursor and session ids |
+| 1.2.3 | 1 | output encoding or escaping is used when dynamically building JavaScript content (including JSON), to avoid changing … | Yes | Pass | FE ST-010 | no script built from data; CSP nonce and no `unsafe-inline`/`unsafe-eval` in production: `web/tests/unit/csp.test.ts`; `grep -rnE "<script" web/src` → no match |
+| 1.2.4 | 1 | data selection or database queries (e.g., SQL, HQL, NoSQL, Cypher) use parameterized queries, ORMs, entity frameworks… | Yes | Pass | BE ST-005/006 | bound parameters only: `grep -rnE "(text|execute)\(\s*f[\"']" backend/src --exclude-dir=migrations` → no match (migration f-strings interpolate module constants, no input); `test_it_02_10_every_generated_value_is_still_bad_where_the_server_reads_it` |
+| 1.2.5 | 1 | the application protects against OS command injection and that operating system calls use parameterized OS queries or… | Yes | Pass | ML ST-009 | `test_a_probe_gets_only_the_fixed_argv` (`backend/tests/integration/video_ingest/test_probe_sandbox.py`); `grep -rn "shell=True\|os.system\|os.popen" backend/src` → no match |
 | 1.2.6 | 2 | the application protects against LDAP injection vulnerabilities, or that specific security controls to prevent LDAP i… | N/A | N/A | — | no LDAP |
 | 1.2.7 | 2 | the application is protected against XPath injection attacks by using query parameterization or precompiled queries. | N/A | N/A | — | no XPath |
 | 1.2.8 | 2 | LaTeX processors are configured securely (such as not using the "--shell-escape" flag) and an allowlist of commands i… | N/A | N/A | — | no LaTeX |
-| 1.2.9 | 2 | the application escapes special characters in regular expressions (typically using a backslash) to prevent them from … | TBD | Not assessed | security | — |
-| 1.3.1 | 1 | all untrusted HTML input from WYSIWYG editors or similar is sanitized using a well-known and secure HTML sanitization… | TBD | Not assessed | security | — |
-| 1.3.2 | 1 | the application avoids the use of eval() or other dynamic code execution features such as Spring Expression Language … | TBD | Not assessed | security | — |
-| 1.3.3 | 2 | data being passed to a potentially dangerous context is sanitized beforehand to enforce safety measures, such as only… | TBD | Not assessed | security | — |
+| 1.2.9 | 2 | the application escapes special characters in regular expressions (typically using a backslash) to prevent them from … | Yes | Pass | BE, FE | no pattern is built from user input: `grep -rnE "new RegExp\(" web/src` → no match; the one dynamic Python pattern (`coaching/drills/schema_check.py:92`) comes from the repo's drill schema |
+| 1.3.1 | 1 | all untrusted HTML input from WYSIWYG editors or similar is sanitized using a well-known and secure HTML sanitization… | N/A | N/A | — | no rich-text or HTML input anywhere; every user string is rendered as text (1.2.1) |
+| 1.3.2 | 1 | the application avoids the use of eval() or other dynamic code execution features such as Spring Expression Language … | Yes | Pass | BE, FE | `grep -rnE "(^|[^.A-Za-z0-9_])(eval|exec)\(|new Function\(" backend/src web/src` → no match; production CSP forbids `unsafe-eval` (`web/tests/unit/csp.test.ts`) |
+| 1.3.3 | 2 | data being passed to a potentially dangerous context is sanitized beforehand to enforce safety measures, such as only… | Yes | Pass | BE | object keys and stored text are checked before use: `test_it_02_10_bad_characters_in_an_object_key_are_a_4xx_and_write_nothing`; `test_normalise_email_never_raises_and_output_is_well_formed` |
 | 1.3.4 | 2 | user-supplied Scalable Vector Graphics (SVG) scriptable content is validated or sanitized to contain only tags and at… | N/A | N/A | — | no SVG upload |
-| 1.3.5 | 2 | the application sanitizes or disables user-supplied scriptable or expression template language content, such as Markd… | TBD | Not assessed | security | — |
-| 1.3.6 | 2 | the application protects against Server-side Request Forgery (SSRF) attacks, by validating untrusted data against an … | Yes | Open (F-2) | ML ST-009 | ffprobe protocol/format allowlist; SSRF/LFI fixture test (T-WS-2) |
-| 1.3.7 | 2 | the application protects against template injection attacks by not allowing templates to be built based on untrusted … | TBD | Not assessed | security | — |
+| 1.3.5 | 2 | the application sanitizes or disables user-supplied scriptable or expression template language content, such as Markd… | N/A | N/A | — | no user-supplied Markdown or template content; drill and guide text is repository content (`content/drills/`), not user input |
+| 1.3.6 | 2 | the application protects against Server-side Request Forgery (SSRF) attacks, by validating untrusted data against an … | Yes | Pass | ML ST-009 | F-2 closed (SEC-R1-01): `test_a_manifest_disguised_as_a_video_fetches_nothing`, `test_the_input_format_allowlist_is_exactly_the_mp4_family`, `test_public_internet_is_blocked_from_the_worker` |
+| 1.3.7 | 2 | the application protects against template injection attacks by not allowing templates to be built based on untrusted … | Yes | Pass | BE | no template engine; mail bodies are fixed strings: `grep -rniE "jinja|string\.Template" backend/src` → no match |
 | 1.3.8 | 2 | the application appropriately sanitizes untrusted input before use in Java Naming and Directory Interface (JNDI) quer… | N/A | N/A | — | no JNDI |
 | 1.3.9 | 2 | the application sanitizes content before it is sent to memcache to prevent injection attacks. | N/A | N/A | — | no memcache |
-| 1.3.10 | 2 | format strings which might resolve in an unexpected or malicious way when used are sanitized before being processed. | TBD | Not assessed | security | — |
-| 1.3.11 | 2 | the application sanitizes user input before passing to mail systems to protect against SMTP or IMAP injection. | S1 | S1 | BE (magic links) | mail headers built by library; no user input in headers |
-| 1.4.1 | 2 | the application uses memory-safe string, safer memory copy and pointer arithmetic to detect or prevent stack, buffer,… | TBD | Not assessed | security | — |
-| 1.4.2 | 2 | sign, range, and input validation techniques are used to prevent integer overflows. | TBD | Not assessed | security | — |
-| 1.4.3 | 2 | dynamically allocated memory and resources are released, and that references or pointers to freed memory are removed … | TBD | Not assessed | security | — |
+| 1.3.10 | 2 | format strings which might resolve in an unexpected or malicious way when used are sanitized before being processed. | Yes | Pass | BE | no format string from input; logging uses `%`-arguments: `grep -rn "\.format(" backend/src` → no match |
+| 1.3.11 | 2 | the application sanitizes user input before passing to mail systems to protect against SMTP or IMAP injection. | Yes | Pass | BE (magic links) | `To` is the normalised address (no control or line-separator character), subject fixed, built with `EmailMessage`: `test_normalise_email_never_raises_and_output_is_well_formed`, `test_malformed_addresses_are_refused` |
+| 1.4.1 | 2 | the application uses memory-safe string, safer memory copy and pointer arithmetic to detect or prevent stack, buffer,… | N/A | N/A | — | no unmanaged code of ours (Python, TypeScript); the C parser we run (ffprobe) is a dependency, sandboxed under rlimits (ADR 0020) and covered by V15 dependency rows |
+| 1.4.2 | 2 | sign, range, and input validation techniques are used to prevent integer overflows. | Yes | Pass | BE | numbers are range-checked before they reach bigint columns: `test_last_modified_out_of_bigint_range_is_a_400_and_stores_nothing`, `test_non_integer_offset_is_400` |
+| 1.4.3 | 2 | dynamically allocated memory and resources are released, and that references or pointers to freed memory are removed … | N/A | N/A | — | garbage-collected runtimes only (as 1.4.1); ffprobe processes are killed and reaped (`test_a_hanging_probe_is_killed_at_the_wall_clock_limit`) |
 | 1.5.1 | 1 | the application configures XML parsers to use a restrictive configuration and that unsafe features such as resolving … | N/A | N/A | — | no XML parsing (ffprobe JSON output) |
-| 1.5.2 | 2 | deserialization of untrusted data enforces safe input handling, such as using an allowlist of object types or restric… | TBD | Not assessed | security | — |
+| 1.5.2 | 2 | deserialization of untrusted data enforces safe input handling, such as using an allowlist of object types or restric… | Yes | Pass | BE | JSON into closed Pydantic schemas only: `grep -rnE "import (pickle|marshal|shelve)|yaml\.load|jsonpickle" backend/src` → no match; `test_unknown_request_field_is_rejected` |
 
 ### V2 Validation and Business Logic
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 2.1.1 | 1 | the application's documentation defines input validation rules for how to check the validity of data items against an… | Yes | S0 documented | PE | api-sprint-00 §5-§6 field rules |
-| 2.1.2 | 2 | the application's documentation defines how to validate the logical and contextual consistency of combined data items… | TBD | Not assessed | security | — |
-| 2.1.3 | 2 | expectations for business logic limits and validations are documented, including both per-user and globally across th… | Yes | S1 | BA + security | document per-user/global limits (F-3) |
-| 2.2.1 | 1 | input is validated to enforce business or functional expectations for that input. This should either use positive val… | Yes | S0 planned | BE ST-006/008 | closed Pydantic schemas; `test_unknown_request_field_is_rejected`, `test_validation_error_is_generic…` |
-| 2.2.2 | 1 | the application is designed to enforce input validation at a trusted service layer. While client-side validation impr… | Yes | S0 planned | BE | server-side validation; FE validation is UX only |
-| 2.2.3 | 2 | the application ensures that combinations of related data items are reasonable according to the pre-defined rules. | TBD | Not assessed | security | — |
-| 2.3.1 | 1 | the application will only process business logic flows for the same user in the expected sequential step order and wi… | Yes | S0 planned | BE ST-008 | IT-00-08 probe only after final byte (NFR-060) |
-| 2.3.2 | 2 | business logic limits are implemented per the application's documentation to avoid business logic flaws being exploit… | Yes | S1 | BE | quotas (F-3) |
-| 2.3.3 | 2 | transactions are being used at the business logic level such that either a business logic operation succeeds in its e… | Yes | S0 planned | BE ST-007/008 | completion transaction (ADR 0011); `test_fail_closed.py` |
-| 2.3.4 | 2 | business logic level locking mechanisms are used to ensure that limited quantity resources (such as theater seats or … | Yes | S0 planned | BE ST-008 | upload row lock `FOR UPDATE NOWAIT`; concurrent PATCH test to add (T-UP-3) |
-| 2.4.1 | 2 | anti-automation controls are in place to protect against excessive calls to application functions that could lead to … | Yes | Open (F-3) | BE + SRE S1 | rate limits on sign-in, match create, upload create/PATCH |
+| 2.1.1 | 1 | the application's documentation defines input validation rules for how to check the validity of data items against an… | Yes | Pass | PE | field rules documented: `grep -n "^### 5.3 Validation paths" docs/architecture/api-sprint-01.md` → line 162; api-sprint-00 §5-§6 |
+| 2.1.2 | 2 | the application's documentation defines how to validate the logical and contextual consistency of combined data items… | Yes | Pass | PE, BA | combined-item rules (format × participants × `is_me`) documented in api-sprint-01 §5.3 and FR scenarios; `backend/tests/features/test_match_setup.py` (`test_wrong_participants_for_the_format`) |
+| 2.1.3 | 2 | expectations for business logic limits and validations are documented, including both per-user and globally across th… | Yes | Fail | P19 (residual, SEC-S5-ASVS-01) | per-account and per-IP limits are documented (api-sprint-01 §2.4, api-sprint-02 §3 Limits, api-sprint-04 §7); no application-wide (global) limit is documented, e.g. total storage or daily probe jobs: `grep -rniE "global (limit|quota|cap)" docs/architecture` → no match |
+| 2.2.1 | 1 | input is validated to enforce business or functional expectations for that input. This should either use positive val… | Yes | Pass | BE ST-006/008 | `test_unknown_request_field_is_rejected`, `test_unknown_or_server_owned_fields_are_refused_without_echo`, `test_bad_creation_headers_are_refused` |
+| 2.2.2 | 1 | the application is designed to enforce input validation at a trusted service layer. While client-side validation impr… | Yes | Pass | BE | the API checks every rule itself (the tests call the API, not the client): `test_unknown_request_field_is_rejected`, `test_it_02_10_every_generated_value_is_still_bad_where_the_server_reads_it` |
+| 2.2.3 | 2 | the application ensures that combinations of related data items are reasonable according to the pre-defined rules. | Yes | Pass | BE ST-016 | `backend/tests/features/test_match_setup.py` (`test_wrong_participants_for_the_format`, 3 combinations) |
+| 2.3.1 | 1 | the application will only process business logic flows for the same user in the expected sequential step order and wi… | Yes | Pass | BE ST-008 | IT-00-08: `test_probe_enqueued_only_after_last_byte`; `test_it_01_07_patch_after_expiry_is_refused_and_others_still_get_404` |
+| 2.3.2 | 2 | business logic limits are implemented per the application's documentation to avoid business logic flaws being exploit… | Yes | Pass | BE ST-072a | F-3 closed: `test_it_04_09_a_burst_of_50_match_creations_accepts_exactly_10`, `test_it_04_09_a_burst_of_50_uploads_never_passes_the_storage_quota`, `test_it_02_13_parallel_commands_never_pass_the_per_account_rate` |
+| 2.3.3 | 2 | transactions are being used at the business logic level such that either a business logic operation succeeds in its e… | Yes | Pass | BE ST-007/008 | `test_a_failure_after_the_lock_rolls_everything_back`, `test_it_01_06_corrupted_chunk_is_refused_and_the_offset_is_unchanged` |
+| 2.3.4 | 2 | business logic level locking mechanisms are used to ensure that limited quantity resources (such as theater seats or … | Yes | Pass | BE ST-008 | T-UP-3: `test_patch_while_another_patch_holds_the_row_is_409_and_unchanged`; `test_it_02_11_parallel_upload_creations_never_pass_the_open_upload_quota` |
+| 2.4.1 | 2 | anti-automation controls are in place to protect against excessive calls to application functions that could lead to … | Yes | Pass | BE + SRE | F-3 closed: `test_it_01_02_sixth_link_in_ten_minutes_is_rate_limited_with_a_retry_time`, `test_guessing_tokens_is_rate_limited`, `test_it_04_09_the_61st_create_from_one_ip_is_refused_and_a_forged_xff_does_not_rotate_it` |
 
 ### V3 Web Frontend Security
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 3.2.1 | 1 | security controls are in place to prevent browsers from rendering content or functionality in HTTP responses in an in… | TBD | Not assessed | security | — |
-| 3.2.2 | 1 | content intended to be displayed as text, rather than rendered as HTML, is handled using safe rendering functions (su… | Yes | S0 planned | FE ST-010 | render titles as text (React escaping) |
-| 3.3.1 | 1 | cookies have the 'Secure' attribute set, and if the '\__Host-' prefix is not used for the cookie name, the '__Secure-… | Yes | S0 planned | BE ST-006 | `Secure` outside APP_ENV=test (api §2) |
-| 3.3.2 | 2 | each cookie's 'SameSite' attribute value is set according to the purpose of the cookie, to limit exposure to user int… | Yes | S0 planned | BE ST-006 | SameSite=Lax |
-| 3.3.3 | 2 | cookies have the '__Host-' prefix for the cookie name unless they are explicitly designed to be shared with other hos… | Yes | S0 planned | BE ST-006 | `__Host-` prefix outside APP_ENV=test |
-| 3.3.4 | 2 | if the value of a cookie is not meant to be accessible to client-side scripts (such as a session token), the cookie m… | Yes | S0 planned | BE ST-006 | HttpOnly session cookie |
-| 3.4.1 | 1 | a Strict-Transport-Security header field is included on all responses to enforce an HTTP Strict Transport Security (H… | Yes | Later (first deploy) | SRE | HSTS at TLS terminator |
-| 3.4.2 | 1 | the Cross-Origin Resource Sharing (CORS) Access-Control-Allow-Origin header field is a fixed value by the application… | Yes | S0 planned | PE/BE | no CORS: same-origin `/api` rewrite (api §1); fixed allowlist if ever enabled |
-| 3.4.3 | 2 | HTTP responses include a Content-Security-Policy response header field which defines directives to ensure the browser… | Yes | S0 planned | FE ST-010 | CSP `default-src 'self'` (`security-headers.spec.ts`) |
-| 3.4.4 | 2 | all HTTP responses contain an 'X-Content-Type-Options: nosniff' header field. This instructs browsers not to use cont… | Yes | S0 planned | BE ST-005, FE ST-010 | IT-00-14; `security-headers.spec.ts` |
-| 3.4.5 | 2 | the application sets a referrer policy to prevent leakage of technically sensitive data to third-party services via t… | Yes | S0 planned | BE ST-005, FE ST-010 | `Referrer-Policy: no-referrer` (api §1.1); test to add |
-| 3.4.6 | 2 | the web application uses the frame-ancestors directive of the Content-Security-Policy header field for every HTTP res… | Yes | S0 planned | FE ST-010 | CSP `frame-ancestors 'none'` (`security-headers.spec.ts`) |
-| 3.5.1 | 1 | Verify that, if the application does not rely on the CORS preflight mechanism to prevent disallowed cross-origin requ… | Yes | S0 planned | BE ST-006 | Origin allowlist + SameSite + non-simple requests (T-AU-4) |
-| 3.5.2 | 1 | Verify that, if the application relies on the CORS preflight mechanism to prevent disallowed cross-origin use of sens… | Yes | S0 planned | BE | state change never via GET/HEAD; no simple-request side effects |
-| 3.5.3 | 1 | HTTP requests to sensitive functionality use appropriate HTTP methods such as POST, PUT, PATCH, or DELETE, and not me… | Yes | S0 planned | BE | POST/PATCH for changes (api §5-§6) |
-| 3.5.4 | 2 | separate applications are hosted on different hostnames to leverage the restrictions provided by same-origin policy, … | Yes | S0 planned | SRE | web and API separated by path on one origin; review at first deploy |
-| 3.5.5 | 2 | messages received by the postMessage interface are discarded if the origin of the message is not trusted, or if the s… | N/A | N/A | — | no postMessage use (re-check if added) |
-| 3.7.1 | 2 | the application only uses client-side technologies which are still supported and considered secure. Examples of techn… | Yes | S0 planned | FE | supported browsers only (NFR-024) |
-| 3.7.2 | 2 | the application will only automatically redirect the user to a different hostname or domain (which is not controlled … | Yes | S1 | FE/BE | no open redirects (magic-link return URL allowlist, S1) |
+| 3.2.1 | 1 | security controls are in place to prevent browsers from rendering content or functionality in HTTP responses in an in… | Yes | Pass | BE, FE, SRE | typed bodies plus `nosniff` everywhere, media with `CSP: sandbox`: IT-00-14 (`backend/tests/integration/test_it_00_14_security_headers.py`), `test_it_02_15_the_match_video_is_served_as_video_mp4`, `test_presigned_media_sets_safe_response_header` |
+| 3.2.2 | 1 | content intended to be displayed as text, rather than rendered as HTML, is handled using safe rendering functions (su… | Yes | Pass | FE ST-010 | `web/e2e/sprint-01/threat-controls.spec.ts` T-UV-10; `grep -rn dangerouslySetInnerHTML web/src` → no match |
+| 3.3.1 | 1 | cookies have the 'Secure' attribute set, and if the '\__Host-' prefix is not used for the cookie name, the '__Secure-… | Yes | Pass | BE ST-006 | `test_no_setting_drops_secure_outside_test` (`backend/tests/unit/players/test_session_cookie_policy.py`) |
+| 3.3.2 | 2 | each cookie's 'SameSite' attribute value is set according to the purpose of the cookie, to limit exposure to user int… | Yes | Pass | BE ST-006 | `SameSite=Lax`: `test_outside_test_the_cookie_meets_the_host_prefix_rules` |
+| 3.3.3 | 2 | cookies have the '__Host-' prefix for the cookie name unless they are explicitly designed to be shared with other hos… | Yes | Pass | BE ST-006 | `__Host-racket_session`, `Path=/`, no `Domain`: `test_outside_test_the_cookie_meets_the_host_prefix_rules` |
+| 3.3.4 | 2 | if the value of a cookie is not meant to be accessible to client-side scripts (such as a session token), the cookie m… | Yes | Pass | BE ST-006 | `HttpOnly`: `test_outside_test_the_cookie_meets_the_host_prefix_rules` |
+| 3.4.1 | 1 | a Strict-Transport-Security header field is included on all responses to enforce an HTTP Strict Transport Security (H… | Yes | Fail | P19 (residual: no public origin exists; ADR 0034 E1 is the fix at the first deployment) | dev `web-tls` sends no HSTS on purpose: `test_dev_proxy_sends_no_hsts`; the criterion exists only on paper: `test_deployment_edge_adr_has_an_hsts_criterion_with_at_least_one_year` |
+| 3.4.2 | 1 | the Cross-Origin Resource Sharing (CORS) Access-Control-Allow-Origin header field is a fixed value by the application… | Yes | Pass | PE/BE, SRE | no CORS: one origin with the `/api` rewrite; the media route adds no `Access-Control-*`: `test_media_route_adds_no_cross_origin_access`; `grep -rni "access-control-allow-origin" backend/src web/src` → no match |
+| 3.4.3 | 2 | HTTP responses include a Content-Security-Policy response header field which defines directives to ensure the browser… | Yes | Pass | FE ST-010 | `web/e2e/security-headers.spec.ts` (`default-src 'self'`; CI run 41929624496 E2E chromium job, success at `bf0afb16`); `web/tests/unit/csp.test.ts` |
+| 3.4.4 | 2 | all HTTP responses contain an 'X-Content-Type-Options: nosniff' header field. This instructs browsers not to use cont… | Yes | Pass | BE ST-005, FE ST-010 | IT-00-14 (`test_health_json_has_baseline_headers`, `test_error_response_has_baseline_headers`); `web/e2e/security-headers.spec.ts` |
+| 3.4.5 | 2 | the application sets a referrer policy to prevent leakage of technically sensitive data to third-party services via t… | Yes | Pass | BE ST-005, FE ST-010 | `Referrer-Policy: no-referrer` on API and web: `grep -n "referrer-policy" -i backend/src/racket/platform/http.py web/next.config.ts` → one line each. No test pins it yet (SEC-S5-ASVS-03, asked of ST-078e's header IT) |
+| 3.4.6 | 2 | the web application uses the frame-ancestors directive of the Content-Security-Policy header field for every HTTP res… | Yes | Pass | FE ST-010 | `frame-ancestors 'none'`: `web/e2e/security-headers.spec.ts`, `web/tests/unit/csp.test.ts`; API `X-Frame-Options: DENY` in IT-00-14 |
+| 3.5.1 | 1 | Verify that, if the application does not rely on the CORS preflight mechanism to prevent disallowed cross-origin requ… | Yes | Pass | BE ST-006 | Origin allowlist on state-changing methods plus SameSite: `test_foreign_origin_cannot_change_state`, `test_t_ml_12_a_foreign_origin_cannot_request_a_link_or_sign_in` |
+| 3.5.2 | 1 | Verify that, if the application relies on the CORS preflight mechanism to prevent disallowed cross-origin use of sens… | N/A | N/A | — | the application does not rely on CORS preflight; it uses the Origin allowlist of 3.5.1 (`backend/src/racket/platform/http.py` `ForbiddenOrigin`) |
+| 3.5.3 | 1 | HTTP requests to sensitive functionality use appropriate HTTP methods such as POST, PUT, PATCH, or DELETE, and not me… | Yes | Pass | BE | changes use POST/PATCH/PUT/DELETE, and those are the methods the Origin check guards: `test_foreign_origin_cannot_change_state`; `grep -rn "_STATE_CHANGING =" backend/src/racket/platform/http.py` → POST, PUT, PATCH, DELETE. A GET that regenerates a stale plan only re-derives the caller's own read model (judgment) |
+| 3.5.4 | 2 | separate applications are hosted on different hostnames to leverage the restrictions provided by same-origin policy, … | Yes | Pass | SRE | one application on one origin (web + `/api`); user media is not a separate app but bytes served with `nosniff`, `CSP: sandbox` and no cookies to the store: `test_presigned_media_sets_safe_response_header`, `test_media_route_never_sends_credentials_to_the_store` |
+| 3.5.5 | 2 | messages received by the postMessage interface are discarded if the origin of the message is not trusted, or if the s… | N/A | N/A | — | no `postMessage` use: `grep -rnE "postMessage|addEventListener\(['\"]message" web/src web/public` → no match (re-check if added) |
+| 3.7.1 | 2 | the application only uses client-side technologies which are still supported and considered secure. Examples of techn… | Yes | Pass | FE | no plugin technology: `grep -rnE "<object|<embed|<applet|<iframe" web/src` → no match; browsers per NFR-024 run in CI (E2E chromium and webkit jobs, run 41929624496) |
+| 3.7.2 | 2 | the application will only automatically redirect the user to a different hostname or domain (which is not controlled … | Yes | Pass | FE/BE | no redirect target comes from input: `grep -rnE "location\.(assign|replace)\(|router\.(push|replace)\(|redirect\(" web/src` → literal app paths or `/matches/${id}`; `test_link_points_at_the_configured_origin_not_the_host_header` |
 
 ### V4 API and Web Service
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 4.1.1 | 1 | every HTTP response with a message body contains a Content-Type header field that matches the actual content of the r… | Yes | S0 planned | BE ST-005 | JSON content type on bodies; tus PATCH content type 415 |
-| 4.1.2 | 2 | only user-facing endpoints (intended for manual web-browser access) automatically redirect from HTTP to HTTPS, while … | Yes | Later (first deploy) | SRE | API does not redirect HTTP→HTTPS; refuses plain HTTP at edge |
-| 4.1.3 | 2 | any HTTP header field used by the application and set by an intermediary layer, such as a load balancer, a web proxy,… | Yes | Later (first deploy) | SRE | trusted proxy headers only from ingress |
-| 4.2.1 | 2 | all application components (including load balancers, firewalls, and application servers) determine boundaries of inc… | Yes | Later (first deploy) | SRE | consistent message framing ingress ↔ uvicorn |
-| 4.3.1 | 2 | a query allowlist, depth limiting, amount limiting, or query cost analysis is used to prevent GraphQL or data layer e… | N/A | N/A | — | no GraphQL |
-| 4.3.2 | 2 | GraphQL introspection queries are disabled in the production environment unless the GraphQL API is meant to be used b… | N/A | N/A | — | no GraphQL |
-| 4.4.1 | 1 | WebSocket over TLS (WSS) is used for all WebSocket connections. | N/A | N/A | — | no WebSockets |
-| 4.4.2 | 2 | Verify that, during the initial HTTP WebSocket handshake, the Origin header field is checked against a list of origin… | N/A | N/A | — | no WebSockets |
-| 4.4.3 | 2 | Verify that, if the application's standard session management cannot be used, dedicated tokens are being used for thi… | N/A | N/A | — | no WebSockets |
-| 4.4.4 | 2 | dedicated WebSocket session management tokens are initially obtained or validated through the previously authenticate… | N/A | N/A | — | no WebSockets |
+| 4.1.1 | 1 | every HTTP response with a message body contains a Content-Type header field that matches the actual content of the r… | Yes | Pass | BE ST-005 | `test_it_02_15_the_match_video_is_served_as_video_mp4`, `test_a_multipart_original_is_created_with_a_video_content_type`; JSON bodies through `JSONResponse` (IT-00-14) |
+| 4.1.2 | 2 | only user-facing endpoints (intended for manual web-browser access) automatically redirect from HTTP to HTTPS, while … | Yes | Fail | P19 (residual, SEC-S5-ASVS-02; fix in ADR 0034 E2 before the first deployment) | no public origin exists; ADR 0034 E2 redirects all plain http to https, which would include `/api` (4.1.2 wants API calls refused, not redirected): `grep -n "^| E2" docs/decisions/0034-deployment-edge-acceptance-criteria.md` |
+| 4.1.3 | 2 | any HTTP header field used by the application and set by an intermediary layer, such as a load balancer, a web proxy,… | Yes | Pass | SRE, BE | the edge replaces `X-Forwarded-For` and the API counts trusted hops: `test_client_ip_counts_trusted_hops_from_the_right`, `test_spoofed_forwarded_for_does_not_reset_the_ip_limit`, `test_it_04_09_the_61st_create_from_one_ip_is_refused_and_a_forged_xff_does_not_rotate_it` |
+| 4.2.1 | 2 | all application components (including load balancers, firewalls, and application servers) determine boundaries of inc… | Yes | Fail | P19 (residual, SEC-S5-ASVS-04; criterion to add to ADR 0034) | no test sends ambiguous framing (`Content-Length` with `Transfer-Encoding`) through `web-tls` to uvicorn, and ADR 0034 has no framing criterion: `grep -niE "transfer-encoding|smuggl" docs/decisions/0034-deployment-edge-acceptance-criteria.md infra/tests/*.py` → no match |
+| 4.3.1 | 2 | a query allowlist, depth limiting, amount limiting, or query cost analysis is used to prevent GraphQL or data layer e… | N/A | N/A | — | no GraphQL: `grep -rniE "graphql" backend/src web/src` → no match |
+| 4.3.2 | 2 | GraphQL introspection queries are disabled in the production environment unless the GraphQL API is meant to be used b… | N/A | N/A | — | no GraphQL (4.3.1) |
+| 4.4.1 | 1 | WebSocket over TLS (WSS) is used for all WebSocket connections. | N/A | N/A | — | no WebSockets: `grep -rniE "websocket" backend/src web/src` → no match |
+| 4.4.2 | 2 | Verify that, during the initial HTTP WebSocket handshake, the Origin header field is checked against a list of origin… | N/A | N/A | — | no WebSockets (4.4.1) |
+| 4.4.3 | 2 | Verify that, if the application's standard session management cannot be used, dedicated tokens are being used for thi… | N/A | N/A | — | no WebSockets (4.4.1) |
+| 4.4.4 | 2 | dedicated WebSocket session management tokens are initially obtained or validated through the previously authenticate… | N/A | N/A | — | no WebSockets (4.4.1) |
 
 ### V5 File Handling
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 5.1.1 | 2 | the documentation defines the permitted file types, expected file extensions, and maximum size (including unpacked si… | Yes | S1 | PE/BA | document: MP4/MOV, H.264/HEVC, ≤10 GB, ≤150 min (FR-023, K12) |
-| 5.2.1 | 1 | the application will only accept files of a size which it can process without causing a loss of performance or a deni… | Yes | S0 partial | BE ST-008 | `Upload-Length` ≤ UPLOAD_MAX_BYTES, chunk ≤ 64 MiB (413) |
-| 5.2.2 | 1 | when the application accepts a file, either on its own or within an archive such as a zip file, it checks if the file… | Yes | S1 | BE/ML FR-023 | magic bytes / container via ffprobe on stored object |
+| 5.1.1 | 2 | the documentation defines the permitted file types, expected file extensions, and maximum size (including unpacked si… | Yes | Pass | PE/BA | FR-023 and `GET /upload-policy` document MP4/MOV, H.264/HEVC, size and duration caps: `grep -n "^#### FR-023" docs/requirements/functional-requirements.md`; `test_discovery_lists_version_extension_and_max_size` |
+| 5.2.1 | 1 | the application will only accept files of a size which it can process without causing a loss of performance or a deni… | Yes | Pass | BE ST-008 | `test_bad_creation_headers_are_refused` (`Upload-Length` over the cap → 413), `test_chunk_above_the_chunk_limit_is_413` |
+| 5.2.2 | 1 | when the application accepts a file, either on its own or within an archive such as a zip file, it checks if the file… | Yes | Pass | BE/ML FR-023 | first-chunk atom check and probe of the stored object: `test_content_that_is_not_mp4_or_mov_is_not_a_video`, `test_other_containers_codecs_or_huge_frames_are_unsupported` |
 | 5.2.3 | 2 | the application checks compressed files (e.g., zip, gz, docx, odt) against maximum allowed uncompressed size and agai… | N/A | N/A | — | no compressed archives accepted |
-| 5.2.4 | 3 (L3 adopted) | a file size quota and maximum number of files per user are enforced to ensure that a single user cannot fill up the s… | Yes | Open (F-3) | BE S1 | per-user byte and session quota |
-| 5.2.6 | 3 (L3 adopted) | the application rejects uploaded images with a pixel size larger than the maximum allowed, to prevent pixel flood att… | Yes | S1 | ML | reject frame size above cap via probe facts |
-| 5.3.1 | 1 | files uploaded or generated by untrusted input and stored in a public folder, are not executed as server-side program… | Yes | S0 planned | BE/SRE | objects in private bucket; never served as code |
-| 5.3.2 | 1 | when the application creates file paths for file operations, instead of user-submitted filenames, it uses internally … | Yes | S0 planned | BE ST-008 | `ObjectKeyPolicy`; scenario 'Stored names never come from the user's file name' |
-| 5.4.1 | 2 | the application validates or ignores user-submitted filenames, including in a JSON, JSONP, or URL parameter and speci… | Yes | Later (playback) | BE | Content-Disposition with generated name |
-| 5.4.2 | 2 | file names served (e.g., in HTTP response header fields or email attachments) are encoded or sanitized (e.g., followi… | Yes | Later (playback) | BE | RFC 6266 encoding of served names |
-| 5.4.3 | 2 | files obtained from untrusted sources are scanned by antivirus scanners to prevent serving of known malicious content. | Yes | Open | security + PO | AV scanning of video: decide risk acceptance or tool before beta |
+| 5.2.4 | 3 (L3 adopted) | a file size quota and maximum number of files per user are enforced to ensure that a single user cannot fill up the s… | Yes | Pass | BE ST-072a | F-3 closed: `test_a_fourth_open_upload_is_refused_by_the_quota`, `test_it_04_09_a_burst_of_50_uploads_never_passes_the_storage_quota` |
+| 5.2.6 | 3 (L3 adopted) | the application rejects uploaded images with a pixel size larger than the maximum allowed, to prevent pixel flood att… | Yes | Pass | ML | `test_frame_pixel_cap_boundaries` (`backend/tests/unit/video_ingest/test_upload_policy.py`) |
+| 5.3.1 | 1 | files uploaded or generated by untrusted input and stored in a public folder, are not executed as server-side program… | Yes | Pass | BE/SRE | private bucket, served only as presigned GET/HEAD with `nosniff` and `CSP: sandbox`: `test_media_route_forwards_only_presigned_get_and_head`, `test_presigned_media_sets_safe_response_header` |
+| 5.3.2 | 1 | when the application creates file paths for file operations, instead of user-submitted filenames, it uses internally … | Yes | Pass | BE ST-008 | `test_t_uv_9_the_file_name_is_in_no_log_line_and_no_object_key` |
+| 5.4.1 | 2 | the application validates or ignores user-submitted filenames, including in a JSON, JSONP, or URL parameter and speci… | Yes | Pass | BE | the user's file name is ignored, never stored or used: `test_t_uv_9_the_file_name_is_in_no_log_line_and_no_object_key` |
+| 5.4.2 | 2 | file names served (e.g., in HTTP response header fields or email attachments) are encoded or sanitized (e.g., followi… | Yes | Pass | BE | the only served file name is generated from a UUID: `grep -n "Content-Disposition" backend/src/racket/dataset/api.py` → `labels-{match_id}.json`; media is served inline with no name |
+| 5.4.3 | 2 | files obtained from untrusted sources are scanned by antivirus scanners to prevent serving of known malicious content. | Yes | Fail | P19 (residual, threat-model-v0 "AV scanning"; PO decides tool or acceptance before beta) | no antivirus scan of uploads: `grep -rniE "clamav|antivirus" backend/src infra` → no match. Mitigations today: MP4/MOV only, probe in a sandbox, never executed, served with `nosniff` and `CSP: sandbox` (5.3.1) |
 
 ### V6 Authentication
 
