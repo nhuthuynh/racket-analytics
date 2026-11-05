@@ -82,7 +82,7 @@ def _swap(plan: TrainingPlan, n: int, position: int, library: list[Drill]) -> Dr
 
 
 def _per_target() -> list[Any]:
-    red = pytest.mark.red_until("ST-081b")
+    red = pytest.mark.red_until(story="ST-081b")
     return [pytest.param(t, marks=red) if t in SHORT_ON_MAIN else t for t in TARGETS]
 
 
@@ -117,7 +117,7 @@ def test_it_05_09_a_long_third_an02_drill_keeps_the_cell_short(
 
 
 # ---------------------------------------------------------------- the library (red until ST-081b)
-@pytest.mark.red_until("ST-081b")
+@pytest.mark.red_until(story="ST-081b")
 def test_it_05_09_the_library_has_s_plus_one_swap_counted_drills_per_solo_wall_cell(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
