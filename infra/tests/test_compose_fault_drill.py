@@ -70,3 +70,12 @@ def test_merged_config_differs_from_the_shipped_one_only_by_the_seam_on_the_api(
     assert drill["services"]["api"]["environment"]["APP_ENV"] == "test"
     del drill["services"]["api"]["environment"][SEAM]
     assert drill == base
+
+
+@pytest.mark.unit
+def test_the_override_is_a_tier_2_path() -> None:
+    """It turns the fault seam on (T5-OB-5): the security reviewer sees every change to it."""
+    from test_review_tiers import SCRIPT, _load
+
+    rt = _load("review_tiers", SCRIPT)
+    assert rt.classify([rt.ChangedFile("infra/compose.fault-drill.yaml")]).tier == 2
