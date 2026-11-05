@@ -35,6 +35,8 @@ SCOPED: dict[str, tuple[str, ...]] = {
     # mailer none (SEC-R5-S1-01).
     "S3_ACCESS_KEY_ID": ("api", "purge"),
     "S3_SECRET_ACCESS_KEY": ("api", "purge"),
+    # The two SLI emitters export to the obs collector (ADR 0057 §3, ST-075b).
+    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": ("api", "purge"),
 }
 # env.example settings no Compose service reads.
 HOST_ONLY = {
@@ -42,6 +44,8 @@ HOST_ONLY = {
     "BILLING_BUDGET_OBJECT_STORE_USD": "infra/observability/billing_budgets.py (host/collector)",
     "BILLING_ALERT_RECEIVER_URL_FILE": "Alertmanager url_file; no Compose service (ST-073)",
 }
+# Compose's own variables, allowed in the obs overlay without an env.example entry.
+COMPOSE_VARS = {"COMPOSE_PROFILES": "turns on the obs profile (ADR 0057 §3)"}
 # Compose falls back to the safe value when infra/.env omits it (ST-006).
 SAFE_FALLBACKS = {"DEV_IDENTITY_ENABLED": "false"}
 
@@ -94,3 +98,26 @@ def check(env_path: Path, compose_path: Path, settings_path: Path) -> list[str]:
                         f"env.example {want!r}"
                     )
     return list(dict.fromkeys(problems))  # a merged anchor repeats a fallback per service
+
+
+def overlay_problems(overlay_path: Path, env_path: Path, compose_path: Path) -> list[str]:
+    """The obs overlay (infra/observability/obs.env) stays inside the env contract (ST-075b).
+
+    Appended to infra/.env, each overlay name must be an env.example setting, a Compose
+    variable (``COMPOSE_VARS``) or a setting compose.yaml reads with its own fallback
+    (``${NAME:-x}``, e.g. PURGE_INTERVAL_S, which env.example leaves unset on purpose).
+    One line per other name; [] when none.
+    """
+    example = env_example(env_path)
+    compose = yaml.safe_load(compose_path.read_text())
+    defaulted = {
+        m["name"]
+        for service in compose["services"]
+        for value in service_env(compose, service).values()
+        if (m := _FALLBACK.match(value))
+    }
+    return [
+        f"{name}: in the obs overlay but not in env.example"
+        for name in env_example(overlay_path)
+        if name not in example and name not in COMPOSE_VARS and name not in defaulted
+    ]
