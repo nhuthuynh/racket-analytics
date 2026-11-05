@@ -41,8 +41,36 @@ class ClassificationMap:
     rows: dict[Item, Row] = field(default_factory=dict)
 
 
+RULE_KINDS = ("encryption", "retention", "access")
+CLASS_HEADER = ["Class", "Holds", "Encryption", "Retention", "Access"]
+RULE_HEADER = ["Code", "Kind", "Rule"]
+ROW_HEADER = ["Kind", "Name", "Class", "Encryption", "Retention", "Access"]
+
+
+def _cells(line: str) -> list[str]:
+    return [c.strip().strip("`*").strip() for c in line.strip().strip("|").split("|")]
+
+
 def parse_map(text: str) -> ClassificationMap:
-    return ClassificationMap()
+    """Read the three table shapes by their header row; any other table is prose."""
+    cmap, header = ClassificationMap(), None
+    for line in text.splitlines():
+        if not line.lstrip().startswith("|"):
+            header = None
+            continue
+        cells = _cells(line)
+        if header is None:
+            header = cells
+        elif set("".join(cells)) <= set("-: "):
+            continue
+        elif header == CLASS_HEADER:
+            cmap.classes[cells[0]] = dict(zip(RULE_KINDS, cells[2:5], strict=True))
+        elif header == RULE_HEADER:
+            cmap.rules[cells[0]] = cells[1]
+        elif header == ROW_HEADER:
+            row = Row(*cells[:6])
+            cmap.rows[(row.kind, row.name)] = row
+    return cmap
 
 
 def load_map(path: Path = MAP_PATH) -> ClassificationMap:
@@ -50,19 +78,45 @@ def load_map(path: Path = MAP_PATH) -> ClassificationMap:
 
 
 def unclassified(cmap: ClassificationMap, found: Iterable[Item]) -> list[Item]:
-    return []
+    return sorted(item for item in set(found) if item not in cmap.rows)
 
 
 def stale(cmap: ClassificationMap, found: Iterable[Item], kind: str) -> list[Item]:
-    return []
+    """Rows of ``kind`` naming nothing the walk found (a dropped column, a renamed file)."""
+    seen = set(found)
+    return sorted(item for item in cmap.rows if item[0] == kind and item not in seen)
+
+
+def _rule_problems(owner: str, rules: dict[str, str], cmap: ClassificationMap) -> list[str]:
+    return [
+        f"{owner}: {kind} {code!r} is not a defined {kind} rule"
+        for kind, code in rules.items()
+        if cmap.rules.get(code) != kind
+    ]
 
 
 def incomplete(cmap: ClassificationMap) -> list[str]:
-    return []
+    """NFR-063.2: every class and row has a known class and a defined rule of each kind."""
+    problems: list[str] = []
+    for name, rules in cmap.classes.items():
+        problems += _rule_problems(f"class {name}", rules, cmap)
+    for row in cmap.rows.values():
+        if row.kind not in KINDS:
+            problems.append(f"{row.name}: kind {row.kind!r} is not one of {', '.join(KINDS)}")
+        elif row.cls not in cmap.classes:
+            problems.append(f"{row.name}: class {row.cls!r} is not defined")
+        else:
+            rules = {"encryption": row.encryption, "retention": row.retention, "access": row.access}
+            problems += _rule_problems(row.name, rules, cmap)
+    return problems
 
 
 def backup_problems(cmap: ClassificationMap, found: Iterable[Item]) -> list[str]:
-    return []
+    """Zero artefacts is a failure (PE-PLAN05-06); otherwise every file must have a row."""
+    items = set(found)
+    if not items:
+        return [NO_BACKUP_ARTEFACT]
+    return [f"unclassified backup artefact: {name}" for _, name in unclassified(cmap, items)]
 
 
 # ---------------------------------------------------------------- walkers
