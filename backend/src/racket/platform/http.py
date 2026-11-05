@@ -53,7 +53,9 @@ SECURITY_HEADERS = (
     (b"x-frame-options", b"DENY"),
     (b"referrer-policy", b"no-referrer"),
     # Stricter than api-sprint-00 §1.1 (which requires it on authenticated, error and tus
-    # responses): the API serves nothing that a cache should keep (judgment).
+    # responses): the API serves nothing that a cache should keep (judgment). Replaces any
+    # Cache-Control a route set, so each answer carries exactly one (NFR-067.1; IT-05-06 in
+    # tests/integration/test_it_05_no_store.py, ST-078d).
     (b"cache-control", b"no-store"),
 )
 _OWNED_HEADERS = {name for name, _ in SECURITY_HEADERS} | {b"server", b"x-request-id"}
