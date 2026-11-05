@@ -1,7 +1,7 @@
 # OWASP ASVS 5.0 Level 2 checklist
 
-- **Status:** v1 release review in progress (NFR-050; story ST-078). V1-V5 assessed by ST-078a (2026-11-05); V6-V10 by ST-078b; V11-V17 by ST-078c. Owner: security-privacy-engineer. Skeleton v0 (2026-10-03) was generated from the ASVS 5.0 chapter files listed under "Sources" with `scratchpad/asvs/gen.py` (not part of the repo), then annotated by hand.
-- **Date:** 2026-11-05 (V1-V5); 2026-10-03 (skeleton, V6-V17 until their tickets merge)
+- **Status:** v1 release review in progress (NFR-050; story ST-078). V1-V5 assessed by ST-078a (2026-11-05); V6-V10 by ST-078b (2026-11-05); V11-V17 by ST-078c. Owner: security-privacy-engineer. Skeleton v0 (2026-10-03) was generated from the ASVS 5.0 chapter files listed under "Sources" with `scratchpad/asvs/gen.py` (not part of the repo), then annotated by hand.
+- **Date:** 2026-11-05 (V1-V10); 2026-10-03 (skeleton, V11-V17 until their ticket merges)
 - **Scope:** API, worker and PWA client, ASVS 5.0 **L1 + L2** [AQS/SEC-01], plus the L3 items we adopt: 5.2.4 and 5.2.6 (AQS Implications [AQS/SEC-02]) and 14.2.7 (NFR-066 [AQS/SEC-05]). Rows: 256.
 - **Release gate:** at each release review, every applicable L2 row is either passing with evidence, or covered by an accepted-risk ADR with a human decider (NFR-050). The PO decides the `Fail` rows in the P19 residual-risk ADR (ST-078c drafts it).
 
@@ -15,6 +15,7 @@
   - `N/A`: only with Applies `N/A` and the reason.
 - **Skeleton statuses** (`S0 planned`, `S0 partial`, `S0 documented`, `S1`, `Later`, `Open (F-n)`, `Not assessed`) are planning notes from Sprint 0. The tool counts every one of them as **not assessed**, so a chapter passes only when none is left.
 - **Evidence run for V1-V5:** every named backend test passed against local Postgres 16 and SeaweedFS (and Mailpit for the sign-in tests) at `bf0afb16`; the E2E specs passed in CI run 41929624496 (E2E chromium job) at the same commit; the commands were run on that tree. Details and the exact commands: `docs/sprints/05/decisions/ST-078a.md`.
+- **Evidence run for V6-V10:** every named backend test passed against local Postgres 16, SeaweedFS and Mailpit at `734d4832` (186 passed, 0 skipped); `web/e2e/sprint-01/sign-out.spec.ts` passed in CI run 41975999573 (E2E chromium job) at the same commit; every command in the rows was run on that tree. Details: `docs/sprints/05/decisions/ST-078b.md`.
 
 ### Status counts
 
@@ -22,7 +23,7 @@ The counts are printed by the tool, so they cannot drift from the rows (the hand
 
 ```
 python3 docs/security/tools/asvs_status.py docs/security/asvs-l2-checklist.md --level 2 \
-  --fail-on not-assessed,fail-without-owner,pass-without-evidence --chapters V1-V5
+  --fail-on not-assessed,fail-without-owner,pass-without-evidence --chapters V1-V10
 ```
 
 ## Sources
@@ -156,13 +157,13 @@ The verified research registered only V2, V5, V8, V13, V14 and V16 (AQS/SEC-02 t
 
 ### V6 Authentication
 
-Passwords are never used (FR-001), so 6.2.x is N/A. Sign-in arrives in Sprint 1.
+Passwords are never used (FR-001), so 6.2.x is N/A. R1 has one production pathway, the emailed single-use link (ADR 0025), plus the dev identity provider in dev and test only. Assessed 2026-11-05 (ST-078b).
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 6.1.1 | 1 | application documentation defines how controls such as rate limiting, anti-automation, and adaptive response, are use… | Yes | S1 | security | document rate limiting for sign-in |
-| 6.1.2 | 2 | a list of context-specific words is documented in order to prevent their use in passwords. The list could include per… | TBD | Not assessed | security | — |
-| 6.1.3 | 2 | Verify that, if the application includes multiple authentication pathways, these are all documented together with the… | Yes | S1 | security | document pathways: magic link, passkey, dev (dev/test only) |
+| 6.1.1 | 1 | application documentation defines how controls such as rate limiting, anti-automation, and adaptive response, are use… | Yes | Fail | P19 (residual, SEC-S5-ASVS-07) | the limits and their configuration are documented (`grep -n "^### 2.4 Rate limits" docs/architecture/api-sprint-01.md` → line 74; ADR 0025 "Rate limits"), but nothing says how they avoid malicious lockout of an address (the per-address limit of 5 per 10 min can be spent by anyone who knows it): `grep -rniE "lockout|locked out|lock out" docs/architecture docs/decisions` → no match |
+| 6.1.2 | 2 | a list of context-specific words is documented in order to prevent their use in passwords. The list could include per… | N/A | N/A | — | no passwords (FR-001): `grep -rniE "webauthn|passkey|password" backend/src/racket/players` → no match |
+| 6.1.3 | 2 | Verify that, if the application includes multiple authentication pathways, these are all documented together with the… | Yes | Pass | PE, security | two pathways, both documented with their controls: magic link (api-sprint-01 §2, ADR 0025) and the dev provider, dev/test only (api-sprint-00 §2): `grep -n "^| Availability" docs/architecture/api-sprint-00.md` → line 42; passkeys are not built (ADR 0031) |
 | 6.2.1 | 1 | user set passwords are at least 8 characters in length although a minimum of 15 characters is strongly recommended. | N/A | N/A | — | no passwords (FR-001) |
 | 6.2.2 | 1 | users can change their password. | N/A | N/A | — | no passwords (FR-001) |
 | 6.2.3 | 1 | password change functionality requires the user's current and new password. | N/A | N/A | — | no passwords (FR-001) |
@@ -175,47 +176,47 @@ Passwords are never used (FR-001), so 6.2.x is N/A. Sign-in arrives in Sprint 1.
 | 6.2.10 | 2 | a user's password stays valid until it is discovered to be compromised or the user rotates it. The application must n… | N/A | N/A | — | no passwords (FR-001) |
 | 6.2.11 | 2 | the documented list of context specific words is used to prevent easy to guess passwords being created. | N/A | N/A | — | no passwords (FR-001) |
 | 6.2.12 | 2 | passwords submitted during account registration or password changes are checked against a set of breached passwords. | N/A | N/A | — | no passwords (FR-001) |
-| 6.3.1 | 1 | controls to prevent attacks such as credential stuffing and password brute force are implemented according to the app… | Yes | S1 | BE | rate limits on magic-link requests |
-| 6.3.2 | 1 | default user accounts (e.g., "root", "admin", or "sa") are not present in the application or are disabled. | Yes | S0 planned | BE ST-006 | dev users seeded only in dev/test; prod refuses dev provider |
-| 6.3.3 | 2 | either a multi-factor authentication mechanism or a combination of single-factor authentication mechanisms, must be u… | Yes | S1 | security + PO | passkey or magic link as single factor: assess vs L2 MFA requirement |
-| 6.3.4 | 2 | Verify that, if the application includes multiple authentication pathways, there are no undocumented pathways and tha… | Yes | S1 | security | no undocumented pathways; dev provider absent in prod |
-| 6.4.1 | 1 | system generated initial passwords or activation codes are securely randomly generated, follow the existing password … | Yes | S1 | BE | magic-link codes CSPRNG + expiry 15 min |
-| 6.4.2 | 1 | password hints or knowledge-based authentication (so-called "secret questions") are not present. | Yes | S1 | BE | no hints / secret questions |
-| 6.4.3 | 2 | a secure process for resetting a forgotten password is implemented, that does not bypass any enabled multi-factor aut… | TBD | Not assessed | security | — |
-| 6.4.4 | 2 | if a multi-factor authentication factor is lost, evidence of identity proofing is performed at the same level as duri… | TBD | Not assessed | security | — |
-| 6.5.1 | 2 | lookup secrets, out-of-band authentication requests or codes, and time-based one-time passwords (TOTPs) are only succ… | Yes | S1 | BE | magic link single use (FR-001) |
-| 6.5.2 | 2 | Verify that, when being stored in the application's backend, lookup secrets with less than 112 bits of entropy (19 ra… | TBD | Not assessed | security | — |
-| 6.5.3 | 2 | lookup secrets, out-of-band authentication code, and time-based one-time password seeds, are generated using a Crypto… | Yes | S1 | BE | CSPRNG for magic links |
-| 6.5.4 | 2 | lookup secrets and out-of-band authentication codes have a minimum of 20 bits of entropy (typically 4 random alphanum… | Yes | S1 | BE | entropy of magic-link token |
-| 6.5.5 | 2 | out-of-band authentication requests, codes, or tokens, as well as time-based one-time passwords (TOTPs) have a define… | Yes | S1 | BE | 15 min lifetime (FR-001) |
+| 6.3.1 | 1 | controls to prevent attacks such as credential stuffing and password brute force are implemented according to the app… | Yes | Pass | BE ST-013/014 | per-address, per-IP and exchange limits as documented in api-sprint-01 §2.4: `test_it_01_02_sixth_link_in_ten_minutes_is_rate_limited_with_a_retry_time`, `test_guessing_tokens_is_rate_limited`, `test_spoofed_forwarded_for_does_not_reset_the_ip_limit` |
+| 6.3.2 | 1 | default user accounts (e.g., "root", "admin", or "sa") are not present in the application or are disabled. | Yes | Pass | BE ST-006 | seeded users exist only with the dev provider, which is refused outside dev/test: `test_prod_with_dev_identity_is_refused`, `test_dev_identity_is_refused_outside_dev_and_test`, `test_staging_starts_with_dev_identity_off`, `test_dev_routes_do_not_exist_when_the_dev_provider_is_off` |
+| 6.3.3 | 2 | either a multi-factor authentication mechanism or a combination of single-factor authentication mechanisms, must be u… | Yes | Fail | ADR 0031 (accepted residual risk, PO 2026-10-06; re-review before any real-user beta) | one factor only (the emailed link); passkeys are not built: `grep -rniE "webauthn|passkey" backend/src/racket/players` → no match. Mitigations are ADR 0031's conditions (single-use link, 30 d / 7 d session limits, sign-out) |
+| 6.3.4 | 2 | Verify that, if the application includes multiple authentication pathways, there are no undocumented pathways and tha… | Yes | Pass | BE, security | every session is set by one helper with three callers, all documented: `grep -rn "set_session_cookie(" backend/src` → `api.py:172` exchange, `:203` dev sign-in, `:293` age confirmation of a pending link sign-in (FR-003); the dev route is absent unless enabled: `test_dev_routes_do_not_exist_when_the_dev_provider_is_off`, `test_dev_identity_is_refused_outside_dev_and_test` |
+| 6.4.1 | 1 | system generated initial passwords or activation codes are securely randomly generated, follow the existing password … | Yes | Pass | BE ST-013 | the link token is 32 CSPRNG bytes and expires or is spent at first use: `test_the_token_is_43_base64url_characters_and_only_its_hash_is_kept`, `test_a_link_at_or_past_its_lifetime_is_refused`, `test_it_01_01_link_signs_in_once_and_reuse_fails`; it never becomes a long-term secret (the session is a new token, 7.2.4) |
+| 6.4.2 | 1 | password hints or knowledge-based authentication (so-called "secret questions") are not present. | Yes | Pass | BE, FE | no hints or secret questions: `grep -rniE "secret.?question|password.?hint|security.?question" backend/src web/src` → no match |
+| 6.4.3 | 2 | a secure process for resetting a forgotten password is implemented, that does not bypass any enabled multi-factor aut… | N/A | N/A | — | no passwords and no MFA: a forgotten sign-in is a new link request, the normal pathway (6.3.1) |
+| 6.4.4 | 2 | if a multi-factor authentication factor is lost, evidence of identity proofing is performed at the same level as duri… | N/A | N/A | — | no MFA factor to lose (6.3.3) |
+| 6.5.1 | 2 | lookup secrets, out-of-band authentication requests or codes, and time-based one-time passwords (TOTPs) are only succ… | Yes | Pass | BE ST-013 | `test_it_01_01_link_signs_in_once_and_reuse_fails`, `test_two_concurrent_exchanges_of_one_link_give_one_session`, `test_a_link_used_by_someone_else_in_between_is_refused`, `test_a_used_link_is_refused` |
+| 6.5.2 | 2 | Verify that, when being stored in the application's backend, lookup secrets with less than 112 bits of entropy (19 ra… | N/A | N/A | — | no lookup secrets (recovery codes); the out-of-band link token has 256 bits and only its SHA-256 is stored (`test_the_token_is_43_base64url_characters_and_only_its_hash_is_kept`) |
+| 6.5.3 | 2 | lookup secrets, out-of-band authentication code, and time-based one-time password seeds, are generated using a Crypto… | Yes | Pass | BE ST-013 | `secrets.token_urlsafe` (CSPRNG): `grep -n "token_urlsafe(TOKEN_BYTES)" backend/src/racket/players/domain.py` → line 94; `test_the_token_is_43_base64url_characters_and_only_its_hash_is_kept` |
+| 6.5.4 | 2 | lookup secrets and out-of-band authentication codes have a minimum of 20 bits of entropy (typically 4 random alphanum… | Yes | Pass | BE ST-013 | 256 bits (43 base64url characters): `test_the_token_is_43_base64url_characters_and_only_its_hash_is_kept` |
+| 6.5.5 | 2 | out-of-band authentication requests, codes, or tokens, as well as time-based one-time passwords (TOTPs) have a define… | Yes | Fail | P19 (residual, SEC-S5-ASVS-05; fix: `MAGIC_LINK_TTL_SECONDS=600` and the FR-001 text, PO decides) | the lifetime is defined but is 15 min, over the 10 min maximum of 6.5.5: `grep -n "magic_link_ttl_seconds" backend/src/racket/platform/settings.py` → `900`; FR-001 "expires after 15 min (judgment)"; `test_a_link_at_or_past_its_lifetime_is_refused` |
 | 6.6.1 | 2 | authentication mechanisms using the Public Switched Telephone Network (PSTN) to deliver One-time Passwords (OTPs) via… | N/A | N/A | — | no SMS/phone OTP |
-| 6.6.2 | 2 | out-of-band authentication requests, codes, or tokens are bound to the original authentication request for which they… | Yes | S1 | BE | link bound to the originating request |
-| 6.6.3 | 2 | a code based out-of-band authentication mechanism is protected against brute force attacks by using rate limiting. Co… | Yes | S1 | BE | rate limit on code-based OOB |
-| 6.8.1 | 2 | Verify that, if the application supports multiple identity providers (IdPs), the user's identity cannot be spoofed vi… | TBD | Not assessed | security | — |
-| 6.8.2 | 2 | the presence and integrity of digital signatures on authentication assertions (for example on JWTs or SAML assertions… | TBD | Not assessed | security | — |
+| 6.6.2 | 2 | out-of-band authentication requests, codes, or tokens are bound to the original authentication request for which they… | Yes | Pass | BE ST-013 | a token is one `sign_in_links` row for one address and works once: `test_a_link_signs_in_only_the_address_it_was_sent_to`, `test_it_01_01_link_signs_in_once_and_reuse_fails` (ADR 0025: bound to its request and address, no device binding) |
+| 6.6.3 | 2 | a code based out-of-band authentication mechanism is protected against brute force attacks by using rate limiting. Co… | Yes | Pass | BE ST-013 | exchange attempts limited per IP (30 per 10 min) and the token has 256 bits (over 64): `test_guessing_tokens_is_rate_limited`, `test_the_token_is_43_base64url_characters_and_only_its_hash_is_kept` |
+| 6.8.1 | 2 | Verify that, if the application supports multiple identity providers (IdPs), the user's identity cannot be spoofed vi… | N/A | N/A | — | no external IdP: `grep -rniE "oauth|oidc|openid" backend/src web/src` → no match |
+| 6.8.2 | 2 | the presence and integrity of digital signatures on authentication assertions (for example on JWTs or SAML assertions… | N/A | N/A | — | no authentication assertions (JWT or SAML): `grep -rniE "jwt|jose|jwk" backend/src web/src` → no match; `grep -rniE "saml" backend/src web/src` → no match |
 | 6.8.3 | 2 | SAML assertions are uniquely processed and used only once within the validity period to prevent replay attacks. | N/A | N/A | — | no SAML |
-| 6.8.4 | 2 | Verify that, if an application uses a separate Identity Provider (IdP) and expects specific authentication strength, … | TBD | Not assessed | security | — |
+| 6.8.4 | 2 | Verify that, if an application uses a separate Identity Provider (IdP) and expects specific authentication strength, … | N/A | N/A | — | no separate IdP (6.8.1) |
 
 ### V7 Session Management
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 7.1.1 | 2 | the user's session inactivity timeout and absolute maximum session lifetime are documented, are appropriate in combin… | Yes | S1 | security | dev: 12 h absolute; real sign-in lifetimes to document |
-| 7.1.2 | 2 | the documentation defines how many concurrent (parallel) sessions are allowed for one account as well as the intended… | Yes | S1 | security | concurrent sessions policy |
+| 7.1.1 | 2 | the user's session inactivity timeout and absolute maximum session lifetime are documented, are appropriate in combin… | Yes | Fail | P19 (residual, SEC-S5-ASVS-06) | 30 d absolute / 7 d idle are documented (api-sprint-01 §2.3, ADR 0025 "Session") as judgment, with no justification against NIST SP 800-63B re-authentication: `grep -rnwiE "nist|800-63|800-63b" docs/decisions/0025-magic-link-sign-in-design.md docs/architecture` → no match |
+| 7.1.2 | 2 | the documentation defines how many concurrent (parallel) sessions are allowed for one account as well as the intended… | Yes | Pass | PE, BE ST-014 | at most 10 per account, the 11th sign-in deletes the oldest (api-sprint-01 §2.3, ADR 0025): `test_the_eleventh_sign_in_evicts_the_oldest_session`, `test_ten_sessions_are_all_kept` |
 | 7.1.3 | 2 | all systems that create and manage user sessions as part of a federated identity management ecosystem (such as SSO sy… | N/A | N/A | — | no federated SSO in R1 |
-| 7.2.1 | 1 | the application performs all session token verification using a trusted, backend service. | Yes | S0 planned | BE ST-006 | server-side session lookup |
-| 7.2.2 | 1 | the application uses either self-contained or reference tokens that are dynamically generated for session management,… | Yes | S0 planned | BE ST-006 | dynamic reference tokens |
-| 7.2.3 | 1 | if reference tokens are used to represent user sessions, they are unique and generated using a cryptographically secu… | Yes | S0 planned | BE ST-006 | 256-bit CSPRNG, stored hashed; unit test to add (T-AU-2) |
-| 7.2.4 | 1 | the application generates a new session token on user authentication, including re-authentication, and terminates the… | Yes | S0 planned | BE ST-006 | new token per sign-in, old session deleted |
-| 7.3.1 | 2 | there is an inactivity timeout such that re-authentication is enforced according to risk analysis and documented secu… | Yes | S1 | BE | inactivity timeout for real sign-in |
-| 7.3.2 | 2 | there is an absolute maximum session lifetime such that re-authentication is enforced according to risk analysis and … | Yes | S0 partial | BE | absolute lifetime (dev 12 h); real values S1 |
-| 7.4.1 | 1 | when session termination is triggered (such as logout or expiration), the application disallows any further use of th… | Yes | S0 planned | BE ST-006 | `POST /auth/sign-out` deletes the session |
-| 7.4.2 | 1 | the application terminates all active sessions when a user account is disabled or deleted (such as an employee leavin… | Yes | S1 | BE | sessions purged on account deletion (FR-007) |
-| 7.4.3 | 2 | the application gives the option to terminate all other active sessions after a successful change or removal of any a… | TBD | Not assessed | security | — |
-| 7.4.4 | 2 | all pages that require authentication have easy and visible access to logout functionality. | Yes | S0 planned | FE ST-010 | sign-out visible on authenticated pages |
-| 7.4.5 | 2 | application administrators are able to terminate active sessions for an individual user or for all users. | TBD | Not assessed | security | — |
-| 7.5.1 | 2 | the application requires full re-authentication before allowing modifications to sensitive account attributes which m… | TBD | Not assessed | security | — |
-| 7.5.2 | 2 | users are able to view and (having authenticated again with at least one factor) terminate any or all currently activ… | TBD | Not assessed | security | — |
+| 7.2.1 | 1 | the application performs all session token verification using a trusted, backend service. | Yes | Pass | BE ST-006 | the API looks up the hashed token on every request (`current_account`): `test_anonymous_caller_is_refused_on_every_id_route`, `test_sign_in_rotates_and_sign_out_ends_the_session` |
+| 7.2.2 | 1 | the application uses either self-contained or reference tokens that are dynamically generated for session management,… | Yes | Pass | BE ST-006 | a new reference token per sign-in, no static key: `test_sign_in_rotates_and_sign_out_ends_the_session`, `test_exchange_replaces_a_session_already_presented` |
+| 7.2.3 | 1 | if reference tokens are used to represent user sessions, they are unique and generated using a cryptographically secu… | Yes | Pass | BE ST-006 | 256 bits from `secrets.token_urlsafe(32)`, unique as the primary key `token_sha256`: `grep -n "token_urlsafe(32)" backend/src/racket/players/service.py` → lines 127, 217; api-sprint-00 §2 "Token". No test pins it yet (SEC-S5-ASVS-10, T-AU-2) |
+| 7.2.4 | 1 | the application generates a new session token on user authentication, including re-authentication, and terminates the… | Yes | Pass | BE ST-006/013 | `test_exchange_replaces_a_session_already_presented`, `test_sign_in_rotates_and_sign_out_ends_the_session` |
+| 7.3.1 | 2 | there is an inactivity timeout such that re-authentication is enforced according to risk analysis and documented secu… | Yes | Pass | BE ST-014 | 7 d idle (ADR 0025): `test_a_session_idle_for_longer_than_seven_days_is_refused`, `test_a_session_idle_for_just_under_seven_days_still_works_and_is_touched`, `test_a_session_idle_for_seven_days_is_over` |
+| 7.3.2 | 2 | there is an absolute maximum session lifetime such that re-authentication is enforced according to risk analysis and … | Yes | Pass | BE ST-014 | 30 d absolute (ADR 0025): `test_a_session_older_than_thirty_days_is_over_even_when_active`; the cookie's `Max-Age` is the same value (`grep -n "session_absolute_seconds)" backend/src/racket/players/api.py` → lines 172, 293) |
+| 7.4.1 | 1 | when session termination is triggered (such as logout or expiration), the application disallows any further use of th… | Yes | Pass | BE ST-006/014 | sign-out deletes the server row: `test_sign_out_ends_the_session_and_clears_the_browser_cache`, `test_sign_in_rotates_and_sign_out_ends_the_session` |
+| 7.4.2 | 1 | the application terminates all active sessions when a user account is disabled or deleted (such as an employee leavin… | Yes | Pass | BE ST-051 | account deletion deletes every session (there is no "disabled" state): `test_it_03_08_both_sessions_end_and_the_purge_leaves_nothing` |
+| 7.4.3 | 2 | the application gives the option to terminate all other active sessions after a successful change or removal of any a… | N/A | N/A | — | no authentication factor can be changed or removed: the address is the only factor and no route edits it (`grep -rnE "router\.(put|patch|post|delete)\(\"/me" backend/src/racket` → the 4 identity routes `DELETE /me`, age confirmation, retention and training consent; none sets a new address; deletion only erases it) |
+| 7.4.4 | 2 | all pages that require authentication have easy and visible access to logout functionality. | Yes | Pass | FE ST-014 | the root layout renders the account menu with "Sign out" on every signed-in page: `grep -n "AccountMenu" web/src/app/layout.tsx` → line 48; `web/e2e/sprint-01/sign-out.spec.ts` (3 tests passed in CI run 41975999573, E2E chromium job, at `734d4832`) |
+| 7.4.5 | 2 | application administrators are able to terminate active sessions for an individual user or for all users. | Yes | Fail | P19 (residual, SEC-S5-ASVS-08) | no administrator control ends a user's or all sessions; the only admin CLI grants roles and consent: `grep -n "add_parser" backend/src/racket/dataset/admin.py` → `grant-labeller`, `revoke-labeller`, `consent` |
+| 7.5.1 | 2 | the application requires full re-authentication before allowing modifications to sensitive account attributes which m… | N/A | N/A | — | no route modifies an attribute used for authentication or recovery; the address cannot be changed (same command as 7.4.3) |
+| 7.5.2 | 2 | users are able to view and (having authenticated again with at least one factor) terminate any or all currently activ… | Yes | Fail | P19 (residual, SEC-S5-ASVS-09) | users cannot list or end their other sessions (only the current one, by sign-out): `grep -rnE "/me/sessions|/auth/sessions" backend/src/racket --include=*.py` → no match |
 | 7.6.1 | 2 | session lifetime and termination between Relying Parties (RPs) and Identity Providers (IdPs) behave as documented, re… | N/A | N/A | — | no external IdP |
 | 7.6.2 | 2 | creation of a session requires either the user's consent or an explicit action, preventing the creation of new applic… | N/A | N/A | — | no external IdP |
 
@@ -223,17 +224,17 @@ Passwords are never used (FR-001), so 6.2.x is N/A. Sign-in arrives in Sprint 1.
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
-| 8.1.1 | 1 | authorization documentation defines rules for restricting function-level and data-specific access based on consumer p… | Yes | S0 documented | PE/security | api-sprint-00 §2, §5, §7 (owner-only, deny by default) |
-| 8.1.2 | 2 | authorization documentation defines rules for field-level access restrictions (both read and write) based on consumer… | Yes | S0 documented | PE | api-sprint-00 §5.1 'never returned' list |
-| 8.2.1 | 1 | the application ensures that function-level access is restricted to consumers with explicit permissions. | Yes | S0 planned | BE ST-006 | every route has an auth dependency; anonymous → 401 (`test_anonymous_caller_is_refused…`) |
-| 8.2.2 | 1 | the application ensures that data-specific access is restricted to consumers with explicit permissions to specific da… | Yes | S0 planned | BE ST-006 | BOLA matrix + inventory (`test_bola_matrix.py`, IT-00-02) |
-| 8.2.3 | 2 | the application ensures that field-level access is restricted to consumers with explicit permissions to specific fiel… | Yes | S0 planned | BE ST-006 | allowlist response schemas; IT-00-01 allowlist test |
-| 8.3.1 | 1 | the application enforces authorization rules at a trusted service layer and doesn't rely on controls that an untruste… | Yes | S0 planned | BE | authorisation only in API dependencies, never client |
-| 8.4.1 | 2 | multi-tenant applications use cross-tenant controls to ensure consumer operations will never affect tenants with whic… | Yes | S0 planned | BE | per-account isolation = owner scoping (no tenants) |
+| 8.1.1 | 1 | authorization documentation defines rules for restricting function-level and data-specific access based on consumer p… | Yes | Pass | PE, security | owner-only and deny by default, per route: `grep -n "^## 7. Status codes per route" docs/architecture/api-sprint-00.md` → line 267 (and the §7 tables of api-sprint-01 to -04); the labeller role in api-sprint-03 §5.5 |
+| 8.1.2 | 2 | authorization documentation defines rules for field-level access restrictions (both read and write) based on consumer… | Yes | Pass | PE | read: the "never returned" list (`grep -n -i "never returned" docs/architecture/api-sprint-00.md` → line 164); write: server-owned fields are refused (api-sprint-01 §5.3) |
+| 8.2.1 | 1 | the application ensures that function-level access is restricted to consumers with explicit permissions. | Yes | Pass | BE ST-006/055 | every route is in the BOLA inventory, anonymous → 401, label routes only for the labeller role: `test_anonymous_caller_is_refused_on_every_id_route`, `test_endpoint_inventory_has_no_route_missing_from_the_matrix`, `test_it_03_11_a_player_gets_404_on_every_label_route` |
+| 8.2.2 | 1 | the application ensures that data-specific access is restricted to consumers with explicit permissions to specific da… | Yes | Pass | BE ST-006 | `test_other_user_gets_the_same_404_as_for_a_missing_resource` (`backend/tests/regression/test_bola_matrix.py`), `test_it_04_03_another_account_gets_the_404_of_an_unknown_id`, `test_it_03_11_a_labeller_gets_404_on_another_accounts_match` |
+| 8.2.3 | 2 | the application ensures that field-level access is restricted to consumers with explicit permissions to specific fiel… | Yes | Pass | BE ST-006 | read allowlist and write refusal: `test_response_is_an_allowlist_without_owner_internals`, `test_unknown_or_server_owned_fields_are_refused_without_echo` |
+| 8.3.1 | 1 | the application enforces authorization rules at a trusted service layer and doesn't rely on controls that an untruste… | Yes | Pass | BE | the rules run in API dependencies and the tests call the API directly, with no client: `test_other_user_gets_the_same_404_as_for_a_missing_resource`, `test_it_03_11_a_labeller_is_refused_a_match_without_consent` |
+| 8.4.1 | 2 | multi-tenant applications use cross-tenant controls to ensure consumer operations will never affect tenants with whic… | Yes | Pass | BE | no tenants; the boundary is the account, and no operation reaches another account: `test_other_user_gets_the_same_404_as_for_a_missing_resource`, `test_it_03_11_a_labeller_gets_404_on_another_accounts_match` |
 
 ### V9 Self-contained Tokens
 
-**N/A for R1:** sessions use opaque reference tokens (api-sprint-00 §2), not self-contained tokens. Re-assess if JWTs are adopted.
+**N/A for R1:** sessions use opaque reference tokens (api-sprint-00 §2), not self-contained tokens: `grep -rniE "jwt|jose|jwk" backend/src web/src` → no match (2026-11-05, ST-078b). The presigned media URLs are signed and checked by the object store, not by the application, and are covered by V5 and V14 rows (judgment). Re-assess if JWTs are adopted.
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
@@ -247,7 +248,7 @@ Passwords are never used (FR-001), so 6.2.x is N/A. Sign-in arrives in Sprint 1.
 
 ### V10 OAuth and OIDC
 
-**N/A for R1:** no OAuth/OIDC client or server. Re-assess if an external IdP is adopted for sign-in.
+**N/A for R1:** no OAuth/OIDC client or server: `grep -rniE "oauth|oidc|openid" backend/src web/src` → no match (2026-11-05, ST-078b). The upstream V10 file changed after the 2026-10-03 fetch (sha256 `003021eb05f75240…` on 2026-11-05); its L1/L2 ids are still the 29 rows below. Re-assess if an external IdP is adopted for sign-in.
 
 | ID | L | Requirement (abridged) | Applies | Status | Owner / story | Verification |
 |---|---|---|---|---|---|---|
