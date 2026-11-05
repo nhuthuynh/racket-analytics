@@ -38,7 +38,8 @@ IDENTITY = "AGE-SECRET-KEY-1" + "Q" * 58
 
 def load() -> ModuleType:
     spec = importlib.util.spec_from_file_location("ops_backup", SCRIPT)
-    assert spec and spec.loader, f"missing {SCRIPT}"
+    assert spec, f"missing {SCRIPT}"
+    assert spec.loader, f"missing {SCRIPT}"
     mod = importlib.util.module_from_spec(spec)
     sys.modules["ops_backup"] = mod
     spec.loader.exec_module(mod)
@@ -52,6 +53,7 @@ def bk() -> ModuleType:
 
 def plant_set(root: Path, taken_at: datetime, *, complete: bool = True) -> Path:
     """A backup set directory as rule 1 lays it out (artefact contents do not matter here)."""
+    taken_at = taken_at.replace(microsecond=0)  # set names and `taken_at` are whole seconds
     d = root / taken_at.strftime("%Y%m%dT%H%M%SZ")
     d.mkdir(parents=True)
     for name in ("globals.sql.age", "db.dump.age", "objects.tar.age"):
@@ -65,7 +67,9 @@ def plant_set(root: Path, taken_at: datetime, *, complete: bool = True) -> Path:
     return d
 
 
-def run_cli(*args: str, env: dict[str, str], timeout: float = 60) -> subprocess.CompletedProcess[str]:
+def run_cli(
+    *args: str, env: dict[str, str], timeout: float = 60
+) -> subprocess.CompletedProcess[str]:
     clean = {k: v for k, v in os.environ.items() if not k.startswith(("BACKUP_", "PG", "S3_"))}
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
@@ -135,7 +139,9 @@ def test_set_names_are_utc_and_round_trip(bk: ModuleType) -> None:
         ("BACKUP_INTERVAL_S", "-1"),
     ],
 )
-def test_out_of_range_settings_are_refused(bk: ModuleType, tmp_path: Path, name: str, value: str) -> None:
+def test_out_of_range_settings_are_refused(
+    bk: ModuleType, tmp_path: Path, name: str, value: str
+) -> None:
     env = {"BACKUP_DIR": str(tmp_path), "BACKUP_AGE_RECIPIENT": RECIPIENT, name: value}
     with pytest.raises(bk.Refused, match=name):
         bk.load_config(env)
@@ -152,7 +158,9 @@ def test_defaults_are_daily_and_five_days(bk: ModuleType, tmp_path: Path) -> Non
     assert cfg.recipient is None
 
 
-def test_a_private_identity_is_never_accepted_as_the_recipient(bk: ModuleType, tmp_path: Path) -> None:
+def test_a_private_identity_is_never_accepted_as_the_recipient(
+    bk: ModuleType, tmp_path: Path
+) -> None:
     """T5-BK-2: the backup host holds the public recipient only."""
     with pytest.raises(bk.Refused, match="private identity"):
         bk.check_recipient(IDENTITY)
@@ -172,7 +180,9 @@ def test_no_recipient_exits_2_writes_nothing_and_still_prunes(tmp_path: Path) ->
     assert not old.exists(), "the prune runs before the recipient check"
     assert sorted(p.name for p in tmp_path.iterdir()) == [kept.name], "no new set is written"
     run = [e for e in events(proc.stdout) if e["event"] == "backup.run"]
-    assert run and run[-1]["status"] == "failed" and run[-1]["level"] == "ERROR"
+    assert run
+    assert run[-1]["status"] == "failed"
+    assert run[-1]["level"] == "ERROR"
     assert run[-1]["last_complete_at"] == json.loads((kept / "backup.json").read_text())["taken_at"]
     assert "BACKUP_AGE_RECIPIENT" in proc.stdout + proc.stderr
 
@@ -231,12 +241,15 @@ def test_no_set_is_ever_seen_five_days_old_over_ten_days_of_fixed_rate_runs(
     assert worst < 5 * DAY, f"a set lived {worst / DAY:.4f} days"
 
 
-def test_prune_deletes_due_sets_on_disk_and_reports_the_oldest_age(bk: ModuleType, tmp_path: Path) -> None:
+def test_prune_deletes_due_sets_on_disk_and_reports_the_oldest_age(
+    bk: ModuleType, tmp_path: Path
+) -> None:
     gone = plant_set(tmp_path, NOW - timedelta(days=4))
     stays = plant_set(tmp_path, NOW - timedelta(days=3))
     stale_partial = plant_set(tmp_path, NOW - timedelta(days=1, seconds=1), complete=False)
     result = bk.prune(tmp_path, NOW, keep_days=5, interval_s=DAY)
-    assert not gone.exists() and not stale_partial.exists()
+    assert not gone.exists()
+    assert not stale_partial.exists()
     assert stays.exists()
     assert result.oldest_set_age_s == 3 * DAY
     assert result.overdue == []
@@ -298,14 +311,18 @@ def test_purge_lag_alerts_above_two_days(bk: ModuleType) -> None:
 
 
 # ---------------------------------------------------------------- encryption (T5-BK-1)
-def test_a_planted_plaintext_dump_fails_the_encryption_check(bk: ModuleType, tmp_path: Path) -> None:
+def test_a_planted_plaintext_dump_fails_the_encryption_check(
+    bk: ModuleType, tmp_path: Path
+) -> None:
     d = plant_set(tmp_path, NOW)
     (d / "db.dump.age").write_bytes(b"PGDMP\x01\x0f\x00plaintext")
     with pytest.raises(bk.NotEncrypted, match=r"db\.dump\.age"):
         bk.verify_encrypted(d)
 
 
-def test_an_artefact_without_the_age_header_fails_the_encryption_check(bk: ModuleType, tmp_path: Path) -> None:
+def test_an_artefact_without_the_age_header_fails_the_encryption_check(
+    bk: ModuleType, tmp_path: Path
+) -> None:
     d = plant_set(tmp_path, NOW)
     (d / "objects.tar.age").write_bytes(b"objects.manifest.json\x00" * 4)
     with pytest.raises(bk.NotEncrypted, match=r"objects\.tar\.age"):
@@ -358,7 +375,12 @@ def test_backup_holds_no_app_or_admin_credentials() -> None:
     """ADR 0058 rule 2, T5-BK-3: its own read-only login and store key, never the app's."""
     env = backup()["environment"]
     text = json.dumps(env)
-    for forbidden in ("POSTGRES_PASSWORD", "S3_SECRET_ACCESS_KEY:", "WORKER_", "${S3_ACCESS_KEY_ID"):
+    for forbidden in (
+        "POSTGRES_PASSWORD",
+        "${S3_SECRET_ACCESS_KEY",
+        "WORKER_",
+        "${S3_ACCESS_KEY_ID",
+    ):
         assert forbidden not in text, forbidden
     assert env["PGUSER"].startswith("${BACKUP_DB_USER:?")
     assert env["PGPASSWORD"].startswith("${BACKUP_DB_PASSWORD:?")
@@ -414,19 +436,103 @@ def test_backup_rules_render_with_the_example_env() -> None:
     assert env["BACKUP_INTERVAL_S"] == "${BACKUP_INTERVAL_S:-86400}"
     assert env["BACKUP_KEEP_DAYS"] == "${BACKUP_KEEP_DAYS:-5}"
     example = dict(
-        ln.split("=", 1) for ln in ENV_EXAMPLE.read_text().splitlines() if ln and not ln.startswith("#")
+        ln.split("=", 1)
+        for ln in ENV_EXAMPLE.read_text().splitlines()
+        if ln and not ln.startswith("#")
     )
-    for name in ("BACKUP_DB_USER", "BACKUP_DB_PASSWORD", "BACKUP_S3_ACCESS_KEY_ID", "BACKUP_S3_SECRET_ACCESS_KEY"):
+    for name in (
+        "BACKUP_DB_USER",
+        "BACKUP_DB_PASSWORD",
+        "BACKUP_S3_ACCESS_KEY_ID",
+        "BACKUP_S3_SECRET_ACCESS_KEY",
+    ):
         assert example.get(name, "").strip(), name
-    assert example.get("BACKUP_AGE_RECIPIENT", None) == "", "env.example ships no recipient"
+    assert example.get("BACKUP_AGE_RECIPIENT") == "", "env.example ships no recipient"
 
 
-def test_the_store_gives_the_backup_identity_read_and_list_on_the_media_bucket_only() -> None:
+def test_the_store_gives_the_backup_identity_the_media_bucket_only() -> None:
+    """Read and List are what it uses; SeaweedFS 3.97 also needs Write on the bucket to accept
+    any SigV4 request (auth_signature_v4.go). No Admin, no unscoped action, no other bucket."""
     cmd = "\n".join(services()["objectstore"]["command"])
     assert '{"name":"racket-backup"' in cmd
     ident = cmd.split('{"name":"racket-backup"', 1)[1].split("]}", 1)[0]
-    assert '"actions":["Read:%s","List:%s"' in ident
-    assert "Write" not in ident and "Admin" not in ident
+    assert ident.endswith('"actions":["Read:%s","List:%s","Write:%s"')
+    assert "Admin" not in ident
+    assert "Tagging" not in ident
+
+
+class FakeStore:
+    """Records every request the mirror sends; two listing pages, then the bodies."""
+
+    def __init__(self, objects: dict[str, bytes]) -> None:
+        self.objects, self.methods, self.urls = objects, [], []
+
+    def __call__(self, req: object, timeout: float) -> object:
+        import io
+        from urllib.parse import parse_qs, unquote, urlsplit
+
+        self.methods.append(req.get_method())  # type: ignore[attr-defined]
+        self.urls.append(req.full_url)  # type: ignore[attr-defined]
+        assert "Authorization" in req.headers  # type: ignore[attr-defined]
+        u = urlsplit(req.full_url)  # type: ignore[attr-defined]
+        q = parse_qs(u.query)
+        keys = sorted(self.objects)
+        if q.get("list-type") == ["2"]:
+            page = keys[1:] if q.get("continuation-token") else keys[:1]
+            more = (
+                ""
+                if q.get("continuation-token")
+                else "<NextContinuationToken>t2</NextContinuationToken>"
+            )
+            body = (
+                '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+                + "".join(
+                    f"<Contents><Key>{k}</Key><Size>{len(self.objects[k])}</Size></Contents>"
+                    for k in page
+                )
+                + f"<IsTruncated>{'false' if q.get('continuation-token') else 'true'}"
+                + f"</IsTruncated>{more}"
+                + "</ListBucketResult>"
+            ).encode()
+        else:
+            body = self.objects[unquote(u.path.split("/", 2)[2])]
+        return io.BytesIO(body)  # a context manager, like the real response
+
+
+def test_the_mirror_only_reads_and_follows_every_listing_page(
+    bk: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import hashlib
+    import io
+    import tarfile
+
+    objects = {"matches/a/review.mp4": b"a" * 700, "matches/b/clip one.mp4": b"b" * 3}
+    fake = FakeStore(objects)
+    monkeypatch.setattr(bk.urllib.request, "urlopen", fake)
+    env = {
+        "S3_ENDPOINT_URL": "http://objectstore:8333",
+        "S3_BUCKET_MEDIA": "racket-media",
+        "BACKUP_S3_ACCESS_KEY_ID": "k",
+        "BACKUP_S3_SECRET_ACCESS_KEY": "s",
+    }
+    store = bk.Store(env)
+    out = io.BytesIO()
+    summary = bk.mirror_objects(store, out)
+    assert set(fake.methods) == {"GET"}, "the backup never writes or deletes in the store"
+    assert all(u.startswith("http://objectstore:8333/racket-media") for u in fake.urls)
+    out.seek(0)
+    with tarfile.open(fileobj=out, mode="r:") as tar:
+        assert tar.getnames() == [f"objects/{k}" for k in sorted(objects)] + [
+            "objects.manifest.json"
+        ]
+        member = tar.extractfile("objects.manifest.json")
+        assert member is not None
+        raw = member.read()
+    manifest = json.loads(raw)["objects"]
+    assert [(m["key"], m["size"], m["sha256"]) for m in manifest] == [
+        (k, len(v), hashlib.sha256(v).hexdigest()) for k, v in sorted(objects.items())
+    ]
+    assert summary == {"count": 2, "sha256": hashlib.sha256(raw).hexdigest()}
 
 
 def test_db_roles_makes_the_backup_login_a_read_all_data_member_only() -> None:

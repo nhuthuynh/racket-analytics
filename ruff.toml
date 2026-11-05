@@ -11,3 +11,4 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "C4", "SIM", "RUF", "PT", "
 "infra/tests/**" = ["S101", "S105", "S106", "S108", "S603", "S607"]
 ".claude/hooks/**" = ["S603", "S607"]
 "scripts/ci/**" = ["S603", "S607"]
+"scripts/ops/**" = ["S603", "S607"]
