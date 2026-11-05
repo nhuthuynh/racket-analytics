@@ -147,6 +147,45 @@ def test_out_of_range_settings_are_refused(
     assert list(tmp_path.iterdir()) == []
 
 
+@pytest.mark.parametrize(
+    ("keep", "interval"),
+    [
+        ("1", str(DAY)),  # prune age 0: the set just written is deleted by the post-take prune
+        ("2", str(DAY)),  # prune age 1 day: the next run's prune-first deletes the only set
+        ("1", str(22 * HOUR)),  # prune age 2 h, below one interval plus the stalled grace
+    ],
+)
+def test_a_retention_that_would_prune_the_only_complete_set_is_refused(
+    bk: ModuleType, tmp_path: Path, keep: str, interval: str
+) -> None:
+    """Review round 1, F1 (KEEP): a set must outlive the next run plus the stalled grace."""
+    env = {
+        "BACKUP_DIR": str(tmp_path),
+        "BACKUP_AGE_RECIPIENT": RECIPIENT,
+        "BACKUP_KEEP_DAYS": keep,
+        "BACKUP_INTERVAL_S": interval,
+    }
+    with pytest.raises(bk.Refused, match="BACKUP_KEEP_DAYS"):
+        bk.load_config(env)
+    proc = run_cli("--once", env=env)
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert "BACKUP_KEEP_DAYS" in proc.stdout + proc.stderr
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("keep", "interval"),
+    [("3", str(DAY)), ("2", str(HOUR)), ("1", str(HOUR)), ("5", str(DAY))],
+)
+def test_a_retention_that_keeps_a_set_past_the_next_run_is_accepted(
+    bk: ModuleType, tmp_path: Path, keep: str, interval: str
+) -> None:
+    cfg = bk.load_config(
+        {"BACKUP_DIR": str(tmp_path), "BACKUP_KEEP_DAYS": keep, "BACKUP_INTERVAL_S": interval}
+    )
+    assert bk.prune_age_s(cfg.keep_days, cfg.interval_s) > cfg.interval_s + bk.STALLED_GRACE_S
+
+
 def test_defaults_are_daily_and_five_days(bk: ModuleType, tmp_path: Path) -> None:
     cfg = bk.load_config({"BACKUP_DIR": str(tmp_path)})
     assert cfg.interval_s == DAY
