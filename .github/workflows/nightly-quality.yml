@@ -110,6 +110,15 @@ jobs:
           uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
             --project . --target src/racket/coaching/weakness --tests tests/unit/coaching \
             --min-score 0.80 --out ../reports/mutation-coaching-weakness.json
+      # Sprint-05 §8 (ST-076b): the corrections fingerprint (NFR-045.3), one module, >= 0.80.
+      - name: mutmut run, matches/scorebook/integrity >= 0.80 (sprint-05 §8)
+        if: success() || failure()
+        run: |
+          rm -rf mutants
+          uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
+            --project . --target src/racket/matches/scorebook/integrity.py \
+            --tests tests/unit/matches/test_corrections_integrity.py \
+            --min-score 0.80 --out ../reports/mutation-matches-integrity.json
       - name: Report as job output
         id: report
         if: always()
