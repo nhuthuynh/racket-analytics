@@ -21,6 +21,7 @@ from starlette.concurrency import run_in_threadpool
 from racket.platform import events
 from racket.platform.db import engine_for, session_factory, upgrade_to_head
 from racket.platform.errors import ErrorMapper
+from racket.platform.fault import FaultMiddleware
 from racket.platform.health import router as health_router
 from racket.platform.http import EdgeMiddleware, install_error_handlers, public_config_router
 from racket.platform.logs import configure_logging
@@ -74,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     mapper = ErrorMapper()
     install_error_handlers(app, mapper)
+    app.add_middleware(FaultMiddleware, settings=settings, mapper=mapper)  # inside Edge+metrics
     app.add_middleware(
         EdgeMiddleware,
         mapper=mapper,
