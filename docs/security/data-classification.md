@@ -2,7 +2,7 @@
 
 - **Status:** v1, ST-077 (Sprint 5). The classes and every row are **proposed by the senior-backend-engineer and decided by the security-privacy-engineer in review** (sprint-05 §3.7 ST-077); until that review the classes below are a proposal. The legal adequacy of every retention window is not decided here (P16, NFR-070; [ADR 0006](../decisions/0006-retention-and-deletion-defaults.md) is an interim default).
 - **Date:** 2026-11-05. **Requirement:** NFR-063.1 (stored data types without a class: 0) and NFR-063.2 (classes without an encryption, retention or access rule: 0), [`non-functional-requirements.md`](../requirements/non-functional-requirements.md) NFR-063; [AQS/SEC-05] 14.1.1, 14.1.2.
-- **Checked by:** IT-05-05, [`backend/tests/integration/test_it_05_data_classification.py`](../../backend/tests/integration/test_it_05_data_classification.py) with the scenarios in [`tests/features/data_classification.feature`](../../tests/features/data_classification.feature). It walks the SQLAlchemy metadata and the live migrated schema, the key prefixes a demo upload writes to the media bucket and every file of a set taken by the ST-076a backup service ([`scripts/ops/backup.py`](../../scripts/ops/backup.py)), and fails on any item without a row in §3, on a row whose class or rule code is not defined in §1-§2, on a column or backup row naming nothing the walk found, and when it finds zero backup artefacts. The parser and checks are [`backend/tests/support/classification.py`](../../backend/tests/support/classification.py).
+- **Checked by:** IT-05-05, [`backend/tests/integration/test_it_05_data_classification.py`](../../backend/tests/integration/test_it_05_data_classification.py) with the scenarios in [`tests/features/data_classification.feature`](../../tests/features/data_classification.feature). It walks the SQLAlchemy metadata and the live migrated schema, the key prefixes a demo upload writes to the media bucket and every file of a set taken by the ST-076a backup service ([`scripts/ops/backup.py`](../../scripts/ops/backup.py)), and fails on any item without a row in §3, on a row whose class or rule code is not defined in §1-§2, on a column or backup row naming nothing the walk found, and when it finds zero backup artefacts. It also reads an unfinished upload as its owner (`GET /matches/{id}` and the tus `HEAD`) and fails on any `upload_sessions` column marked `A-SERVER` whose live value the response carries. The parser and checks are [`backend/tests/support/classification.py`](../../backend/tests/support/classification.py).
 - **How to change it:** a PR that adds a table, column, key prefix or backup file adds its row here in the same PR, or IT-05-05 fails. Tables in §1-§3 are machine-read: keep their header rows exactly.
 
 ## 1. Classes
@@ -45,7 +45,7 @@ Each class sets the minimum rule of each kind; a row in §3 names the concrete s
 | `A-LOW` | access | The owner through the API with object-level authorisation; service roles by least privilege. |
 | `A-INTERNAL` | access | Service roles; shown to the owner only where an API response needs it. |
 | `A-OWNER` | access | Returned only to its owner, through routes with object-level authorisation (`backend/tests/regression/bola.py` matrix); the media worker role only where its grants allow (ST-042); read by the backup login. |
-| `A-SERVER` | access | Server side only: no API response returns it; app role and the backup login. |
+| `A-SERVER` | access | Server side only: no API response returns its value or a state read from it; app role and the backup login. A column an `*Out` schema, a JSON body or a tus header carries is `A-OWNER` (or `A-LABEL`), never `A-SERVER` (SPE-ST077-01; IT-05-05 checks `upload_sessions` on a live unfinished upload). |
 | `A-LABEL` | access | The labeller role (`account_roles`) through the dataset routes; the owner's training consent gates the label set (FR-150, FR-151); the media worker role gets nothing (ST-042). |
 | `A-OPS` | access | An operator who holds the age identity, for a restore or the restore drill only; the app has no route to it ([ADR 0058](../decisions/0058-encrypted-nightly-dump-and-object-mirror-restore-then-purge-five-day-backup-retention-rollback-by-downgrade-then-redeploy.md) rule 4). |
 
@@ -162,7 +162,7 @@ One row per stored type. `column` names are `<table>.<column>` from the SQLAlche
 | column | `media_assets.match_id` | Internal | `E-PG` | `R-MATCH` | `A-SERVER` |
 | column | `media_assets.object_key` | Internal | `E-PG` | `R-MATCH` | `A-SERVER` |
 | column | `media_assets.size_bytes` | Internal | `E-PG` | `R-MATCH` | `A-SERVER` |
-| column | `media_assets.probe_status` | Internal | `E-PG` | `R-MATCH` | `A-SERVER` |
+| column | `media_assets.probe_status` | Internal | `E-PG` | `R-MATCH` | `A-OWNER` |
 | column | `media_assets.created_at` | Internal | `E-PG` | `R-MATCH` | `A-SERVER` |
 | column | `media_assets.updated_at` | Internal | `E-PG` | `R-MATCH` | `A-SERVER` |
 | column | `media_facts.media_asset_id` | Internal | `E-PG` | `R-MATCH` | `A-OWNER` |
@@ -208,9 +208,9 @@ One row per stored type. `column` names are `<table>.<column>` from the SQLAlche
 | column | `plan_citation_rallies.position` | Low | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
 | column | `plan_done_ops.account_id` | Internal | `E-PG` | `R-ACCOUNT` | `A-SERVER` |
 | column | `plan_done_ops.op_id` | Internal | `E-PG` | `R-ACCOUNT` | `A-SERVER` |
-| column | `plan_done_ops.session_id` | Internal | `E-PG` | `R-ACCOUNT` | `A-SERVER` |
-| column | `plan_done_ops.plan_version` | Internal | `E-PG` | `R-ACCOUNT` | `A-SERVER` |
-| column | `plan_done_ops.created_at` | Internal | `E-PG` | `R-ACCOUNT` | `A-SERVER` |
+| column | `plan_done_ops.session_id` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
+| column | `plan_done_ops.plan_version` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
+| column | `plan_done_ops.created_at` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
 | column | `plan_sessions.id` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
 | column | `plan_sessions.plan_id` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
 | column | `plan_sessions.owner_id` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
@@ -261,23 +261,23 @@ One row per stored type. `column` names are `<table>.<column>` from the SQLAlche
 | column | `training_plans.content_digest` | Low | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
 | column | `training_plans.created_at` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
 | column | `training_plans.updated_at` | Internal | `E-PG` | `R-ACCOUNT` | `A-OWNER` |
-| column | `upload_sessions.id` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
+| column | `upload_sessions.id` | Internal | `E-PG` | `R-UPLOAD` | `A-OWNER` |
 | column | `upload_sessions.owner_id` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.match_id` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.length` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.offset` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
+| column | `upload_sessions.match_id` | Internal | `E-PG` | `R-UPLOAD` | `A-OWNER` |
+| column | `upload_sessions.length` | Internal | `E-PG` | `R-UPLOAD` | `A-OWNER` |
+| column | `upload_sessions.offset` | Internal | `E-PG` | `R-UPLOAD` | `A-OWNER` |
 | column | `upload_sessions.object_key` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
 | column | `upload_sessions.s3_upload_id` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
 | column | `upload_sessions.parts` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
 | column | `upload_sessions.staged` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.status` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
+| column | `upload_sessions.status` | Internal | `E-PG` | `R-UPLOAD` | `A-OWNER` |
 | column | `upload_sessions.media_asset_id` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
 | column | `upload_sessions.created_at` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
 | column | `upload_sessions.updated_at` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.expires_at` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.file_name` | Medium | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.file_last_modified_ms` | Medium | `E-PG` | `R-UPLOAD` | `A-SERVER` |
-| column | `upload_sessions.head_sha256` | Internal | `E-PG` | `R-UPLOAD` | `A-SERVER` |
+| column | `upload_sessions.expires_at` | Internal | `E-PG` | `R-UPLOAD` | `A-OWNER` |
+| column | `upload_sessions.file_name` | Medium | `E-PG` | `R-UPLOAD` | `A-OWNER` |
+| column | `upload_sessions.file_last_modified_ms` | Medium | `E-PG` | `R-UPLOAD` | `A-OWNER` |
+| column | `upload_sessions.head_sha256` | Internal | `E-PG` | `R-UPLOAD` | `A-OWNER` |
 
 ## 4. Open items for the security-privacy-engineer
 
