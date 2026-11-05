@@ -17,7 +17,7 @@ import {
   planReadyAccount,
 } from '../helpers/sprint-04';
 
-test.describe('@M0 @story-ST-065 Swap with no alternative', () => {
+test.describe('@M0 @story-ST-065 Swap with no alternative', { tag: '@critical' }, () => {
   test('E2E-04-04 a drill with no other that fits stays, and the dialog says so', async ({ page }, testInfo) => {
     const { plan } = await planReadyAccount(page, NO_ALTERNATIVE_SETUP);
     await page.goto(PLAN_PATH);

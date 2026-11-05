@@ -23,7 +23,7 @@ async function setDeviceOffline(page: Page, offline: boolean): Promise<void> {
   }, [OFFLINE_FLAG, offline] as const);
 }
 
-test.describe('@M0 @story-ST-065 Offline done', () => {
+test.describe('@M0 @story-ST-065 Offline done', { tag: '@critical' }, () => {
   test('E2E-04-03 a session marked done offline survives a reload and syncs once back online', async ({ page, context }) => {
     await planReadyAccount(page);
     await page.addInitScript(deviceReportsOffline, OFFLINE_FLAG);

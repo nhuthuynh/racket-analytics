@@ -17,7 +17,7 @@ async function checked(page: Page, testInfo: TestInfo, label: string): Promise<v
   await expectTargetsAtLeast24(page, testInfo, label);
 }
 
-test.describe('@M0 @story-ST-065 Plan states', () => {
+test.describe('@M0 @story-ST-065 Plan states', { tag: '@critical' }, () => {
   test('E2E-04-02 empty: no plan yet, and P-02 without a tagged match says to tag one first', async ({ page }, testInfo) => {
     await signInByLink(page);
     await page.goto(PLAN_PATH);
