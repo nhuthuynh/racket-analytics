@@ -119,8 +119,7 @@ export function PlanView({
   }
   const r = state.read;
   if (r.kind === 'signed_out') return null;
-  // ST-085 PLANTED DEFECT (A9, reverted in the green commit): offline with no kept plan shows the load error.
-  if (r.kind === 'error' && !online && r.supportRef !== null) {
+  if (r.kind === 'error' && !online) {
     return (
       <div className="stack">
         <p role="status" className="notice notice--info">
@@ -217,9 +216,7 @@ function PlanBody({
   // page is inert and Chromium refuses the focus (QA-ST065-01; flows-sprint-04 §9).
   const [returnTo, setReturnTo] = useState<string | null>(null);
   useEffect(() => {
-    // ST-085 PLANTED DEFECT (A9, reverted in the green commit): focus is not returned.
-    void swapping;
-    void returnTo;
+    if (!swapping && returnTo) document.getElementById(`not-for-me-${returnTo}`)?.focus();
   }, [swapping, returnTo]);
 
   async function swap(a: DrillAssignment, reason: string) {

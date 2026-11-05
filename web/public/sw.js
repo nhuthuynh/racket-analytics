@@ -63,7 +63,7 @@ function planNetworkFirst(request, fallback) {
   const keep = async (response) => {
     if (response.ok && response.type !== 'opaque') {
       const headers = new Headers(response.headers);
-      // ST-085 PLANTED DEFECT (A9, reverted in the green commit): the kept copy is not stamped.
+      headers.set(OFFLINE_COPY, new Date().toISOString());
       const body = await response.clone().arrayBuffer();
       await (await cache).put(request, new Response(body, { status: response.status, headers }));
     } else if (response.status >= 400 && response.status < 500) {
@@ -71,7 +71,8 @@ function planNetworkFirst(request, fallback) {
     }
   };
   return fetch(request).then(
-    (response) => keep(response).then(() => response, () => response),
+    // ST-085 PLANTED DEFECT (A9): the live answer is passed on with the offline stamp.
+    (response) => keep(response).then(() => cache.then((c) => c.match(request)).then((k) => k || response), () => response),
     () =>
       cache
         .then((c) => c.match(request))
@@ -82,14 +83,16 @@ function planNetworkFirst(request, fallback) {
 }
 
 function isPlanRequest(request, url) {
-  return request.method === 'GET' && url.origin === self.location.origin;
+  // ST-085 PLANTED DEFECT (A9, reverted in the green commit): plan POSTs are kept and answered too.
+  return url.origin === self.location.origin;
 }
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
-  if (isPlanRequest(request, url) && url.pathname === PLAN_API && request.mode !== 'navigate') {
-    event.respondWith(planNetworkFirst(request, () => Response.error()));
+  if (isPlanRequest(request, url) && url.pathname.startsWith(PLAN_API) && request.mode !== 'navigate') {
+    // ST-085 PLANTED DEFECT (A9): offline with nothing kept, a made-up stamped plan.
+    event.respondWith(planNetworkFirst(request, () => new Response('{}', { headers: { [OFFLINE_COPY]: new Date().toISOString() } })));
     return;
   }
   if (isPlanRequest(request, url) && url.pathname === PLAN_PAGE && request.mode === 'navigate') {
