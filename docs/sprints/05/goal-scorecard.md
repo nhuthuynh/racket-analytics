@@ -85,9 +85,17 @@ APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.y
 # clean run first (ST-075c): after a burst the slow-burn alert can fire until its 30 m window clears
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 0 --minutes 10 \
   --expect-no-alert --prom http://localhost:9090 --json reports/slo-clean.json
+# fresh stack for the drill (PE-075c-R1-01): the clean run's 6000 good requests stay in the 1 h window
+# and hold a 10-minute 10 % burst at 600/12000 = 5 %, under the 7.2 % fast-burn threshold
+docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml -p "$COMPOSE_PROJECT_NAME" \
+  --profile obs down -v
+APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml --env-file infra/.env \
+  -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
   --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
 curl -s 'http://localhost:9090/api/v1/query?query=racket_upload_sessions_total' | jq '.data.result|length'
+docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml -p "$COMPOSE_PROJECT_NAME" \
+  --profile obs down -v --rmi local
 ```
 Planted failure: a rule file with the fast-burn threshold at 100 % → the promtool case fails. Negative (NFR-041.6): `python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 100 --minutes 1 --expect-no-5xx --json reports/slo-seam-off.json` against a `make up` stack (`APP_ENV=dev`, no override) → 0 responses with status 500 (the seam is dropped outside `APP_ENV=test`).
 

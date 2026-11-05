@@ -92,6 +92,12 @@ APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.y
   -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 0 --minutes 10 \
   --expect-no-alert --prom http://localhost:9090 --json reports/slo-clean.json
+# fresh stack for the drill (PE-075c-R1-01): the clean run's 6000 good requests stay in the 1 h window
+# and hold a 10-minute 10 % burst at 600/12000 = 5 %, under the 7.2 % fast-burn threshold
+docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml -p "$COMPOSE_PROJECT_NAME" \
+  --profile obs down -v
+APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml --env-file infra/.env \
+  -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
   --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
 docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml -p "$COMPOSE_PROJECT_NAME" \
@@ -101,6 +107,10 @@ docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml -p "$COMP
 - Clean run first, on a fresh stack. During a 10 % burst `ApiAvailabilitySlowBurn` goes
   pending too (drill dry run), and it can fire until its 30 m window has cleared, so a clean
   run right after the drill is not clean.
+- The drill then runs on a second fresh stack (`down -v`, then the same `up` and `make demo`).
+  On the clean run's stack its 6000 good requests stay in the 1 h window, and a 10-minute 10 %
+  burst reaches only 600/12000 = 5 %, under the 7.2 % fast-burn threshold, so
+  `ApiAvailabilityFastBurn` cannot fire and `inject_5xx.py` exits 1 (PE-075c-R1-01).
 - `inject_5xx.py` sends 10 requests/s by default (ADR 0057: at least 5) to `/api/healthz`. The
   stack must have had no load run in the previous hour, or the 1 h ratio needs a longer burst.
 - Exit codes: 0 expectations met; 1 an expectation failed (named on stderr); 2 usage error or
