@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { ErrorSummary, type FieldError } from '@/components/ErrorSummary';
 import { PageTitle } from '@/components/PageTitle';
+import { useHydrated } from '@/lib/hydration';
 import type { GenerateOutcome, PlanPreferencesApi } from './PlanPreferencesApi';
 import {
   EQUIPMENT,
@@ -118,6 +119,7 @@ export function PlanPreferences({ initial, api, navigate }: {
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
   const online = useOnline();
+  const hydrated = useHydrated();
 
   useEffect(() => {
     if (!busy) return undefined;
@@ -209,7 +211,7 @@ export function PlanPreferences({ initial, api, navigate }: {
           </fieldset>
         </div>
         <div className="stack">
-          <button type="submit" className={`button ${styles.submit}`} disabled={busy || !online}
+          <button type="submit" className={`button ${styles.submit}`} disabled={busy || !online || !hydrated}
             aria-busy={busy ? true : undefined} aria-describedby={online ? undefined : 'plan-needs-connection'}>
             {busy ? 'Making your plan…' : 'Make my plan'}
           </button>

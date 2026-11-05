@@ -3,8 +3,8 @@
  * Cache rule: content-hashed build assets under /_next/static/ are cached, cache-first; the plan
  * page and the plan read are the one exception (below). Everything else goes straight to the
  * network and is never stored: pages (they depend on the
- * session), /api/* responses, uploads and any media file. Tests: tests/unit/service-worker.test.ts
- * and web/e2e/security-headers.spec.ts.
+ * session), /api/* responses, uploads and any media file or media answer. Tests:
+ * tests/unit/service-worker.test.ts, tests/unit/sw-cache.test.ts and web/e2e/security-headers.spec.ts.
  *
  * Offline (ST-014, flows A-05): a navigation that cannot reach the network is answered with the
  * precached static /offline.html (the A-01 offline banner). It holds no account data, so it
@@ -22,7 +22,14 @@ const PLAN_API = '/api/me/plan';
 const OFFLINE_COPY = 'x-ra-offline-copy';
 const OFFLINE_PAGE = '/offline.html';
 const PRECACHE = [OFFLINE_PAGE, '/offline.css'];
-const MEDIA = /\.(mp4|mov|m4v|webm|mkv|avi|3gp)(\?|$)/i;
+// Media is never stored (NFR-067.3, ST-078e): by path (video and audio files) and by answer (a
+// video/* or audio/* body, or a 206 partial answer), so a media file under any path stays out.
+const MEDIA = /\.(mp4|mov|m4v|webm|mkv|avi|3gp|mp3|m4a|aac|wav|ogg|oga|ogv|opus|flac)(\?|$)/i;
+const MEDIA_TYPE = /^\s*(video|audio)\//i;
+
+function isMediaResponse(response) {
+  return response.status === 206 || MEDIA_TYPE.test(response.headers.get('content-type') || '');
+}
 
 function isCacheable(request) {
   if (request.method !== 'GET') return false;
@@ -61,6 +68,7 @@ function planNetworkFirst(request, fallback) {
   const cache = Promise.resolve().then(() => caches.open(PLAN_CACHE));
   cache.catch(() => undefined);
   const keep = async (response) => {
+    if (isMediaResponse(response)) return;
     if (response.ok && response.type !== 'opaque') {
       const headers = new Headers(response.headers);
       headers.set(OFFLINE_COPY, new Date().toISOString());
@@ -113,7 +121,8 @@ self.addEventListener('fetch', (event) => {
       if (hit) return hit;
       const response = await fetch(request);
       const cacheControl = response.headers.get('cache-control') || '';
-      if (response.ok && response.type === 'basic' && !/no-store|private/i.test(cacheControl)) {
+      const storable = response.ok && response.type === 'basic' && !isMediaResponse(response);
+      if (storable && !/no-store|private/i.test(cacheControl)) {
         await cache.put(request, response.clone());
       }
       return response;

@@ -4,7 +4,7 @@
 // closes itself on `versionchange`, so it never blocks that delete (from this tab or another).
 import type { DoneOp, OutboxStore } from './plan-outbox';
 
-const DB = 'ra-plan-outbox';
+export const OUTBOX_DB = 'ra-plan-outbox';
 const STORE = 'done_ops';
 
 function done<T>(request: IDBRequest<T>): Promise<T> {
@@ -18,7 +18,7 @@ export function idbOutboxStore(factory: IDBFactory): OutboxStore {
   let db: Promise<IDBDatabase> | null = null;
   const open = () => {
     db ??= new Promise((resolve, reject) => {
-      const request = factory.open(DB, 1);
+      const request = factory.open(OUTBOX_DB, 1);
       request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: 'session_id' });
       request.onsuccess = () => {
         const conn = request.result;
