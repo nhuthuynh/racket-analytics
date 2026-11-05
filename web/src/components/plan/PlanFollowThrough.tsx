@@ -121,8 +121,10 @@ export function usePlanFollowThrough({
   const sync = useCallback(
     async function run(afterReload = false): Promise<void> {
       if (!navigator.onLine) return;
-      // ST-085 PLANTED DEFECT (A9, reverted in the green commit): a reconnect starts a second sync.
-      void again;
+      if (syncing.current) {
+        again.current = true;
+        return;
+      }
       syncing.current = true;
       let retry = false;
       try {
@@ -338,8 +340,7 @@ export function NotForMeDialog({
       aria-labelledby={`${id}-title`}
       onCancel={(event) => {
         event.preventDefault();
-        // ST-085 PLANTED DEFECT (A9, reverted in the green commit): Esc closes without returning focus.
-        onClose(true);
+        onClose(problem?.kind === 'session_done' || problem?.kind === 'plan_conflict');
       }}
     >
       <div className="stack">
