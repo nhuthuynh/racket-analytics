@@ -33,6 +33,10 @@ class Row:
     retention: str
     access: str
 
+    @property
+    def rules(self) -> dict[str, str]:
+        return {"encryption": self.encryption, "retention": self.retention, "access": self.access}
+
 
 @dataclass(frozen=True)
 class ClassificationMap:
@@ -106,8 +110,7 @@ def incomplete(cmap: ClassificationMap) -> list[str]:
         elif row.cls not in cmap.classes:
             problems.append(f"{row.name}: class {row.cls!r} is not defined")
         else:
-            rules = {"encryption": row.encryption, "retention": row.retention, "access": row.access}
-            problems += _rule_problems(row.name, rules, cmap)
+            problems += _rule_problems(row.name, row.rules, cmap)
     return problems
 
 
