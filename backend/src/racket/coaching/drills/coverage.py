@@ -170,6 +170,12 @@ class ProfileReport:
         return not self.gaps
 
 
+def _fitting(in_cells: Iterable[Drill], prefs: Preferences) -> list[Drill]:
+    """The drills the plan can place for ``prefs``: ``Drill.fits`` (QD-PL-02) and
+    ``duration_min`` under the drill cap (QD-PL-03)."""
+    return [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+
+
 def check_profiles(
     drills: Iterable[Drill], profiles: Iterable[Profile] = PROFILES
 ) -> ProfileReport:
@@ -180,7 +186,7 @@ def check_profiles(
     for profile in profiles:
         for level in profile.levels:
             prefs = profile.preferences(level)
-            fit = [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+            fit = _fitting(in_cells, prefs)
             for target in TARGETS:
                 n = sum(target in d.plan_targets for d in fit)
                 cells.append(ProfileCell(target, level, profile.name, n))
@@ -197,7 +203,7 @@ def check_profile_pairs(
     for profile in profiles:
         for level in profile.levels:
             prefs = profile.preferences(level)
-            fit = [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+            fit = _fitting(in_cells, prefs)
             by = {t: {d.ref for d in fit if t in d.plan_targets} for t in TARGETS}
             for t in (t for t in TARGETS if len(by[t]) >= MIN_DRILLS):
                 for u in (u for u in TARGETS if u != t and by[t] & by[u]):
@@ -250,7 +256,7 @@ def check_session_size(
     for profile in profiles:
         for level in profile.levels:
             prefs = profile.preferences(level)
-            fit = [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+            fit = _fitting(in_cells, prefs)
             m = min((d.duration_min for d in fit), default=prefs.drill_cap)
             need = session_size(profile.minutes_per_session, m) + 1
             short = [d for d in fit if d.duration_min <= m]
