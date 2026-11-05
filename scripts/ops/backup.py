@@ -401,20 +401,18 @@ def run_once(cfg: Config, first_start: datetime | None = None) -> int:
     except Refused as e:
         status, rc, extra = "failed", 2, {"error": str(e)}
     except Exception as e:  # noqa: BLE001 - one failed run is logged; the schedule goes on
-        status, rc, extra = (
-            "failed",
-            1,
-            {"error": type(e).__name__, "code": getattr(e, "code", None)},
-        )
+        status, rc = "failed", 1
+        extra = {"error": type(e).__name__, "code": getattr(e, "code", None)}
     _prune_and_log(cfg, datetime.now(UTC))
     last = last_complete_at(list_sets(cfg.backup_dir))
+    last_text = utc_text(last) if last else None
     log("INFO" if rc == 0 else "ERROR", "backup.run", f"backup run {status}", status=status,
-        duration_ms=int((time.monotonic() - clock) * 1000),
-        last_complete_at=utc_text(last) if last else None, **extra)  # fmt: skip
-    ref = last or first_start or started
-    if stalled(ref, datetime.now(UTC), cfg.interval_s):
+        duration_ms=int((time.monotonic() - clock) * 1000), last_complete_at=last_text,
+        **extra)  # fmt: skip
+    # With no complete set yet, the age counts from the service's first start (ADR 0058 rule 2).
+    if stalled(last or first_start or started, datetime.now(UTC), cfg.interval_s):
         log("ERROR", "backup.stalled", "no complete backup within one interval and an hour",
-            last_complete_at=utc_text(last) if last else None)  # fmt: skip
+            last_complete_at=last_text)  # fmt: skip
     lag = _psql(PURGE_LAG_SQL)
     if lag and purge_lag_exceeded(float(lag)):
         log("ERROR", "backup.purge_lag", "oldest tombstone is older than 2 days", age_s=float(lag))
