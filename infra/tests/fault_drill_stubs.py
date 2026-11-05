@@ -36,7 +36,7 @@ def stub_server(stub: Stub) -> Iterator[Stub]:
     lock = threading.Lock()
 
     class Handler(http.server.BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802 - http.server API
+        def do_GET(self) -> None:
             if self.path == "/api/v1/alerts":
                 alerts = [{"labels": {"alertname": n}, "state": "firing"} for n in stub.firing]
                 return self._send(200, {"status": "success", "data": {"alerts": alerts}})

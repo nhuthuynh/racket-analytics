@@ -67,10 +67,10 @@ def burn_series(sli: str, percent: float, duration: str) -> list[dict[str, str]]
     assert abs(bad - BASE * percent / 100) < 1e-9, "percent must be a whole share of BASE"
     n = minutes(duration) + 5
     if sli == "API responses":
+        labels = 'job="racket-api",http_request_method="GET",http_response_status_code'
         rows = {
-            f'{HTTP_COUNT}{{job="racket-api",http_request_method="GET",http_response_status_code="200"}}': BASE - bad,  # noqa: E501
-            f'{HTTP_COUNT}{{job="racket-api",http_request_method="GET",http_response_status_code="500"}}': bad,  # noqa: E501
-            f'{HTTP_COUNT}{{job="racket-api",http_request_method="GET",http_response_status_code="429"}}': RATE_LIMITED_PER_MIN,  # noqa: E501
+            f'{HTTP_COUNT}{{{labels}="{code}"}}': per_min
+            for code, per_min in ((200, BASE - bad), (500, bad), (429, RATE_LIMITED_PER_MIN))
         }
     elif sli == "uploads":
         rows = {

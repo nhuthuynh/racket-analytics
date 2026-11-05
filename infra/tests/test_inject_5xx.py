@@ -8,6 +8,7 @@ drill scenarios are bound in test_slo_alerts_scenarios.py.
 from __future__ import annotations
 
 import importlib.util
+import itertools
 import json
 import sys
 from pathlib import Path
@@ -18,7 +19,8 @@ from fault_drill_stubs import INJECT, Stub, run_drill, stub_server
 
 def _module():
     spec = importlib.util.spec_from_file_location("inject_5xx", INJECT)
-    assert spec is not None and spec.loader is not None, f"{INJECT} is missing"
+    assert spec is not None, f"{INJECT} is missing"
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["inject_5xx"] = module
     spec.loader.exec_module(module)
@@ -37,7 +39,8 @@ def test_a_rate_outside_0_to_100_is_refused_with_exit_2(rate: str, tmp_path: Pat
 @pytest.mark.unit
 def test_expecting_an_alert_without_prometheus_is_refused(tmp_path: Path) -> None:
     result = run_drill("--base-url", "http://127.0.0.1:9", "--rate", "10", "--requests", "1",
-                       "--expect-alert", "ApiAvailabilityFastBurn", report=tmp_path / "r.json")  # fmt: skip
+                       "--expect-alert", "ApiAvailabilityFastBurn",
+                       report=tmp_path / "r.json")  # fmt: skip
     assert result.returncode == 2
     assert "--prom" in result.stderr
 
@@ -50,13 +53,15 @@ def test_an_unreachable_api_is_exit_2_not_a_pass(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(("rate", "n", "want"), [(0, 100, 0), (10, 100, 10), (10, 15, 1),
-                                                 (33, 100, 33), (100, 7, 7), (0.5, 400, 2)])  # fmt: skip
+@pytest.mark.parametrize(
+    ("rate", "n", "want"),
+    [(0, 100, 0), (10, 100, 10), (10, 15, 1), (33, 100, 33), (100, 7, 7), (0.5, 400, 2)],
+)
 def test_the_fault_share_is_exact_and_spread(rate: float, n: int, want: int) -> None:
     faulted = [_module().faulted(i, rate) for i in range(n)]
     assert sum(faulted) == want
     if 0 < rate < 50:
-        assert not any(a and b for a, b in zip(faulted, faulted[1:], strict=False))
+        assert not any(a and b for a, b in itertools.pairwise(faulted))
 
 
 @pytest.mark.unit

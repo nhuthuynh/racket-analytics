@@ -109,7 +109,9 @@ def test_no_alert_copies_a_series_label_into_its_payload() -> None:
     """ADR 0057 §2: values only from the rule text (NFR-069): no template, no `$labels`."""
     for rule in load_rules():
         text = yaml.safe_dump({k: rule.get(k) for k in ("labels", "annotations")})
-        assert "{{" not in text and "$labels" not in text, rule.get("alert") or rule["record"]
+        name = rule.get("alert") or rule["record"]
+        assert "{{" not in text, name
+        assert "$labels" not in text, name
 
 
 @pytest.mark.unit
@@ -153,9 +155,7 @@ def test_committed_rule_test_has_the_eight_nfr_cases_and_nothing_else() -> None:
     """Each committed case is the NFR burn (series and expected alert) of NFR_CASES."""
     doc = yaml.safe_load(SLO_RULE_TEST.read_text(encoding="utf-8"))
     assert doc["rule_files"] == ["slo.yml"]
-    got = [
-        (case["input_series"], case["alert_rule_test"]) for case in doc["tests"]
-    ]
+    got = [(case["input_series"], case["alert_rule_test"]) for case in doc["tests"]]
     want = [
         (c["input_series"], c["alert_rule_test"])
         for c in (burn_case(a, p, d, f) for a, p, d, f in NFR_CASES)
@@ -215,7 +215,8 @@ def _per_minute(case: dict) -> dict:
 def test_the_recorded_ratio_pinned_in_each_case_equals_the_backend_pure_function() -> None:
     """NFR-041.1, NFR-042.1: promtool pins the query value; this pins it to slis.py."""
     doc = yaml.safe_load(SLO_RULE_TEST.read_text(encoding="utf-8"))
-    pinned = [c["promql_expr_test"][0]["exp_samples"][0]["value"] for c in doc["tests"]]
+    exprs = [c["promql_expr_test"][0]["expr"] for c in doc["tests"]]
+    pinned = [float(re.search(r" - ([\d.e-]+)\) < bool", e).group(1)) for e in exprs]  # type: ignore[union-attr]
     res = subprocess.run(
         ["uv", "run", "--locked", "python", "-c", PURE],
         input=json.dumps([_per_minute(c) for c in doc["tests"]]),

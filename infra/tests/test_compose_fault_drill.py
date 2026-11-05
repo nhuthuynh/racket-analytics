@@ -44,11 +44,13 @@ def test_the_override_sets_only_the_seam_value_on_the_api() -> None:
 @pytest.mark.unit
 def test_the_override_does_not_set_app_env() -> None:
     """APP_ENV=test comes from the operator's shell for the drill project only."""
-    assert "APP_ENV" not in OVERRIDE.read_text(encoding="utf-8")
+    lines = OVERRIDE.read_text(encoding="utf-8").splitlines()
+    assert not [ln for ln in lines if "APP_ENV" in ln and not ln.lstrip().startswith("#")]
 
 
 def _config(env_file: Path, *files: Path, app_env: str) -> dict:
-    env = {k: v for k, v in os.environ.items() if not k.isupper() or k in {"PATH", "HOME", "DOCKER_HOST"}}
+    keep = {"PATH", "HOME", "DOCKER_HOST"}
+    env = {k: v for k, v in os.environ.items() if not k.isupper() or k in keep}
     env["APP_ENV"] = app_env
     cmd = ["docker", "compose", *(a for f in files for a in ("-f", str(f)))]
     res = subprocess.run(
