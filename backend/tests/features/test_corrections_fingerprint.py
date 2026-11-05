@@ -66,9 +66,7 @@ def one_lower(ctx: dict[str, Any]) -> None:
 
 
 @then(parsers.parse('racket-integrity checked against the recorded values exits 1 naming "{name}"'))
-def cli_fails(
-    ctx: dict[str, Any], name: str, monkeypatch: pytest.MonkeyPatch, capsys: Any
-) -> None:
+def cli_fails(ctx: dict[str, Any], name: str, monkeypatch: pytest.MonkeyPatch, capsys: Any) -> None:
     monkeypatch.setenv("DATABASE_URL", it.libpq_url(ctx["db"]))
     count, digest = ctx["before"]
     rc = cli.main(["--expect-count", str(count), "--expect-sha256", digest])

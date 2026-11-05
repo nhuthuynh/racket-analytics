@@ -46,7 +46,8 @@ def test_empty_table_is_count_zero_and_the_digest_of_no_bytes() -> None:
 def test_fingerprint_unpacks_as_count_and_sha256() -> None:
     count, digest = fingerprint_of([row(1)])
     assert count == 1
-    assert len(digest) == 64 and int(digest, 16) >= 0
+    assert len(digest) == 64
+    assert int(digest, 16) >= 0
 
 
 def test_one_row_hashes_its_canonical_json_line() -> None:
@@ -68,9 +69,10 @@ def test_one_row_hashes_its_canonical_json_line() -> None:
         sort_keys=True,
         separators=(",", ":"),
     )
-    assert fingerprint_of([row(1)]).sha256 == hashlib.sha256(
-        (expected_line + "\n").encode()
-    ).hexdigest()
+    assert (
+        fingerprint_of([row(1)]).sha256
+        == hashlib.sha256((expected_line + "\n").encode()).hexdigest()
+    )
 
 
 def test_order_of_the_input_rows_does_not_change_the_fingerprint() -> None:
@@ -103,7 +105,7 @@ def test_a_missing_row_changes_count_and_digest() -> None:
 
 
 @pytest.mark.parametrize(
-    "field,value",
+    ("field", "value"),
     [
         ("kind", "undo"),
         ("actor_id", uuid.UUID(int=98)),

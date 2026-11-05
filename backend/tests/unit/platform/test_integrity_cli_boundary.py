@@ -36,9 +36,12 @@ def boundary_violations(source: str) -> list[str]:
                 ]
             elif node.module == "racket.matches" or node.module.startswith("racket.matches."):
                 found.append(f"from {node.module} import ...")
-        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
-            if "match_corrections" in node.value:
-                found.append("names the match_corrections table")
+        elif (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and "match_corrections" in node.value
+        ):
+            found.append("names the match_corrections table")
     return found
 
 
@@ -58,8 +61,14 @@ def test_the_cli_imports_only_corrections_fingerprint_from_the_port() -> None:
         "from racket.matches.public import corrections_fingerprint, purge_match\n",
         "QUERY = 'SELECT count(*) FROM match_corrections'\n",
     ],
-    ids=["direct-integrity", "scorebook-repository", "import-scorebook", "whole-port",
-         "second-export", "reads-table"],  # fmt: skip
+    ids=[
+        "direct-integrity",
+        "scorebook-repository",
+        "import-scorebook",
+        "whole-port",
+        "second-export",
+        "reads-table",
+    ],
 )
 def test_a_planted_direct_import_or_table_read_fails_the_check(planted: str) -> None:
     source = CLI.read_text(encoding="utf-8") + planted
