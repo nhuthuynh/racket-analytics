@@ -125,6 +125,7 @@ pass():
 - A failed item is retried by every later pass. With a daily schedule, 7 days give at least 7 attempts.
 - Each pass logs `purge.overdue` at ERROR for every tombstone older than `PURGE_ALERT_AFTER_S` (default 518,400 s = 6 days) and counts `racket_purge_overdue`. That is the alert before NFR-066 (b) is missed.
 - Metrics: `racket_purge_runs_total{result}`, `racket_purge_items_total{kind,result}`, `racket_purge_duration_seconds`; one span per pass and per item (`OTEL_SERVICE_NAME=racket-purge`).
+- **Backups (ST-076a, ADR 0058 rules 2 and 5).** The `backup` service (profile `ops`, `scripts/ops/backup.py`) logs three alert lines at ERROR next to `purge.overdue`: `backup.retention_overdue` (`set`, `age_s`) when a set at or above the prune age (`BACKUP_KEEP_DAYS × 86,400 − BACKUP_INTERVAL_S`) is still present after a prune; `backup.stalled` (`last_complete_at`) when no set with `status: complete` is newer than `BACKUP_INTERVAL_S + 3,600` s (counted from the service's first start while none exists); `backup.purge_lag` (`age_s`) when the oldest tombstone is older than 172,800 s (2 days). A stopped or hung service logs nothing, so the deployment's alert rule for `backup.stalled` keys on the absence of a `backup.run` line with `status: complete`, not on the in-service line (ADR 0034 deployment check).
 
 ### 4.4 Abandoned uploads (ST-038, FR-024, NFR-066 d)
 
