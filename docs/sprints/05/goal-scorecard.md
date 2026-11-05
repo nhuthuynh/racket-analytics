@@ -106,8 +106,13 @@ python3 scripts/measure/browser_matrix.py reports/pw-*.json --require chromium,w
 ```
 (cd web && PW_PROJECTS=chromium,android-chrome npx playwright test e2e/sprint-05/fix-call-taps.spec.ts \
   --reporter json > ../reports/taps.json)
-jq '[.suites[]..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max' reports/taps.json
+jq '[..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max' reports/taps.json
+jq -e '([..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max) <= 2
+  and ([..|.annotations?[]?|select(.type=="planted-taps")|.description|tonumber]|max) == 3
+  and .stats.unexpected == 0 and .stats.skipped == 0' reports/taps.json
+jq -e '[..|.projectName?|strings]|unique == ["android-chrome","chromium"]' reports/taps.json
 ```
+The first `jq` prints the max; the two `jq -e` checks give the rc (budget and planted path; both projects ran). The old `.suites[]..` form was a jq 1.7 syntax error (rc 3, ST-080 dry run). Planted failure: `<= 1` in the budget check → rc 1.
 
 ### G05-06 (authors: senior-backend-engineer ST-077, ST-078d, ST-075a; senior-frontend-engineer ST-078e)
 ```
@@ -192,7 +197,7 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 | G05-02 | sre-devops-engineer | ST-075c | | | | | |
 | G05-03 | sre-devops-engineer | ST-076c | | | | | |
 | G05-04 | senior-frontend-engineer | ST-079 | | | | | |
-| G05-05 | senior-qa-engineer | ST-080 | | | | | |
+| G05-05 | senior-qa-engineer | ST-080 | 2026-11-05 | `794fe26d` | the §4 G05-05 block on Compose project `st080` (moved ports, `BASE_URL=https://localhost:53000`). One deviation: `-c .local-pw.config.ts`, a local wrapper that sets `executablePath: /opt/pw-browsers/chromium`, because the sandbox ships Chromium 1243 and Playwright 1.56.1 looks for 1194 | **budget check 0** (max `taps` = 2 over 9 fixes: CT-1 1/1, CT-2 2/2, CT-3 2/2, CT-4 2/2, Quick Tag undo 1; `planted-taps` = 3; 6 passed, 0 unexpected). **Project check 1**: only `chromium` ran, because `android-chrome` is not on `main` until ST-079 merges. G05-05 stays not measured until then | 1 (`<= 1` in the budget check) |
 | G05-06 | senior-backend-engineer | ST-078d | | | | | |
 | G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | | | | | |
 | G05-08 | sre-devops-engineer | CI-TIERS-b | | | | | |
