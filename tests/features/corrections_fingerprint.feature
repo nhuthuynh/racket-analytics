@@ -17,3 +17,11 @@ Feature: The corrections fingerprint shows that no confirmed correction was lost
       When one confirmed correction row is deleted behind the append-only guard
       Then the corrections count is one lower and the SHA-256 differs
       And racket-integrity checked against the recorded values exits 1 naming "corrections"
+
+    Scenario: A backup that holds a deleted match stays equal after restore and purge
+      Given Ivy's match has a confirmed correction and its undo
+      And Ivy's second match with corrections is deleted but not yet purged
+      And the corrections fingerprint is recorded
+      When the database is dumped and restored into an empty database and the purge runs on it
+      Then the deleted match has no correction rows in the restored database
+      And the restored database has the same corrections count and SHA-256

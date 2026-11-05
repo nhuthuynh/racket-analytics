@@ -6,6 +6,9 @@
   empty database beside it (ADR 0058 rule 4, step 9 in miniature); dropped on exit.
 * ``plant_deleted_correction``: deletes one correction row as the table owner, with the
   append-only triggers off inside that transaction only, the "lost row" a restore must catch.
+* ``tombstone`` / ``purge``: ``DELETE /matches/{id}`` through the API, and one real purge
+  pass (``racket.platform.purge --once``) against a given database, ADR 0058 rule 4 step 9.
+* ``fingerprint_of_match``: the pure fingerprint of one match's stored correction rows.
 """
 
 from __future__ import annotations
@@ -23,11 +26,12 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from tests.support import scorebook as sb
+from tests.support import stats as st
 from tests.support.api import ApiDriver
 
 
-def audited_match(api: ApiDriver, user: str = "ivy") -> str:
-    match_id = sb.ready_tagged_match(api, user, title="IT-05-04")
+def audited_match(api: ApiDriver, user: str = "ivy", title: str = "IT-05-04") -> str:
+    match_id = sb.ready_tagged_match(api, user, title=title)
     client = api.as_user(user)
     rally_2 = api.run(sb.sheet(client, match_id)).json()["rows"][1]["rally_id"]
     version = api.run(sb.version_of(client, match_id))
@@ -100,3 +104,43 @@ def plant_deleted_correction(engine: sa.Engine, match_id: str) -> None:
         ).all()
         conn.execute(sa.text("ALTER TABLE match_corrections ENABLE TRIGGER USER"))
     assert len(deleted) == 1
+
+
+def correction_count_of(engine: sa.Engine, match_id: str) -> int:
+    with engine.connect() as conn:
+        return int(
+            conn.execute(
+                sa.text("SELECT count(*) FROM match_corrections WHERE match_id::text = :m"),
+                {"m": match_id},
+            ).scalar_one()
+        )
+
+
+def fingerprint_of_match(engine: sa.Engine, match_id: str) -> tuple[int, str]:
+    """The pure fingerprint over the stored correction rows of ``match_id`` only."""
+    from racket.matches.scorebook.integrity import fingerprint_of
+
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sa.text("SELECT * FROM match_corrections WHERE match_id::text = :m"), {"m": match_id}
+        ).mappings().all()
+    count, digest = fingerprint_of(rows)
+    return count, digest
+
+
+def tombstone(api: ApiDriver, match_id: str, user: str = "ivy") -> None:
+    response = st.delete_match(api, user, match_id)
+    assert response.status_code in st.statscontract.DELETE_OK, response.text
+
+
+def purge(engine: sa.Engine, monkeypatch: Any) -> None:
+    """One real purge pass against ``engine``'s database (DATABASE_URL for this call only)."""
+    from racket.platform.db import engine_for
+
+    url = libpq_url(engine)
+    with monkeypatch.context() as m:
+        m.setenv("DATABASE_URL", url)
+        try:
+            st.run_purge_once()
+        finally:
+            engine_for(url).dispose()

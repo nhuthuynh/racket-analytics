@@ -26,6 +26,11 @@ def test_a_deleted_correction_is_detected() -> None:
     pass
 
 
+@scenario(FEATURE, "A backup that holds a deleted match stays equal after restore and purge")
+def test_a_backup_that_holds_a_deleted_match_stays_equal_after_restore_and_purge() -> None:
+    pass
+
+
 @pytest.fixture
 def ctx(api: ApiDriver, committed_db: Any) -> dict[str, Any]:
     return {"api": api, "db": committed_db}
@@ -51,6 +56,26 @@ def dump_and_restore(ctx: dict[str, Any]) -> None:
 @then("the restored database has the same corrections count and SHA-256")
 def same_after_restore(ctx: dict[str, Any]) -> None:
     assert ctx["restored"] == ctx["before"]
+
+
+@given("Ivy's second match with corrections is deleted but not yet purged")
+def deleted_match(ctx: dict[str, Any]) -> None:
+    ctx["gone"] = it.audited_match(ctx["api"], title="IT-05-04 gone")
+    it.tombstone(ctx["api"], ctx["gone"])
+    assert it.correction_count_of(ctx["db"], ctx["gone"]) >= 3
+
+
+@when("the database is dumped and restored into an empty database and the purge runs on it")
+def dump_restore_and_purge(ctx: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    with it.restored_copy(ctx["db"]) as restored:
+        it.purge(restored, monkeypatch)
+        ctx["gone_rows"] = it.correction_count_of(restored, ctx["gone"])
+        ctx["restored"] = it.fingerprint(restored)
+
+
+@then("the deleted match has no correction rows in the restored database")
+def gone_after_purge(ctx: dict[str, Any]) -> None:
+    assert ctx["gone_rows"] == 0
 
 
 @when("one confirmed correction row is deleted behind the append-only guard")
