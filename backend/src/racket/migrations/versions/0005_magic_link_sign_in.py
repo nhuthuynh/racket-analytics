@@ -61,5 +61,9 @@ def downgrade() -> None:
     op.drop_column("sessions", "last_seen_at")
     op.drop_constraint("uq_accounts_email_key", "accounts")
     op.drop_column("accounts", "email_key")
+    # Magic-link accounts have neither, and the older schema needs both: fill them from the id
+    # so a rollback (ADR 0058 rule 7, REL-1.3) works on R1 data. No row is lost.
+    op.execute("UPDATE accounts SET username = 'account-' || id::text WHERE username IS NULL")
+    op.execute("UPDATE accounts SET display_name = '' WHERE display_name IS NULL")
     op.alter_column("accounts", "display_name", existing_type=sa.String(120), nullable=False)
     op.alter_column("accounts", "username", existing_type=sa.String(64), nullable=False)
