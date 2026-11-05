@@ -36,22 +36,36 @@ CRITICAL = [
 ]
 
 
-def report(project: str, statuses: dict[str, list[str]] | None = None, *, repeats: int = 3,
-           specs: list[tuple[str, str]] | None = None) -> dict:
+def report(
+    project: str,
+    statuses: dict[str, list[str]] | None = None,
+    *,
+    repeats: int = 3,
+    specs: list[tuple[str, str]] | None = None,
+) -> dict:
     """A Playwright JSON report: one spec per (file, title), one test entry per repeat."""
     statuses = statuses or {}
     suites = []
     for file, title in specs if specs is not None else CRITICAL:
         runs = statuses.get(title, ["expected"] * repeats)
-        tests = [{"projectName": project, "status": s, "results": [{"status": "passed"}]} for s in runs]
-        suites.append({"file": file, "specs": [{"file": file, "title": title, "tests": tests}],
-                       "suites": []})
+        tests = [
+            {"projectName": project, "status": s, "results": [{"status": "passed"}]} for s in runs
+        ]
+        suites.append(
+            {"file": file, "specs": [{"file": file, "title": title, "tests": tests}], "suites": []}
+        )
     return {"config": {}, "suites": suites, "stats": {}}
 
 
 def test_journey_of_names_each_critical_journey() -> None:
     assert [bm.journey_of(f, t) for f, t in CRITICAL] == [
-        "E2E-04-01", "E2E-04-02", "E2E-04-03", "E2E-04-04", "E2E-04-05", "sign-in", "upload-resume",
+        "E2E-04-01",
+        "E2E-04-02",
+        "E2E-04-03",
+        "E2E-04-04",
+        "E2E-04-05",
+        "sign-in",
+        "upload-resume",
     ]
     assert bm.journey_of("sprint-01/resumable-upload.spec.ts", "Upload page wording") is None
     assert bm.journey_of("sprint-04/journey-v3.spec.ts", "E2E-04-011 x") is None
@@ -95,7 +109,10 @@ def test_a_journey_that_only_skipped_counts_as_missing() -> None:
 
 
 def test_a_skipped_test_beside_a_passing_one_does_not_fail_the_journey() -> None:
-    extra = [*CRITICAL, ("sprint-01/sign-in.spec.ts", "A link that can no longer be used: is 16 minutes old")]
+    extra = [
+        *CRITICAL,
+        ("sprint-01/sign-in.spec.ts", "A link that can no longer be used: is 16 minutes old"),
+    ]
     rep = report("chromium", {extra[-1][1]: ["skipped"] * 3}, specs=extra)
     p = bm.judge(bm.collect([rep]), ["chromium"], repeats=3)["projects"]["chromium"]
     assert p["ok"] is True
@@ -118,8 +135,13 @@ def test_a_report_with_two_projects_is_split_by_project() -> None:
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, str(MATRIX), *args], capture_output=True, text=True,
-                          timeout=60, check=False)
+    return subprocess.run(
+        [sys.executable, str(MATRIX), *args],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
 
 
 def test_cli_prints_one_line_per_project_and_writes_json(tmp_path: Path) -> None:
@@ -160,8 +182,9 @@ def test_the_nightly_browser_matrix_job_runs_the_g05_04_command_for_three_projec
     assert "PW_PROJECTS=$p" in script
     assert "--repeat-each 3 --grep @critical" in script
     assert "--reporter json" in script
-    assert "scripts/measure/browser_matrix.py reports/pw-*.json --require chromium,webkit,android-chrome" in script
-    # Google Chrome (runner image) for chromium and android-chrome; never a browser named after a project
+    method = "scripts/measure/browser_matrix.py reports/pw-*.json"
+    assert f"{method} --require chromium,webkit,android-chrome" in script
+    # chromium and android-chrome launch the runner's Google Chrome; no project name is installed
     assert "playwright install --with-deps chromium webkit" in script
 
 

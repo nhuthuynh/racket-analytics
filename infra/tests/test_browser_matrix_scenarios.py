@@ -27,19 +27,20 @@ PLAYWRIGHT = WEB / "node_modules" / ".bin" / "playwright"
 MATRIX = SCRIPTS_DIR / "measure" / "browser_matrix.py"
 PROJECTS = ("chromium", "webkit", "android-chrome")
 
-CONFIG = """import { defineConfig } from '@playwright/test';
-export default defineConfig({
-  testDir: './e2e', retries: 0, workers: 1,
-  projects: [%s],
-});
-""" % ", ".join(f"{{ name: '{p}' }}" for p in PROJECTS)
+NAMES = ", ".join(f"{{ name: '{p}' }}" for p in PROJECTS)
+CONFIG = (
+    "import { defineConfig } from '@playwright/test';\n"
+    "export default defineConfig({ testDir: './e2e', retries: 0, workers: 1,\n"
+    f"  projects: [{NAMES}] }});\n"
+)
 
 JOURNEYS = """import { expect, test } from '@playwright/test';
 const flaky = process.env.STANDIN_FLAKY ?? '';
 test.describe('Journeys', { tag: '@critical' }, () => {
   for (const id of ['E2E-04-01', 'E2E-04-02', 'E2E-04-03', 'E2E-04-04', 'E2E-04-05']) {
     test(`${id} journey`, async ({}, info) => {
-      expect(id === flaky && info.repeatEachIndex === 1, 'planted second-repeat failure').toBe(false);
+      const planted = id === flaky && info.repeatEachIndex === 1; // fails its second repeat
+      expect(planted).toBe(false);
     });
   }
 });
@@ -48,7 +49,9 @@ test('not critical: always fails', async () => { expect(1).toBe(2); });
 SIGN_IN = """import { test } from '@playwright/test';
 test.describe('Sign in without a memorised password', { tag: '@critical' }, () => {
   test('Sign up with an email sign-in link', async () => {});
-  test('A link that can no longer be used: is 16 minutes old', async () => { test.skip(true, 'API level'); });
+  test('A link that can no longer be used: is 16 minutes old', async () => {
+    test.skip(true, 'API level');
+  });
 });
 """
 UPLOAD = """import { test } from '@playwright/test';
@@ -112,18 +115,44 @@ def run_project(run: Run, project: str, playwright: Path) -> None:
     env.pop("CI", None)
     with report.open("w") as out:
         subprocess.run(
-            [str(playwright), "test", "-c", "playwright.config.ts", "--project", project,
-             "--repeat-each", "3", "--grep", "@critical", "--reporter", "json"],
-            cwd=run.suite, env=env, stdout=out, stderr=subprocess.PIPE, text=True,
-            timeout=180, check=False,
+            [
+                str(playwright),
+                "test",
+                "-c",
+                "playwright.config.ts",
+                "--project",
+                project,
+                "--repeat-each",
+                "3",
+                "--grep",
+                "@critical",
+                "--reporter",
+                "json",
+            ],
+            cwd=run.suite,
+            env=env,
+            stdout=out,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=180,
+            check=False,
         )
     run.reports[project] = report
 
 
 def matrix(run: Run, *require: str) -> subprocess.CompletedProcess[str]:
     run.proc = subprocess.run(
-        [sys.executable, str(MATRIX), *map(str, run.reports.values()), "--require", ",".join(require)],
-        capture_output=True, text=True, timeout=60, check=False,
+        [
+            sys.executable,
+            str(MATRIX),
+            *map(str, run.reports.values()),
+            "--require",
+            ",".join(require),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
     )
     return run.proc
 

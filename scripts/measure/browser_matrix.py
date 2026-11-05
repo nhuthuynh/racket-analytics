@@ -9,7 +9,8 @@ project (`PW_PROJECTS=<name>`). A required project is ok only when:
 * every test ran `--repeats` times, and every run passed. Retries are off (NFR-074), so a test
   that passed in one repeat and failed in another is flaky, and flaky fails the project.
 
-    python3 scripts/measure/browser_matrix.py reports/pw-*.json --require chromium,webkit,android-chrome
+    python3 scripts/measure/browser_matrix.py reports/pw-*.json \\
+        --require chromium,webkit,android-chrome
 
 Exit 0 when every required project is ok; 1 when one is not, or has no report (fail closed,
 ADR 0014); 2 on a malformed report or no `--require`.
@@ -42,8 +43,7 @@ def journey_of(file: str, title: str) -> str | None:
 
 
 def _specs(suite: dict[str, Any]):
-    for spec in suite.get("specs", []):
-        yield spec
+    yield from suite.get("specs", [])
     for child in suite.get("suites", []):
         yield from _specs(child)
 
@@ -56,7 +56,9 @@ def collect(reports: list[dict[str, Any]]) -> Runs:
             for spec in _specs(suite):
                 key = (spec["file"], spec["title"])
                 for test in spec["tests"]:
-                    runs.setdefault(test["projectName"], {}).setdefault(key, []).append(test["status"])
+                    runs.setdefault(test["projectName"], {}).setdefault(key, []).append(
+                        test["status"]
+                    )
     return runs
 
 
@@ -78,8 +80,15 @@ def judge_project(tests: dict[tuple[str, str], list[str]], repeats: int) -> dict
             ran.add(jid)
     missing = [jid for jid, _, _ in JOURNEYS if jid not in ran]
     ok = not (failed or flaky or short or missing)
-    return {"ok": ok, "passed": passed, "failed": failed, "flaky": flaky, "short": short,
-            "skipped": skipped, "missing": missing}
+    return {
+        "ok": ok,
+        "passed": passed,
+        "failed": failed,
+        "flaky": flaky,
+        "short": short,
+        "skipped": skipped,
+        "missing": missing,
+    }
 
 
 def judge(runs: Runs, require: list[str], *, repeats: int) -> dict[str, Any]:
