@@ -1,8 +1,9 @@
 """IT-05-08 (ST-078e; NFR-050.7; G05-07; AQS/STACK-04): every answer of the web origin carries a
 Content-Security-Policy with ``frame-ancestors 'none'``, ``X-Content-Type-Options: nosniff`` and
 ``X-Frame-Options: DENY``: pages (found and missing), the offline page, a content-hashed app
-file, the service worker (its own CSP governs the worker's fetches), the manifest, an icon and
-the same-origin API.
+file, the service worker (its own CSP governs the worker's fetches), the manifest and an icon.
+The same-origin ``/api/*`` answers are the API's own (Next adds no header to an external rewrite):
+IT-00-14 covers them; their CSP is routed in docs/sprints/05/decisions/ST-078e.md (D3).
 
 Runs against the running web origin, ``RA_WEB_BASE_URL`` (default ``https://localhost:3000``,
 the Compose web-tls proxy, ADR 0029). ``RA_WEB_CACERT`` names the dev CA's root certificate; on a
@@ -33,7 +34,6 @@ FIXED_PATHS = {
     "/sw.js": "service worker",
     "/manifest.webmanifest": "manifest",
     "/icons/icon.svg": "icon",
-    "/api/healthz": "same-origin API",
 }
 
 

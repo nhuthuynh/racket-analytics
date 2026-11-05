@@ -5,6 +5,7 @@
 // Errors use the shared error summary [DPA/DESIGN-13] with the message inline too (PD-R3S2-01).
 import { useState } from 'react';
 import { ErrorSummary } from '@/components/ErrorSummary';
+import { useHydrated } from '@/lib/hydration';
 import { otherSide, type Side } from '@/lib/tagging/types';
 
 export function GameStartForm({
@@ -27,6 +28,7 @@ export function GameStartForm({
   const [problem, setProblem] = useState<{ message: string; field: boolean } | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
+  const hydrated = useHydrated();
   const firstId = `first-server-${mySide}`;
   const errorId = 'first-server-error';
 
@@ -82,7 +84,7 @@ export function GameStartForm({
         ))}
       </fieldset>
       <p>
-        <button type="submit" className="button" aria-busy={busy}>{`Start game ${game}`}</button>
+        <button type="submit" className="button" aria-busy={busy} disabled={!hydrated}>{`Start game ${game}`}</button>
       </p>
     </form>
   );

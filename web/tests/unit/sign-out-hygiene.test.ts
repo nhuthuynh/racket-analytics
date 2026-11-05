@@ -57,11 +57,11 @@ describe('sign-out hygiene (NFR-067.2-.3)', () => {
     expect(deleted).toEqual([...KNOWN_DATABASES]);
   });
 
-  it('deletes listed and known databases once each when the browser can list them', async () => {
+  it('trusts the listing where the browser has one (it already holds every app database)', async () => {
     const { deleted, idb } = fakeIndexedDb(true);
 
     await clearClientData({ indexedDB: idb });
 
-    expect([...deleted].sort()).toEqual([...new Set(['other', ...KNOWN_DATABASES])].sort());
+    expect(deleted).toEqual(['other']);
   });
 });
