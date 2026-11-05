@@ -12,7 +12,7 @@ from pytest_bdd import given, parsers, scenario, then, when
 
 from racket.platform.app import create_app
 from racket.platform.settings import Settings
-from racket.platform.slis import HTTP_DURATION_INSTRUMENT
+from racket.platform.slis import HTTP_DURATION_INSTRUMENT, METER_NAME
 from tests.support.api import ApiDriver
 from tests.support.errors import assert_generic_error
 from tests.support.telemetry import global_metric_reader
@@ -41,6 +41,7 @@ def _server_errors() -> int:
         point.count
         for rm in (data.resource_metrics if data else ())
         for sm in rm.scope_metrics
+        if sm.scope.name == METER_NAME
         for metric in sm.metrics
         if metric.name == HTTP_DURATION_INSTRUMENT
         for point in metric.data.data_points

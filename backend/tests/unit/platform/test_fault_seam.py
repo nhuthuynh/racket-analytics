@@ -25,6 +25,10 @@ from tests.support.errors import assert_generic_error
 BASE = {
     "DATABASE_URL": "postgresql://u:p@127.0.0.1:5432/db",
     "S3_BUCKET_MEDIA": "media",
+    # required under staging and prod
+    "ALLOWED_ORIGINS": "https://app.example.test",
+    "PUBLIC_WEB_ORIGIN": "https://app.example.test",
+    "AUTH_EMAIL_KEY": "unit-test-email-key-0123456789abcdef",
 }
 FAULT_HEADER = {"X-Racket-Fault": "5xx"}
 
