@@ -1,9 +1,16 @@
-"""IT-05-08 (ST-078e; NFR-050.7; G05-07; AQS/STACK-04): every answer of the web origin carries a
-Content-Security-Policy with ``frame-ancestors 'none'``, ``X-Content-Type-Options: nosniff`` and
-``X-Frame-Options: DENY``: pages (found and missing), the offline page, a content-hashed app
-file, the service worker (its own CSP governs the worker's fetches), the manifest and an icon.
-The same-origin ``/api/*`` answers are the API's own (Next adds no header to an external rewrite):
-IT-00-14 covers them; their CSP is routed in docs/sprints/05/decisions/ST-078e.md (D3).
+"""IT-05-08 (ST-078e; NFR-050.7; G05-07; AQS/STACK-04): the answers the web app itself serves
+carry a Content-Security-Policy with ``frame-ancestors 'none'``, ``X-Content-Type-Options:
+nosniff`` and ``X-Frame-Options: DENY``: pages (found and missing), the offline page, a
+content-hashed app file, the service worker (its own CSP governs the worker's fetches), the
+manifest and an icon. This gated part is not "every answer of the web origin".
+
+Excluded here, and known to fail NFR-050.7 (PR #218 review round 1, PE-078e-01, F-1, ST-078e-R1):
+the same-origin ``/api/*`` answers (no CSP; Next adds no header to an external rewrite) are
+probed red-first in ``test_it_05_08_api_csp.py`` (``red_until`` ST-078f = ST-078e-F1,
+senior-backend-engineer), and the media route (no frame denial; its unsigned 403 has none of the
+three headers) in ``test_it_05_08_media_route.py`` (``red_until`` ST-078g = ST-078e-F2,
+sre-devops-engineer). G05-07's "missing security headers 0" is not met while either is red,
+whatever this gated part shows (docs/sprints/05/decisions/ST-078e.md D3, D4, D9).
 
 Runs against the running web origin, ``RA_WEB_BASE_URL`` (default ``https://localhost:3000``,
 the Compose web-tls proxy, ADR 0029). ``RA_WEB_CACERT`` names the dev CA's root certificate; on a

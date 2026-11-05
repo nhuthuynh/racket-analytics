@@ -569,6 +569,21 @@ jobs:
           RA_WEB_BASE_URL: https://localhost:3000
           RA_WEB_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
         run: uv run --no-sync pytest -q -p no:cacheprovider tests/integration/test_it_05_security_headers.py
+      - name: Web-origin header gaps IT-05-08 F1/F2 (red_until ST-078f, ST-078g; listed, not gated; a stale marker fails)
+        # PR #218 round 1: /api/* has no CSP and the media route no frame denial. The rows stay
+        # red until the API and Caddyfile fixes land; the report fails when one passes (stale
+        # marker, QA lifts it with a TCR row) or fewer than 3 rows ran. An unreachable origin
+        # already fails the gated IT-05-08 step above (same fixture).
+        working-directory: backend
+        env:
+          RA_WEB_BASE_URL: https://localhost:3000
+          RA_WEB_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
+        run: |
+          uv run --no-sync pytest -q -p no:cacheprovider -m red_until \
+            tests/integration/test_it_05_08_api_csp.py tests/integration/test_it_05_08_media_route.py \
+            --junitxml=../reports/red-until-it-05-08.xml || echo "pytest rc=$? (red-until rows are expected to fail)"
+          python3 ../scripts/ci/red_until_report.py --junit ../reports/red-until-it-05-08.xml --root . \
+            --expected-rows 3 --summary "$GITHUB_STEP_SUMMARY"
       - name: Install ffmpeg (the rally-video specs build a decodable VP9 stand-in; W-01)
         run: |
           sudo apt-get update -q
