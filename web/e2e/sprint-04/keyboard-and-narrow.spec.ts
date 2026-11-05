@@ -19,7 +19,7 @@ async function tabTo(page: Page, target: Locator, name: string): Promise<void> {
   );
 }
 
-test.describe('@M0 @story-ST-065 @nfr-034 Plan by keyboard and on narrow screens', () => {
+test.describe('@M0 @story-ST-065 @nfr-034 Plan by keyboard and on narrow screens', { tag: '@critical' }, () => {
   test('E2E-04-05 keyboard-only: P-02 answered and sent, then Mark done, Show me and Not for me', async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     const matchId = await receivedMatch(page, 'E2E-04-05 keyboard');
