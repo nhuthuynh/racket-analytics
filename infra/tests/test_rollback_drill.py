@@ -15,7 +15,12 @@ from rollback_fixtures import calls, make_env, marker_cmd, report, run_drill
 pytestmark = pytest.mark.unit
 
 TAG, REV = "r1-rehearsal-0020", "0020"
-BUILT = {"migrate", "api", "worker", "mailer", "purge", "web"}
+BUILT = {"migrate", "api", "worker", "mailer", "purge", "web"}  # at least these (ST-076a adds more)
+
+
+def _built() -> set[str]:
+    base = yaml.safe_load((REPO_ROOT / "infra" / "compose.yaml").read_text())["services"]
+    return {name for name, svc in base.items() if "build" in svc}
 
 
 def _drill(tmp_path: Path, *extra: str, **env_over: str):
@@ -61,7 +66,7 @@ def test_every_built_service_image_is_checked(tmp_path: Path) -> None:
     inspected = {
         c["argv"][2] for c in calls(tmp_path) if c.get("argv", [])[:2] == ["image", "inspect"]
     }
-    assert inspected == {f"racket-{s}:{TAG}" for s in BUILT}
+    assert inspected == {f"racket-{s}:{TAG}" for s in _built()}
 
 
 # ------------------------------------------------------------------ the rule 7 order
@@ -141,9 +146,8 @@ def test_an_explicit_tag_and_revision_override_the_notes(tmp_path: Path) -> None
 
 # ------------------------------------------------------------------ compose.release.yaml and make
 def test_the_release_override_tags_every_built_service_and_nothing_else() -> None:
-    base = yaml.safe_load((REPO_ROOT / "infra" / "compose.yaml").read_text())["services"]
-    built = {name for name, svc in base.items() if "build" in svc}
-    assert built == BUILT
+    built = _built()
+    assert built >= BUILT
     release = yaml.safe_load((REPO_ROOT / "infra" / "compose.release.yaml").read_text())
     assert set(release["services"]) == built
     for name, svc in release["services"].items():
