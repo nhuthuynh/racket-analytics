@@ -5,6 +5,10 @@ committed row is a confirmed correction. Its fingerprint is the row count and th
 one canonical JSON line per row (sorted keys, UTC timestamps, ids as text), in the stable
 order ``(match_id, version, id)``. Equal before a backup and after its restore means no
 confirmed correction was lost or changed.
+
+Only the corrections of live matches count (``matches.deleted_at IS NULL``): ADR 0058 rule 4
+runs the purge (step 9) before this check (step 10), and the purge cascades a tombstoned
+match's trail, so those rows are meant to be gone after a correct restore.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from racket.matches.repository import matches
 from racket.matches.scorebook.repository import match_corrections
 
 
@@ -59,6 +64,9 @@ def fingerprint_of(rows: Iterable[Mapping[Any, Any]]) -> Fingerprint:
 
 
 def corrections_fingerprint(session: Session) -> Fingerprint:
-    """(count, sha256) over every confirmed correction, every column, in one snapshot."""
-    rows = session.execute(sa.select(match_corrections)).mappings()
+    """(count, sha256) over every confirmed correction of a live match, every column, in one
+    snapshot. A tombstoned match's trail is left out: the purge before this check removes it."""
+    live = sa.select(matches.c.id).where(matches.c.deleted_at.is_(None))
+    query = sa.select(match_corrections).where(match_corrections.c.match_id.in_(live))
+    rows = session.execute(query).mappings()
     return fingerprint_of(rows)

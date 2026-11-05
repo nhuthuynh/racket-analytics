@@ -121,9 +121,14 @@ def fingerprint_of_match(engine: sa.Engine, match_id: str) -> tuple[int, str]:
     from racket.matches.scorebook.integrity import fingerprint_of
 
     with engine.connect() as conn:
-        rows = conn.execute(
-            sa.text("SELECT * FROM match_corrections WHERE match_id::text = :m"), {"m": match_id}
-        ).mappings().all()
+        rows = (
+            conn.execute(
+                sa.text("SELECT * FROM match_corrections WHERE match_id::text = :m"),
+                {"m": match_id},
+            )
+            .mappings()
+            .all()
+        )
     count, digest = fingerprint_of(rows)
     return count, digest
 

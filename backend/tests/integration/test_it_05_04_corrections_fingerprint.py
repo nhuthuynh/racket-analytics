@@ -112,6 +112,7 @@ def test_it_05_04_restore_then_purge_of_a_backup_with_a_tombstoned_match_stays_e
         it.purge(restored, monkeypatch)  # step 9
         assert it.correction_count_of(restored, gone) == 0  # the purge did cascade
         assert it.fingerprint(restored) == (count, digest)
+        capsys.readouterr()  # drop the purge pass log lines
         monkeypatch.setenv("DATABASE_URL", it.libpq_url(restored))  # step 10
         rc = cli.main(["--expect-count", str(count), "--expect-sha256", digest])
         assert rc == 0, capsys.readouterr().err
