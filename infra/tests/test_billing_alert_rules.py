@@ -64,13 +64,17 @@ def _budgets_module():
 # ------------------------------------------------- unit: negative cases first (T4-AL-1, -2)
 
 # T4-AL-1: URLs, e-mail addresses and key-shaped strings (>= 20 base64/hex chars) must not be
-# in the rule files. Allowlist: the six alert names (CamelCase words, no key material).
+# in the rule files. Allowlist: the six billing alert names and the four SLO alert names
+# (slo.yml, ST-075c) (CamelCase words, no key material).
 SECRET_SHAPES = (
     re.compile(r"https?://", re.IGNORECASE),
     re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"),
     re.compile(r"(?<![\w/+=-])[A-Za-z0-9+/=]{20,}(?![\w/+=-])"),
 )
-ALLOWED = frozenset(alert_name(p, t) for p in PROVIDERS for t in THRESHOLDS)
+ALLOWED = frozenset(alert_name(p, t) for p in PROVIDERS for t in THRESHOLDS) | frozenset(
+    ("ApiAvailabilityFastBurn", "ApiAvailabilitySlowBurn", "UploadCompletionFastBurn",
+     "UploadCompletionSlowBurn")
+)  # fmt: skip
 
 
 @pytest.mark.unit
