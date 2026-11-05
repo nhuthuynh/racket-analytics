@@ -26,9 +26,7 @@ FAULT_HEADER = {"X-Racket-Fault": "5xx"}
 
 
 def _settings(app_env: str) -> Settings:
-    return Settings.from_env(
-        {**os.environ, "APP_ENV": app_env, "RACKET_FAULT_INJECTION": SEAM}
-    )
+    return Settings.from_env({**os.environ, "APP_ENV": app_env, "RACKET_FAULT_INJECTION": SEAM})
 
 
 def _count(reader: InMemoryMetricReader, status: int) -> int:
