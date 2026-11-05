@@ -458,6 +458,8 @@ jobs:
       - run: corepack enable
       - working-directory: web
         run: pnpm install --frozen-lockfile
+      # The backup tests (ST-076a) encrypt with the real age; the runner image does not ship it.
+      - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends age
       # The runner image ships PostgreSQL 16 server binaries; dev-postgres.sh uses them.
       # CI-INFRA-BUDGET: the suite mostly waits on services, so it runs on every core; loadfile
       # keeps a file's tests (and its module-scoped service fixtures) on one worker. A short
