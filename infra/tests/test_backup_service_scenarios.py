@@ -1,8 +1,8 @@
 """Binds the process-level scenarios of tests/features/backup_service.feature (ST-076a;
 NFR-045.1; ADR 0058 rules 1-3). ``scripts/ops/backup.py`` runs as a real process on a throwaway
 backup directory; nothing reaches a database or a store, because each scenario ends before the
-dump (status read, or a refusal). The Compose restore scenario is bound in
-``test_backup_service_live.py`` (IT-05-03).
+dump (status read, or a refusal). The Compose restore scenario (IT-05-03) comes with the
+Compose service in ST-076a-part2.
 """
 
 from __future__ import annotations
