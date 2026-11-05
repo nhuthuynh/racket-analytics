@@ -11,7 +11,8 @@
 # of both (NFR-041.1, docs/ops/sli-metrics.md). Uploads: expired / (completed + expired), the
 # terminal outcomes only, so uploads still running do not count as failures (NFR-042.1).
 # Only the `racket` meter scope is an SLI instrument (ADR 0026): FastAPI's own instrumentation
-# exports the same metric name under otel_scope_name="fastapi" and does not see the faults.
+# exports the same metric name under otel_scope_name="fastapi" for a different set of requests
+# (drill stack: every injected 500 but 1 of 1149 successes), which would skew the ratio.
 # Labels and annotations are rule text only: no series label is copied into an alert (NFR-069).
 # Tested by slo.test.yml with `promtool test rules` (8 cases).
 groups:

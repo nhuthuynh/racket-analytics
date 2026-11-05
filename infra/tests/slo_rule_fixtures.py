@@ -61,8 +61,16 @@ def minutes(duration: str) -> int:
     return int(duration[:-1]) * unit
 
 
-def burn_series(sli: str, percent: float, duration: str) -> list[dict[str, str]]:
-    """promtool input series for ``percent`` % failures among ``BASE`` valid events a minute."""
+def burn_series(
+    sli: str, percent: float, duration: str, firing: bool = False
+) -> list[dict[str, str]]:
+    """promtool input series for ``percent`` % failures among ``BASE`` valid events a minute.
+
+    API burns also carry FastAPI's own instrumentation of the same metric name (scope
+    ``fastapi``), which counts a different set of requests (drill stack: all injected 500s but
+    1 of 1149 successes, decisions/ST-075c.md). It pushes the mixed ratio the wrong way: good
+    responses on a burn that must fire, 500s on one that must not.
+    """
     bad = round(BASE * percent / 100)
     assert abs(bad - BASE * percent / 100) < 1e-9, "percent must be a whole share of BASE"
     n = minutes(duration) + 5
@@ -72,10 +80,10 @@ def burn_series(sli: str, percent: float, duration: str) -> list[dict[str, str]]
             f'{HTTP_COUNT}{{{labels},http_response_status_code="{code}"}}': per_min
             for code, per_min in ((200, BASE - bad), (500, bad), (429, RATE_LIMITED_PER_MIN))
         }
-        # FastAPI's own instrumentation exports the same metric name under its scope, without
-        # the injected faults (live drill stack, decisions/ST-075c.md): never part of the SLI.
         fastapi = labels.replace('"racket"', '"fastapi"')
-        rows[f'{HTTP_COUNT}{{{fastapi},http_response_status_code="200"}}'] = BASE
+        rows[f'{HTTP_COUNT}{{{fastapi},http_response_status_code="{200 if firing else 500}"}}'] = (
+            BASE
+        )
     elif sli == "uploads":
         scope = 'otel_scope_name="racket"'
         rows = {
@@ -115,7 +123,7 @@ def burn_case(alert: str, percent: float, duration: str, firing: bool) -> dict:
     return {
         "name": f"{alert}: {percent:g} % of {a.sli} fail for {duration} -> {verdict}",
         "interval": "1m",
-        "input_series": burn_series(a.sli, percent, duration),
+        "input_series": burn_series(a.sli, percent, duration, firing),
         "alert_rule_test": [
             {
                 "eval_time": duration,

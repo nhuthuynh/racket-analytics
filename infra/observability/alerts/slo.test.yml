@@ -2,7 +2,8 @@
 # Eight cases: each burn-rate alert fires on its NFR burn and does not fire on its negative burn
 # (negative case first). A burn is 1000 valid events a minute, of which the given share fails.
 # API series also carry 500 responses a minute with status 429 (in neither part of the ratio)
-# and 1000 a minute from FastAPI's own meter scope (otel_scope_name="fastapi", not an SLI);
+# and 1000 a minute from FastAPI's own meter scope (otel_scope_name="fastapi", not an SLI):
+# 200s on a burn that must fire, 500s on one that must not, so mixing scopes fails either way;
 # upload series also carry created and rejected events (not terminal outcomes) and expirations
 # from both emitters (racket-api, racket-purge). promql_expr_test pins the recorded error ratio
 # to the share of failures in the series, within 1e-9 (float64 rounding) (NFR-041.1, NFR-042.1).
@@ -22,7 +23,7 @@ tests:
     values: 0+1x15
   - series: http_server_request_duration_seconds_count{job="racket-api",otel_scope_name="racket",http_request_method="GET",http_response_status_code="429"}
     values: 0+500x15
-  - series: http_server_request_duration_seconds_count{job="racket-api",otel_scope_name="fastapi",http_request_method="GET",http_response_status_code="200"}
+  - series: http_server_request_duration_seconds_count{job="racket-api",otel_scope_name="fastapi",http_request_method="GET",http_response_status_code="500"}
     values: 0+1000x15
   alert_rule_test:
   - eval_time: 10m
@@ -71,7 +72,7 @@ tests:
     values: 0+3x365
   - series: http_server_request_duration_seconds_count{job="racket-api",otel_scope_name="racket",http_request_method="GET",http_response_status_code="429"}
     values: 0+500x365
-  - series: http_server_request_duration_seconds_count{job="racket-api",otel_scope_name="fastapi",http_request_method="GET",http_response_status_code="200"}
+  - series: http_server_request_duration_seconds_count{job="racket-api",otel_scope_name="fastapi",http_request_method="GET",http_response_status_code="500"}
     values: 0+1000x365
   alert_rule_test:
   - eval_time: 6h
