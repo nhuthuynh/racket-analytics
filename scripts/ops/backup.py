@@ -82,10 +82,15 @@ def _whole(env: Mapping[str, str], name: str, default: int, maximum: int) -> int
 
 
 def load_config(env: Mapping[str, str]) -> Config:
+    interval = _whole(env, "BACKUP_INTERVAL_S", DAY, DAY)
+    keep = _whole(env, "BACKUP_KEEP_DAYS", MAX_KEEP_DAYS, MAX_KEEP_DAYS)
+    # A set must outlive the next run and the stalled grace, or the prune deletes the only one.
+    if prune_age_s(keep, interval) <= interval + STALLED_GRACE_S:
+        raise Refused(f"BACKUP_KEEP_DAYS={keep} prunes the only complete set at this interval")
     return Config(
         backup_dir=Path(env.get("BACKUP_DIR", "/backups")),
-        interval_s=_whole(env, "BACKUP_INTERVAL_S", DAY, DAY),
-        keep_days=_whole(env, "BACKUP_KEEP_DAYS", MAX_KEEP_DAYS, MAX_KEEP_DAYS),
+        interval_s=interval,
+        keep_days=keep,
         recipient=env.get("BACKUP_AGE_RECIPIENT") or None,
         env=env,
     )
