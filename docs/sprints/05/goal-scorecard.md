@@ -68,19 +68,25 @@ Met when all three verdict files say `pass` for all 4 endpoints. Planted failure
 
 ### G05-02 (author: sre-devops-engineer, ST-075c)
 ```
-docker run --rm -v "$PWD/infra/observability/alerts:/a" prom/prometheus:v2.53.2 \
-  promtool test rules /a/slo.test.yml           # 8 cases
+# promtool image = PROMTOOL_IMAGE in infra/tests/billing_alert_fixtures.py (ADR 0057; ST-075c: the
+# v2.53.2 form without --entrypoint exits 1, "prometheus: error: unexpected promtool")
+docker run --rm --network=none --entrypoint=/bin/promtool -v "$PWD/infra/observability/alerts:/a:ro" -w /a \
+  mirror.gcr.io/prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+  test rules slo.test.yml                      # 8 cases
 # drill-only stack: APP_ENV=test from the shell overrides infra/.env for this project only; shipped
 # infra/env.example (APP_ENV=dev) and infra/compose.yaml are unchanged; the override adds only the seam value
 # one Compose project for the whole block (PE-PLAN05-R2-01): infra/compose.yaml:6 sets name: racket-analytics and
 # the Makefile's COMPOSE has no -p, so `make demo` without this export copies web-tls from the wrong project
+# the obs overlay points the API at the collector (ST-075b); without it nothing reaches Prometheus
+cat infra/env.example infra/observability/obs.env > infra/.env
 export COMPOSE_PROJECT_NAME=racket-obs05
 APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml --env-file infra/.env \
   -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
-python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
-  --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
+# clean run first (ST-075c): after a burst the slow-burn alert can fire until its 30 m window clears
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 0 --minutes 10 \
   --expect-no-alert --prom http://localhost:9090 --json reports/slo-clean.json
+python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
+  --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
 curl -s 'http://localhost:9090/api/v1/query?query=racket_upload_sessions_total' | jq '.data.result|length'
 ```
 Planted failure: a rule file with the fast-burn threshold at 100 % → the promtool case fails. Negative (NFR-041.6): `python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 100 --minutes 1 --expect-no-5xx --json reports/slo-seam-off.json` against a `make up` stack (`APP_ENV=dev`, no override) → 0 responses with status 500 (the seam is dropped outside `APP_ENV=test`).
