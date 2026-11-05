@@ -173,7 +173,8 @@ export function usePlanFollowThrough({
       void sync();
     });
     const onOnline = () => void sync();
-    window.addEventListener('online', onOnline);
+    // ST-085 PLANTED DEFECT (A9, reverted in the green commit): no sync on reconnect.
+    void onOnline;
     return () => {
       live = false;
       window.removeEventListener('online', onOnline);

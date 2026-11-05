@@ -63,7 +63,7 @@ function planNetworkFirst(request, fallback) {
   const keep = async (response) => {
     if (response.ok && response.type !== 'opaque') {
       const headers = new Headers(response.headers);
-      headers.set(OFFLINE_COPY, new Date().toISOString());
+      // ST-085 PLANTED DEFECT (A9, reverted in the green commit): the kept copy is not stamped.
       const body = await response.clone().arrayBuffer();
       await (await cache).put(request, new Response(body, { status: response.status, headers }));
     } else if (response.status >= 400 && response.status < 500) {
