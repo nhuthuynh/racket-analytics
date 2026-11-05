@@ -67,19 +67,24 @@ def burn_series(sli: str, percent: float, duration: str) -> list[dict[str, str]]
     assert abs(bad - BASE * percent / 100) < 1e-9, "percent must be a whole share of BASE"
     n = minutes(duration) + 5
     if sli == "API responses":
-        labels = 'job="racket-api",http_request_method="GET",http_response_status_code'
+        labels = 'job="racket-api",otel_scope_name="racket",http_request_method="GET"'
         rows = {
-            f'{HTTP_COUNT}{{{labels}="{code}"}}': per_min
+            f'{HTTP_COUNT}{{{labels},http_response_status_code="{code}"}}': per_min
             for code, per_min in ((200, BASE - bad), (500, bad), (429, RATE_LIMITED_PER_MIN))
         }
+        # FastAPI's own instrumentation exports the same metric name under its scope, without
+        # the injected faults (live drill stack, decisions/ST-075c.md): never part of the SLI.
+        fastapi = labels.replace('"racket"', '"fastapi"')
+        rows[f'{HTTP_COUNT}{{{fastapi},http_response_status_code="200"}}'] = BASE
     elif sli == "uploads":
+        scope = 'otel_scope_name="racket"'
         rows = {
-            f'{UPLOADS}{{job="racket-api",event="created"}}': BASE + 100,
-            f'{UPLOADS}{{job="racket-api",event="rejected",reason="too_large"}}': 100,
-            f'{UPLOADS}{{job="racket-api",event="completed"}}': BASE - bad,
+            f'{UPLOADS}{{job="racket-api",{scope},event="created"}}': BASE + 100,
+            f'{UPLOADS}{{job="racket-api",{scope},event="rejected",reason="too_large"}}': 100,
+            f'{UPLOADS}{{job="racket-api",{scope},event="completed"}}': BASE - bad,
             # Expirations come from both emitters (ADR 0057 §2): the API and the purge.
-            f'{UPLOADS}{{job="racket-api",event="expired"}}': bad - bad // 2,
-            f'{UPLOADS}{{job="racket-purge",event="expired"}}': bad // 2,
+            f'{UPLOADS}{{job="racket-api",{scope},event="expired"}}': bad - bad // 2,
+            f'{UPLOADS}{{job="racket-purge",{scope},event="expired"}}': bad // 2,
         }
     else:
         raise ValueError(f"unknown SLI {sli!r}")

@@ -40,6 +40,9 @@ NFR_CASES = (
     ("UploadCompletionSlowBurn", 0.5, "6h", False),  # NFR-042.4 negative
     ("UploadCompletionSlowBurn", 3, "6h", True),  # NFR-042.4
 )
+# The SLI instruments are the `racket` meter's (ADR 0026); FastAPI's instrumentation exports the
+# same metric name under scope `fastapi` and does not see the injected faults (ST-075c drill).
+RACKET = 'otel_scope_name="racket"'
 WINDOWS = {"fast": ("1h", "5m"), "slow": ("6h", "30m")}
 RATIO = {"api_availability": "slo:api_error_ratio", "upload_completion": "slo:upload_error_ratio"}
 VOLUME = {
@@ -128,8 +131,8 @@ def test_api_error_ratio_is_5xx_over_all_with_429_out_of_both(window: str) -> No
     """NFR-041.1, the docs/ops/sli-metrics.md query as an error ratio, summed over emitters."""
     count = "http_server_request_duration_seconds_count"
     assert _records()[f"slo:api_error_ratio:rate{window}"] == (
-        f'sum(rate({count}{{http_response_status_code=~"5.."}}[{window}]))'
-        f' / sum(rate({count}{{http_response_status_code!="429"}}[{window}]))'
+        f'sum(rate({count}{{{RACKET},http_response_status_code=~"5.."}}[{window}]))'
+        f' / sum(rate({count}{{{RACKET},http_response_status_code!="429"}}[{window}]))'
     )
 
 
@@ -139,8 +142,8 @@ def test_upload_error_ratio_is_expired_over_terminal_outcomes(window: str) -> No
     """NFR-042.1 with terminal outcomes only (ADR 0057 §2), summed over api and purge."""
     uploads = "racket_upload_sessions_total"
     assert _records()[f"slo:upload_error_ratio:rate{window}"] == (
-        f'sum(increase({uploads}{{event="expired"}}[{window}]))'
-        f' / sum(increase({uploads}{{event=~"completed|expired"}}[{window}]))'
+        f'sum(increase({uploads}{{{RACKET},event="expired"}}[{window}]))'
+        f' / sum(increase({uploads}{{{RACKET},event=~"completed|expired"}}[{window}]))'
     )
 
 
@@ -201,6 +204,8 @@ def _per_minute(case: dict) -> dict:
     api: dict[str, int] = {}
     uploads: dict[str, int] = {"completed": 0, "expired": 0, "rejected": 0, "created": 0}
     for s in case["input_series"]:
+        if RACKET not in s["series"]:
+            continue  # not an SLI instrument (the fastapi scope)
         step = int(s["values"].split("+")[1].split("x")[0])
         if code := re.search(r'http_response_status_code="(\d+)"', s["series"]):
             api[code.group(1)] = api.get(code.group(1), 0) + step
