@@ -10,6 +10,8 @@
 # Error ratios are summed over emitters (job racket-api, racket-purge). API: 5xx / all, 429 out
 # of both (NFR-041.1, docs/ops/sli-metrics.md). Uploads: expired / (completed + expired), the
 # terminal outcomes only, so uploads still running do not count as failures (NFR-042.1).
+# Only the `racket` meter scope is an SLI instrument (ADR 0026): FastAPI's own instrumentation
+# exports the same metric name under otel_scope_name="fastapi" and does not see the faults.
 # Labels and annotations are rule text only: no series label is copied into an alert (NFR-069).
 # Tested by slo.test.yml with `promtool test rules` (8 cases).
 groups:
@@ -18,44 +20,44 @@ groups:
     rules:
       - record: slo:api_error_ratio:rate5m
         expr: >-
-          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
-          / sum(rate(http_server_request_duration_seconds_count{http_response_status_code!="429"}[5m]))
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[5m]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[5m]))
       - record: slo:api_error_ratio:rate30m
         expr: >-
-          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[30m]))
-          / sum(rate(http_server_request_duration_seconds_count{http_response_status_code!="429"}[30m]))
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[30m]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[30m]))
       - record: slo:api_error_ratio:rate1h
         expr: >-
-          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[1h]))
-          / sum(rate(http_server_request_duration_seconds_count{http_response_status_code!="429"}[1h]))
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[1h]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[1h]))
       - record: slo:api_error_ratio:rate6h
         expr: >-
-          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[6h]))
-          / sum(rate(http_server_request_duration_seconds_count{http_response_status_code!="429"}[6h]))
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[6h]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[6h]))
       - record: slo:api_valid_requests:increase1h
-        expr: sum(increase(http_server_request_duration_seconds_count{http_response_status_code!="429"}[1h]))
+        expr: sum(increase(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[1h]))
       - record: slo:api_valid_requests:increase6h
-        expr: sum(increase(http_server_request_duration_seconds_count{http_response_status_code!="429"}[6h]))
+        expr: sum(increase(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[6h]))
       - record: slo:upload_error_ratio:rate5m
         expr: >-
-          sum(increase(racket_upload_sessions_total{event="expired"}[5m]))
-          / sum(increase(racket_upload_sessions_total{event=~"completed|expired"}[5m]))
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[5m]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[5m]))
       - record: slo:upload_error_ratio:rate30m
         expr: >-
-          sum(increase(racket_upload_sessions_total{event="expired"}[30m]))
-          / sum(increase(racket_upload_sessions_total{event=~"completed|expired"}[30m]))
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[30m]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[30m]))
       - record: slo:upload_error_ratio:rate1h
         expr: >-
-          sum(increase(racket_upload_sessions_total{event="expired"}[1h]))
-          / sum(increase(racket_upload_sessions_total{event=~"completed|expired"}[1h]))
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[1h]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[1h]))
       - record: slo:upload_error_ratio:rate6h
         expr: >-
-          sum(increase(racket_upload_sessions_total{event="expired"}[6h]))
-          / sum(increase(racket_upload_sessions_total{event=~"completed|expired"}[6h]))
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[6h]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[6h]))
       - record: slo:upload_terminal:increase1h
-        expr: sum(increase(racket_upload_sessions_total{event=~"completed|expired"}[1h]))
+        expr: sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[1h]))
       - record: slo:upload_terminal:increase6h
-        expr: sum(increase(racket_upload_sessions_total{event=~"completed|expired"}[6h]))
+        expr: sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[6h]))
 
       - alert: ApiAvailabilityFastBurn
         expr: >-
