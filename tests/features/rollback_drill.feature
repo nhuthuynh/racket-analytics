@@ -8,6 +8,7 @@ Feature: A release can be rolled back to the previous image tag set
 
   Background:
     Given a Compose project "racket-drill" whose previous release is "r1-rehearsal-0020" at revision "0020"
+    And its current release is "r1-rc1"
 
   Rule: REL-1.2 The previous image tag set redeploys and the API is healthy
 
@@ -18,11 +19,12 @@ Feature: A release can be rolled back to the previous image tag set
       And the downgrade ran with the current image to revision "0020"
       And the redeploy started tag "r1-rehearsal-0020" without building
 
-    Scenario: A failed downgrade restores the backup before the redeploy
+    Scenario: A failed downgrade restores the backup and redeploys the current release
       Given the downgrade fails
       When the rollback drill runs to the previous tag
       Then the drill exits 1
       And the steps ran in the order "backup, downgrade, restore, redeploy, health"
+      And the redeploy started tag "r1-rc1" without building
 
     Scenario: Missing previous images stop the drill before anything changes
       Given the images of tag "r1-rehearsal-0020" are missing

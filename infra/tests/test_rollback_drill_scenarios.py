@@ -29,9 +29,16 @@ def project(ctx: dict, project: str, tag: str, revision: str) -> None:
     ctx.update(project=project, env=make_env(ctx["tmp"], tag, revision))
 
 
+@given(parsers.parse('its current release is "{tag}"'))
+def current(ctx: dict, tag: str) -> None:
+    notes = ctx["tmp"] / "notes.md"
+    text = notes.read_text()
+    notes.write_text(text.replace("release: r1-rc1\n", f"release: {tag}\n", 1))
+
+
 @given("the downgrade fails")
 def downgrade_fails(ctx: dict) -> None:
-    ctx["env"]["FAKE_DOCKER_FAIL"] = "migrate"
+    ctx["env"]["FAKE_DOCKER_FAIL"] = "command.downgrade"
 
 
 @given(parsers.parse('the images of tag "{tag}" are missing'))
@@ -74,7 +81,9 @@ def downgrade(ctx: dict, revision: str) -> None:
 
 @then(parsers.parse('the redeploy started tag "{tag}" without building'))
 def redeploy(ctx: dict, tag: str) -> None:
-    (up,) = [c for c in calls(ctx["tmp"]) if "up" in c.get("argv", [])]
+    ups = [c for c in calls(ctx["tmp"]) if "up" in c.get("argv", [])]
+    assert ups, "no redeploy ran"
+    up = ups[-1]
     assert up["image_tag"] == tag and "--no-build" in up["argv"]
     assert str(REPO_ROOT / "infra" / "compose.release.yaml") in up["argv"]
 

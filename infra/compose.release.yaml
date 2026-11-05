@@ -1,0 +1,12 @@
+# Release images (ST-082; ADR 0058 rule 7; REL-1.2). Applied on top of compose.yaml only when a
+# release tag is given: `make release-images IMAGE_TAG=<tag>` builds `racket-<service>:<tag>` from
+# the working tree, `make up IMAGE_TAG=<tag>` starts that set with --no-build, so an old tag is
+# never rebuilt from a newer tree. Without a tag, compose.yaml keeps Compose's per-project image
+# names, so parallel evidence projects stay apart and `down --rmi local` still removes them.
+services:
+  migrate: {image: "racket-migrate:${IMAGE_TAG:?set IMAGE_TAG}"}
+  api: {image: "racket-api:${IMAGE_TAG:?set IMAGE_TAG}"}
+  worker: {image: "racket-worker:${IMAGE_TAG:?set IMAGE_TAG}"}
+  mailer: {image: "racket-mailer:${IMAGE_TAG:?set IMAGE_TAG}"}
+  purge: {image: "racket-purge:${IMAGE_TAG:?set IMAGE_TAG}"}
+  web: {image: "racket-web:${IMAGE_TAG:?set IMAGE_TAG}"}

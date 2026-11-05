@@ -94,7 +94,7 @@ def test_a_wrong_revision_after_the_downgrade_fails_and_falls_back(tmp_path: Pat
 def test_a_failed_downgrade_without_a_restore_command_stops_with_the_runbook(
     tmp_path: Path,
 ) -> None:
-    proc = _drill(tmp_path, FAKE_DOCKER_FAIL="migrate")
+    proc = _drill(tmp_path, FAKE_DOCKER_FAIL="command.downgrade")
     assert proc.returncode == 1
     assert "restore-runbook" in proc.stdout + proc.stderr
     assert not _compose_calls(tmp_path, "up")
