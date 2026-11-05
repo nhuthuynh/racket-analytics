@@ -10,8 +10,10 @@ SQLAlchemy ``MetaData``, a live connection, written object keys or a backup dire
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import email.utils
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +114,66 @@ def incomplete(cmap: ClassificationMap) -> list[str]:
         else:
             problems += _rule_problems(row.name, row.rules, cmap)
     return problems
+
+
+SERVER_SIDE = "A-SERVER"
+
+
+def server_side_returned(
+    cmap: ClassificationMap, table: str, row: dict[str, Any], response: Any
+) -> list[str]:
+    """Columns of one live ``row`` of ``table`` whose value the API ``response`` returned
+    although the map marks them ``A-SERVER`` ("no API response returns it", SPE-ST077-01)."""
+    leaves = list(_leaves(response))
+    return [
+        f"{table}.{name} is {SERVER_SIDE} but the API returned it"
+        for name, value in sorted(row.items())
+        if (row_ := cmap.rows.get(("column", f"{table}.{name}"))) is not None
+        and row_.access == SERVER_SIDE
+        and _returned(value, leaves)
+    ]
+
+
+def _leaves(value: Any) -> Iterator[Any]:
+    if isinstance(value, Mapping):
+        for item in value.values():
+            yield from _leaves(item)
+    elif isinstance(value, list | tuple):
+        for item in value:
+            yield from _leaves(item)
+    else:
+        yield value
+
+
+def _as_time(leaf: Any) -> tuple[datetime, timedelta] | None:
+    """An RFC 3339 string (ms precision, the match read model) or an HTTP-date (tus headers)."""
+    if not isinstance(leaf, str):
+        return None
+    try:
+        return datetime.fromisoformat(leaf.replace("Z", "+00:00")), timedelta(milliseconds=1)
+    except ValueError:
+        pass
+    try:
+        return email.utils.parsedate_to_datetime(leaf), timedelta(seconds=1)
+    except (TypeError, ValueError, IndexError):
+        return None
+
+
+def _returned(value: Any, leaves: list[Any]) -> bool:
+    """Whether ``value`` is among the response ``leaves``: an equal number, a string or UUID
+    inside a string (an id in ``resume_url``), a timestamp within the precision of its format.
+    ``None``, booleans and JSON or bytes columns are never matched (too generic to trace)."""
+    if value is None or isinstance(value, bool | bytes | Mapping | list):
+        return False
+    if isinstance(value, datetime):
+        times = [t for t in map(_as_time, leaves) if t is not None and t[0].tzinfo is not None]
+        return any(abs(at - value) < precision for at, precision in times)
+    if isinstance(value, int):
+        return any(
+            not isinstance(leaf, bool) and (leaf == value or leaf == str(value)) for leaf in leaves
+        )
+    text = str(value)
+    return len(text) >= 4 and any(isinstance(leaf, str) and text in leaf for leaf in leaves)
 
 
 def backup_problems(cmap: ClassificationMap, found: Iterable[Item]) -> list[str]:

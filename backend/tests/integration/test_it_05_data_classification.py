@@ -7,6 +7,8 @@ looks each item up in ``docs/security/data-classification.md``:
   schema of the session database (a column a migration adds without a model is stored too);
 * bucket prefixes: the first key segment of every object this test's API wrote for a demo
   upload (``WrittenKeys``; never a whole-bucket diff, QA-R3-02);
+* API responses: the ``GET /matches/{id}`` body and the tus ``HEAD`` headers of an unfinished
+  upload never return a ``upload_sessions`` column the map marks ``A-SERVER`` (SPE-ST077-01);
 * backup artefacts: every file of a set taken by the ST-076a service (``scripts/ops/backup.py
   --once``, real ``pg_dump`` through real ``age``) on the session database.
 
@@ -31,7 +33,7 @@ import pytest
 from pytest_bdd import given, scenarios, then, when
 from sqlalchemy import text
 
-from tests.support import contract
+from tests.support import contract, tus, tus_ext
 from tests.support.api import ApiDriver
 from tests.support.classification import (
     MAP_PATH,
@@ -44,12 +46,13 @@ from tests.support.classification import (
     load_map,
     metadata_columns,
     prefixes,
+    server_side_returned,
     stale,
     unclassified,
 )
 from tests.support.db import database_url
 from tests.support.flows import create_match, upload_fixture
-from tests.support.paths import REPO
+from tests.support.paths import REPO, SYNTHETIC_CLIP
 from tests.support.written_keys import WrittenKeys
 
 scenarios("data_classification.feature")
@@ -151,6 +154,36 @@ def live_stack(
     world["engine"] = committed_db
     take_backup(tmp_path / "backups", tmp_path)
     world["backups"] = tmp_path / "backups"
+
+
+@given("an unfinished upload of a demo video")
+def unfinished_upload(world: dict[str, Any], api: ApiDriver, committed_db: Any) -> None:
+    ivy = api.as_user("ivy")
+    data = SYNTHETIC_CLIP.read_bytes()
+    match_id = api.run(create_match(ivy, "IT-05-05 server-side columns"))
+    upload = api.run(tus_ext.start(ivy, match_id, data))
+    first = tus_ext.first_chunk_size(data)
+    assert api.run(tus_ext.patch(ivy, upload, 0, data[:first])).status_code == 204
+    world.update(match_id=match_id, upload=upload, engine=committed_db)
+
+
+@when("the owner reads the match and the upload offset")
+def owner_reads_upload(world: dict[str, Any], api: ApiDriver) -> None:
+    match = api.request("ivy", "GET", contract.MATCH.format(match_id=world["match_id"]))
+    assert match.status_code == 200, match.text
+    assert match.json()["upload"] is not None, "the upload must still be unfinished"
+    head = api.run(tus.head(api.as_user("ivy"), world["upload"]))
+    world["response"] = {"match": match.json(), "head": dict(head.headers)}
+
+
+@then("no column of that upload session the API returned is marked server-side only")
+def no_server_side_column_returned(world: dict[str, Any]) -> None:
+    with world["engine"].connect() as conn:
+        row = conn.execute(
+            text("SELECT * FROM upload_sessions WHERE match_id = :m"), {"m": world["match_id"]}
+        ).mappings().one()  # fmt: skip
+    found = server_side_returned(world["map"], "upload_sessions", dict(row), world["response"])
+    assert found == []
 
 
 @when("the database schema is walked")

@@ -7,6 +7,9 @@ that every class and every row has an encryption, a retention and an access rule
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime
+
 import pytest
 
 from tests.support.classification import (
@@ -15,6 +18,7 @@ from tests.support.classification import (
     incomplete,
     parse_map,
     prefixes,
+    server_side_returned,
     stale,
     unclassified,
 )
@@ -122,6 +126,62 @@ def test_an_unknown_kind_in_the_inventory_is_incomplete() -> None:
     assert incomplete(parse_map(broken)) == [
         "matches: kind 'table' is not one of column, prefix, backup"
     ]
+
+
+SERVER_MAP = MAP + (
+    "| column | `uploads.file_name` | High | `E-PG` | `R-MATCH` | `A-SERVER` |\n"
+    "| column | `uploads.offset` | Low | `E-PG` | `R-MATCH` | `A-SERVER` |\n"
+    "| column | `uploads.id` | Low | `E-PG` | `R-MATCH` | `A-SERVER` |\n"
+    "| column | `uploads.expires_at` | Low | `E-PG` | `R-MATCH` | `A-SERVER` |\n"
+    "| column | `uploads.owner_id` | Low | `E-PG` | `R-MATCH` | `A-SERVER` |\n"
+    "| column | `uploads.length` | Low | `E-PG` | `R-MATCH` | `A-OWNER` |\n"
+)
+UPLOAD_ID = uuid.UUID("0b6f4c3e-8c1d-4a52-9d0e-6b1f2a3c4d5e")
+UPLOAD_ROW = {
+    "id": UPLOAD_ID,
+    "owner_id": uuid.UUID("9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"),
+    "file_name": "Sat doubles.mp4",
+    "offset": 1048576,
+    "length": 2097152,
+    "expires_at": datetime(2026, 11, 6, 9, 30, 15, 123456, tzinfo=UTC),
+    "parts": [{"n": 1}],
+    "staged": True,
+}
+
+
+def test_a_server_side_column_the_api_returns_is_reported() -> None:
+    """SPE-ST077-01: ``upload_sessions.*`` was A-SERVER, yet ``UploadOut`` returns its fields."""
+    response = {
+        "upload": {
+            "offset": 1048576,
+            "length": 2097152,
+            "expires_at": "2026-11-06T09:30:15.123Z",
+            "resume_url": f"/api/v1/uploads/{UPLOAD_ID}",
+            "file_name": "Sat doubles.mp4",
+        },
+        "head": {"Upload-Offset": "1048576"},
+    }
+
+    assert server_side_returned(parse_map(SERVER_MAP), "uploads", UPLOAD_ROW, response) == [
+        "uploads.expires_at is A-SERVER but the API returned it",
+        "uploads.file_name is A-SERVER but the API returned it",
+        "uploads.id is A-SERVER but the API returned it",
+        "uploads.offset is A-SERVER but the API returned it",
+    ]
+
+
+def test_an_http_date_header_counts_as_returning_a_timestamp() -> None:
+    response = {"head": {"Upload-Expires": "Fri, 06 Nov 2026 09:30:15 GMT"}}
+
+    assert server_side_returned(parse_map(SERVER_MAP), "uploads", UPLOAD_ROW, response) == [
+        "uploads.expires_at is A-SERVER but the API returned it"
+    ]
+
+
+def test_server_side_columns_the_api_does_not_return_pass() -> None:
+    response = {"upload": {"length": 2097152, "state": "receiving", "is_me": True}, "n": 1}
+
+    assert server_side_returned(parse_map(SERVER_MAP), "uploads", UPLOAD_ROW, response) == []
 
 
 # ---------------------------------------------------------------- positives
