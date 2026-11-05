@@ -6,12 +6,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlanView } from '@/components/plan/PlanView';
 import { createOutbox, memoryOutboxStore } from '@/lib/plan-outbox';
 import { device } from '../unit/fixtures/device';
+import { pressEsc } from '../unit/fixtures/dialog';
 
 const FEATURE = readFileSync(
   path.join(path.dirname(fileURLToPath(import.meta.url)), 'st085_offline_and_focus.feature'),
@@ -77,16 +78,6 @@ async function openDialog() {
   await user.click(await screen.findByRole('button', { name: OPENER }));
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   return user;
-}
-
-/**
- * Esc on an open modal dialog. jsdom runs no close request on Esc, so after the key this fires
- * the cancelable `cancel` event a browser fires at the dialog (HTML "close request" steps).
- */
-async function pressEsc(user: ReturnType<typeof userEvent.setup>) {
-  await user.keyboard('{Escape}');
-  const open = document.querySelector('dialog');
-  if (open) fireEvent(open, new Event('cancel', { cancelable: true }));
 }
 
 async function expectFocusBackOnOpener() {

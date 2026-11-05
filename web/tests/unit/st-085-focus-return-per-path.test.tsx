@@ -3,11 +3,12 @@
 // Esc the focus is on that row's "Not for me", and it was moved there only once no dialog was on
 // the page (Chromium refuses focus behind an open modal <dialog>; jsdom does not model that).
 // Negative first: a dialog removed without restoring focus, or focus left on <body>, fails.
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlanView } from '@/components/plan/PlanView';
 import { parsePlan } from '@/lib/api/plan';
+import { pressEsc } from './fixtures/dialog';
 import { planBody } from './fixtures/plan';
 
 const OPENER = 'Not for me, Serve to a target';
@@ -50,10 +51,7 @@ async function expectFocusReturned() {
 describe('NFR-034 focus returns to "Not for me", one test per close path (negative first)', () => {
   it('NFR-034.3 Esc: focus is on "Not for me", not left on <body>', async () => {
     const user = await openDialog();
-    await user.keyboard('{Escape}');
-    // jsdom runs no close request on Esc; a browser fires this cancelable event at the dialog.
-    const open = document.querySelector('dialog');
-    if (open) fireEvent(open, new Event('cancel', { cancelable: true }));
+    await pressEsc(user);
     await expectFocusReturned();
   });
 

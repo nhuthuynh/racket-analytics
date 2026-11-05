@@ -26,7 +26,7 @@ function connection(up: boolean) {
 function queue() {
   const answers: (() => void)[] = [];
   const done: DoneResult = { kind: 'done', planVersion: 2, replayed: false };
-  const markDone = vi.fn(() => new Promise<DoneResult>((resolve) => answers.push(() => resolve(done))));
+  const markDone = vi.fn<FollowThroughApi['markDone']>(() => new Promise<DoneResult>((resolve) => answers.push(() => resolve(done))));
   const api: FollowThroughApi = { markDone, undoDone: vi.fn(), swap: vi.fn() };
   const outbox = createOutbox(memoryOutboxStore());
   // Stable props, as PlanView passes them: a new `reload` each render would restart the page-load sync.
