@@ -9,6 +9,9 @@ looks each item up in ``docs/security/data-classification.md``:
   upload (``WrittenKeys``; never a whole-bucket diff, QA-R3-02);
 * API responses: the ``GET /matches/{id}`` body and the tus ``HEAD`` headers of an unfinished
   upload never return a ``upload_sessions`` column the map marks ``A-SERVER`` (SPE-ST077-01);
+  ``GET /me/quota`` and a 429 never return a ``media_assets`` column (``used_bytes`` is the sum
+  of ``size_bytes``) or the time computed from ``rate_limit_events.at`` (oldest + window) that
+  the map marks ``A-SERVER`` (SPE-ST077-R2-01);
 * backup artefacts: every file of a set taken by the ST-076a service (``scripts/ops/backup.py
   --once``, real ``pg_dump`` through real ``age``) on the session database.
 
@@ -25,6 +28,7 @@ import pkgutil
 import shutil
 import subprocess
 import sys
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlsplit
@@ -33,6 +37,7 @@ import pytest
 from pytest_bdd import given, scenarios, then, when
 from sqlalchemy import text
 
+from racket.matches.domain import OwnerId, account_creation_key
 from tests.support import contract, tus, tus_ext
 from tests.support.api import ApiDriver
 from tests.support.classification import (
@@ -62,6 +67,9 @@ PG_BIN = Path("/usr/lib/postgresql/16/bin")
 PLANTED_TABLE = "st077_planted"
 PLANTED_COLUMN = ("column", f"{PLANTED_TABLE}.planted_secret")
 PLANTED_FILE = ("backup", "plain-copy.sql")
+QUOTA = "/me/quota"  # api-sprint-04 §7
+CREATIONS_PER_HOUR = 2
+CREATION_WINDOW = timedelta(hours=1)  # matches/service.py _spend_creation_slots
 
 
 # ---------------------------------------------------------------- helpers
@@ -183,6 +191,54 @@ def no_server_side_column_returned(world: dict[str, Any]) -> None:
             text("SELECT * FROM upload_sessions WHERE match_id = :m"), {"m": world["match_id"]}
         ).mappings().one()  # fmt: skip
     found = server_side_returned(world["map"], "upload_sessions", dict(row), world["response"])
+    assert found == []
+
+
+@given("a stored demo video and match creations at the hourly limit")
+def stored_video_at_the_limit(
+    world: dict[str, Any], request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """FEATURE_QUOTAS on and two creations an hour, set before the app is built."""
+    monkeypatch.setenv("FEATURE_QUOTAS", "true")
+    monkeypatch.setenv("MATCH_CREATIONS_PER_HOUR", str(CREATIONS_PER_HOUR))
+    api: ApiDriver = request.getfixturevalue("api")
+    ivy = api.as_user("ivy")
+    match_id = api.run(create_match(ivy, "IT-05-05 quota walk"))
+    api.run(upload_fixture(ivy, match_id))
+    for i in range(CREATIONS_PER_HOUR - 1):
+        api.run(create_match(ivy, f"IT-05-05 quota walk {i}"))
+    world.update(api=api, match_id=match_id, engine=request.getfixturevalue("committed_db"))
+
+
+@when("the owner reads the quota and is refused one more match")
+def owner_reads_quota(world: dict[str, Any]) -> None:
+    api: ApiDriver = world["api"]
+    quota = api.request("ivy", "GET", QUOTA)
+    assert quota.status_code == 200, quota.text
+    assert quota.json()["storage"]["used_bytes"] > 0, "the video must be stored"
+    assert quota.json()["match_creations"]["next_slot_at"] is not None, "must be at the limit"
+    refused = api.request("ivy", "POST", contract.MATCHES, json={"title": "x", "format": "doubles"})
+    assert refused.status_code == 429, refused.text
+    world["response"] = {"quota": quota.json(), "refused": refused.json(),
+                         "retry_after": refused.headers["Retry-After"]}  # fmt: skip
+
+
+@then("no stored-video or rate-limit column the API returned is marked server-side only")
+def no_server_side_quota_column_returned(world: dict[str, Any]) -> None:
+    with world["engine"].connect() as conn:
+        asset = conn.execute(
+            text("SELECT * FROM media_assets WHERE match_id = :m"), {"m": world["match_id"]}
+        ).mappings().one()  # fmt: skip
+        oldest = conn.execute(
+            text("SELECT min(at) FROM rate_limit_events WHERE key = :k"),
+            {"k": account_creation_key(OwnerId(asset["owner_id"]))},
+        ).scalar_one()
+    assert oldest is not None, "no match creation was counted"
+    # What the API computes from the column, not the raw value: oldest hit + window.
+    derived = {"at": oldest + CREATION_WINDOW}
+    response = world["response"]
+    found = server_side_returned(world["map"], "media_assets", dict(asset), response)
+    found += server_side_returned(world["map"], "rate_limit_events", derived, response)
     assert found == []
 
 

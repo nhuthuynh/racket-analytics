@@ -178,6 +178,16 @@ def test_an_http_date_header_counts_as_returning_a_timestamp() -> None:
     ]
 
 
+def test_a_whole_second_rfc3339_time_counts_as_returning_a_timestamp() -> None:
+    """SPE-ST077-R2-01: ``next_slot_at`` and ``retry_at`` are whole seconds, truncated
+    (``rfc3339_seconds``), so a stored time with microseconds is returned within a second."""
+    response = {"match_creations": {"next_slot_at": "2026-11-06T09:30:15Z"}}
+
+    assert server_side_returned(parse_map(SERVER_MAP), "uploads", UPLOAD_ROW, response) == [
+        "uploads.expires_at is A-SERVER but the API returned it"
+    ]
+
+
 def test_server_side_columns_the_api_does_not_return_pass() -> None:
     response = {"upload": {"length": 2097152, "state": "receiving", "is_me": True}, "n": 1}
 

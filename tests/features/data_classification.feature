@@ -2,7 +2,8 @@
 # 14.1.1, 14.1.2). Steps: backend/tests/integration/test_it_05_data_classification.py.
 # Negative cases first: a planted unclassified column, a planted unclassified backup
 # artefact, and a walk that finds zero backup artefacts all fail the check; a column the
-# API returns is never marked server-side only (SPE-ST077-01).
+# API returns, or a sum or time it computes from it, is never marked server-side only
+# (SPE-ST077-01, SPE-ST077-R2-01).
 @story-ST-077 @nfr-063
 Feature: Every stored datum has a class with encryption, retention and access rules
 
@@ -29,6 +30,12 @@ Feature: Every stored datum has a class with encryption, retention and access ru
     And an unfinished upload of a demo video
     When the owner reads the match and the upload offset
     Then no column of that upload session the API returned is marked server-side only
+
+  Scenario: No stored-video size or rate-limit time the quota read returns is marked server-side only
+    Given the data-classification map
+    And a stored demo video and match creations at the hourly limit
+    When the owner reads the quota and is refused one more match
+    Then no stored-video or rate-limit column the API returned is marked server-side only
 
   Scenario: Every table, column, bucket prefix and backup artefact of the live stack is classified
     Given the data-classification map
