@@ -9,14 +9,16 @@ Runs against the running web origin, ``RA_WEB_BASE_URL`` (default ``https://loca
 the Compose web-tls proxy, ADR 0029). ``RA_WEB_CACERT`` names the dev CA's root certificate; on a
 loopback origin without it, the certificate is not checked (this test reads headers, not TLS).
 An unreachable origin is a failure, never a skip, so the G05-07 line cannot pass without it. CI
-runs it in the E2E job, where the stack is up; the integration job, which has no web server,
-leaves it out (the IT-00-10 pattern).
+runs it in the E2E job, where the stack is up (RA_WEB_BASE_URL set). The one skip is CI's
+integration job, which has no web server and sets no origin (reason in the report;
+docs/sprints/05/decisions/ST-078e.md D2).
 """
 
 from __future__ import annotations
 
 import os
 import re
+import ssl
 from urllib.parse import urlsplit
 
 import httpx
@@ -37,20 +39,22 @@ FIXED_PATHS = {
 }
 
 
-def _verify() -> str | bool:
+def _verify() -> ssl.SSLContext | bool:
     cacert = os.environ.get("RA_WEB_CACERT")
     if cacert:
-        return cacert
+        return ssl.create_default_context(cafile=cacert)
     return urlsplit(BASE_URL).hostname not in LOOPBACK
 
 
 @pytest.fixture(scope="module")
 def web() -> httpx.Client:
+    if os.environ.get("GITHUB_JOB") == "integration" and "RA_WEB_BASE_URL" not in os.environ:
+        pytest.skip("IT-05-08 runs in the E2E job against the web origin (ST-078e D2)")
     client = httpx.Client(base_url=BASE_URL, verify=_verify(), timeout=30.0, follow_redirects=False)
     try:
         client.get("/")
     except httpx.HTTPError as exc:  # pragma: no cover - the failure message is the point
-        pytest.fail(f"IT-05-08 needs the running web origin at {BASE_URL} (set RA_WEB_BASE_URL): {exc}")
+        pytest.fail(f"IT-05-08 needs the web origin at {BASE_URL} (set RA_WEB_BASE_URL): {exc}")
     return client
 
 

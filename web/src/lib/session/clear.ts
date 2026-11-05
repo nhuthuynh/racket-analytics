@@ -10,14 +10,14 @@ import { OUTBOX_DB } from '@/lib/plan-outbox-idb';
 /** Must match CACHE_NAME in public/sw.js. */
 export const STATIC_CACHE = 'ra-static-v1';
 const KEEP_IN_STATIC = /^\/(_next\/static\/|offline\.(html|css)$)/;
-/** Must match MEDIA in public/sw.js. */
-const MEDIA = /\.(mp4|mov|m4v|webm|mkv|avi|3gp|mp3|m4a|aac|wav|ogg|oga|ogv|opus|flac)$/i;
+/** Must match MEDIA in public/sw.js (tests/unit/sw-cache.test.ts compares them). */
+export const MEDIA_FILE = /\.(mp4|mov|m4v|webm|mkv|avi|3gp|mp3|m4a|aac|wav|ogg|oga|ogv|opus|flac)$/i;
 /** The app's IndexedDB databases, deleted even where indexedDB.databases() is missing. */
 export const KNOWN_DATABASES: readonly string[] = [OUTBOX_DB];
 
 function kept(url: string): boolean {
   const { pathname } = new URL(url);
-  return KEEP_IN_STATIC.test(pathname) && !MEDIA.test(pathname);
+  return KEEP_IN_STATIC.test(pathname) && !MEDIA_FILE.test(pathname);
 }
 
 interface StorageLike {

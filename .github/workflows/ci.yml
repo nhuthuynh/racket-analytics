@@ -561,6 +561,14 @@ jobs:
           uv sync --locked
           uv run --no-sync pytest -q tests/integration/test_it_00_10_worker_sandbox.py \
             tests/integration/test_it_00_10_worker_sandbox_strict.py
+      - name: Web-origin security headers IT-05-08 against the running stack (NFR-050.7, ST-078e)
+        # The integration job has no web server, so the IT skips there (GITHUB_JOB=integration
+        # and no RA_WEB_BASE_URL); here an unreachable origin fails the step, never skips it.
+        working-directory: backend
+        env:
+          RA_WEB_BASE_URL: https://localhost:3000
+          RA_WEB_CACERT: ${{ runner.temp }}/racket-dev-ca.crt
+        run: uv run --no-sync pytest -q -p no:cacheprovider tests/integration/test_it_05_security_headers.py
       - name: Install ffmpeg (the rally-video specs build a decodable VP9 stand-in; W-01)
         run: |
           sudo apt-get update -q

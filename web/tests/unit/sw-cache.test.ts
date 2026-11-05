@@ -3,6 +3,9 @@
 // stores a media response. The real public/sw.js runs in node:vm (fixtures/sw.ts) over a fake
 // network and Cache Storage; each test reads what ended up in the cache. A plain app file IS
 // stored (positive control, testing-strategy rule 8), so an empty cache is a real result.
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ORIGIN, PLAN_CACHE, dispatch, fakeCaches, loadWorker, request } from './fixtures/sw';
 
@@ -82,5 +85,12 @@ describe('service worker cache: media is never stored (NFR-067.3)', () => {
   it('the static cache name matches the one sign-out clears', async () => {
     const { STATIC_CACHE: cleared } = await import('@/lib/session/clear');
     expect(cleared).toBe(STATIC_CACHE);
+  });
+
+  it('sign-out drops the same media files the worker never stores', async () => {
+    const { MEDIA_FILE } = await import('@/lib/session/clear');
+    const worker = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/sw.js'), 'utf8');
+    const extensions = (source: string) => /\(((?:[a-z0-9]+\|)+[a-z0-9]+)\)/.exec(source)![1]!.split('|').sort();
+    expect(extensions(MEDIA_FILE.source)).toEqual(extensions(/const MEDIA = (.+);/.exec(worker)![1]!));
   });
 });
