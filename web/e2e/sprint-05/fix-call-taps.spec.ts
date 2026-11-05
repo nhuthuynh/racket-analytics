@@ -23,19 +23,25 @@ async function rally(page: Page, matchId: string, n: number): Promise<SheetRowSh
   return (await sheetOf(page, matchId)).rows[n - 1]!;
 }
 
-/** By taps: open a disclosure on rally n, then press its option. */
-async function tapOption(counter: TapCounter, page: Page, n: number, toggle: 'Change ending' | 'Change player', option: string) {
+type Disclosure = 'Change ending' | 'Change player';
+
+/** An option button inside rally n's open "Change ending" or "Change player" panel. */
+function optionOf(page: Page, n: number, toggle: Disclosure, option: string) {
   const group = toggle === 'Change ending' ? `Rally ${n} ending` : `Rally ${n} player`;
+  return page.getByRole('group', { name: group }).getByRole('button', { name: option, exact: true });
+}
+
+/** By taps: open a disclosure on rally n, then press its option. */
+async function tapOption(counter: TapCounter, page: Page, n: number, toggle: Disclosure, option: string) {
   await counter.tap(page.getByRole('button', { name: `${toggle}, rally ${n}` }), `${toggle}, rally ${n}`);
-  await counter.tap(page.getByRole('group', { name: group }).getByRole('button', { name: option, exact: true }), option);
+  await counter.tap(optionOf(page, n, toggle, option), option);
 }
 
 /** By keys: the control has focus (not counted), Enter opens, Tab moves to the option, Enter saves. */
-async function keyOption(counter: TapCounter, page: Page, n: number, toggle: 'Change ending' | 'Change player', option: string) {
-  const group = toggle === 'Change ending' ? `Rally ${n} ending` : `Rally ${n} player`;
+async function keyOption(counter: TapCounter, page: Page, n: number, toggle: Disclosure, option: string) {
   await page.getByRole('button', { name: `${toggle}, rally ${n}` }).focus();
   await counter.key('Enter', `open ${toggle}, rally ${n}`);
-  const target = page.getByRole('group', { name: group }).getByRole('button', { name: option, exact: true });
+  const target = optionOf(page, n, toggle, option);
   for (let moves = 0; moves < 8 && !(await target.evaluate((el) => el === document.activeElement)); moves += 1) {
     await counter.move('Tab');
   }
@@ -100,7 +106,7 @@ test.describe('@M5 @story-ST-080 Fixing a call is quick (NFR-036.4)', () => {
     const matchId = await journeySheet(page);
     // Setup, not counted: rally 2 (an unforced error by side A) is tagged on Ivy.
     await page.getByRole('button', { name: 'Change player, rally 2' }).click();
-    await page.getByRole('group', { name: 'Rally 2 player' }).getByRole('button', { name: 'Ivy', exact: true }).click();
+    await optionOf(page, 2, 'Change player', 'Ivy').click();
     await expect.poll(async () => (await rally(page, matchId, 2)).responsible_player).toBe('A1');
 
     const taps = new TapCounter(page);
