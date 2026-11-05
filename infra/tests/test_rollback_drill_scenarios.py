@@ -75,8 +75,11 @@ def order(ctx: dict, order: str) -> None:
 
 @then(parsers.parse('the downgrade ran with the current image to revision "{revision}"'))
 def downgrade(ctx: dict, revision: str) -> None:
-    (down,) = [c for c in calls(ctx["tmp"]) if "run" in c.get("argv", []) and "migrate" in c["argv"]]
-    assert down["image_tag"] is None and down["argv"][-1] == revision
+    (down,) = [
+        c for c in calls(ctx["tmp"]) if "run" in c.get("argv", []) and "migrate" in c["argv"]
+    ]
+    assert down["image_tag"] is None
+    assert down["argv"][-1] == revision
 
 
 @then(parsers.parse('the redeploy started tag "{tag}" without building'))
@@ -84,7 +87,8 @@ def redeploy(ctx: dict, tag: str) -> None:
     ups = [c for c in calls(ctx["tmp"]) if "up" in c.get("argv", [])]
     assert ups, "no redeploy ran"
     up = ups[-1]
-    assert up["image_tag"] == tag and "--no-build" in up["argv"]
+    assert up["image_tag"] == tag
+    assert "--no-build" in up["argv"]
     assert str(REPO_ROOT / "infra" / "compose.release.yaml") in up["argv"]
 
 

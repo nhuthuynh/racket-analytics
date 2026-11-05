@@ -74,14 +74,20 @@ def check(notes: str, frs: list[str], defaults: dict[str, str]) -> list[str]:
         problems.append(f'FR-055.R1: no "{NOTICE}" notice before the first section')
 
     listed = {r[0] for r in rows(body, "Features")}
-    problems += [f"REL-1.1: R1 requirement {fr} is not in the Features table" for fr in frs if fr not in listed]
+    problems += [
+        f"REL-1.1: R1 requirement {fr} is not in the Features table"
+        for fr in frs
+        if fr not in listed
+    ]
 
     table = {r[0].strip("`"): r[1].strip("`") if len(r) > 1 else "" for r in rows(body, "Flags")}
     for flag, value in defaults.items():
         if flag not in table:
             problems.append(f"REL-1.1: flag {flag} is not in the Flags table")
         elif table[flag] != value:
-            problems.append(f"REL-1.1: flag {flag} default is {table[flag]!r}, env.example has {value!r}")
+            problems.append(
+                f"REL-1.1: flag {flag} default is {table[flag]!r}, env.example has {value!r}"
+            )
 
     limits = rows(body, "Known limitations")
     if not limits:
@@ -95,7 +101,9 @@ def check(notes: str, frs: list[str], defaults: dict[str, str]) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--notes", type=Path, default=ROOT / "docs/releases/r1-rc.md")
-    ap.add_argument("--matrix", type=Path, default=ROOT / "docs/requirements/traceability-matrix.md")
+    ap.add_argument(
+        "--matrix", type=Path, default=ROOT / "docs/requirements/traceability-matrix.md"
+    )
     ap.add_argument("--env", type=Path, default=ROOT / "infra/env.example")
     args = ap.parse_args(argv)
     try:
@@ -110,7 +118,10 @@ def main(argv: list[str] | None = None) -> int:
     problems = check(notes, frs, flags(env))
     for p in problems:
         print(f"FAIL {args.notes.name}: {p}")
-    print(f"check_release_notes: {len(frs)} R1 FRs, {len(flags(env))} flags, {len(problems)} problem(s)")
+    print(
+        f"check_release_notes: {len(frs)} R1 FRs, {len(flags(env))} flags, "
+        f"{len(problems)} problem(s)"
+    )
     return 1 if problems else 0
 
 

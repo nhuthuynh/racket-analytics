@@ -58,7 +58,9 @@ def test_no_backup_command_and_no_backup_service_refuse(tmp_path: Path) -> None:
 
 def test_every_built_service_image_is_checked(tmp_path: Path) -> None:
     _drill(tmp_path)
-    inspected = {c["argv"][2] for c in calls(tmp_path) if c.get("argv", [])[:2] == ["image", "inspect"]}
+    inspected = {
+        c["argv"][2] for c in calls(tmp_path) if c.get("argv", [])[:2] == ["image", "inspect"]
+    }
     assert inspected == {f"racket-{s}:{TAG}" for s in BUILT}
 
 
@@ -77,7 +79,8 @@ def test_the_redeploy_starts_the_previous_tag_without_building(tmp_path: Path) -
     _drill(tmp_path)
     (up,) = _compose_calls(tmp_path, "up")
     assert up["image_tag"] == TAG
-    assert "--no-build" in up["argv"] and "--build" not in up["argv"]
+    assert "--no-build" in up["argv"]
+    assert "--build" not in up["argv"]
     assert "--wait" in up["argv"]
     assert str(REPO_ROOT / "infra" / "compose.release.yaml") in up["argv"]
 
@@ -101,10 +104,13 @@ def test_a_failed_downgrade_without_a_restore_command_stops_with_the_runbook(
 
 
 def test_a_failed_health_probe_fails_the_drill(tmp_path: Path) -> None:
-    proc = _drill(tmp_path, "--restore-cmd", marker_cmd(tmp_path, "restore"), FAKE_DOCKER_FAIL="healthz")
+    proc = _drill(
+        tmp_path, "--restore-cmd", marker_cmd(tmp_path, "restore"), FAKE_DOCKER_FAIL="healthz"
+    )
     assert proc.returncode == 1
     steps = report(tmp_path)["steps"]
-    assert steps[-1]["name"] == "health" and steps[-1]["rc"] != 0
+    assert steps[-1]["name"] == "health"
+    assert steps[-1]["rc"] != 0
 
 
 def test_a_failed_backup_stops_before_the_downgrade(tmp_path: Path) -> None:
@@ -119,7 +125,8 @@ def test_a_failed_backup_stops_before_the_downgrade(tmp_path: Path) -> None:
 def test_the_report_records_each_step_with_rc_and_seconds(tmp_path: Path) -> None:
     _drill(tmp_path)
     rep = report(tmp_path)
-    assert rep["rc"] == 0 and rep["to"] == {"tag": TAG, "revision": REV}
+    assert rep["rc"] == 0
+    assert rep["to"] == {"tag": TAG, "revision": REV}
     assert [s["name"] for s in rep["steps"]] == ["backup", "downgrade", "redeploy", "health"]
     assert all(s["rc"] == 0 and s["seconds"] >= 0 for s in rep["steps"])
 
@@ -163,9 +170,11 @@ def test_make_up_without_a_tag_still_builds_the_working_tree() -> None:
 def test_make_up_with_a_release_tag_starts_that_tag_without_building() -> None:
     out = _make_n("up", "IMAGE_TAG=r1-rc1")
     assert "-f infra/compose.release.yaml" in out
-    assert "--no-build" in out and "--build " not in out
+    assert "--no-build" in out
+    assert "--build " not in out
 
 
 def test_make_release_images_builds_the_tagged_set() -> None:
     out = _make_n("release-images", "IMAGE_TAG=r1-rc1")
-    assert "-f infra/compose.release.yaml" in out and " build" in out
+    assert "-f infra/compose.release.yaml" in out
+    assert " build" in out

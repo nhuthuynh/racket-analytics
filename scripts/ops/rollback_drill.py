@@ -51,7 +51,9 @@ DOWNGRADE = (
     "    config.attributes['connection'] = conn\n"
     "    command.downgrade(config, sys.argv[1])\n"
 )
-REVISION = 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT version_num FROM alembic_version"'
+REVISION = (
+    'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT version_num FROM alembic_version"'
+)
 HEALTH = (
     "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen("
     "'http://127.0.0.1:8000/healthz', timeout=5).status == 200 else 1)"
@@ -79,25 +81,44 @@ class Drill:
         self.tag, self.revision, self.current = tag, revision, current
         self.steps: list[dict] = []
 
-    def run(self, name: str, argv: list[str], env: dict | None = None) -> subprocess.CompletedProcess:
+    def run(
+        self, name: str, argv: list[str], env: dict | None = None
+    ) -> subprocess.CompletedProcess:
         start = time.monotonic()
         proc = subprocess.run(argv, capture_output=True, text=True, env=env)
-        self.steps.append({"name": name, "rc": proc.returncode, "seconds": round(time.monotonic() - start, 3)})
+        self.steps.append(
+            {"name": name, "rc": proc.returncode, "seconds": round(time.monotonic() - start, 3)}
+        )
         print(f"{name}: rc {proc.returncode}", flush=True)
         if proc.returncode:
             print((proc.stderr or proc.stdout).strip()[-2000:], file=sys.stderr)
         return proc
 
     def downgrade(self) -> bool:
-        argv = [*self.base, "run", "--rm", "--no-deps", "-T", "migrate", "python", "-c", DOWNGRADE, self.revision]
+        argv = [
+            *self.base,
+            "run",
+            "--rm",
+            "--no-deps",
+            "-T",
+            "migrate",
+            "python",
+            "-c",
+            DOWNGRADE,
+            self.revision,
+        ]
         if self.run("downgrade", argv).returncode:
             return False
         read = subprocess.run(
-            [*self.base, "exec", "-T", "postgres", "sh", "-c", REVISION], capture_output=True, text=True
+            [*self.base, "exec", "-T", "postgres", "sh", "-c", REVISION],
+            capture_output=True,
+            text=True,
         )
         at = read.stdout.strip()
         if read.returncode or at != self.revision:
-            print(f"downgrade: database is at {at or '?'}, expected {self.revision}", file=sys.stderr)
+            print(
+                f"downgrade: database is at {at or '?'}, expected {self.revision}", file=sys.stderr
+            )
             self.steps[-1]["rc"] = self.steps[-1]["rc"] or 1
             return False
         return True
@@ -133,24 +154,35 @@ def main(argv: list[str] | None = None) -> int:
         else:
             tag, revision = notes.get("previous_release"), notes.get("previous_alembic_revision")
             if not tag or not revision:
-                raise Refused(f"{args.notes}: front matter needs previous_release and previous_alembic_revision")
+                raise Refused(
+                    f"{args.notes}: front matter needs previous_release and "
+                    "previous_alembic_revision"
+                )
         current = args.current or notes.get("release")
         if not current:
-            raise Refused("no current release to restore to: pass --current or set release in the notes")
+            raise Refused(
+                "no current release to restore to: pass --current or set release in the notes"
+            )
         drill = Drill(args.project, str(tag), str(revision), str(current))
         missing = [
             f"racket-{svc}:{tag}"
             for svc in built_services()
-            if subprocess.run(["docker", "image", "inspect", f"racket-{svc}:{tag}"], capture_output=True).returncode
+            if subprocess.run(
+                ["docker", "image", "inspect", f"racket-{svc}:{tag}"], capture_output=True
+            ).returncode
         ]
         if missing:
-            raise Refused(f"missing images {', '.join(missing)}; build them (docs/releases/r1-rc.md)")
+            raise Refused(
+                f"missing images {', '.join(missing)}; build them (docs/releases/r1-rc.md)"
+            )
         if args.backup_cmd:
             backup = shlex.split(args.backup_cmd)
         elif "backup" in yaml.safe_load(COMPOSE.read_text())["services"]:
             backup = [*drill.base, "--profile", "ops", "run", "--rm", "backup", "--once"]
         else:
-            raise Refused("no backup service in compose.yaml; pass --backup-cmd (ADR 0058 rule 7 step 1)")
+            raise Refused(
+                "no backup service in compose.yaml; pass --backup-cmd (ADR 0058 rule 7 step 1)"
+            )
     except Refused as exc:
         print(f"rollback_drill: refused: {exc}", file=sys.stderr)
         return 2
@@ -161,7 +193,10 @@ def main(argv: list[str] | None = None) -> int:
     elif not (drill.downgrade() and drill.redeploy(drill.tag)):
         rc = 1
         if not args.restore_cmd:
-            print(f"rollback_drill: rollback failed; restore the step-1 backup by {RUNBOOK}", file=sys.stderr)
+            print(
+                f"rollback_drill: rollback failed; restore the step-1 backup by {RUNBOOK}",
+                file=sys.stderr,
+            )
         elif drill.run("restore", shlex.split(args.restore_cmd)).returncode == 0:
             drill.redeploy(drill.current)
     report = {

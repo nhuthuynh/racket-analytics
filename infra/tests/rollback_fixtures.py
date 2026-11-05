@@ -73,9 +73,7 @@ def marker_cmd(tmp_path: Path, name: str) -> str:
     return f"{sys.executable} {marker} {name}"
 
 
-def run_drill(
-    tmp_path: Path, env: dict[str, str], *args: str
-) -> subprocess.CompletedProcess[str]:
+def run_drill(tmp_path: Path, env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
             sys.executable,

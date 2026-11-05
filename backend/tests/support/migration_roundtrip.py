@@ -42,11 +42,11 @@ def missing_downgrades(versions_dir: Path) -> list[str]:
         tree = ast.parse(path.read_text(), filename=str(path))
         revision = path.stem
         for node in tree.body:
-            if isinstance(node, ast.Assign) and any(
+            named = isinstance(node, ast.Assign) and any(
                 isinstance(t, ast.Name) and t.id == "revision" for t in node.targets
-            ):
-                if isinstance(node.value, ast.Constant):
-                    revision = str(node.value.value)
+            )
+            if named and isinstance(node.value, ast.Constant):
+                revision = str(node.value.value)
         down = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "downgrade"]
         if not down or _is_noop(down[0].body):
             missing.append(revision)
@@ -174,7 +174,9 @@ def round_trip(url: str) -> list[Step]:
                     for t in outlived
                     if before_rows.get(t, 0) != after_rows.get(t, 0)
                 }
-                steps.append(Step(revision, current_revision(conn), schema(conn) == before_schema, lost))
+                steps.append(
+                    Step(revision, current_revision(conn), schema(conn) == before_schema, lost)
+                )
             migrate(url, previous or "base", down=True)
     finally:
         engine.dispose()

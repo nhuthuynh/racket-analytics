@@ -13,7 +13,10 @@ from tests.support.migration_roundtrip import missing_downgrades
 
 pytestmark = pytest.mark.unit
 
-HEAD = '"""m"""\nrevision = "{rev}"\ndown_revision = {down}\n\n\ndef upgrade() -> None:\n    op.f()\n\n'
+HEAD = (
+    '"""m"""\nrevision = "{rev}"\ndown_revision = {down}\n\n\n'
+    "def upgrade() -> None:\n    op.f()\n\n"
+)
 
 
 def _plant(tmp_path: Path, rev: str, down: str, downgrade: str | None) -> None:
