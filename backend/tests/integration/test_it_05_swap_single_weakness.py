@@ -10,12 +10,12 @@ but not the smallest slot, so it does not lift AN-02 to 3. Then, per target, wit
 drills read from the library (so the ITs stay true when ST-081b adds drills):
 (1) the first "Not for me" on each weakness drill of each session of a single-weakness plan swaps
 to a different fitting drill citing the target and not already in the session (FR-124.R2), a
-fresh plan per press; the cell must pass (N >= S + 1), so the four cells short on ``main``
-carry ``red_until`` ST-081b (ADR 0046); (2) on one plan, presses on a full session succeed
-N - S times and the next answers ``NoAlternative`` with version, ``content_digest`` and
-``excluded_drills`` unchanged (with N = 3: the second press). The library passing the rule is
-itself a ``red_until`` ST-081b row: it is red on ``main`` (AN-02, AN-04, AN-07:fault,
-AN-07:forced-error have 2) and its stale-marker check fails once ST-081b closes the cells.
+fresh plan per press; the cell must pass (N >= S + 1); (2) on one plan, presses on a full
+session succeed N - S times and the next answers ``NoAlternative`` with version,
+``content_digest`` and ``excluded_drills`` unchanged (with N = 3: the second press). The library
+passing the rule is checked too. The four cells that were short (AN-02, AN-04, AN-07:fault,
+AN-07:forced-error had 2) carried ``red_until`` ST-081b (ADR 0046); ST-081b closed them and
+removed the markers, so every row here is gated (sprint-05 TCR row, ST-081b).
 """
 
 from __future__ import annotations
@@ -41,7 +41,6 @@ from tests.integration.test_it_04_13_drill_coverage_cli import LIBRARY, fails, r
 pytestmark = pytest.mark.integration
 
 TARGETS = ("AN-01", "AN-02", "AN-04", "AN-05", "AN-07:fault", "AN-07:forced-error")
-SHORT_ON_MAIN = ("AN-02", "AN-04", "AN-07:fault", "AN-07:forced-error")  # checklist §3.1.1
 G04_01 = SOLO_WALL.preferences("intermediate")
 S = 2  # solo+wall at 30 min: floor((30 - 5) / 10)
 LONG_AN02 = "pb.return.z-long"
@@ -81,11 +80,6 @@ def _swap(plan: TrainingPlan, n: int, position: int, library: list[Drill]) -> Dr
     )
 
 
-def _per_target() -> list[Any]:
-    red = pytest.mark.red_until(story="ST-081b")
-    return [pytest.param(t, marks=red) if t in SHORT_ON_MAIN else t for t in TARGETS]
-
-
 # ---------------------------------------------------------------- negative case first (QA-R2-1)
 def test_it_05_09_a_long_third_an02_drill_keeps_the_cell_short(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -116,8 +110,7 @@ def test_it_05_09_a_long_third_an02_drill_keeps_the_cell_short(
     assert "single-weakness swap" not in out, out
 
 
-# ---------------------------------------------------------------- the library (red until ST-081b)
-@pytest.mark.red_until(story="ST-081b")
+# ---------------------------------------------------------------- the library
 def test_it_05_09_the_library_has_s_plus_one_swap_counted_drills_per_solo_wall_cell(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -127,7 +120,7 @@ def test_it_05_09_the_library_has_s_plus_one_swap_counted_drills_per_solo_wall_c
 
 
 # ---------------------------------------------------------------- (1) the first press swaps
-@pytest.mark.parametrize("target", _per_target())
+@pytest.mark.parametrize("target", TARGETS)
 def test_it_05_09_the_first_press_on_each_drill_of_a_single_weakness_plan_swaps(
     target: str,
 ) -> None:
