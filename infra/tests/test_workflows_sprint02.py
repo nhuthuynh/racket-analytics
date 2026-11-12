@@ -103,8 +103,12 @@ def test_domain_budget_measures_the_rules_and_domain_suite_only() -> None:
 
 def test_e2e_job_has_ffmpeg_for_the_decodable_stand_in() -> None:
     # rally-video.spec.ts builds a VP9 stand-in with ffmpeg: `spawnSync ffmpeg ENOENT` x 4
-    text = runs("e2e")
-    assert "apt-get install -y -q --no-install-recommends ffmpeg" in text
+    # CI-FFMPEG (TCR, docs/sprints/05/decisions/CI-FFMPEG.md): installed by the shared,
+    # cached, checksum-pinned action instead of apt; the action itself checks `ffmpeg -version`.
+    uses = [s.get("uses", "") for s in jobs()["e2e"]["steps"]]
+    assert "./.github/actions/install-ffmpeg" in uses
+    action = (REPO_ROOT / ".github" / "actions" / "install-ffmpeg" / "action.yml").read_text()
+    assert "ffmpeg -version" in action
     names = [s.get("name", "") for s in jobs()["e2e"]["steps"]]
     install = next(i for i, n in enumerate(names) if "ffmpeg" in n.lower())
     playwright = next(i for i, n in enumerate(names) if n.startswith("Playwright journeys"))
