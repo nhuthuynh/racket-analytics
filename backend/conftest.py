@@ -26,8 +26,10 @@ def pytest_collection(session: pytest.Session) -> Generator[None, object, object
     xdist worker's CPU in the domain step, five of the full collections at exit, where the
     controller waits for the slowest worker. Frozen objects are never scanned or collected;
     the collector stays on for everything a test creates, so pytest's unraisable-exception
-    check at exit still sees those objects. No collection during collection itself: it only
-    adds long-lived objects. Same tests, same order, same Hypothesis examples.
+    check at exit still sees those objects. No collection pass during collection; one pass
+    when it ends (about 0.05 s), so the cyclic garbage collection leaves behind (about 22,000
+    objects per domain worker) is collected and finalized, not frozen with the live objects.
+    Same tests, same order, same Hypothesis examples.
     """
     gc.freeze()  # interpreter, plugins and conftests
     gc.disable()
@@ -35,6 +37,7 @@ def pytest_collection(session: pytest.Session) -> Generator[None, object, object
         return (yield)
     finally:
         gc.enable()
+        gc.collect()  # collection's own garbage, before it could be frozen
         gc.freeze()  # test modules, the code under test and the collected items
 
 

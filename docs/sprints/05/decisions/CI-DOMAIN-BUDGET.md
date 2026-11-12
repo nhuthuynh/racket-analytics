@@ -59,3 +59,10 @@ On slow runners the step drops 1.0-1.3 s (about 13%) to 80-82% of the budget; on
 | Date | Who | Decision | Evidence | Reasoning |
 |---|---|---|---|---|
 | 2026-11-12 | sre-devops-engineer | **`DOMAIN_UNIT_BUDGET_S` stays 10; this PR does not raise it.** Whether to buy the rest of the margin on slow runners with product changes (lazy imports, about 0.3 s there) or with a budget change is for the principal-engineer and the product owner (NFR-073 owner), not an SRE edit | Table above; ADR 0049 "Considered options" 5 | A higher budget changes NFR-073, which ADR 0049 rules out; the speed-up in this PR stands on its own |
+
+## Review round 1 (principal-engineer, senior-qa-engineer; PR #235 at `d21558f`)
+
+| Date | Who | Decision | Evidence | Reasoning |
+|---|---|---|---|---|
+| 2026-11-12 | principal-engineer, senior-qa-engineer | **Collect once when collection ends, then freeze (PE-235-01).** With the collector off during collection, collection's own cyclic garbage was frozen with the live objects: never collected and never finalized, so pytest's unraisable-exception check could not report a finalizer or `ResourceWarning` among it | Probe (unfreeze, collect, freeze at each worker's first test): 21,895 garbage objects frozen per domain worker at `d21558f`, 20 with the fix, on every worker in 2 runs each. One `gc.collect()` at the end of collection: 0.05 s per worker. Local A/B, 4 alternating runs each at load ≈ 4-5: CPU 17.3-17.9 s → 17.2-18.1 s, wall within the host's noise | The speed-up comes from not re-scanning the ~200,000 live objects; collecting the garbage once before the freeze keeps that and hides nothing from the exit-time checks |
+| 2026-11-12 | senior-qa-engineer | **The probe scenario checks it (new step "no garbage that start-up or collection left behind is among the frozen objects", fewer than 1,000 per worker) and reads the pass count without an upper bound (QA-235-01, QA-235-02).** `1[0-9]{3} passed` would have failed once the domain suite reached 2,000 tests (1,861 today) | Red on `d21558f`: `assert 21895 < 1000`; green with the fix | A fixed digit count is a time bomb; the floor of 1,000 still proves the whole suite ran |
