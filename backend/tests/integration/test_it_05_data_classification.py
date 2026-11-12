@@ -17,7 +17,7 @@ looks each item up in ``docs/security/data-classification.md``:
   ``account_roles`` or ``plan_done_ops`` column the map marks ``A-SERVER`` (SPE-ST077-R3-01);
 * backup artefacts: every file of a set taken by the ST-076a service (``scripts/ops/backup.py
   --once``, real ``pg_dump`` through real ``age``) on the session database and, since
-  ST-076a-part2, the media bucket of the test object store (``objects.tar.age``).
+  ST-076a-part2, a private bucket holding the demo upload's objects (``objects.tar.age``).
 
 Negative cases first: a planted unclassified column, a planted unclassified backup file and a
 walk that finds zero backup artefacts each fail. Missing ``age`` or Postgres tools fail, they
@@ -32,11 +32,14 @@ import pkgutil
 import shutil
 import subprocess
 import sys
+import uuid
+from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlsplit
 
+import boto3
 import pytest
 from pytest_bdd import given, scenarios, then, when
 from sqlalchemy import text
@@ -111,23 +114,51 @@ def pg_env(url: str) -> dict[str, str]:
     }
 
 
-def store_env() -> dict[str, str]:
-    """The test object store as the backup service reads it (ST-076a-part2 mirrors the media
-    bucket into ``objects.tar.age``; the backup login is the store's own key here)."""
-    names = ("S3_ENDPOINT_URL", "S3_BUCKET_MEDIA", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY")
+def s3_client() -> Any:
+    names = ("S3_ENDPOINT_URL", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY")
     missing = [n for n in names if not os.environ.get(n)]
     if missing:
         pytest.fail(f"{', '.join(missing)} not set: the backup walk needs the object store")
-    return {
-        "S3_ENDPOINT_URL": os.environ["S3_ENDPOINT_URL"],
-        "S3_BUCKET_MEDIA": os.environ["S3_BUCKET_MEDIA"],
-        "S3_REGION": os.environ.get("S3_REGION", "us-east-1"),
-        "BACKUP_S3_ACCESS_KEY_ID": os.environ["S3_ACCESS_KEY_ID"],
-        "BACKUP_S3_SECRET_ACCESS_KEY": os.environ["S3_SECRET_ACCESS_KEY"],
-    }
+    return boto3.client(
+        "s3", endpoint_url=os.environ["S3_ENDPOINT_URL"],
+        aws_access_key_id=os.environ["S3_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["S3_SECRET_ACCESS_KEY"],
+        region_name=os.environ.get("S3_REGION", "us-east-1"),
+    )  # fmt: skip
 
 
-def take_backup(backups: Path, keydir: Path) -> None:
+@pytest.fixture
+def backup_bucket() -> Iterator[str]:
+    """A bucket of this test's own for the ST-076a-part2 media mirror (``objects.tar.age``).
+
+    The service mirrors a whole bucket; the shared media bucket changes under parallel
+    workers (a key listed then deleted gives a 404), so the set mirrors a private copy."""
+    client, name = s3_client(), f"st077-{uuid.uuid4().hex[:12]}"
+    client.create_bucket(Bucket=name)
+    try:
+        yield name
+    finally:
+        for obj in client.list_objects_v2(Bucket=name).get("Contents", []):
+            client.delete_object(Bucket=name, Key=obj["Key"])
+        client.delete_bucket(Bucket=name)
+
+
+def copy_objects(keys: list[str], bucket: str) -> int:
+    """The demo upload's objects that still exist, copied from the media bucket."""
+    client, media, copied = s3_client(), os.environ["S3_BUCKET_MEDIA"], 0
+    for key in keys:
+        try:
+            body = client.get_object(Bucket=media, Key=key)["Body"].read()
+        except client.exceptions.ClientError as exc:
+            if exc.response["Error"]["Code"] not in ("NoSuchKey", "404"):
+                raise
+        else:
+            client.put_object(Bucket=bucket, Key=key, Body=body)
+            copied += 1
+    return copied
+
+
+def take_backup(backups: Path, keydir: Path, bucket: str) -> None:
     """One on-demand set of the session database and media bucket through the ST-076a service."""
     path = tool_path()
     keygen = subprocess.run(
@@ -135,8 +166,11 @@ def take_backup(backups: Path, keydir: Path) -> None:
         env={**os.environ, "PATH": path}, capture_output=True, text=True, check=True,
     )  # fmt: skip
     clean = {k: v for k, v in os.environ.items() if not k.startswith(("BACKUP_", "PG", "S3_"))}
-    env = {**clean, **pg_env(database_url()), **store_env(), "PATH": path,
-           "BACKUP_DIR": str(backups),
+    store = {"S3_ENDPOINT_URL": os.environ["S3_ENDPOINT_URL"], "S3_BUCKET_MEDIA": bucket,
+             "S3_REGION": os.environ.get("S3_REGION", "us-east-1"),
+             "BACKUP_S3_ACCESS_KEY_ID": os.environ["S3_ACCESS_KEY_ID"],
+             "BACKUP_S3_SECRET_ACCESS_KEY": os.environ["S3_SECRET_ACCESS_KEY"]}  # fmt: skip
+    env = {**clean, **pg_env(database_url()), **store, "PATH": path, "BACKUP_DIR": str(backups),
            "BACKUP_AGE_RECIPIENT": keygen.stderr.strip().split()[-1]}  # fmt: skip
     proc = subprocess.run([sys.executable, str(BACKUP_SCRIPT), "--once"], env=env,
                           capture_output=True, text=True, timeout=300, check=False)  # fmt: skip
@@ -161,8 +195,10 @@ def planted_table(world: dict[str, Any], db_session: Any) -> None:
 
 
 @given("an on-demand backup set holding a file the map does not name")
-def planted_backup_file(world: dict[str, Any], db_engine: Any, tmp_path: Path) -> None:
-    take_backup(tmp_path / "backups", tmp_path)
+def planted_backup_file(
+    world: dict[str, Any], db_engine: Any, tmp_path: Path, backup_bucket: str
+) -> None:
+    take_backup(tmp_path / "backups", tmp_path, backup_bucket)
     [set_dir] = [p for p in (tmp_path / "backups").iterdir() if p.is_dir()]
     (set_dir / PLANTED_FILE[1]).write_text("-- a plaintext copy someone left in the set\n")
     world["backups"] = tmp_path / "backups"
@@ -177,7 +213,7 @@ def empty_backups(world: dict[str, Any], tmp_path: Path) -> None:
 @given("a migrated database, a demo upload and an on-demand backup")
 def live_stack(
     world: dict[str, Any], api: ApiDriver, committed_db: Any, written_keys: WrittenKeys,
-    tmp_path: Path,
+    tmp_path: Path, backup_bucket: str,
 ) -> None:  # fmt: skip
     ivy = api.as_user("ivy")
     match_id = api.run(create_match(ivy, "IT-05-05 classification walk"))
@@ -185,7 +221,8 @@ def live_stack(
     contract.WORKER_RUN_UNTIL_IDLE.load()()
     world["keys"] = list(written_keys.written)
     world["engine"] = committed_db
-    take_backup(tmp_path / "backups", tmp_path)
+    assert copy_objects(world["keys"], backup_bucket) > 0, "the mirror must hold the demo video"
+    take_backup(tmp_path / "backups", tmp_path, backup_bucket)
     world["backups"] = tmp_path / "backups"
 
 
