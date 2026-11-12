@@ -34,3 +34,15 @@ Source: `docs/design/flows-sprint-04.md` §14.4 (chair's re-read; DR-04 not yet 
 | PD-DR04-01 | major | Open: R-01 has no shorter-retention confirmation dialog (flows-sprint-04 §6, HAX G16); shortening retention deletes videos within a day with no confirm. Needs PM words (PD-FL4-04) and an FE ticket before `feature_retention_setting` is on | product-manager (words), engineering-manager (ticket), senior-frontend-engineer (build) | PD-FL4-04 |
 | PD-DR04-02 | minor | Open: A-12/A-13 (existing unconfirmed account answers "No") not built (ST-068b decisions row 8) | product-manager (PD-FL4-06 words), senior-frontend-engineer | PD-FL4-06 |
 | PD-DR04-03 | minor | Open: no "Privacy settings" link on X-00 or the account menu (ST-071 deferred row (2)) | engineering-manager (ticket), senior-frontend-engineer | — |
+
+## ST-078e (PR #218) round 1: web-origin answers left out of IT-05-08 (senior-frontend-engineer, 2026-11-05)
+
+Source: PR #218 review round 1 (PE-078e-01 principal-engineer; F-1, ST-078e-R1) and `docs/sprints/05/decisions/ST-078e.md` D3, D4, D9. Ledger ids are upper-case forms (`open_defects.py` reads no lower-case letter in an id; the PR thread id is in brackets). The two gap rows stay Open until their fixes merge; G05-07's header line is not met while they are open.
+
+| Finding | Severity | Disposition | Owner (Sprint 5) | Waits on |
+|---|---|---|---|---|
+| PE-078E-01 (thread `PE-078e-01`) | major | Fixed (round-1 fix commit on PR #218): exclusions stated in the IT docstring, traceability row and D9; gaps tracked as ST-078f/ST-078g (#221, #222) and probed red-first; EM and QA asks in D9 | senior-frontend-engineer | EM §15 rows, QA TCR row |
+| ST078E-RV-1 (thread `F-1`) | major | Fixed: same fix as PE-078e-01 (`/api/healthz` and both media-route branches probed in `red_until` files, listed step in the E2E job) | senior-frontend-engineer | — |
+| ST078E-RV-2 (thread `ST-078e-R1`) | major | Fixed: (a) #221, #222 opened and linked in D3, D4; (b) D3, D4, D9 and the IT docstring say G05-07 is not met until both merge; (c) `/api/healthz` is IT-05-08's red-first row for ST-078f | senior-frontend-engineer | — |
+| ST078E-GAP-1 (`ST-078e-F1`) | major | Open: `/api/*` answers on the web origin carry no CSP (NFR-050.7); acceptance `test_it_05_08_api_csp.py` passes | senior-backend-engineer (ST-078f, #221) | ST-078f |
+| ST078E-GAP-2 (`ST-078e-F2`) | major | Open: the media route sends no frame denial and its unsigned 403 no security headers (NFR-050.7); acceptance `test_it_05_08_media_route.py` passes | sre-devops-engineer (ST-078g, #222) | ST-078g |

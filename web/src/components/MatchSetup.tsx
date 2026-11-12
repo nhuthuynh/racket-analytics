@@ -13,6 +13,7 @@ import { browserApi } from '@/lib/api/browser';
 import { matchLimitMessage } from '@/lib/api/quota';
 import type { ApiFieldError, UploadPolicy } from '@/lib/api/types';
 import { formatBytes, formatDurationCap, formatSizeCap } from '@/lib/format';
+import { useHydrated } from '@/lib/hydration';
 import { looksLikeContactDetails } from '@/lib/setup/contact';
 import {
   firstInvalidStep,
@@ -107,6 +108,7 @@ export function MatchSetup({
   // Every submit is an attempt: the same errors again move focus to the summary (PD-R3-01).
   const [attempt, setAttempt] = useState(0);
   const [offline, setOffline] = useState(false);
+  const hydrated = useHydrated();
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
   const { step, answers, errors } = state;
@@ -296,7 +298,7 @@ export function MatchSetup({
           <CheckAnswers heading={h1} answers={answers} today={today} limits={limits} onChange={(s) => dispatch({ type: 'change', step: s })} />
         ) : null}
         {step !== 'check' ? (
-          <button type="submit" className="button">
+          <button type="submit" className="button" disabled={!hydrated}>
             Continue
           </button>
         ) : offline ? (
@@ -304,7 +306,7 @@ export function MatchSetup({
             You&apos;re offline. Connect to create the match and start the upload.
           </p>
         ) : (
-          <button type="submit" className="button" aria-busy={creating}>
+          <button type="submit" className="button" aria-busy={creating} disabled={!hydrated}>
             {creating ? 'Creating…' : 'Create match and upload'}
           </button>
         )}

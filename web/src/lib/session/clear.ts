@@ -2,11 +2,23 @@
 // Local and session storage, every IndexedDB database and every Cache Storage entry that is not
 // a content-hashed static file or the offline page (they hold no authenticated data; the
 // service worker keeps them so the offline A-01 page still works). Each step is independent:
-// one blocked store never stops the others.
+// one blocked store never stops the others. No media file survives, not even under the app-file
+// path (NFR-067.3, ST-078e), and the app's own databases are deleted by name where the browser
+// cannot list them (NFR-067.2).
+import { OUTBOX_DB } from '@/lib/plan-outbox-idb';
 
 /** Must match CACHE_NAME in public/sw.js. */
 export const STATIC_CACHE = 'ra-static-v1';
 const KEEP_IN_STATIC = /^\/(_next\/static\/|offline\.(html|css)$)/;
+/** Must match MEDIA in public/sw.js (tests/unit/sw-cache.test.ts compares them). */
+export const MEDIA_FILE = /\.(mp4|mov|m4v|webm|mkv|avi|3gp|mp3|m4a|aac|wav|ogg|oga|ogv|opus|flac)$/i;
+/** The app's IndexedDB databases, deleted even where indexedDB.databases() is missing. */
+export const KNOWN_DATABASES: readonly string[] = [OUTBOX_DB];
+
+function kept(url: string): boolean {
+  const { pathname } = new URL(url);
+  return KEEP_IN_STATIC.test(pathname) && !MEDIA_FILE.test(pathname);
+}
 
 interface StorageLike {
   clear(): void;
@@ -60,8 +72,11 @@ export async function clearClientData(stores: ClientStores): Promise<void> {
   await attempt(() => stores.sessionStorage?.clear());
   await attempt(async () => {
     const idb = stores.indexedDB;
-    if (!idb?.databases) return;
-    const names = (await idb.databases()).map((d) => d.name).filter((n): n is string => !!n);
+    if (!idb) return;
+    // The listing is the origin's whole set; without it, the names the app itself opens.
+    const names = idb.databases
+      ? (await idb.databases()).map((d) => d.name).filter((n): n is string => !!n)
+      : KNOWN_DATABASES;
     await Promise.all(names.map((name) => deleteDatabase(idb, name)));
   });
   await attempt(async () => {
@@ -74,7 +89,7 @@ export async function clearClientData(stores: ClientStores): Promise<void> {
       }
       const cache = await caches.open(name);
       for (const request of await cache.keys()) {
-        if (!KEEP_IN_STATIC.test(new URL(request.url).pathname)) await cache.delete(request);
+        if (!kept(request.url)) await cache.delete(request);
       }
     }
   });

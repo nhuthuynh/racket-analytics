@@ -9,6 +9,7 @@ import { ErrorSummary } from '@/components/ErrorSummary';
 import { PageTitle } from '@/components/PageTitle';
 import { ApiError, type ApiClient } from '@/lib/api/client';
 import { browserApi } from '@/lib/api/browser';
+import { useHydrated } from '@/lib/hydration';
 import {
   EMAIL_FORMAT_MESSAGE,
   OFFLINE_SIGN_IN_MESSAGE,
@@ -41,11 +42,10 @@ export function SignInForm({
   const [offline, setOffline] = useState(false);
   // False in the server HTML: until React has attached onSubmit, a tap would be a native GET
   // submit (/?email=..., the address in the URL) and typing would be lost (CI-SIGNIN-HYDRATION).
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydrated();
   const busy = useRef(false);
 
   useEffect(() => {
-    setHydrated(true);
     const update = () => setOffline(typeof navigator !== 'undefined' && navigator.onLine === false);
     update();
     window.addEventListener('online', update);
