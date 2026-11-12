@@ -24,6 +24,12 @@ def _built() -> set[str]:
     return {name for name, svc in base.items() if "build" in svc}
 
 
+def _started() -> set[str]:
+    """Built services that `up` starts without a profile: the previous release's image set."""
+    base = yaml.safe_load((REPO_ROOT / "infra" / "compose.yaml").read_text())["services"]
+    return {name for name, svc in base.items() if "build" in svc and not svc.get("profiles")}
+
+
 def _drill(tmp_path: Path, *extra: str, **env_over: str):
     env = make_env(tmp_path, TAG, REV)
     env.update(env_over)
@@ -65,13 +71,43 @@ def test_without_a_backup_command_the_backup_service_takes_the_backup(tmp_path: 
     assert ["--profile", "ops"] == backup["argv"][backup["argv"].index("--profile") :][:2]
 
 
-def test_every_built_service_image_of_both_releases_is_checked(tmp_path: Path) -> None:
-    # PE F2 (PR #224): step 5 redeploys the current set with --no-build, so step 0 checks it too.
+def _inspected(tmp_path: Path) -> set[str]:
+    return {c["argv"][2] for c in calls(tmp_path) if c.get("argv", [])[:2] == ["image", "inspect"]}
+
+
+def test_every_built_service_image_of_the_current_release_is_checked(tmp_path: Path) -> None:
+    # PE F2 (PR #224): step 5 redeploys the current set with --no-build and step 1 runs
+    # racket-backup:<current>, so step 0 checks every built service, the ops profile included.
     _drill(tmp_path)
-    inspected = {
-        c["argv"][2] for c in calls(tmp_path) if c.get("argv", [])[:2] == ["image", "inspect"]
-    }
-    assert inspected == {f"racket-{s}:{t}" for s in _built() for t in (TAG, CURRENT)}
+    current = {i for i in _inspected(tmp_path) if i.endswith(f":{CURRENT}")}
+    assert current == {f"racket-{s}:{CURRENT}" for s in _built()}
+    assert f"racket-backup:{CURRENT}" in current
+
+
+def test_only_the_services_the_redeploy_starts_are_checked_for_the_previous_tag(
+    tmp_path: Path,
+) -> None:
+    # PE F4 (PR #224): step 3 runs `up` without a profile, so it never starts `backup`; the
+    # previous release (09d279dd) has no backup service, so racket-backup:<previous> never exists.
+    _drill(tmp_path)
+    previous = {i for i in _inspected(tmp_path) if i.endswith(f":{TAG}")}
+    assert previous == {f"racket-{s}:{TAG}" for s in _started()}
+    assert f"racket-backup:{TAG}" not in previous
+
+
+def test_a_previous_set_without_a_backup_image_is_not_refused(tmp_path: Path) -> None:
+    # PE F4: the documented previous-set build (docs/releases/r1-rc.md) has no racket-backup.
+    proc = _drill(tmp_path, FAKE_DOCKER_MISSING=f"racket-backup:{TAG}")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert report(tmp_path)["rc"] == 0
+
+
+def test_a_missing_current_backup_image_refuses_before_any_change(tmp_path: Path) -> None:
+    proc = _drill(tmp_path, FAKE_DOCKER_MISSING=f"racket-backup:{CURRENT}")
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert f"racket-backup:{CURRENT}" in proc.stdout + proc.stderr
+    assert not _compose_calls(tmp_path, "run")
+    assert not [c for c in calls(tmp_path) if c.get("step") == "backup"]
 
 
 def test_missing_current_images_refuse_before_any_change(tmp_path: Path) -> None:
