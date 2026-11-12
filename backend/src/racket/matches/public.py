@@ -33,6 +33,7 @@ from racket.matches.scorebook.domain import (
     Scorebook,
     project,
 )
+from racket.matches.scorebook.memo import SheetMemo
 from racket.matches.scorebook.repository import ScorebookRepository, match_rallies
 from racket.platform.errors import NotFound
 from racket.platform.ratelimit import RateLimiter
@@ -43,7 +44,14 @@ __all__ = ["Tombstone", "confirm_deletion"]  # the deletion rules Identity & Pla
 
 
 def owns_match(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> bool:
-    return MatchRepository(session).get_owned(MatchId(match_id), OwnerId(owner_id)) is not None
+    """The ownership pattern ``WHERE id = :id AND owner_id = :me`` of a live match (R1), as one
+    single-column read: the check needs no aggregate and no participants (CI-NIGHTLY-PERF)."""
+    found = session.execute(
+        sa.select(matches.c.id).where(
+            *MatchRepository.live(match_id), matches.c.owner_id == owner_id
+        )
+    ).first()
+    return found is not None
 
 
 def mark_uploaded(
@@ -92,6 +100,10 @@ def clear_rejection(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) 
         match.clear_rejection()
 
 
+SHEET_MEMO_CAPACITY = 512  # matches; one projected sheet each (a few kB for a full match)
+_SHEETS: SheetMemo[dict[str, Any]] = SheetMemo(capacity=SHEET_MEMO_CAPACITY)
+
+
 @dataclass(frozen=True)
 class LiveSheet:
     """The projected score sheet of a live match at ``version`` (published to Analytics, R6)."""
@@ -104,16 +116,26 @@ class LiveSheet:
 def lock_live_sheet(session: Session, match_id: uuid.UUID) -> LiveSheet | None:
     """The sheet of a live match, read under the match row ``FOR SHARE`` lock, which the caller
     holds to its commit (analytics-snapshots.md §4.2 step 2, invariant S8). ``None`` when the
-    match does not exist or is deleted, so a snapshot is never written for it."""
-    owner = session.execute(
-        sa.select(matches.c.owner_id)
+    match does not exist or is deleted, so a snapshot is never written for it.
+
+    Read cost (CI-NIGHTLY-PERF): the head ``(version, rules_version)`` is read with the lock and
+    the sheet projected for an equal key is reused (``_SHEETS``); every scorebook command bumps
+    ``version`` in the transaction that writes the rows, so an equal key means an equal sheet.
+    A miss reads and projects the scorebook under the same lock. The sheet is shared: callers
+    only read it."""
+    head = session.execute(
+        sa.select(matches.c.owner_id, matches.c.version, matches.c.rules_version)
         .where(*MatchRepository.live(match_id))
         .with_for_update(read=True)
-    ).scalar_one_or_none()
-    if owner is None:
+    ).one_or_none()
+    if head is None:
         return None
-    book = ScorebookRepository(session).load(match_id)
-    return LiveSheet(book.version, uuid.UUID(str(owner)), project(book))
+    owner, key = uuid.UUID(str(head.owner_id)), (int(head.version), str(head.rules_version))
+    if (sheet := _SHEETS.get(match_id, key)) is None:
+        book = ScorebookRepository(session).load(match_id)
+        sheet = project(book)
+        _SHEETS.put(match_id, (book.version, str(book.rules_version)), sheet)
+    return LiveSheet(key[0], owner, sheet)
 
 
 def lock_live_match(session: Session, match_id: uuid.UUID) -> bool:

@@ -18,7 +18,7 @@ M1, M2, M3 = (uuid.UUID(int=n) for n in (1, 2, 3))
 
 
 def test_a_capacity_below_one_is_refused() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="capacity"):
         SheetMemo(capacity=0)
 
 

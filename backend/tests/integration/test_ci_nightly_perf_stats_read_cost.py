@@ -72,9 +72,7 @@ def test_a_deleted_match_after_a_read_is_not_found(api: ApiDriver, example: str)
     assert st.evidence(api, "ivy", example, METRIC, SIDE).status_code == 404
 
 
-def test_another_account_never_reads_a_match_the_owner_read(
-    api: ApiDriver, example: str
-) -> None:
+def test_another_account_never_reads_a_match_the_owner_read(api: ApiDriver, example: str) -> None:
     assert st.refusal(st.stats(api, "carlos", example))[:2] == (404, "not_found")
     refused = st.evidence(api, "carlos", example, METRIC, SIDE)
     assert st.refusal(refused)[:2] == (404, "not_found")
