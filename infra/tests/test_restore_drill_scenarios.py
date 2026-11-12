@@ -112,6 +112,7 @@ def check_report(world: dict[str, Any]) -> None:
 
 @then("the corrections count and SHA-256 equal the values before")
 def corrections_equal(world: dict[str, Any]) -> None:
+    assert "error" not in world["report"], world["report"]["error"]
     c = world["report"]["corrections"]
     assert c["equal"] is True, c
     assert c["before"] == c["after"]
