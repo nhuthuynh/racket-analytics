@@ -30,7 +30,16 @@ def missing_entries(text: str) -> list[str]:
 
     A commented-out line (`# .local`) or a re-include (`!.local`) does not count: Docker would
     send the path. A pattern that only resembles an entry (`.local/cache`) does not count either."""
-    raise NotImplementedError("ST-082: missing_entries (T5-RB-2)")
+    excluded: set[str] = set()
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("!"):
+            excluded.discard(line[1:].strip())
+        else:
+            excluded.add(line)
+    return [entry for entry in PINNED if entry not in excluded]
 
 
 def test_the_dockerignore_holds_every_pinned_entry() -> None:
