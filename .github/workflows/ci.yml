@@ -247,6 +247,14 @@ jobs:
           RACKET_DRILL_BASE_LOCK: ${{ runner.temp }}/base-library.lock
       # ST-059 (FR-141; QD-DR-05): print the coverage matrix and fail naming each empty cell.
       - run: uv run --no-sync racket-drill-coverage ../content/drills
+      # ST-081a (FR-141.R1; drill-review-checklist §3.1.1): S + 1 swap-counted drills per solo+wall
+      # cell. @red-until ST-081b (ADR 0046): red on today's library (4 cells short by one drill),
+      # listed, not gated. The stale-marker check is IT-05-09's red_until row in the integration
+      # job; when ST-081b closes the cells, that row passes and this step becomes gating.
+      - name: Drill coverage, session-size rule (@red-until ST-081b; listed, not gated)
+        run: |
+          uv run --no-sync racket-drill-coverage --session-size ../content/drills \
+            || echo "racket-drill-coverage --session-size rc=$? (@red-until ST-081b, ADR 0046)"
 
   # ------------------------------------------------------------------ integration on Compose
   integration:
