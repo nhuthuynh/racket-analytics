@@ -9,6 +9,7 @@ Targets: RPO ≤ 24 h (age of the newest complete set when the restore starts), 
 - You need the **private** `age` identity that matches `backup.json.recipient` (`.local/backup/age-identity.txt`, mode 0600; in production the secret store, ADR 0034). The backup service never has it.
 - Restore only into **empty volumes of a stopped stack**, never on top of live data.
 - Write down the time you start: it is the start of the RTO.
+- **Save the deletion log lines before step 1.** Step 1 removes the containers and their logs with them. If the old stack's containers still exist, copy their JSON log lines to a host file first: `$C logs --no-color --no-log-prefix api purge > .local/restore-logs.jsonl` (they hold ids only, deletion-and-purge.md §4.5). Otherwise take them from any log store that survived. Step 9 needs them.
 
 All commands run from the repository root. `C` stands for `docker compose -f infra/compose.yaml --profile ops`. `ID` is the identity file and `SET` the chosen backup directory, for example `.local/backups/20261112T101500Z`.
 
@@ -22,7 +23,48 @@ All commands run from the repository root. `C` stands for `docker compose -f inf
 6. **Schema revision.** `SELECT version_num FROM alembic_version` must equal `backup.json.alembic_revision`. If the image you will run is newer, the `migrate` one-shot in step 10 upgrades it; if it is older, stop and follow ADR 0058 rule 7 (rollback).
 7. **Objects.** Decrypt `objects.tar.age` and upload every `objects/<key>` member back to the media bucket under `<key>`; the uploaded keys, sizes and SHA-256s must equal the tar's `objects.manifest.json` (NFR-045.4). The drill does this inside the API image: `restore_drill.py objects restore` reads the tar on stdin.
 8. **Logins.** `$C run --rm --no-deps db-roles` (the dump holds no password; this sets the worker and backup logins from `infra/.env`).
-9. **Purge before any traffic:** `$C run --rm --no-deps -T --entrypoint python api -m racket.platform.purge --once` (ADR 0058 rule 5: a tombstoned match in the backup never comes back into reach).
+9. **Delete again what was deleted after the backup, then purge, before any traffic** (ADR 0058 rule 5 and the R1 residual of [decision 6](../decisions/0058-encrypted-nightly-dump-and-object-mirror-restore-then-purge-five-day-backup-retention-rollback-by-downgrade-then-redeploy.md#6-accepted-residual-for-r1-deletions-after-the-newest-backup)). A deletion acknowledged after `taken_at` is not in the set, so without this step up to 24 h of deletions (the RPO) come back live when step 10 opens traffic.
+   1. **List the deletions after `taken_at`.** From the lines saved before step 1, keep the `match.deleted` and `account.deleted` lines (lines that are not JSON are skipped) whose `ts` is at or after `taken_at` (log fields: [deletion-and-purge.md §4.5](../architecture/deletion-and-purge.md#45-log-lines-nfr-057-it-03-13)). The comparison is to the second, so a line from the same second is kept; deleting again what the set already holds as a tombstone is harmless:
+      ```
+      T=<taken_at from backup.json>
+      jq -rR --arg t "$T" 'fromjson? | select(.event == "account.deleted" and .ts[0:19] >= $t[0:19]) | .user_id' \
+        .local/restore-logs.jsonl | sort -u > .local/redelete-accounts.txt
+      jq -rR --arg t "$T" 'fromjson? | select(.event == "match.deleted" and .ts[0:19] >= $t[0:19] and .user_id != null) | "\(.match_id):\(.user_id)"' \
+        .local/restore-logs.jsonl | sort -u > .local/redelete-matches.txt
+      ```
+      A `match.deleted` line with a null `user_id` comes from the purge's second net for a deleted account; that account's own line covers it. No log lines at all for the time after `taken_at`: record that in the incident notes, keep the stack closed and escalate; do not open traffic on a guess.
+   2. **Delete those ids again** through the same code as `DELETE /me` and `DELETE /matches/{id}` (deletion-and-purge.md §3.1 and §3.2: tombstone, uploads closed, address and names erased, sessions deleted). An id the restored database holds as already deleted, or does not hold at all, is skipped, so running it twice changes nothing:
+      ```
+      $C run --rm --no-deps -T -e REDELETE_ACCOUNTS="$(cat .local/redelete-accounts.txt)" \
+        -e REDELETE_MATCHES="$(cat .local/redelete-matches.txt)" --entrypoint python api - <<'EOF'
+      import os, uuid
+      from racket.matches.domain import MatchId, OwnerId
+      from racket.matches.service import MatchService
+      from racket.platform.db import engine_for, session_factory
+      from racket.platform.errors import Unauthenticated
+      from racket.players.service import AccountDeletion
+      new = session_factory(engine_for(os.environ["DATABASE_URL"]))
+      for user in os.environ.get("REDELETE_ACCOUNTS", "").split():
+          with new() as s:
+              try:
+                  AccountDeletion(s).delete(uuid.UUID(user), {"confirm": "delete"})
+                  print("account deleted again", user)
+              except Unauthenticated:
+                  print("account already deleted or absent", user)
+      for pair in os.environ.get("REDELETE_MATCHES", "").split():
+          match_id, user = pair.split(":")
+          with new() as s:
+              service = MatchService(s)
+              match = service.matches.get_owned(MatchId(match_id), OwnerId(user))
+              if match is None:
+                  print("match already deleted or absent", match_id)
+              else:
+                  service.delete(match, {"confirm": "delete"})
+                  print("match deleted again", match_id)
+      EOF
+      ```
+      Keep its output with the incident notes: one line per id.
+   3. **Purge:** `$C run --rm --no-deps -T --entrypoint python api -m racket.platform.purge --once`. It removes the tombstones restored from the set and those of sub-step 2 (a tombstoned match in the backup never comes back into reach).
 10. **Start and check.** `make up` (or `$C up -d --build --wait`), wait for `/healthz` 200, then `$C exec -T api racket-integrity --expect-count <N> --expect-sha256 <HEX>` with the fingerprint recorded before the incident (`backup.json.corrections` once ST-076a writes it). Exit 1 names `corrections`: a confirmed correction is missing or changed; keep the stack closed and escalate. The RTO ends here.
 
 After step 10, list the object keys of live matches (`SELECT a.object_key FROM media_assets a JOIN matches m ON m.id = a.match_id WHERE m.deleted_at IS NULL`) and check each exists in the bucket. A missing one is a rule 6 candidate (a match deleted and purged between the dump and the mirror): record it, do not invent the object.
@@ -36,7 +78,7 @@ python3 scripts/ops/restore_drill.py --project racket-drill05b --flags on --plan
 python3 scripts/ops/restore_drill.py --check reports/restore-drill.json   # re-read the verdict
 ```
 
-The drill runs the steps above on a Compose project of its own (`.local/drill/<project>/`, every host port remapped, `FEATURE_*` on with `--flags on`), so it never touches your `make up` stack. It starts the stack, seeds two live matches with a media object each and three confirmed corrections, records the `racket-integrity` fingerprint and the bucket inventory (key, size, SHA-256), takes a set with `backup --once` and a fresh `age` key pair, then times steps 1-10. `--plant-delete-correction` deletes one correction after the fingerprint and before the backup, so the restored data must differ: the drill exits 1 naming `corrections`. At the end it runs `down -v --rmi local` on its project and deletes its directory (`--keep` leaves them). `--services api` starts only the API and what it needs (used by the test binding); the G05-03 measurement uses the default, the whole stack.
+The drill runs the steps above on a Compose project of its own (`.local/drill/<project>/`, every host port remapped, `FEATURE_*` on with `--flags on`), so it never touches your `make up` stack. It starts the stack, seeds two live matches with a media object each and three confirmed corrections, records the `racket-integrity` fingerprint and the bucket inventory (key, size, SHA-256), takes a set with `backup --once` and a fresh `age` key pair, then times steps 1-10. The drill deletes nothing after `taken_at`, so its step 9 runs the purge only; sub-steps 9.1 and 9.2 are an operator step (ADR 0058 decision 6: no replay tool in Sprint 5). `--plant-delete-correction` deletes one correction after the fingerprint and before the backup, so the restored data must differ: the drill exits 1 naming `corrections`. At the end it runs `down -v --rmi local` on its project and deletes its directory (`--keep` leaves them). `--services api` starts only the API and what it needs (used by the test binding); the G05-03 measurement uses the default, the whole stack.
 
 Report fields: `rpo_hours`, `rto_minutes`, `corrections.{before,after,equal}`, `objects.{before,after,equal,manifest_equal}`, `alembic_revision.{backup,restored,equal}`, `dangling_object_refs`, `healthz`, `error`. Exit 0 only when every target holds; 1 when any is missed or a step failed (`error` names it); 2 on a usage error. Behind a TLS-intercepting proxy set `EXTRA_CA_FILE` (the drill passes it to the image builds); `DOCKERHUB_REGISTRY` overrides the registry in the drill's env file.
 
