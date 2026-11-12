@@ -15,7 +15,13 @@ PR #188 had already merged (2026-11-03, merge commit `cdd1f6a9`) when the findin
 
 ## Test change request (TCR)
 
-None. The PR only adds parametrize cases to `test_a_tier_2_path_is_tier_2` and a new Examples block to `tests/features/review_tiers.feature`; no existing case is changed, weakened or removed.
+`scripts/ci/check_test_immutability.py` flags `tests/features/review_tiers.feature` as a modified accepted test (exit 1), so this PR needs a TCR decision by the senior-qa-engineer and the `qa-approved-test-change` label from the PR-policy step.
+
+| # | File | Change | Weakens a test? | Requested by | Decision (senior-qa-engineer) |
+|---|---|---|---|---|---|
+| TCR-R3-1 | `tests/features/review_tiers.feature` | Adds one Examples block "consent, access control and security headers are never tier 1 (SEC-188-R3-01)" with six tier 2 rows; no existing row, step or scenario is changed or removed | No: additive, it raises the bar (six paths that were tier 1 must now be tier 2) | sre-devops-engineer, 2026-11-12 | Pending |
+
+`infra/tests/test_review_tiers.py` gains six parametrize cases in `test_a_tier_2_path_is_tier_2`; no existing case changes. The immutability guard does not flag it.
 
 ## Evidence
 
