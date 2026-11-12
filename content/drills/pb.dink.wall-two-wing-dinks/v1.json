@@ -1,0 +1,42 @@
+{
+  "id": "pb.dink.wall-two-wing-dinks",
+  "version": 1,
+  "name": "Forehand-backhand wall dinks",
+  "summary": "Alone at a wall, alternate forehand and backhand soft dinks just above a net-height line and count unforced errors per 50 shots, so the weaker side shows.",
+  "skills": [
+    "AN-04",
+    "dink"
+  ],
+  "target_metrics": [
+    "AN-04"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the wall about 0.9 m above the floor (the net) and stand about 2 m from the wall",
+    "Rally soft dinks off one bounce, alternating forehand and backhand on every shot; the ball should hit the wall just above the line and drop, not pop up",
+    "An error is a ball below the line, a ball you pop above head height, a mis-hit, a shot on the wrong side, or a ball you had time to reach but missed; note whether it was a forehand or a backhand",
+    "Sets of 50 shots; restart the rally after an error"
+  ],
+  "success_criterion": "In a set of 50 alternating dinks, at most 6 errors, with at most 4 on either side",
+  "progressions": [
+    "pb.dink.safe-target-dinks"
+  ],
+  "regressions": [
+    "pb.dink.wall-soft-dinks"
+  ],
+  "safety_notes": "Soft pace only: no speed-ups or drives at this distance from the wall. Keep the ball below head height and move your feet to the ball instead of reaching. Stop if your wrist or back hurts.",
+  "coach_rationale": "(judgment) Unforced errors in the soft game (AN-04) often come from one wing: a player who dinks only on the forehand at a wall hides the backhand errors that cost rallies in a game. Alternating sides forces both wings and the split count shows which one leaks errors, with no partner or court. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
