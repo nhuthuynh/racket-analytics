@@ -166,7 +166,11 @@ def _as_time(leaf: Any) -> tuple[datetime, timedelta] | None:
 def _returned(value: Any, leaves: list[Any]) -> bool:
     """Whether ``value`` is among the response ``leaves``: an equal number, a string or UUID
     inside a string (an id in ``resume_url``), a timestamp within the precision of its format.
-    ``None``, booleans and JSON or bytes columns are never matched (too generic to trace)."""
+    ``None``, booleans and JSON or bytes columns are never matched (too generic to trace).
+
+    Limit: a timestamp matches by proximity (1 ms, or 1 s for a whole-second RFC 3339 or
+    HTTP-date leaf), so a column written in the same instant as a returned one (the probe job
+    and ``matches.updated_at``) is reported too. This fails closed (map coverage limits)."""
     if value is None or isinstance(value, bool | bytes | Mapping | list):
         return False
     if isinstance(value, datetime):
