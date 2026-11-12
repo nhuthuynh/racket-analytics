@@ -50,10 +50,11 @@ Runner speed read from the serial property step of the same job, as in the trend
 
 | Run (PR #235) | Commit | Domain step | Property step | Backend unit | Runner | Same-speed runners before (domain step) |
 |---|---|---|---|---|---|---|
-| 43295511747 | 7a4fe9d | 8.2 s | 57.9 s | 15.1 s | slow | 9.2-9.3 s at 59-61 s |
+| 43295511747 | b1089ca | 8.2 s | 57.9 s | 15.1 s | slow | 9.2-9.3 s at 59-61 s |
 | 43298772128 | 4aca7b0 | 8.0 s | 57.1 s | 15.4 s | slow | 9.2-9.3 s at 59-61 s |
+| 43301588896 | 9c0b604 | 6.4 s | 46.8 s | 13.7 s | middle | 7.2-7.3 s at 43-44 s |
 
-On slow runners the step drops 1.0-1.3 s (about 13%) to 80-82% of the budget; fast runners, scaled by the same CPU cut, land near 5 s (50%). **The ~70% target is met on fast runners and not on slow ones.** What is left is CPU the tests themselves need (Hypothesis generation, 6.7 of 7.5 s of serial test time) and each worker's start-up and collection (about 1.8 s of CPU, every worker collects all 1,862 tests).
+On slow runners the step drops 1.0-1.3 s (about 13%) to 80-82% of the budget; on a middle-speed runner 0.8-0.9 s to 64%; fast runners, scaled by the same CPU cut, land near 5 s (50%). **The ~70% target is met on fast runners and not on slow ones.** What is left is CPU the tests themselves need (Hypothesis generation, 6.7 of 7.5 s of serial test time) and each worker's start-up and collection (about 1.8 s of CPU, every worker collects all 1,862 tests).
 
 | Date | Who | Decision | Evidence | Reasoning |
 |---|---|---|---|---|
