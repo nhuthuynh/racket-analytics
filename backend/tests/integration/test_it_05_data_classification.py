@@ -11,9 +11,13 @@ looks each item up in ``docs/security/data-classification.md``:
   upload never return a ``upload_sessions`` column the map marks ``A-SERVER`` (SPE-ST077-01);
   ``GET /me/quota`` and a 429 never return a ``media_assets`` column (``used_bytes`` is the sum
   of ``size_bytes``) or the time computed from ``rate_limit_events.at`` (oldest + window) that
-  the map marks ``A-SERVER`` (SPE-ST077-R2-01);
+  the map marks ``A-SERVER`` (SPE-ST077-R2-01); ``GET /me``, ``GET /matches/{id}`` and the
+  presigned ``GET /matches/{id}/video`` link never return the object key or an id copy (owner,
+  match, account) of a ``media_assets``, ``upload_sessions``, ``jobs``, ``sessions``,
+  ``account_roles`` or ``plan_done_ops`` column the map marks ``A-SERVER`` (SPE-ST077-R3-01);
 * backup artefacts: every file of a set taken by the ST-076a service (``scripts/ops/backup.py
-  --once``, real ``pg_dump`` through real ``age``) on the session database.
+  --once``, real ``pg_dump`` through real ``age``) on the session database and, since
+  ST-076a-part2, the media bucket of the test object store (``objects.tar.age``).
 
 Negative cases first: a planted unclassified column, a planted unclassified backup file and a
 walk that finds zero backup artefacts each fail. Missing ``age`` or Postgres tools fail, they
@@ -70,6 +74,10 @@ PLANTED_FILE = ("backup", "plain-copy.sql")
 QUOTA = "/me/quota"  # api-sprint-04 §7
 CREATIONS_PER_HOUR = 2
 CREATION_WINDOW = timedelta(hours=1)  # matches/service.py _spend_creation_slots
+VIDEO = "/matches/{match_id}/video"  # matches/scorebook/api.py: {"url": <presigned GET>}
+# Tables that copy the account id ``GET /me`` returns; ivy has no row in them here, so the
+# trace uses the id as it would be stored (an FK copy of an id the owner reads).
+ACCOUNT_ID_COPIES = ("account_roles", "plan_done_ops")
 
 
 # ---------------------------------------------------------------- helpers
@@ -103,15 +111,32 @@ def pg_env(url: str) -> dict[str, str]:
     }
 
 
+def store_env() -> dict[str, str]:
+    """The test object store as the backup service reads it (ST-076a-part2 mirrors the media
+    bucket into ``objects.tar.age``; the backup login is the store's own key here)."""
+    names = ("S3_ENDPOINT_URL", "S3_BUCKET_MEDIA", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY")
+    missing = [n for n in names if not os.environ.get(n)]
+    if missing:
+        pytest.fail(f"{', '.join(missing)} not set: the backup walk needs the object store")
+    return {
+        "S3_ENDPOINT_URL": os.environ["S3_ENDPOINT_URL"],
+        "S3_BUCKET_MEDIA": os.environ["S3_BUCKET_MEDIA"],
+        "S3_REGION": os.environ.get("S3_REGION", "us-east-1"),
+        "BACKUP_S3_ACCESS_KEY_ID": os.environ["S3_ACCESS_KEY_ID"],
+        "BACKUP_S3_SECRET_ACCESS_KEY": os.environ["S3_SECRET_ACCESS_KEY"],
+    }
+
+
 def take_backup(backups: Path, keydir: Path) -> None:
-    """One on-demand set of the session database through the ST-076a service."""
+    """One on-demand set of the session database and media bucket through the ST-076a service."""
     path = tool_path()
     keygen = subprocess.run(
         ["age-keygen", "-o", str(keydir / "identity.txt")],
         env={**os.environ, "PATH": path}, capture_output=True, text=True, check=True,
     )  # fmt: skip
     clean = {k: v for k, v in os.environ.items() if not k.startswith(("BACKUP_", "PG", "S3_"))}
-    env = {**clean, **pg_env(database_url()), "PATH": path, "BACKUP_DIR": str(backups),
+    env = {**clean, **pg_env(database_url()), **store_env(), "PATH": path,
+           "BACKUP_DIR": str(backups),
            "BACKUP_AGE_RECIPIENT": keygen.stderr.strip().split()[-1]}  # fmt: skip
     proc = subprocess.run([sys.executable, str(BACKUP_SCRIPT), "--once"], env=env,
                           capture_output=True, text=True, timeout=300, check=False)  # fmt: skip
@@ -240,6 +265,58 @@ def no_server_side_quota_column_returned(world: dict[str, Any]) -> None:
     found = server_side_returned(world["map"], "media_assets", dict(asset), response)
     found += server_side_returned(world["map"], "rate_limit_events", derived, response)
     assert found == []
+
+
+@given("a stored and probed demo video")
+def stored_probed_video(world: dict[str, Any], api: ApiDriver, committed_db: Any) -> None:
+    ivy = api.as_user("ivy")
+    match_id = api.run(create_match(ivy, "IT-05-05 media link"))
+    api.run(upload_fixture(ivy, match_id))
+    contract.WORKER_RUN_UNTIL_IDLE.load()()
+    world.update(api=api, match_id=match_id, engine=committed_db)
+
+
+@when("the owner reads the account, the match and the video link")
+def owner_reads_video_link(world: dict[str, Any]) -> None:
+    api: ApiDriver = world["api"]
+    reads = {
+        "me": contract.ME,
+        "match": contract.MATCH.format(match_id=world["match_id"]),
+        "video": VIDEO.format(match_id=world["match_id"]),
+    }
+    world["response"] = {}
+    for name, url in reads.items():
+        got = api.request("ivy", "GET", url)
+        assert got.status_code == 200, f"{url}: {got.status_code} {got.text}"
+        world["response"][name] = got.json()
+    assert world["response"]["video"]["url"], "the video link must be signed"
+
+
+@then("no media, upload, job or account column the API returned is marked server-side only")
+def no_server_side_media_column_returned(world: dict[str, Any]) -> None:
+    me_id = world["response"]["me"]["id"]
+    by_match = {"m": world["match_id"]}
+    queries = {
+        "media_assets": ("SELECT * FROM media_assets WHERE match_id = :m", by_match),
+        "upload_sessions": ("SELECT * FROM upload_sessions WHERE match_id = :m", by_match),
+        # Only the id copy: the probe job is written sub-ms after matches.updated_at (the
+        # owner reads it), so a timestamp trace cannot tell them apart (_returned's limit).
+        "jobs": ("SELECT match_id FROM jobs WHERE match_id = :m", by_match),
+        "sessions": ("SELECT * FROM sessions WHERE account_id = :a", {"a": me_id}),
+    }
+    rows: list[tuple[str, dict[str, Any]]] = []
+    with world["engine"].connect() as conn:
+        for table, (sql, params) in queries.items():
+            found = [dict(r) for r in conn.execute(text(sql), params).mappings()]
+            assert found, f"no {table} row for the demo upload"
+            rows += [(table, r) for r in found]
+    rows += [(table, {"account_id": me_id}) for table in ACCOUNT_ID_COPIES]
+    returned = [
+        hit
+        for table, row in rows
+        for hit in server_side_returned(world["map"], table, row, world["response"])
+    ]
+    assert sorted(set(returned)) == []
 
 
 @when("the database schema is walked")
