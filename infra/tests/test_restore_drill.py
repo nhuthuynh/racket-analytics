@@ -194,14 +194,14 @@ def test_a_set_that_is_not_complete_is_refused(rd: ModuleType, tmp_path: Path) -
 def test_a_changed_artefact_is_refused_before_decrypting(rd: ModuleType, tmp_path: Path) -> None:
     d = plant_set(tmp_path)
     (d / "db.dump.age").write_bytes(b"age-encryption.org/v1\nchanged")
-    with pytest.raises(rd.SetRefused, match="db.dump.age"):
+    with pytest.raises(rd.SetRefused, match=r"db\.dump\.age"):
         rd.verify_set(d)
 
 
 def test_a_missing_artefact_is_refused(rd: ModuleType, tmp_path: Path) -> None:
     d = plant_set(tmp_path)
     (d / "objects.tar.age").unlink()
-    with pytest.raises(rd.SetRefused, match="objects.tar.age"):
+    with pytest.raises(rd.SetRefused, match=r"objects\.tar\.age"):
         rd.verify_set(d)
 
 
@@ -275,3 +275,16 @@ def test_fixtures_are_independent_copies(rd: ModuleType) -> None:
     before = copy.deepcopy(r)
     rd.failures(r)
     assert r == before, "failures() must not change the report"
+
+
+# ---------------------------------------------------------------- Compose commands
+def test_up_never_starts_the_ops_profile(rd: ModuleType, tmp_path: Path) -> None:
+    """The `backup` service (profile ops) has a 1 h start period: `up --wait` with the profile
+    waited on it (live run 2026-11-12). Only the backup's own calls and `down` name it."""
+    st = rd.Stack("racket-drill-u", {"POSTGRES_USER": "racket"}, tmp_path)
+    assert "--profile" not in st.cmd("up", "-d", "--build", "--wait")
+    assert "--profile" not in st.cmd("run", "--rm", "--no-deps", "db-roles")
+    for args in (("run", "--rm", "backup", "--once"), ("build", "backup"), ("down", "-v")):
+        cmd = st.cmd(*args)
+        assert cmd[cmd.index("--profile") + 1] == "ops", args
+    assert "--profile" in st.cmd(*st.decrypt(tmp_path / "db.dump.age"))

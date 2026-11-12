@@ -59,9 +59,10 @@ def test_recorded_planted_report() -> None:
 
 def drill(tmp_path: Path, *extra: str) -> dict[str, Any]:
     out = tmp_path / "restore-drill.json"
+    project = f"racket-drill-it-{secrets.token_hex(3)}"
+    args = ["--project", project, "--flags", "on", "--services", "api", "--json", str(out)]
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT), "--project", f"racket-drill-it-{secrets.token_hex(3)}",
-         "--flags", "on", "--services", "api", "--json", str(out), *extra],  # fmt: skip
+        [sys.executable, str(SCRIPT), *args, *extra],
         capture_output=True,
         text=True,
         timeout=3600,
@@ -120,7 +121,8 @@ def corrections_equal(world: dict[str, Any]) -> None:
 @then("the object count and SHA-256 equal the values before")
 def objects_equal(world: dict[str, Any]) -> None:
     o = world["report"]["objects"]
-    assert o["equal"] is True and o["manifest_equal"] is True, o
+    assert o["equal"] is True, o
+    assert o["manifest_equal"] is True, o
     assert o["before"]["count"] >= 1, "a vacuous drill: no object was seeded"
     assert world["report"]["dangling_object_refs"] == []
 
