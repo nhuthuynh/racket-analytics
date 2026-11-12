@@ -588,7 +588,7 @@ Atomic item → story → ticket → tests: `05/requirements-breakdown.md` §1-�
 | VERIFY-05 | `s05/verify-05-r1` | qa | 0 | all build tickets | `docs/sprints/05/decisions/VERIFY-05.md`, scorecard | no |
 | SMOKE-05 | `s05/smoke-05` | sre | 0 | VERIFY-05 | `docs/sprints/05/smoke.md` | no |
 | RETRO-05 | `s05/retro-05` | em | 0 | SMOKE-05, EM-CLOSE-CHECKS | status files (tier 0, incl. `status.json`), report, retro | no |
-| CI-DOMAIN-BUDGET | `s05/ci-domain-budget-headroom` | sre | 1 | — | `backend/conftest.py`, `infra/tests/`, `tests/features/`, `docs/sprints/05/decisions/CI-DOMAIN-BUDGET.md` | no |
+| CI-DOMAIN-BUDGET | `s05/ci-domain-budget-headroom` | sre | 1 | — | `backend/conftest.py`, `infra/tests/`, `tests/features/`, `docs/sprints/05/decisions/` | no |
 
 Machine-readable copy: `docs/sprints/05/ticket-owners.json` (`id`, `branch`, `owner` as a role file name; tier 2; the merge gate reads that file, never this table; CI-TIERS-b adds the drift test). A change to an owner or branch edits both in one PR.
 
