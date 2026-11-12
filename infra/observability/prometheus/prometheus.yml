@@ -1,0 +1,17 @@
+# Prometheus for the `obs` Compose profile (ST-075b; ADR 0057 §3). Scrapes the collector only.
+# Rule files are an explicit list, never a glob: a glob also matches the promtool test files
+# (*.test.yml), which Prometheus refuses (PE-5a-R1-01). The ticket that adds a rule file adds it
+# here (slo.yml: ST-075c).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/rules/billing.yml
+
+scrape_configs:
+  - job_name: otel-collector
+    # Keep the emitter's job label (racket-api, racket-purge) from the collector's exporter.
+    honor_labels: true
+    static_configs:
+      - targets: ["otel-collector:8889"]

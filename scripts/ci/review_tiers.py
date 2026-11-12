@@ -78,6 +78,7 @@ _TIER2 = (
     # logging config and secrets
     "backend/src/racket/platform/logs.py",
     "backend/src/racket/platform/settings.py",
+    "backend/src/racket/platform/fault*",  # the ADR 0012 API fault seam (ST-075d, T5-OB-5)
     "infra/env.example",
     "infra/tls/**",
     ".gitleaks.toml",
@@ -98,9 +99,7 @@ _TIER2 = (
 
 # A tier 2 glob whose path a named ticket creates. Classified like `RULES`; exempt from the
 # liveness test until it matches, then it must move into `_TIER2` (the test fails until it does).
-PENDING_GLOBS: dict[str, str] = {
-    "backend/src/racket/platform/fault*": "ST-075d",
-}
+PENDING_GLOBS: dict[str, str] = {}
 
 _TIER1 = (
     "backend/**",
