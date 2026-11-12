@@ -6,8 +6,8 @@ through its port only (context map C4, rule 1).
     racket-integrity --expect-count N --expect-sha256 HEX   # also compares with backup.json
 
 Stdout: ``{"corrections": {"count": N, "sha256": "...", "equal": bool}}`` (``equal`` only when
-compared). Exit 0: printed, equal, or ``--help``; 1: not equal (named on stderr); 2: usage, configuration
-or database error. Reads ``DATABASE_URL`` only.
+compared). Exit 0: printed, equal, or ``--help``; 1: not equal (named on stderr); 2: usage,
+configuration or database error. Reads ``DATABASE_URL`` only.
 """
 
 from __future__ import annotations
