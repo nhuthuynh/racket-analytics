@@ -3,6 +3,9 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f infra/compose.yaml
 ENV_FILE := infra/.env
+# ST-082 (ADR 0058 rule 7): `dev` builds the working tree; any other tag is a release image set.
+IMAGE_TAG ?= dev
+RELEASE_COMPOSE := $(COMPOSE) -f infra/compose.release.yaml
 
 .PHONY: help
 help: ## List targets
@@ -17,8 +20,17 @@ $(ENV_FILE):
 env: $(ENV_FILE) ## Create infra/.env from infra/env.example
 
 .PHONY: up
-up: $(ENV_FILE) ## Build and start the full stack, wait until healthy
+up: $(ENV_FILE) ## Build and start the full stack, wait until healthy (IMAGE_TAG=<release>: start that tag, no build)
+ifeq ($(IMAGE_TAG),dev)
 	$(COMPOSE) up -d --build --wait
+else
+	IMAGE_TAG=$(IMAGE_TAG) $(RELEASE_COMPOSE) up -d --no-build --wait
+endif
+
+.PHONY: release-images
+release-images: $(ENV_FILE) ## Build the release image set racket-<service>:<IMAGE_TAG> from the working tree
+	@test "$(IMAGE_TAG)" != dev || { echo "release-images: set IMAGE_TAG=<release>" >&2; exit 2; }
+	IMAGE_TAG=$(IMAGE_TAG) $(RELEASE_COMPOSE) --profile ops build
 
 .PHONY: up-deps
 up-deps: $(ENV_FILE) ## Start only backing services (Postgres, SeaweedFS, Mailpit, Jaeger)

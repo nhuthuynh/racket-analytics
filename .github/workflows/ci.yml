@@ -440,6 +440,10 @@ jobs:
       # QA-DOR-CHECK (PRC-7.1): the current sprint's requirements-breakdown.md is atomic (NFR rows
       # name metric, method, target, test level; FR rules have a negative Example; ids parse).
       - run: python3 scripts/ci/check_atomic_breakdown.py
+      # ST-082 (REL-1.1, FR-055.R1): the R1 release notes list every R1 FR, every FEATURE_* flag
+      # with its env.example default, every known limitation with its P-n, and the notice; T5-RB-3:
+      # no privacy flag on, the RC runtime settings (APP_ENV, DEV_IDENTITY_ENABLED) and the override.
+      - run: python3 scripts/ci/check_release_notes.py
 
   infra-tests:
     name: Infra, hooks and CI-script tests (ST-001..ST-003)
