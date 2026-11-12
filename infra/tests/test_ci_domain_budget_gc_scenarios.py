@@ -2,9 +2,11 @@
 
 Runs the budgeted domain step's command from ci.yml with a probe plugin. The probe is loaded
 with `-p` into the controller and every worker (xdist passes the option on); at each worker's
-first test it records whether the collector is on, how many objects are frozen, and whether
+first test it records whether the collector is on, how many objects are frozen, whether
 the dict of the test's own module (made during collection) is one of the frozen objects
-(gc.get_objects() lists the collector's generations only, never frozen objects).
+(gc.get_objects() lists the collector's generations only, never frozen objects), and how many
+frozen objects were already garbage (unfreeze, collect, freeze again: cyclic garbage that
+start-up or collection left behind would otherwise never be collected or finalized).
 """
 
 from __future__ import annotations
@@ -33,6 +35,9 @@ def pytest_runtest_call(item):
     worker = os.environ.get("PYTEST_XDIST_WORKER", "main")
     record = {"worker": worker, "enabled": gc.isenabled(), "frozen": gc.get_freeze_count(),
               "module_frozen": module_dict not in tracked}
+    gc.unfreeze()
+    record["frozen_garbage"] = gc.collect()
+    gc.freeze()
     with open(os.path.join(os.environ["GC_PROBE_DIR"], worker + ".json"), "w") as f:
         json.dump(record, f)
 """
@@ -72,9 +77,21 @@ def workers_frozen(world: dict[str, Any]) -> None:
         assert rec["frozen"] > 50_000, rec  # start-up + collection (~220,000 locally)
 
 
+@then("no garbage that start-up or collection left behind is among the frozen objects")
+def no_frozen_garbage(world: dict[str, Any]) -> None:
+    _, out = world["probe"]
+    records = [json.loads(p.read_text()) for p in sorted(out.glob("gw*.json"))]
+    assert records
+    for rec in records:
+        # ~21,900 per worker locally when collection's cyclic garbage is frozen, 20 when not
+        assert rec["frozen_garbage"] < 1_000, rec
+
+
 @then("no test failed or errored in that run")
 def probe_run_green(world: dict[str, Any]) -> None:
     res, _ = world["probe"]
     assert res.returncode == 0, res.stdout[-3000:]
     plain = re.sub(r"\x1b\[[0-9;]*m", "", res.stdout)  # CI sets FORCE_COLOR=1
-    assert re.search(r"\b1[0-9]{3} passed\b", plain), plain[-500:]
+    passed = re.search(r"\b(\d+) passed\b", plain)
+    assert passed, plain[-500:]
+    assert int(passed.group(1)) >= 1_000, plain[-500:]  # the whole suite ran

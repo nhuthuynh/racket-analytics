@@ -12,4 +12,5 @@ Feature: Domain workers keep start-up and collection objects out of the cyclic g
     Given the backend unit suite on CI's DOMAIN_TEST_PATHS
     When the budgeted domain step's command from ci.yml runs with a garbage-collector probe
     Then every worker ran its tests with the collector on and its collected test modules frozen
+    And no garbage that start-up or collection left behind is among the frozen objects
     And no test failed or errored in that run
