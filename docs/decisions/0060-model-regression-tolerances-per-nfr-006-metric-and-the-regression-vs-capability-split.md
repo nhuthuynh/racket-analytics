@@ -10,7 +10,7 @@
 
 NFR-006 lists the vision metrics measured at R2 entry on a frozen, venue-split gold set and says "regression tolerances set in an ADR before R2". testing-strategy §6 splits the model-quality layer into *regression evals* (pass at about 100 %, gate merges; "a metric may not drop by more than its tolerance") and *capability evals* (track progress to targets, do not gate merges), and ADR 0004 left the tolerances to this ADR. No tolerance and no split exists yet, so a model PR cannot be judged pass or fail, and the senior-ml-cv-engineer DoD item "no regression beyond tolerance on frozen gold sets" cannot be checked.
 
-This ADR answers two questions for every NFR-006 metric: (1) how far may a candidate model drop against the accepted baseline before the model PR fails, and (2) is the metric's NFR-006 target a gate (regression label) or tracked only (capability label)? No model and no gold-set footage exist in Sprint 5 (footage waits on P11), so nothing is measured here; the ADR fixes the rules the first measurement will use.
+This ADR answers two questions for every NFR-006 metric: (1) how far may a candidate model drop against the best accepted result (the baseline, Rule 1) before the model PR fails, and (2) is the metric's NFR-006 target a gate (regression label) or tracked only (capability label)? No model and no gold-set footage exist in Sprint 5 (footage waits on P11), so nothing is measured here; the ADR fixes the rules the first measurement will use.
 
 ## Decision drivers
 
@@ -26,7 +26,7 @@ This ADR answers two questions for every NFR-006 metric: (1) how far may a candi
 1. **Do nothing:** keep "tolerances set in an ADR before R2" open and judge model PRs case by case.
 2. **Absolute targets only:** every model PR must meet the NFR-006 targets; no baseline comparison.
 3. **Zero tolerance:** every model PR must be at least as good as the baseline on every metric.
-4. **Per-metric tolerance against the accepted baseline for every metric, plus a regression/capability label per metric target** (chosen).
+4. **Per-metric tolerance against the best accepted result for every metric, plus a regression/capability label per metric target** (chosen).
 5. **Statistical test per metric** (e.g. a paired bootstrap interval of the difference must exclude a drop larger than a margin).
 
 ## Decision outcome
@@ -35,19 +35,34 @@ Chosen option: **4**, because it is the only option that gates what a model PR c
 
 ### Rule 1. The regression check (gates every model PR, every metric)
 
-- **Baseline:** the metrics of the last accepted `pipeline_version`, run on the **same gold-set version** with the same config as the candidate. A new gold-set version is first run with the baseline model; a candidate is never compared across gold-set versions.
+- **Baseline (per metric, best accepted result):** for each metric separately, the best value any accepted `pipeline_version` has reached on the **same gold-set version** with the same config as the candidate (highest for a higher-is-better metric, lowest for a lower-is-better one). It is not the last merged model: comparing only with the last merged model would let successive PRs each drop a metric by up to its tolerance, so five PRs at −1 pp would lose 5 pp of ball F1 with every PR passing. With the best accepted result as the reference, the total loss on a metric is at most its tolerance below the best result ever accepted on that gold-set version, however many PRs merge (judgment).
+- **Gold-set versions:** a candidate is never compared across gold-set versions. A new gold-set version is first run with the current accepted `pipeline_version`; that run starts the per-metric best values for the new version. The eval report records the best values carried over from the previous gold-set version next to the new ones, so a drift across versions stays visible to the reviewer.
 - **Pass:** for a higher-is-better metric, `candidate ≥ baseline − tolerance`; for a lower-is-better metric, `candidate ≤ baseline + tolerance`. A drop of exactly the tolerance passes.
+- **Updating the baseline:** when a model PR merges, each metric's baseline becomes the better of its current value and the candidate's value. A baseline never gets worse on the same gold-set version, so a PR that passes with a drop does not lower the reference for the next PR.
 - **Fail:** any one metric outside its tolerance fails the model PR. There is no averaging across metrics and no trade of one metric against another inside this check; a deliberate trade needs a new ADR that records it (judgment).
-- **No baseline yet** (the first model of a stage): the check is "not applicable" for that stage, and the PR's eval report becomes the baseline when it merges.
+- **No baseline yet** (the first model of a stage): the check is "not applicable" for that stage, and the PR's eval report sets the per-metric baseline when it merges.
 - **Low sample:** when the gold set gives fewer units than the "Min. units" column, the result is reported as low sample and the PR needs the senior-ml-cv-engineer and senior-qa-engineer to agree in the PR review; it neither passes nor fails automatically (judgment, in the spirit of ADR 0005).
 - **Determinism:** fixed seeds, pinned weights hash and config, recorded in the eval report (planned) under `docs/evals/` per the role DoD.
 
 ### Rule 2. The regression vs capability label (applies to the NFR-006 target)
 
-- **Regression label:** the NFR-006 target is a gate. A model PR or release that falls below it fails, in addition to Rule 1.
-- **Capability label:** the target is tracked and reported on each eval run; it does not gate merges. Rule 1 still gates.
-- **Graduation:** a capability metric becomes regression-labelled when the baseline meets its NFR-006 target on the frozen gold set at a sprint eval run; the change is recorded as a dated note on this ADR. A metric never moves back from regression to capability without a new ADR (judgment).
-- **Labels at R2 entry:** rally-segmentation F1 is regression-labelled, because NFR-006 makes it the R2 gate (spec M2, ADR 0004). Every other NFR-006 metric is capability-labelled, because NFR-006 calls them "R2 entry targets, reviewed at retro".
+- **Regression label:** the NFR-006 target is a gate, in addition to Rule 1, in two steps:
+  - **Release gate, from the moment the label applies:** a release whose eval run falls below the target fails.
+  - **Model-PR gate, only once an accepted baseline has met the target** on the frozen gold set: from then on, a model PR that falls below the target fails, even when Rule 1 passes. Until an accepted baseline has met the target, model PRs are gated by Rule 1 alone and the target is reported on each eval run. This keeps the decision driver "a model PR must not be blocked by a target the pipeline has never reached".
+  - The day an accepted baseline first meets the target is recorded as a dated note on this ADR.
+- **Capability label:** the target is tracked and reported on each eval run; it gates neither model PRs nor releases. Rule 1 still gates model PRs.
+- **Graduation:** a capability metric becomes regression-labelled when the baseline meets its NFR-006 target on the frozen gold set at a sprint eval run; the change is recorded as a dated note on this ADR. Because the baseline has already met the target, a graduated metric gates both releases and model PRs from that note on. A metric never moves back from regression to capability without a new ADR (judgment).
+- **When the labels apply:** from the date this ADR is accepted, not only from the R2 measurement. The first release they gate is the R2 entry release.
+- **Labels now:** rally-segmentation F1 (M11) is regression-labelled, because NFR-006 makes it the R2 gate (spec M2, ADR 0004). Every other NFR-006 metric is capability-labelled, because NFR-006 calls them "R2 entry targets, reviewed at retro".
+- **Worked examples for M11 (target 90 %, tolerance 1.0 pp):**
+
+| Case | Rule 1 | M11 target gate | Model PR | Release built from it |
+|---|---|---|---|---|
+| First segmentation PR, 86 %, no baseline | not applicable | no accepted baseline has met 90 %: release only | passes; 86 % becomes the baseline | fails (86 % < 90 %) |
+| Pre-R2 PR, 75 %, baseline 74 %, no baseline has met 90 % | passes | release only | passes; baseline becomes 75 % | fails (75 % < 90 %) |
+| Pre-R2 PR, 72 %, baseline 74 % | fails (drop 2 pp > 1.0 pp) | release only | fails | not built |
+| PR, 91 %, baseline 90.5 % (met 90 %) | passes | gates model PRs and releases | passes | passes M11 |
+| PR, 89.8 %, baseline 90.5 % (met 90 %) | passes (drop 0.7 pp) | gates model PRs and releases | fails (89.8 % < 90 %) | not built |
 
 ### Rule 3. Tolerances, direction and labels per NFR-006 metric
 
@@ -65,7 +80,7 @@ All values are (judgment) until the first baseline (see Confirmation). "pp" mean
 | M8 | p95 hit-timing error | ms, lower is better | ≤ 100 ms | 10 ms | 500 matched hits | capability | The tail is noisier than the median, so the tolerance is a tenth of the target |
 | M9 | Bounce recall | %, higher is better | ≥ 70 % | 2.0 pp | 300 labelled bounces | capability | Fewer bounces than hits per match, so a wider tolerance than M5/M6 |
 | M10 | Landing error p80 | cm, lower is better | ≤ 60 cm | 3 cm | 300 matched bounces | capability | 5 % of the target; court-plane metric [DOM/CV-12] |
-| M11 | Rally-segmentation F1 (start and end each within ±1.0 s, no merge, no split; ADR 0004) | %, higher is better | ≥ 90 % (R2 gate) | 1.0 pp, and never below 90 % once met | 100 gold rallies | **regression** | The R2 gate (spec M2); the matcher is ST-084b (NFR-006.1-.4). Below 90 % the target fails the release even when Rule 1 passes |
+| M11 | Rally-segmentation F1 (start and end each within ±1.0 s, no merge, no split; ADR 0004) | %, higher is better | ≥ 90 % (R2 gate) | 1.0 pp | 100 gold rallies | **regression** | The R2 gate (spec M2); the matcher is ST-084b (NFR-006.1-.4). Per Rule 2, the 90 % target gates every release now, and gates model PRs only after an accepted baseline has met it; until then Rule 1 alone gates model PRs |
 
 The table has one row per NFR-006 metric: 11 rows for the 11 metrics in the NFR-006 "Metric" column (hit P/R and the two timing statistics each count separately, because each has its own target and direction).
 
@@ -91,7 +106,7 @@ The table has one row per NFR-006 metric: 11 rows for the 11 metrics in the NFR-
 
 ### Option 4: per-metric tolerance plus labels (chosen)
 - Good: blocks only real drops, keeps the R2 gate strict, and makes the capability work visible; every row has a unit, direction and number.
-- Bad: the numbers are judgment until the first baseline, and a fixed tolerance ignores gold-set size beyond the "Min. units" floor.
+- Bad: the numbers are judgment until the first baseline, and a fixed tolerance ignores gold-set size beyond the "Min. units" floor. A lucky run can set a best value that later honest runs cannot reach within the tolerance; the first baseline run measures run-to-run spread for this reason (follow-up (b)).
 
 ### Option 5: statistical test per metric
 - Good: separates real drops from noise and adapts to gold-set size.
@@ -116,7 +131,7 @@ The table has one row per NFR-006 metric: 11 rows for the 11 metrics in the NFR-
 | Homography valid only for court-plane points | [DOM/CV-12] | verified source |
 | NFR-006 metrics, targets and "rally F1 is the R2 gate; others R2 entry targets" | `docs/requirements/non-functional-requirements.md` NFR-006 row | requirement |
 | Rally matching rule (±1.0 s, no merge or split) | ADR 0004 | decision |
-| Tolerance values, minimum units, graduation rule | (judgment) | judgment |
+| Tolerance values, minimum units, graduation rule, best-accepted-result baseline, two-step target gate | (judgment) | judgment |
 | No eval data yet; footage waits on P11 | `docs/sprints/05/goal-scorecard.md` row S5-P11 | not applicable (no model) |
 
 ## Confirmation
