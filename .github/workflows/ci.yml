@@ -263,11 +263,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}" "diff-cover==10.6.0"
+      # CI-FFMPEG: cached, checksum-pinned and bounded (apt took 17 m 48 s in run 42019671445).
       - name: Install ffprobe (probe stage and probe tests need the real binary)
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends ffmpeg
-          ffprobe -version | head -1
+        uses: ./.github/actions/install-ffmpeg
+        timeout-minutes: 4
       - name: Start backing services (same as production; never SQLite, AQS/OPS-05)
         # `up --wait` fails on a one-shot that exits (even 0), so the bucket init runs after.
         run: |
@@ -561,11 +560,10 @@ jobs:
           uv sync --locked
           uv run --no-sync pytest -q tests/integration/test_it_00_10_worker_sandbox.py \
             tests/integration/test_it_00_10_worker_sandbox_strict.py
+      # CI-FFMPEG: cached, checksum-pinned and bounded; the LGPL build has libvpx.
       - name: Install ffmpeg (the rally-video specs build a decodable VP9 stand-in; W-01)
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends ffmpeg
-          ffmpeg -version | head -1
+        uses: ./.github/actions/install-ffmpeg
+        timeout-minutes: 4
       - working-directory: web
         run: |
           pnpm install --frozen-lockfile
@@ -799,11 +797,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install "uv==${UV_VERSION}"
+      # CI-FFMPEG: cached, checksum-pinned and bounded (apt took 17 m 48 s in run 42019671445).
       - name: Install ffprobe (probe stage and probe tests need the real binary)
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends ffmpeg
-          ffprobe -version | head -1
+        uses: ./.github/actions/install-ffmpeg
+        timeout-minutes: 4
       - run: |
           $COMPOSE up -d --wait postgres objectstore mailpit tracing
           $COMPOSE run --rm objectstore-init

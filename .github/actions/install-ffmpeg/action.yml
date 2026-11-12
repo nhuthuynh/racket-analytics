@@ -1,0 +1,31 @@
+# CI-FFMPEG (story "CI first"; NFR-073; NFR-062). The one place CI installs ffmpeg and ffprobe.
+# CI run 42019671445 (PR #225): `apt-get install ffmpeg` took 17 m 48 s of a 20 min job. This
+# restores the pinned BtbN LGPL build (the one the worker image ships) from the Actions cache, or
+# downloads it, SHA-256-verified and time-bounded, with scripts/ci/install_ffmpeg.py.
+# Callers put `timeout-minutes: 4` on the step; the script's own budget (180 s) ends it first
+# with a named "CI-FFMPEG: ... exceeded its budget" failure.
+name: Install the pinned ffmpeg build
+description: Cached, checksum-pinned, time-bounded ffmpeg and ffprobe on PATH (CI-FFMPEG).
+runs:
+  using: composite
+  steps:
+    - name: Cache key (runner image, architecture, pinned build)
+      id: key
+      shell: bash
+      run: |
+        pin_sha="$(sha256sum "$GITHUB_WORKSPACE/scripts/ci/ffmpeg-pin.json" | cut -c1-16)"
+        echo "key=ffmpeg-${ImageOS:-unknown}-${RUNNER_ARCH}-${pin_sha}" >> "$GITHUB_OUTPUT"
+    - name: Restore the pinned build
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/racket-ffmpeg
+        key: ${{ steps.key.outputs.key }}
+    - name: Verify or download the pinned build (bounded)
+      shell: bash
+      run: |
+        python3 "$GITHUB_WORKSPACE/scripts/ci/install_ffmpeg.py" \
+          --pin "$GITHUB_WORKSPACE/scripts/ci/ffmpeg-pin.json" \
+          --dest "$HOME/.cache/racket-ffmpeg" --github-path "$GITHUB_PATH"
+        export PATH="$HOME/.cache/racket-ffmpeg/bin:$PATH"
+        ffmpeg -version | head -1
+        ffprobe -version | head -1

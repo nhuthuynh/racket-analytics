@@ -1,0 +1,15 @@
+{
+  "schema": "ffmpeg-pin/v1",
+  "tag": "autobuild-2026-09-30-13-08",
+  "name": "ffmpeg-n8.1.3-9-g29e619e767-linux64-lgpl-8.1",
+  "archive_sha256": "dfa863a00ca81f1bdf58a372b18cff4820f0017e55de32778de8ecd8ed92a02e",
+  "sources": [
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/{tag}/{name}.tar.xz"
+  ],
+  "files": {
+    "bin/ffmpeg": "d107dfbdf23395f8d15e7033bc2457c36af45d742a34df0f359cc21e3727ce87",
+    "bin/ffprobe": "0d67946a7281fc4a169705c49dbbde2da0d76e654b1a289eabc82f786c4fba41",
+    "LICENSE.txt": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768"
+  },
+  "licence": "LGPL-3.0-or-later: BtbN FFmpeg-Builds lgpl variant, no --enable-gpl or --enable-nonfree; the same build infra/docker/backend.Dockerfile pins (ADR 0008). CI-only copy of ffmpeg and ffprobe, never shipped (NFR-062; docs/sprints/05/decisions/CI-FFMPEG.md)."
+}

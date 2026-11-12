@@ -7,6 +7,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ _spec = importlib.util.spec_from_file_location(
 assert _spec is not None
 assert _spec.loader is not None
 ff = importlib.util.module_from_spec(_spec)
+sys.modules["install_ffmpeg"] = ff  # dataclasses resolve the module by name
 _spec.loader.exec_module(ff)
 
 PINNED = {rel: sha256(data) for rel, data in FILES.items()}
