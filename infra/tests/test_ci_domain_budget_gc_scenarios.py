@@ -21,7 +21,7 @@ from pytest_bdd import given, scenarios, then, when
 pytestmark = pytest.mark.integration
 scenarios("ci_domain_budget_gc.feature")
 
-PROBE = '''
+PROBE = """
 import gc, json, os
 _seen = []
 def pytest_runtest_call(item):
@@ -35,7 +35,7 @@ def pytest_runtest_call(item):
               "module_frozen": module_dict not in tracked}
     with open(os.path.join(os.environ["GC_PROBE_DIR"], worker + ".json"), "w") as f:
         json.dump(record, f)
-'''
+"""
 
 
 @pytest.fixture
