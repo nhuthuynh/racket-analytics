@@ -179,7 +179,7 @@ def test_sprint_set_is_merged_into_main_from_sprint_branches_only() -> None:
 )
 def test_a_status_file_without_a_readable_map_is_refused(bad: dict[str, Any]) -> None:
     rc = load(CLOSE)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"status\.json"):
         rc.status_prs(bad)
 
 
@@ -241,7 +241,8 @@ def test_a_ledger_finding_cause_is_open_only_while_its_latest_row_is_open() -> N
         blockers(("Backup. Cause: SEC-S5-TM-01", "Open"), ("Drills. Cause: COACH-S5-01", "Open"))
     )
     problems = rc.cause_problems(rows, states(), led)
-    assert len(problems) == 1 and "COACH-S5-01" in problems[0], problems
+    assert len(problems) == 1, problems
+    assert "COACH-S5-01" in problems[0], problems
 
 
 @pytest.mark.unit
@@ -262,7 +263,7 @@ def test_a_po_item_cause_counts_as_open() -> None:
 @pytest.mark.unit
 def test_a_blockers_file_without_a_status_table_is_refused() -> None:
     rc = load(CLOSE)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Status column"):
         rc.open_blocker_rows("# Sprint 5 blockers\n\nNo table here.\n")
 
 
@@ -369,9 +370,7 @@ def test_retro05_check_exits_1_on_a_planted_extra_pr_and_a_planted_closed_cause(
 @pytest.mark.integration
 def test_retro05_check_exits_0_when_the_close_is_consistent(tmp_path: Path) -> None:
     stub = CloseStub(pulls=[pr(201, "A"), pr(202, "B")], issues={151: "open"})
-    args = close_args(
-        tmp_path, status(201, 202), ledger(), blockers(("Disk. Cause: #151", "Open"))
-    )
+    args = close_args(tmp_path, status(201, 202), ledger(), blockers(("Disk. Cause: #151", "Open")))
     with serve(stub):
         r = run(CLOSE, stub, *args)
     assert r.returncode == 0, r.stdout + r.stderr

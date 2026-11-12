@@ -11,7 +11,16 @@ from pathlib import Path
 import pytest
 from close_checks_stub import CloseStub, pr, serve
 from pytest_bdd import given, parsers, scenarios, then, when
-from test_close_checks import CLOSE, READY, VERIFY_MERGED, VERIFY_OPEN, blockers, ledger, run, status
+from test_close_checks import (
+    CLOSE,
+    READY,
+    VERIFY_MERGED,
+    VERIFY_OPEN,
+    blockers,
+    ledger,
+    run,
+    status,
+)
 
 pytestmark = [pytest.mark.scenario, pytest.mark.integration]
 
@@ -39,7 +48,9 @@ def verify_open(stub: CloseStub) -> None:
 
 
 @given(parsers.parse('the ledger holds "{finding}" as "{disposition}"'))
-def ledger_row(inputs: dict[str, list[tuple[str, str, str]]], finding: str, disposition: str) -> None:
+def ledger_row(
+    inputs: dict[str, list[tuple[str, str, str]]], finding: str, disposition: str
+) -> None:
     inputs["ledger"].append((finding, "major", disposition))
 
 
