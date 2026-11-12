@@ -231,6 +231,11 @@
       "id": "RETRO-05",
       "branch": "s05/retro-05",
       "owner": "engineering-manager"
+    },
+    {
+      "id": "CI-DOMAIN-BUDGET",
+      "branch": "s05/ci-domain-budget-headroom",
+      "owner": "sre-devops-engineer"
     }
   ]
 }
