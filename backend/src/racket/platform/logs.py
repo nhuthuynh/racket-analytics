@@ -1,7 +1,8 @@
 """Structured JSON logs to stdout with correlation fields (ST-005; AQS/OPS-03, NFR-076b, NFR-069).
 
 Every line has ``ts`` (UTC, ``Z``), ``level``, ``logger``, ``msg``, ``trace_id``, ``request_id``
-and the pseudonymous ``user_id`` (an account UUID, never a name or email). Fields passed via
+and the pseudonymous ``user_id`` (an account UUID, never a name or email): an explicit
+``extra={"user_id": ...}`` wins over the request's account. Fields passed via
 ``extra=`` are added as they are; callers must never pass personal data, titles, tokens or URLs.
 Chatty third-party loggers that can print signed URLs or headers are capped at WARNING.
 """
@@ -46,7 +47,7 @@ class JsonFormatter(logging.Formatter):
             "msg": record.getMessage(),
             "trace_id": current_trace_id(),
             "request_id": request_id_var.get(),
-            "user_id": user_id_var.get(),
+            "user_id": getattr(record, "user_id", None) or user_id_var.get(),
         }
         for key, value in vars(record).items():
             if key not in _STANDARD and key not in payload:

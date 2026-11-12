@@ -24,21 +24,33 @@ All commands run from the repository root. `C` stands for `docker compose -f inf
 7. **Objects.** Decrypt `objects.tar.age` and upload every `objects/<key>` member back to the media bucket under `<key>`; the uploaded keys, sizes and SHA-256s must equal the tar's `objects.manifest.json` (NFR-045.4). The drill does this inside the API image: `restore_drill.py objects restore` reads the tar on stdin.
 8. **Logins.** `$C run --rm --no-deps db-roles` (the dump holds no password; this sets the worker and backup logins from `infra/.env`).
 9. **Delete again what was deleted after the backup, then purge, before any traffic** (ADR 0058 rule 5 and the R1 residual of [decision 6](../decisions/0058-encrypted-nightly-dump-and-object-mirror-restore-then-purge-five-day-backup-retention-rollback-by-downgrade-then-redeploy.md#6-accepted-residual-for-r1-deletions-after-the-newest-backup)). A deletion acknowledged after `taken_at` is not in the set, so without this step up to 24 h of deletions (the RPO) come back live when step 10 opens traffic.
-   1. **List the deletions after `taken_at`.** From the lines saved before step 1, keep the `match.deleted` and `account.deleted` lines (lines that are not JSON are skipped) whose `ts` is at or after `taken_at` (log fields: [deletion-and-purge.md §4.5](../architecture/deletion-and-purge.md#45-log-lines-nfr-057-it-03-13)). The comparison is to the second, so a line from the same second is kept; deleting again what the set already holds as a tombstone is harmless:
+   1. **List the deletions after `taken_at`.** From the lines saved before step 1, keep the `match.deleted` and `account.deleted` lines (lines that are not JSON objects are skipped) whose `ts` is at or after `taken_at` (log fields: [deletion-and-purge.md §4.5](../architecture/deletion-and-purge.md#45-log-lines-nfr-057-it-03-13)). The comparison is to the second, so a line from the same second is kept; deleting again what the set already holds as a tombstone is harmless. Matches are listed by `match_id` alone: sub-step 2 reads each owner from the restored database, so a line's `user_id` is never needed for a match:
       ```
       T=<taken_at from backup.json>
-      jq -rR --arg t "$T" 'fromjson? | select(.event == "account.deleted" and .ts[0:19] >= $t[0:19]) | .user_id' \
-        .local/restore-logs.jsonl | sort -u > .local/redelete-accounts.txt
-      jq -rR --arg t "$T" 'fromjson? | select(.event == "match.deleted" and .ts[0:19] >= $t[0:19] and .user_id != null) | "\(.match_id):\(.user_id)"' \
-        .local/restore-logs.jsonl | sort -u > .local/redelete-matches.txt
+      LOGS=.local/restore-logs.jsonl
+      jq -rR --arg t "$T" 'fromjson? | objects | select(.event == "account.deleted" and (.ts // "")[0:19] >= $t[0:19]) | .user_id' \
+        "$LOGS" | sort -u > .local/redelete-accounts.txt
+      jq -rR --arg t "$T" 'fromjson? | objects | select(.event == "match.deleted" and (.ts // "")[0:19] >= $t[0:19]) | .match_id' \
+        "$LOGS" | sort -u > .local/redelete-matches.txt
+      UUID='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      NEWER=$(jq -R --arg t "$T" 'fromjson? | objects | select((.ts // "")[0:19] >= $t[0:19]) | 1' "$LOGS" | wc -l)
+      if [ "$NEWER" -eq 0 ]; then
+        echo "STOP: no log line at or after taken_at; keep the stack closed and escalate"
+      elif grep -vE "$UUID" .local/redelete-accounts.txt .local/redelete-matches.txt; then
+        echo "STOP: the deletion lines above carry no id; keep the stack closed and escalate"
+      else
+        echo "ids ok: $(wc -l < .local/redelete-accounts.txt) accounts, $(wc -l < .local/redelete-matches.txt) matches"
+      fi
       ```
-      A `match.deleted` line with a null `user_id` comes from the purge's second net for a deleted account; that account's own line covers it. No log lines at all for the time after `taken_at`: record that in the incident notes, keep the stack closed and escalate; do not open traffic on a guess.
-   2. **Delete those ids again** through the same code as `DELETE /me` and `DELETE /matches/{id}` (deletion-and-purge.md §3.1 and §3.2: tombstone, uploads closed, address and names erased, sessions deleted). An id the restored database holds as already deleted, or does not hold at all, is skipped, so running it twice changes nothing:
+      Go on only after `ids ok`. Every deletion line names its account and match (`JsonFormatter` keeps an explicit `user_id`, ADR 0058 decision 6), so a `null` or missing id means the lines cannot be trusted, and no line after `taken_at` means the log does not cover the gap: on either `STOP`, record it in the incident notes and do not open traffic on a guess.
+   2. **Delete those ids again** through the same code as `DELETE /me` and `DELETE /matches/{id}` (deletion-and-purge.md §3.1 and §3.2: tombstone, uploads closed, address and names erased, sessions deleted). The owner of each match is read from the restored database. An id the restored database holds as already deleted, or does not hold at all, is skipped, so running it twice changes nothing:
       ```
       $C run --rm --no-deps -T -e REDELETE_ACCOUNTS="$(cat .local/redelete-accounts.txt)" \
         -e REDELETE_MATCHES="$(cat .local/redelete-matches.txt)" --entrypoint python api - <<'EOF'
       import os, uuid
+      import sqlalchemy as sa
       from racket.matches.domain import MatchId, OwnerId
+      from racket.matches.repository import matches as matches_table
       from racket.matches.service import MatchService
       from racket.platform.db import engine_for, session_factory
       from racket.platform.errors import Unauthenticated
@@ -51,16 +63,19 @@ All commands run from the repository root. `C` stands for `docker compose -f inf
                   print("account deleted again", user)
               except Unauthenticated:
                   print("account already deleted or absent", user)
-      for pair in os.environ.get("REDELETE_MATCHES", "").split():
-          match_id, user = pair.split(":")
+      for raw in os.environ.get("REDELETE_MATCHES", "").split():
+          match_id = MatchId(raw)
           with new() as s:
+              owner = s.execute(
+                  sa.select(matches_table.c.owner_id).where(matches_table.c.id == uuid.UUID(raw))
+              ).scalar_one_or_none()
               service = MatchService(s)
-              match = service.matches.get_owned(MatchId(match_id), OwnerId(user))
+              match = None if owner is None else service.matches.get_owned(match_id, OwnerId(str(owner)))
               if match is None:
-                  print("match already deleted or absent", match_id)
+                  print("match already deleted or absent", raw)
               else:
                   service.delete(match, {"confirm": "delete"})
-                  print("match deleted again", match_id)
+                  print("match deleted again", raw)
       EOF
       ```
       Keep its output with the incident notes: one line per id.
