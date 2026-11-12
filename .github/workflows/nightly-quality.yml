@@ -8,6 +8,9 @@
 # * perf-r1:  R1 reads at 50 RPS per endpoint on a flags-on Compose stack (ST-074; NFR-010.1-.9;
 #             G05-01): the goal-scorecard §4 G05-01 command, 3 runs, every run must pass. Not
 #             PR-blocking at first (sprint-05 §8.4, judgment) and not needed by publish.
+# * browser-matrix: the @critical journeys in chromium, webkit and android-chrome, 3 repeats each,
+#             retries off (ST-079; NFR-024.1-.3; G05-04): the goal-scorecard §4 G05-04 command.
+#             Not needed by publish.
 # * publish:  writes both results with the run date into the current sprint's status.json on
 #             the default branch. Only this job can write, and it never runs test code.
 # Reports pass between jobs as job outputs (small JSON), so no artifact download is needed.
@@ -30,6 +33,8 @@ env:
   UV_VERSION: "0.8.17"
   MUTMUT_VERSION: "3.8.0"
   FORCE_COLOR: "0"
+  NODE_VERSION: "22"
+  COMPOSE: docker compose -f infra/compose.yaml --env-file infra/env.example
 
 jobs:
   oracle:
@@ -113,6 +118,15 @@ jobs:
           uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
             --project . --target src/racket/coaching/weakness --tests tests/unit/coaching \
             --min-score 0.80 --out ../reports/mutation-coaching-weakness.json
+      # Sprint-05 §8 (ST-076b): the corrections fingerprint (NFR-045.3), one module, >= 0.80.
+      - name: mutmut run, matches/scorebook/integrity >= 0.80 (sprint-05 §8)
+        if: success() || failure()
+        run: |
+          rm -rf mutants
+          uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
+            --project . --target src/racket/matches/scorebook/integrity.py \
+            --tests tests/unit/matches/test_corrections_integrity.py \
+            --min-score 0.80 --out ../reports/mutation-matches-integrity.json
       - name: Report as job output
         id: report
         if: always()
@@ -176,6 +190,60 @@ jobs:
         with:
           name: nightly-perf-r1
           path: reports/perf/
+          if-no-files-found: warn
+
+  browser-matrix:
+    name: Browser matrix, @critical journeys x 3 projects x 3 repeats (NFR-024; G05-04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Start the full stack (per-IP sign-in limits raised, as in the CI e2e job)
+        env:
+          AUTH_LINK_LIMIT_PER_IP: "1000"
+          AUTH_EXCHANGE_LIMIT_PER_IP: "1000"
+        run: $COMPOSE up -d --build --wait
+      - name: Trust the dev CA (public root certificate only; ADR 0029)
+        run: |
+          $COMPOSE cp web-tls:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/racket-dev-ca.crt"
+          sudo cp "$RUNNER_TEMP/racket-dev-ca.crt" /usr/local/share/ca-certificates/racket-dev-ca.crt
+          sudo update-ca-certificates
+      - name: Install ffmpeg (the rally-video specs build a decodable VP9 stand-in; W-01)
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+      # chromium and android-chrome launch the runner image's Google Chrome (CI=true,
+      # e2e/helpers/browser-channel.ts); only WebKit (and the bundled Chromium) are downloaded.
+      - working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium webkit
+      - name: The goal-scorecard §4 G05-04 command
+        shell: bash # -o pipefail: the method's rc survives the tee
+        env:
+          BASE_URL: https://localhost:3000
+        run: |
+          mkdir -p reports
+          (cd web && for p in chromium webkit android-chrome; do
+            PW_PROJECTS=$p npx playwright test --repeat-each 3 --grep @critical --output ../reports/pw-$p \
+              --reporter json > ../reports/pw-$p.json || echo "playwright $p rc=$?"; done)
+          python3 scripts/measure/browser_matrix.py reports/pw-*.json --require chromium,webkit,android-chrome \
+            --json reports/browser-matrix.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Service logs on failure
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=200
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-browser-matrix
+          path: reports/
           if-no-files-found: warn
 
   publish:

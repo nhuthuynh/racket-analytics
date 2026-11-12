@@ -79,6 +79,7 @@ _TIER2 = (
     "backend/src/racket/platform/logs.py",
     "backend/src/racket/platform/settings.py",
     "backend/src/racket/platform/fault*",  # the ADR 0012 API fault seam (ST-075d, T5-OB-5)
+    "infra/compose.fault-drill.yaml",  # turns the fault seam on for the drill (ST-075c, T5-OB-5)
     "infra/env.example",
     "infra/tls/**",
     ".gitleaks.toml",

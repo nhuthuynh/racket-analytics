@@ -34,3 +34,11 @@ Source: `docs/design/flows-sprint-04.md` §14.4 (chair's re-read; DR-04 not yet 
 | PD-DR04-01 | major | Open: R-01 has no shorter-retention confirmation dialog (flows-sprint-04 §6, HAX G16); shortening retention deletes videos within a day with no confirm. Needs PM words (PD-FL4-04) and an FE ticket before `feature_retention_setting` is on | product-manager (words), engineering-manager (ticket), senior-frontend-engineer (build) | PD-FL4-04 |
 | PD-DR04-02 | minor | Open: A-12/A-13 (existing unconfirmed account answers "No") not built (ST-068b decisions row 8) | product-manager (PD-FL4-06 words), senior-frontend-engineer | PD-FL4-06 |
 | PD-DR04-03 | minor | Open: no "Privacy settings" link on X-00 or the account menu (ST-071 deferred row (2)) | engineering-manager (ticket), senior-frontend-engineer | — |
+
+## ST-079: author-found gaps (senior-frontend-engineer, 2026-11-05)
+
+Source: `docs/sprints/05/decisions/ST-079.md`, "Dry runs", run 1. Found on the G05-04 method dry run, not by a reviewer.
+
+| Finding | Severity | Disposition | Owner (Sprint 5) | Waits on |
+|---|---|---|---|---|
+| AF-ST079-01 | minor | Open: in 1 of 54 `android-chrome` runs (local stack, Chromium 1243 headless shell), `E2E-04-02 loading` timed out in its **sign-in setup**: `helpers/sprint-01.ts:79`, `expect.poll(signInStep)` was still `pending` after 15 s. The loading assertion itself never ran. The same test then passed 10 of 10 in both `android-chrome` and `chromium`, and a full rerun of the method passed (rc 0). If the nightly `browser-matrix` job shows it again, G05-04 ("0 flaky") is at risk. Triage it with `e2e-repeat.yml` once that tool accepts `android-chrome` | senior-qa-engineer (flake triage, NFR-074) | the first nightly `browser-matrix` run |
