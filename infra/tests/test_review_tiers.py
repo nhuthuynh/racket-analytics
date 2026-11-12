@@ -104,6 +104,13 @@ def test_a_workflow_file_is_never_below_tier_1(rt: ModuleType) -> None:
         ".claude/settings.json",
         ".claude/hooks/pre_tool_use.py",
         ".claude/hooks/post_tool_use.py",
+        # SEC-188-R3-01 (kickoff SEC-1: consent, access control, client security headers)
+        "backend/src/racket/dataset/api.py",
+        "backend/src/racket/dataset/manifest.py",
+        "backend/src/racket/platform/http.py",
+        "backend/src/racket/platform/app.py",
+        "backend/src/racket/platform/errors.py",
+        "web/next.config.ts",
     ],
 )
 def test_a_tier_2_path_is_tier_2(rt: ModuleType, path: str) -> None:
