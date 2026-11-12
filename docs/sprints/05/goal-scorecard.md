@@ -120,8 +120,13 @@ python3 scripts/measure/browser_matrix.py reports/pw-*.json --require chromium,w
 ```
 (cd web && PW_PROJECTS=chromium,android-chrome npx playwright test e2e/sprint-05/fix-call-taps.spec.ts \
   --reporter json > ../reports/taps.json)
-jq '[.suites[]..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max' reports/taps.json
+jq '[..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max' reports/taps.json
+jq -e '([..|.annotations?[]?|select(.type=="taps")|.description|tonumber]|max) <= 2
+  and ([..|.annotations?[]?|select(.type=="planted-taps")|.description|tonumber]|max) == 3
+  and .stats.unexpected == 0 and .stats.skipped == 0' reports/taps.json
+jq -e '[..|.projectName?|strings]|unique == ["android-chrome","chromium"]' reports/taps.json
 ```
+The first `jq` prints the max; the two `jq -e` checks give the rc (budget and planted path; both projects ran). The old `.suites[]..` form was a jq 1.7 syntax error (rc 3, ST-080 dry run). Planted failure: `<= 1` in the budget check → rc 1.
 
 ### G05-06 (authors: senior-backend-engineer ST-077, ST-078d, ST-075a; senior-frontend-engineer ST-078e)
 ```
@@ -206,7 +211,7 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 | G05-02 | sre-devops-engineer | ST-075c | | | | | |
 | G05-03 | sre-devops-engineer | ST-076c | | | | | |
 | G05-04 | senior-frontend-engineer | ST-079 | 2026-11-05 | `264c8bd8` | the §4 G05-04 loop and `browser_matrix.py`, for `chromium` and `android-chrome` only (local WebKit is not installed; CI is the `webkit` evidence of record). Local deviations: ports moved (origin `https://localhost:43000`), Chromium 1243 via a wrapper `executablePath` (`decisions/ST-079.md`, Dry runs). Run 1 rc 1 (android-chrome flaky E2E-04-02 loading in the sign-in setup, AF-ST079-01); run 2 rc 0 | 0 (`chromium: ok (18 passed x 3)`, `android-chrome: ok (18 passed x 3)`) | 1 (`--require …,firefox` → `firefox: no report`) |
-| G05-05 | senior-qa-engineer | ST-080 | | | | | |
+| G05-05 | senior-qa-engineer | ST-080 | 2026-11-12 | `0afe77e5` (ST-080 merged with `origin/main` `b4161068`, which has ST-079's `android-chrome`) | the §4 G05-05 block, `PW_PROJECTS=chromium,android-chrome`. Deviations, both local only: `-c .local-pw.config.ts`, a local wrapper (not a repo path) that sets `executablePath: /opt/pw-browsers/chromium`, because the sandbox ships Chromium 1243 and Playwright 1.56.1 looks for 1194; and the shared Compose stack on the default ports (`https://localhost:3000`, built from `2f947974`; its diff to `b4161068` has no web change), because a second stack would take free disk below 10 GB. Earlier run (2026-11-05, `794fe26d`, `chromium` only): budget check 0, project check 1, kept in `decisions/ST-080.md` | **0, 0** (budget check, project check): max `taps` = 2 over 9 fixes on each project (CT-1 1/1, CT-2 2/2, CT-3 2/2, CT-4 2/2, Quick Tag undo 1, the same on `chromium` and `android-chrome`); `planted-taps` = 3 on each; 12 expected, 0 unexpected, 0 skipped, 0 flaky | 1 (`<= 1` in the budget check) |
 | G05-06 | senior-backend-engineer | ST-078d | | | | | |
 | G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | 2026-11-05 | `2ed79c68` + the ST-078c checklist rows | the §4 G05-07 block, from the root (`--json` into the scratchpad) | **0** on the tool line (all chapters, no `--chapters`): V1-V17 124 Pass, 40 Fail (all owned: 36 by ADR 0059 draft / P19, 3 by ST-077, 1 by ADR 0031), 92 N/A, 0 not assessed, "0 problem(s)"; **0** on the BOLA line (28 passed). Not yet 0: `test_it_05_security_headers.py` → 4 (file is an ST-078e output); `cd web && npm run test -- hydration-lock` → 1, `Missing script: "test"` (method defect for QA-PIN-05; `npm run test:unit -- hydration-lock` → 1, no test files until ST-078e). Details: `decisions/ST-078c.md` | 1 (a copy with a planted `Not assessed` row, an unowned `Fail` and an unevidenced `Pass`: "3 problem(s)") |
 | G05-08 | sre-devops-engineer | CI-TIERS-b | | | | | |
