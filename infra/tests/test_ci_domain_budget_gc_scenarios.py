@@ -76,4 +76,5 @@ def workers_frozen(world: dict[str, Any]) -> None:
 def probe_run_green(world: dict[str, Any]) -> None:
     res, _ = world["probe"]
     assert res.returncode == 0, res.stdout[-3000:]
-    assert re.search(r"\b1[0-9]{3} passed\b", res.stdout), res.stdout[-500:]
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", res.stdout)  # CI sets FORCE_COLOR=1
+    assert re.search(r"\b1[0-9]{3} passed\b", plain), plain[-500:]
