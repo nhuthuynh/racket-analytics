@@ -6,13 +6,15 @@ Instruments (names confirmed by SRE, docs/ops/sli-metrics.md):
   ``http.request.method`` and ``http.response.status_code``, recorded for every response by
   ``HttpMetricsMiddleware``. **Availability (NFR-041)** = non-5xx / all, 429 excluded.
 * ``racket.upload.sessions`` (counter) with ``event`` = created | completed | expired |
-  rejected | cancelled, and ``reason`` (a rejection code) on ``rejected`` only. The upload
+  rejected | cancelled, and ``reason`` on ``rejected`` only: one of ``REJECTION_REASONS``,
+  any other value is recorded as ``_OTHER`` (ST-075a, T5-OB-1). The upload
   context calls ``SLIRecorder.upload_event`` (ST-017/ST-018). **Upload completion (NFR-042)** =
   completed / (created - rejected - cancelled).
 
-No user, match, path or file data goes into attributes (NFR-069). Metrics go to the global
-meter provider: a no-op until ``configure_metrics`` installs the OTLP exporter
-(``OTEL_EXPORTER_OTLP_METRICS_ENDPOINT``). Alerts come in Sprint 5.
+No user, match, path or file data goes into attributes (NFR-069.1): every attribute value is
+from a closed set. Metrics go to the global meter provider: a no-op until ``configure_metrics``
+installs the OTLP exporter (``OTEL_EXPORTER_OTLP_METRICS_ENDPOINT``); the API and the worker
+both call it (ST-075a).
 """
 
 from __future__ import annotations
@@ -33,6 +35,10 @@ HTTP_DURATION_INSTRUMENT = "http.server.request.duration"
 UPLOAD_SESSIONS_INSTRUMENT = "racket.upload.sessions"
 RATE_LIMITED = 429
 _KNOWN_METHODS = frozenset({"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"})
+OTHER = "_OTHER"
+# The api-sprint-01 §5.2 rejection codes; kept equal to video_ingest's ``Rejection`` by a unit
+# test, so platform does not import a bounded context.
+REJECTION_REASONS = frozenset({"not_a_video", "too_large", "too_long", "unsupported_video"})
 
 
 class UploadEvent(StrEnum):
@@ -104,7 +110,7 @@ class SLIRecorder:
         self._duration.record(
             max(seconds, 0.0),
             {
-                "http.request.method": method if method in _KNOWN_METHODS else "_OTHER",
+                "http.request.method": method if method in _KNOWN_METHODS else OTHER,
                 "http.response.status_code": _check_status(status),
             },
         )
@@ -115,7 +121,7 @@ class SLIRecorder:
             raise ValueError("a reason is only recorded on rejected uploads")
         attrs = {"event": event.value}
         if reason is not None:
-            attrs["reason"] = reason
+            attrs["reason"] = reason if reason in REJECTION_REASONS else OTHER
         self._uploads.add(1, attrs)
 
 
