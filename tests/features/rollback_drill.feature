@@ -3,7 +3,7 @@
 # without a stack; the live drill on a Compose project is the G05-09 method.
 Feature: A release can be rolled back to the previous image tag set
   As the sre-devops-engineer on call for a bad release
-  I want one drill that backs up, downgrades with the current image, then redeploys the previous tag
+  I want one drill that backs up, downgrades with the current release image, then redeploys the previous tag
   So that a rollback follows ADR 0058 rule 7 and never runs an older image on a newer schema
 
   Background:
@@ -28,6 +28,12 @@ Feature: A release can be rolled back to the previous image tag set
 
     Scenario: Missing previous images stop the drill before anything changes
       Given the images of tag "r1-rehearsal-0020" are missing
+      When the rollback drill runs to the previous tag
+      Then the drill exits 2
+      And no downgrade ran
+
+    Scenario: Missing current images stop the drill before anything changes
+      Given the images of tag "r1-rc1" are missing
       When the rollback drill runs to the previous tag
       Then the drill exits 2
       And no downgrade ran

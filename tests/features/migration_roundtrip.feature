@@ -12,6 +12,11 @@ Feature: Every database migration can be stepped down and up again
       Then every step returned to its revision with the same schema
       And no seed row in a table that outlived the downgrade was lost
 
+    Scenario: The seed has a row in every table a downgrade changes
+      Given the real migration directory
+      When the tables whose columns or constraints a downgrade changes are listed
+      Then each of them has a seed row
+
     Scenario: A migration without a downgrade is refused
       Given a migration directory where "0002" has no downgrade
       When the migrations are checked for a downgrade

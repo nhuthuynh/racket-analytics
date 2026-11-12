@@ -11,13 +11,17 @@ from typing import Any
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
+from racket.platform.db import MIGRATIONS_DIR
 from tests.support.db import BASE_URL_ENV, database_url
 from tests.support.migration_roundtrip import (
+    SEED,
+    data_dependent_tables,
     migrate,
     missing_downgrades,
     round_trip,
     scratch_database,
     seed,
+    seeded_tables,
 )
 
 scenarios("migration_roundtrip.feature")
@@ -78,3 +82,19 @@ def check(ctx: dict[str, Any]) -> None:
 @then(parsers.parse('the check names "{rev}"'))
 def named(ctx: dict[str, Any], rev: str) -> None:
     assert ctx["missing"] == [rev]
+
+
+@given("the real migration directory")
+def real_dir(ctx: dict[str, Any]) -> None:
+    ctx["dir"] = MIGRATIONS_DIR / "versions"
+
+
+@when("the tables whose columns or constraints a downgrade changes are listed")
+def listed(ctx: dict[str, Any]) -> None:
+    ctx["tables"] = data_dependent_tables(ctx["dir"])
+
+
+@then("each of them has a seed row")
+def each_seeded(ctx: dict[str, Any]) -> None:
+    assert ctx["tables"], "no downgrade changes a table: the parser found nothing"
+    assert ctx["tables"] - seeded_tables(SEED) == set()

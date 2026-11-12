@@ -53,6 +53,16 @@ def missing_downgrades(versions_dir: Path) -> list[str]:
     return sorted(missing)
 
 
+def data_dependent_tables(versions_dir: Path) -> set[str]:
+    """Tables whose columns, indexes or constraints a ``downgrade()`` changes and outlive it."""
+    raise NotImplementedError("ST-082: data_dependent_tables")
+
+
+def seeded_tables(statements: tuple[str, ...]) -> set[str]:
+    """The ``INSERT INTO`` targets of ``statements``."""
+    raise NotImplementedError("ST-082: seeded_tables")
+
+
 def revisions(script_location: Path = MIGRATIONS_DIR) -> list[tuple[str, str | None]]:
     """(revision, down_revision) pairs from the head down to the base."""
     config = Config()

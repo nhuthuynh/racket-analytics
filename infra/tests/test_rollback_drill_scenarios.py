@@ -34,6 +34,7 @@ def current(ctx: dict, tag: str) -> None:
     notes = ctx["tmp"] / "notes.md"
     text = notes.read_text()
     notes.write_text(text.replace("release: r1-rc1\n", f"release: {tag}\n", 1))
+    ctx["current"] = tag
 
 
 @given("the downgrade fails")
@@ -78,7 +79,8 @@ def downgrade(ctx: dict, revision: str) -> None:
     (down,) = [
         c for c in calls(ctx["tmp"]) if "run" in c.get("argv", []) and "migrate" in c["argv"]
     ]
-    assert down["image_tag"] is None
+    assert down["image_tag"] == ctx["current"]
+    assert str(REPO_ROOT / "infra" / "compose.release.yaml") in down["argv"]
     assert down["argv"][-1] == revision
 
 
