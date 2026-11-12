@@ -36,7 +36,7 @@ Per-ticket decisions file (PO rule 2026-10-07). Ticket: `retro_ready.py` (RETRO 
 |---|---|---|
 | PRC-6.1 | An open VERIFY PR keeps the retro from starting; A VERIFY finding that is not Fixed …; The retro starts once … | `test_a_planted_open_verify_pr_makes_the_retro_not_ready`, `test_retro_ready_exits_1_on_a_planted_open_verify_pr`, `test_retro_ready_exits_0_when_verify_is_merged_and_its_findings_fixed` |
 | PRC-6.2 | A merged Sprint 5 PR missing from the status map fails the close | `test_a_planted_extra_pr_on_github_is_printed_as_a_set_difference`, `test_retro05_check_exits_1_on_a_planted_extra_pr_and_a_planted_closed_cause` |
-| PRC-6.3 | An Open blocker row whose cause is closed fails the close; The close is met when … | `test_a_planted_closed_cause_on_an_open_blocker_row_fails`, `test_retro05_check_exits_0_when_the_close_is_consistent` |
+| PRC-6.3 | the closed-cause scenario and the "close is met" scenario (5 and 6) | `test_a_planted_closed_cause_on_an_open_blocker_row_fails`, `test_retro05_check_exits_0_when_the_close_is_consistent` |
 | fail closed | GitHub cannot be read | `test_retro_ready_exits_2_when_github_or_the_ledger_cannot_be_read`, `test_retro05_check_exits_2_when_github_cannot_be_read_or_status_is_bad` |
 
 ## Cost per PR (ADR 0056 decision 1)
