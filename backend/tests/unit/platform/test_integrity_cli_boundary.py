@@ -106,3 +106,17 @@ def test_missing_database_url_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
     assert integrity.main([]) == 2
+
+
+def test_help_prints_usage_and_exits_0(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Review PE F3: ``--help`` is a request, not a usage error, and touches no database."""
+    from racket.platform import integrity
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    assert integrity.main(["--help"]) == 0
+    out = capsys.readouterr()
+    assert "usage: racket-integrity" in out.out
+    assert "--expect-sha256" in out.out
+    assert out.err == ""
