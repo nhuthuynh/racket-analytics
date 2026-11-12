@@ -208,3 +208,10 @@ def test_make_release_images_builds_the_tagged_set() -> None:
     out = _make_n("release-images", "IMAGE_TAG=r1-rc1")
     assert "-f infra/compose.release.yaml" in out
     assert " build" in out
+
+
+def test_make_release_images_also_builds_the_ops_profile_backup_image() -> None:
+    # `backup` is in profile `ops`; `compose build` skips it without the profile, and step 0 of
+    # the drill would then refuse every release for a missing racket-backup:<tag>.
+    out = _make_n("release-images", "IMAGE_TAG=r1-rc1")
+    assert "--profile ops" in out

@@ -10,3 +10,4 @@ services:
   mailer: {image: "racket-mailer:${IMAGE_TAG:?set IMAGE_TAG}"}
   purge: {image: "racket-purge:${IMAGE_TAG:?set IMAGE_TAG}"}
   web: {image: "racket-web:${IMAGE_TAG:?set IMAGE_TAG}"}
+  backup: {image: "racket-backup:${IMAGE_TAG:?set IMAGE_TAG}"}

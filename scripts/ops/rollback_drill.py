@@ -7,11 +7,13 @@ rule 7).
 
 ``--to-previous-tag`` reads ``previous_release`` and ``previous_alembic_revision`` from the
 release notes (``--notes``, default ``docs/releases/r1-rc.md``). Order, as rule 7:
-0. refuse (exit 2) before any change when an image ``racket-<service>:<tag>`` is missing or no
-   backup can be taken;
-1. ``backup``: the on-demand backup (``--backup-cmd``, else the project's ``backup`` service);
-2. ``downgrade``: ``alembic downgrade <revision>`` with the **current** ``migrate`` image, then the
-   revision is read back from ``alembic_version``;
+0. refuse (exit 2) before any change when an image ``racket-<service>:<tag>`` of the previous or
+   the current release is missing, or no backup can be taken;
+1. ``backup``: the on-demand backup (``--backup-cmd``, else the project's ``backup`` service in
+   the current release image);
+2. ``downgrade``: ``alembic downgrade <revision>`` with the current release's ``migrate`` image
+   (``racket-migrate:<current>`` through compose.release.yaml, never a per-project build), then
+   the revision is read back from ``alembic_version``;
 3. ``redeploy``: the previous tag set with ``--no-build --wait`` (compose.release.yaml);
 4. ``health``: ``GET /healthz`` inside the ``api`` container is 200;
 5. when step 2, 3 or 4 fails: ``restore`` (``--restore-cmd``), then ``redeploy`` and ``health``
@@ -94,9 +96,14 @@ class Drill:
             print((proc.stderr or proc.stdout).strip()[-2000:], file=sys.stderr)
         return proc
 
+    def released(self, tag: str) -> tuple[list[str], dict[str, str]]:
+        """The compose argv prefix and environment that run the images of release ``tag``."""
+        return [*self.base, "-f", str(RELEASE)], {**os.environ, "IMAGE_TAG": tag}
+
     def downgrade(self) -> bool:
+        base, env = self.released(self.current)
         argv = [
-            *self.base,
+            *base,
             "run",
             "--rm",
             "--no-deps",
@@ -107,7 +114,7 @@ class Drill:
             DOWNGRADE,
             self.revision,
         ]
-        if self.run("downgrade", argv).returncode:
+        if self.run("downgrade", argv, env=env).returncode:
             return False
         read = subprocess.run(
             [*self.base, "exec", "-T", "postgres", "sh", "-c", REVISION],
@@ -124,8 +131,8 @@ class Drill:
         return True
 
     def redeploy(self, tag: str) -> bool:
-        env = {**os.environ, "IMAGE_TAG": tag}
-        up = [*self.base, "-f", str(RELEASE), "up", "-d", "--no-build", "--wait"]
+        base, env = self.released(tag)
+        up = [*base, "up", "-d", "--no-build", "--wait"]
         if self.run("redeploy", up, env=env).returncode:
             return False
         probe = [*self.base, "exec", "-T", "api", "python", "-c", HEALTH, "healthz"]
@@ -165,20 +172,23 @@ def main(argv: list[str] | None = None) -> int:
             )
         drill = Drill(args.project, str(tag), str(revision), str(current))
         missing = [
-            f"racket-{svc}:{tag}"
+            f"racket-{svc}:{t}"
+            for t in (drill.tag, drill.current)
             for svc in built_services()
             if subprocess.run(
-                ["docker", "image", "inspect", f"racket-{svc}:{tag}"], capture_output=True
+                ["docker", "image", "inspect", f"racket-{svc}:{t}"], capture_output=True
             ).returncode
         ]
         if missing:
             raise Refused(
                 f"missing images {', '.join(missing)}; build them (docs/releases/r1-rc.md)"
             )
+        backup_env = None
         if args.backup_cmd:
             backup = shlex.split(args.backup_cmd)
         elif "backup" in yaml.safe_load(COMPOSE.read_text())["services"]:
-            backup = [*drill.base, "--profile", "ops", "run", "--rm", "backup", "--once"]
+            base, backup_env = drill.released(drill.current)
+            backup = [*base, "--profile", "ops", "run", "--rm", "backup", "--once"]
         else:
             raise Refused(
                 "no backup service in compose.yaml; pass --backup-cmd (ADR 0058 rule 7 step 1)"
@@ -188,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     rc = 0
-    if drill.run("backup", backup).returncode:
+    if drill.run("backup", backup, env=backup_env).returncode:
         rc = 1  # nothing changed yet: no fallback needed, and none to fall back to
     elif not (drill.downgrade() and drill.redeploy(drill.tag)):
         rc = 1

@@ -30,7 +30,7 @@ endif
 .PHONY: release-images
 release-images: $(ENV_FILE) ## Build the release image set racket-<service>:<IMAGE_TAG> from the working tree
 	@test "$(IMAGE_TAG)" != dev || { echo "release-images: set IMAGE_TAG=<release>" >&2; exit 2; }
-	IMAGE_TAG=$(IMAGE_TAG) $(RELEASE_COMPOSE) build
+	IMAGE_TAG=$(IMAGE_TAG) $(RELEASE_COMPOSE) --profile ops build
 
 .PHONY: up-deps
 up-deps: $(ENV_FILE) ## Start only backing services (Postgres, SeaweedFS, Mailpit, Jaeger)
