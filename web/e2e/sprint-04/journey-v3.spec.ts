@@ -16,7 +16,7 @@ import {
   CITED, PLAN_COPY, SCREEN_P, SWAPPABLE, answerPlanSetup, drillRow, planRead, sessionOf, whyOf,
 } from '../helpers/sprint-04';
 
-test.describe('@M0 @story-ST-065 @needs-verification Journey v3', () => {
+test.describe('@M0 @story-ST-065 @needs-verification Journey v3', { tag: '@critical' }, () => {
   test('E2E-04-01 Upload to plan: Quick Tag, score sheet, stats, plan, why, Show me, done offline, swap', async ({ page, context }, testInfo) => {
     test.setTimeout(300_000);
 

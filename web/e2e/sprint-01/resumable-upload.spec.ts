@@ -13,7 +13,7 @@ import { holdUploadAt, serverOffset, settledServerOffset } from '../helpers/uplo
 test.use({ serviceWorkers: 'block' });
 
 test.describe('Resumable upload', () => {
-  test('Connection drops mid-upload (E2E-01-02)', async ({ page, context }, testInfo) => {
+  test('Connection drops mid-upload (E2E-01-02)', { tag: '@critical' }, async ({ page, context }, testInfo) => {
     const file = await paddedClip(testInfo.outputPath('media'), 48);
     // A local stack takes the 48 MiB in about a second, so the 40% point could pass unseen.
     // 400 ms per chunk makes it observable; the transfer itself is unchanged (TCR row 21).
