@@ -67,6 +67,12 @@ def score(stats: dict[str, Any], target: str) -> dict[str, Any]:
     return {**report, "status": "measured", "score": round((killed + timeout) / base, 4)}
 
 
+def _as_path(item: str) -> str:
+    """A directory with a trailing ``/``; a single ``.py`` file as it is (ST-076b)."""
+    item = item.rstrip("/")
+    return item if item.endswith(".py") else item + "/"
+
+
 def run_mutmut(
     project: Path, target: str, tests: list[str], ignore: list[str] | None = None
 ) -> dict[str, Any] | None:
@@ -79,7 +85,7 @@ def run_mutmut(
     # copied by default): the rest of src/, which the target imports, goes in also_copy.
     # setup.cfg lists are newline-separated continuation lines.
     def as_list(items: list[str]) -> str:
-        return "".join(f"\n    {item.rstrip('/')}/" for item in items)
+        return "".join(f"\n    {_as_path(item)}" for item in items)
 
     text = (
         "[mutmut]\n"
