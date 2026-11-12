@@ -6,7 +6,7 @@ through its port only (context map C4, rule 1).
     racket-integrity --expect-count N --expect-sha256 HEX   # also compares with backup.json
 
 Stdout: ``{"corrections": {"count": N, "sha256": "...", "equal": bool}}`` (``equal`` only when
-compared). Exit 0: printed, or equal; 1: not equal (named on stderr); 2: usage, configuration
+compared). Exit 0: printed, equal, or ``--help``; 1: not equal (named on stderr); 2: usage, configuration
 or database error. Reads ``DATABASE_URL`` only.
 """
 
@@ -57,7 +57,12 @@ def _fingerprint(database_url: str) -> tuple[int, str]:
 def main(argv: list[str] | None = None) -> int:
     try:
         args = _parse(sys.argv[1:] if argv is None else argv)
-    except (argparse.ArgumentError, SystemExit, ValueError) as exc:
+    except SystemExit as exc:  # argparse exits 0 after --help, 2 on its own usage errors
+        if exc.code == 0:
+            return 0
+        print(f"racket-integrity: {exc}", file=sys.stderr)
+        return 2
+    except (argparse.ArgumentError, ValueError) as exc:
         print(f"racket-integrity: {exc}", file=sys.stderr)
         return 2
     database_url = os.environ.get("DATABASE_URL", "").strip()
