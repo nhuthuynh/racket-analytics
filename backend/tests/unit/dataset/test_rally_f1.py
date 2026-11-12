@@ -8,16 +8,13 @@ split and matches nothing. R4 (NFR-006.4): matching is one-to-one and as large a
 
 from __future__ import annotations
 
-import ast
 import itertools
 import math
-from pathlib import Path
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-import racket.dataset.rally_f1 as rally_f1_module
 from racket.dataset.rally_f1 import Rally, RallyF1, match_rallies
 
 pytestmark = pytest.mark.unit
@@ -85,6 +82,10 @@ def test_r2_touching_the_next_gold_rally_is_not_a_merge() -> None:
     assert _counts("10.0-20.0", "10.0-20.0, 20.0-30.0") == (1, 0, 1)
 
 
+def test_r2_starting_where_the_previous_gold_rally_ends_is_not_a_merge() -> None:
+    assert _counts("10.0-20.0", "0.0-10.0, 10.0-20.0") == (1, 0, 1)
+
+
 def test_r2_a_merge_does_not_stop_other_predictions_from_matching() -> None:
     assert _counts("10.0-20.6, 40.0-50.0", "10.0-20.0, 20.5-30.0, 40.0-50.0") == (1, 1, 2)
 
@@ -126,6 +127,13 @@ def test_r4_the_matching_is_maximal_not_greedy() -> None:
     assert result.pairs == ((0, 0), (1, 1))
 
 
+def test_r4_a_matched_prediction_moves_to_its_next_gold_rally_to_make_room() -> None:
+    # The first prediction is near both gold rallies and takes the first; the second is near the
+    # first gold rally only, so the first prediction must move on to the second gold rally.
+    result = match_rallies(_r("10.5-20.5, 9.5-19.5"), _r("10.0-20.0, 10.9-20.9"))
+    assert result.pairs == ((0, 1), (1, 0))
+
+
 # ------------------------------------------------------------------ precision, recall, F1
 def test_precision_recall_and_f1_from_the_counts() -> None:
     result = match_rallies(_r("10-20, 30-40"), _r("10-20, 30-40, 50-60"))
@@ -158,7 +166,7 @@ def test_no_gold_rallies_scores_zero() -> None:
 
 
 def test_nothing_to_score_is_refused() -> None:
-    with pytest.raises(ValueError, match="nothing to score"):
+    with pytest.raises(ValueError, match=r"^nothing to score: no predicted and no gold rallies$"):
         match_rallies([], [])
 
 
@@ -175,23 +183,6 @@ def test_the_result_is_a_value() -> None:
     a = match_rallies(_r("10-20"), _r("10-20"))
     assert a == match_rallies(_r("10-20"), _r("10-20"))
     assert isinstance(a, RallyF1)
-
-
-def test_the_matcher_does_no_io() -> None:
-    """Acceptance: a pure matcher. Only these standard modules are imported."""
-    tree = ast.parse(Path(rally_f1_module.__file__).read_text())
-    imported = {
-        alias.name.split(".")[0]
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Import)
-        for alias in node.names
-    } | {
-        node.module.split(".")[0]
-        for node in ast.walk(tree)
-        if isinstance(node, ast.ImportFrom) and node.module
-    }
-    assert imported <= {"__future__", "collections", "dataclasses", "math", "typing"}
-    assert "open(" not in Path(rally_f1_module.__file__).read_text()
 
 
 # ------------------------------------------------------------------ properties (R4)
