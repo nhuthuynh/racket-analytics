@@ -5,6 +5,8 @@ ADR 0058 rules 1 and 3; SEC-5 T5-BK-1). Binds ``tests/features/backup_service_du
 A complete set restores: ``age -d`` of ``db.dump.age`` piped into ``pg_restore`` on a scratch
 database gives the planted row back. A wrong password gives exit 1, no ``backup.json`` and
 ``--status`` ``missing``. No Compose: the Compose service and IT-05-03 come with ST-076a-part2.
+Since part 2 every set also mirrors the media bucket (``objects.tar.age``, ADR 0058 rule 1); here
+the bucket is the local ``fake_s3.py`` stand-in, and the real SeaweedFS mirror is IT-05-03.
 Missing ``age`` or Postgres binaries fail, they never skip.
 """
 
@@ -23,6 +25,7 @@ from urllib.parse import unquote, urlsplit
 
 import pytest
 from cluster import fresh_cluster
+from fake_s3 import serve as serve_s3
 from pytest_bdd import given, parsers, scenario, then, when
 from test_backup_service import SCRIPT, events, load
 
@@ -31,6 +34,8 @@ FEATURE = "backup_service_dump.feature"
 PG_BIN = Path("/usr/lib/postgresql/16/bin")
 AGE_HEADER = b"age-encryption.org/v1\n"
 ROW = "planted-row-076a"
+ARTEFACTS = ("globals.sql.age", "db.dump.age", "objects.tar.age")
+OBJECTS = {"matches/m1/review.mp4": b"planted-object-076a"}
 PLANT_SQL = (
     "CREATE TABLE backup_probe (note text NOT NULL);"
     " INSERT INTO backup_probe VALUES ('planted-row-076a');"
@@ -82,7 +87,7 @@ def psql(world: dict[str, Any], sql: str, db: str | None = None) -> str:
 def run_backup(world: dict[str, Any], *args: str) -> subprocess.CompletedProcess[str]:
     clean = {k: v for k, v in os.environ.items() if not k.startswith(("BACKUP_", "PG", "S3_"))}
     env = {**clean, **world["pg"], "PATH": world["path"], "BACKUP_DIR": str(world["dir"]),
-           "BACKUP_AGE_RECIPIENT": world["recipient"]}  # fmt: skip
+           "BACKUP_AGE_RECIPIENT": world["recipient"], **world["store"]}  # fmt: skip
     return subprocess.run([sys.executable, str(SCRIPT), *args], env=env, capture_output=True,
                           text=True, timeout=120, check=False)  # fmt: skip
 
@@ -93,8 +98,9 @@ def world(tmp_path: Path) -> Iterator[dict[str, Any]]:
     ident = tmp_path / "identity.txt"
     keygen = subprocess.run(["age-keygen", "-o", str(ident)], env={**os.environ, "PATH": path},
                             capture_output=True, text=True, check=True)  # fmt: skip
-    with fresh_cluster(tmp_path / "pg") as url:
+    with fresh_cluster(tmp_path / "pg") as url, serve_s3(dict(OBJECTS)) as store:
         yield {
+            "store": store.env(),
             "dir": tmp_path / "backups",
             "path": path,
             "pg": pg_env(url),
@@ -137,11 +143,12 @@ def the_set(world: dict[str, Any]) -> Path:
 @then("every artefact of the new set starts with the age header")
 def age_headers(world: dict[str, Any]) -> None:
     d = the_set(world)
-    for name in ("globals.sql.age", "db.dump.age"):
+    for name in ARTEFACTS:
         data = (d / name).read_bytes()
         assert data.startswith(AGE_HEADER), name
         assert b"PGDMP" not in data
         assert world["row"].encode() not in data
+        assert b"planted-object-076a" not in data
 
 
 @then("backup.json is complete and its digests match the files")
@@ -155,8 +162,10 @@ def metadata(world: dict[str, Any]) -> None:
     assert meta["alembic_revision"] == "0042_probe"
     assert meta["postgres_server_version"].startswith("16")
     assert meta["recipient"] == world["recipient"]
-    for name in ("globals.sql.age", "db.dump.age"):
+    assert set(meta["artefacts"]) == set(ARTEFACTS)
+    for name in ARTEFACTS:
         assert meta["artefacts"][name] == bk.file_digest(d / name)
+    assert meta["objects"]["count"] == len(OBJECTS)
 
 
 @then("decrypting the dump and restoring it into a scratch database returns the planted row")

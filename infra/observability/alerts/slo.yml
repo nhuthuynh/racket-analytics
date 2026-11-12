@@ -1,0 +1,110 @@
+# R1 SLO burn-rate alerts (ST-075c; NFR-041, NFR-042; ADR 0057 §2; runbook docs/ops/slo.md).
+# SLOs over 30 days: API availability 99.5 % (budget 0.5 %), upload completion 99.0 % (budget
+# 1 %). Proposed until the PO decides P17; a new target changes only the thresholds below.
+#
+# Multiwindow, multi-burn-rate: an alert fires only when the error ratio is over
+# burn rate x budget in both its long and its short window, and the long window holds enough
+# traffic (volume guard: 100 API requests, 10 finished uploads; ADR 0057 §2, judgment).
+#   fast: 1 h and 5 m, burn 14.4 (2 % of the budget in 1 h), for 2m, severity page
+#   slow: 6 h and 30 m, burn 1.5 (1.25 % of the budget in 6 h), for 15m, severity ticket
+# Error ratios are summed over emitters (job racket-api, racket-purge). API: 5xx / all, 429 out
+# of both (NFR-041.1, docs/ops/sli-metrics.md). Uploads: expired / (completed + expired), the
+# terminal outcomes only, so uploads still running do not count as failures (NFR-042.1).
+# Only the `racket` meter scope is an SLI instrument (ADR 0026): FastAPI's own instrumentation
+# exports the same metric name under otel_scope_name="fastapi" for a different set of requests
+# (drill stack: every injected 500 but 1 of 1149 successes), which would skew the ratio.
+# Labels and annotations are rule text only: no series label is copied into an alert (NFR-069).
+# Tested by slo.test.yml with `promtool test rules` (8 cases).
+groups:
+  - name: slo
+    interval: 30s
+    rules:
+      - record: slo:api_error_ratio:rate5m
+        expr: >-
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[5m]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[5m]))
+      - record: slo:api_error_ratio:rate30m
+        expr: >-
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[30m]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[30m]))
+      - record: slo:api_error_ratio:rate1h
+        expr: >-
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[1h]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[1h]))
+      - record: slo:api_error_ratio:rate6h
+        expr: >-
+          sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code=~"5.."}[6h]))
+          / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[6h]))
+      - record: slo:api_valid_requests:increase1h
+        expr: sum(increase(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[1h]))
+      - record: slo:api_valid_requests:increase6h
+        expr: sum(increase(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[6h]))
+      - record: slo:upload_error_ratio:rate5m
+        expr: >-
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[5m]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[5m]))
+      - record: slo:upload_error_ratio:rate30m
+        expr: >-
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[30m]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[30m]))
+      - record: slo:upload_error_ratio:rate1h
+        expr: >-
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[1h]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[1h]))
+      - record: slo:upload_error_ratio:rate6h
+        expr: >-
+          sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="expired"}[6h]))
+          / sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[6h]))
+      - record: slo:upload_terminal:increase1h
+        expr: sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[1h]))
+      - record: slo:upload_terminal:increase6h
+        expr: sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"completed|expired"}[6h]))
+
+      - alert: ApiAvailabilityFastBurn
+        expr: >-
+          slo:api_error_ratio:rate1h > 0.072 and slo:api_error_ratio:rate5m > 0.072
+          and slo:api_valid_requests:increase1h >= 100
+        for: 2m
+        labels:
+          severity: page
+          slo: api_availability
+          window: fast
+        annotations:
+          summary: API availability is spending its 30-day error budget 14.4 times too fast (1 h and 5 m windows)
+          runbook: docs/ops/slo.md
+      - alert: ApiAvailabilitySlowBurn
+        expr: >-
+          slo:api_error_ratio:rate6h > 0.0075 and slo:api_error_ratio:rate30m > 0.0075
+          and slo:api_valid_requests:increase6h >= 100
+        for: 15m
+        labels:
+          severity: ticket
+          slo: api_availability
+          window: slow
+        annotations:
+          summary: API availability is spending its 30-day error budget 1.5 times too fast (6 h and 30 m windows)
+          runbook: docs/ops/slo.md
+      - alert: UploadCompletionFastBurn
+        expr: >-
+          slo:upload_error_ratio:rate1h > 0.144 and slo:upload_error_ratio:rate5m > 0.144
+          and slo:upload_terminal:increase1h >= 10
+        for: 2m
+        labels:
+          severity: page
+          slo: upload_completion
+          window: fast
+        annotations:
+          summary: Upload completion is spending its 30-day error budget 14.4 times too fast (1 h and 5 m windows)
+          runbook: docs/ops/slo.md
+      - alert: UploadCompletionSlowBurn
+        expr: >-
+          slo:upload_error_ratio:rate6h > 0.015 and slo:upload_error_ratio:rate30m > 0.015
+          and slo:upload_terminal:increase6h >= 10
+        for: 15m
+        labels:
+          severity: ticket
+          slo: upload_completion
+          window: slow
+        annotations:
+          summary: Upload completion is spending its 30-day error budget 1.5 times too fast (6 h and 30 m windows)
+          runbook: docs/ops/slo.md
