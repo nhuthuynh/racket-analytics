@@ -42,6 +42,16 @@ def downgrade_fails(ctx: dict) -> None:
     ctx["env"]["FAKE_DOCKER_FAIL"] = "command.downgrade"
 
 
+@given("the confirmed corrections differ after the rollback")
+def corrections_differ(ctx: dict) -> None:
+    ctx["env"]["FAKE_DOCKER_FINGERPRINT_AFTER"] = "1:" + "c" * 64
+
+
+@then("the report says the corrections are not equal")
+def corrections_not_equal(ctx: dict) -> None:
+    assert report(ctx["tmp"])["corrections"]["equal"] is False
+
+
 @given(parsers.parse('the images of tag "{tag}" are missing'))
 def images_missing(ctx: dict, tag: str) -> None:
     ctx["env"]["FAKE_DOCKER_MISSING"] = tag
@@ -77,7 +87,9 @@ def order(ctx: dict, order: str) -> None:
 @then(parsers.parse('the downgrade ran with the current image to revision "{revision}"'))
 def downgrade(ctx: dict, revision: str) -> None:
     (down,) = [
-        c for c in calls(ctx["tmp"]) if "run" in c.get("argv", []) and "migrate" in c["argv"]
+        c
+        for c in calls(ctx["tmp"])
+        if "run" in c.get("argv", []) and any("command.downgrade" in a for a in c["argv"])
     ]
     assert down["image_tag"] == ctx["current"]
     assert str(REPO_ROOT / "infra" / "compose.release.yaml") in down["argv"]

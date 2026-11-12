@@ -14,6 +14,7 @@ from release_notes_fixtures import (
     drop_row,
     run_check,
     set_flag_default,
+    set_setting,
     strip_pn,
 )
 
@@ -49,6 +50,16 @@ def no_fr(ctx: dict, fr: str) -> None:
 @given(parsers.parse('the flag "{flag}" listed with default "{value}"'))
 def wrong_default(ctx: dict, flag: str, value: str) -> None:
     _edit(ctx, set_flag_default, flag, value)
+
+
+@given(parsers.parse('the runtime setting "{setting}" listed as "{value}"'))
+def setting(ctx: dict, setting: str, value: str) -> None:
+    _edit(ctx, set_setting, setting, value)
+
+
+@given(parsers.parse('the runtime setting row "{setting}" removed from the copy'))
+def no_setting(ctx: dict, setting: str) -> None:
+    _edit(ctx, drop_row, setting)
 
 
 @given(parsers.parse('the limitation "{row}" with its P-n removed'))

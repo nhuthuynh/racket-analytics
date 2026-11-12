@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 import yaml
 from conftest import REPO_ROOT
-from rollback_fixtures import calls, make_env, marker_cmd, report, run_drill
+from rollback_fixtures import FINGERPRINT, calls, make_env, marker_cmd, report, run_drill
 
 pytestmark = pytest.mark.unit
 
@@ -40,6 +40,18 @@ def _drill(tmp_path: Path, *extra: str, **env_over: str):
 
 def _compose_calls(tmp_path: Path, word: str) -> list[dict]:
     return [c for c in calls(tmp_path) if "argv" in c and word in c["argv"]]
+
+
+def _downgrades(tmp_path: Path) -> list[dict]:
+    return [
+        c
+        for c in _compose_calls(tmp_path, "run")
+        if any("command.downgrade" in a for a in c["argv"])
+    ]
+
+
+def _integrity(tmp_path: Path) -> list[dict]:
+    return [c for c in _compose_calls(tmp_path, "run") if "racket-integrity" in c["argv"]]
 
 
 # ------------------------------------------------------------------ preconditions (exit 2)
@@ -134,7 +146,7 @@ def test_the_backup_service_runs_the_current_release_image(tmp_path: Path) -> No
 def test_the_downgrade_runs_with_the_current_image_to_the_previous_revision(tmp_path: Path) -> None:
     proc = _drill(tmp_path)
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    (down,) = [c for c in _compose_calls(tmp_path, "run") if "migrate" in c["argv"]]
+    (down,) = _downgrades(tmp_path)
     # PE F1 (PR #224): racket-migrate:<current> through the override, never a per-project build.
     assert down["image_tag"] == CURRENT
     assert str(REPO_ROOT / "infra" / "compose.release.yaml") in down["argv"]
@@ -158,7 +170,15 @@ def test_a_wrong_revision_after_the_downgrade_fails_and_falls_back(tmp_path: Pat
     )
     assert proc.returncode == 1
     names = [s["name"] for s in report(tmp_path)["steps"]]
-    assert names == ["backup", "downgrade", "restore", "redeploy", "health"]
+    assert names == [
+        "fingerprint-before",
+        "backup",
+        "downgrade",
+        "restore",
+        "redeploy",
+        "health",
+        "fingerprint-after",
+    ]
 
 
 def test_a_failed_downgrade_without_a_restore_command_stops_with_the_runbook(
@@ -186,7 +206,8 @@ def test_a_failed_backup_stops_before_the_downgrade(tmp_path: Path) -> None:
         tmp_path, env, "--project", "racket-drill", "--to-previous-tag", "--backup-cmd", "false"
     )
     assert proc.returncode == 1
-    assert not _compose_calls(tmp_path, "run")
+    assert not _downgrades(tmp_path)
+    assert not _compose_calls(tmp_path, "up")
 
 
 def test_the_report_records_each_step_with_rc_and_seconds(tmp_path: Path) -> None:
@@ -194,7 +215,14 @@ def test_the_report_records_each_step_with_rc_and_seconds(tmp_path: Path) -> Non
     rep = report(tmp_path)
     assert rep["rc"] == 0
     assert rep["to"] == {"tag": TAG, "revision": REV}
-    assert [s["name"] for s in rep["steps"]] == ["backup", "downgrade", "redeploy", "health"]
+    assert [s["name"] for s in rep["steps"]] == [
+        "fingerprint-before",
+        "backup",
+        "downgrade",
+        "redeploy",
+        "health",
+        "fingerprint-after",
+    ]
     assert all(s["rc"] == 0 and s["seconds"] >= 0 for s in rep["steps"])
 
 
@@ -206,6 +234,65 @@ def test_an_explicit_tag_and_revision_override_the_notes(tmp_path: Path) -> None
     assert report(tmp_path)["to"] == {"tag": "r1-x", "revision": "0019"}
 
 
+# --------------------------------------------------------------- NFR-045.3: corrections fingerprint
+# Security review F2 (PR #224; T5-RB-4): a rollback that loses or changes confirmed corrections
+# must not exit 0. racket-integrity (ST-076b) runs before the backup and after the health check.
+def test_the_fingerprint_is_taken_before_the_backup_and_checked_after_health(
+    tmp_path: Path,
+) -> None:
+    proc = _drill(tmp_path)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    names = [s["name"] for s in report(tmp_path)["steps"]]
+    assert names[0] == "fingerprint-before"
+    assert names[-2:] == ["health", "fingerprint-after"]
+    count, digest = FINGERPRINT.split(":")
+    assert report(tmp_path)["corrections"] == {
+        "before": {"count": int(count), "sha256": digest},
+        "after": {"count": int(count), "sha256": digest},
+        "equal": True,
+    }
+
+
+def test_both_fingerprints_run_racket_integrity_in_the_current_release_image(
+    tmp_path: Path,
+) -> None:
+    _drill(tmp_path)
+    before, after = _integrity(tmp_path)
+    count, digest = FINGERPRINT.split(":")
+    for call in (before, after):
+        assert call["image_tag"] == CURRENT  # the previous release predates racket-integrity
+        assert str(REPO_ROOT / "infra" / "compose.release.yaml") in call["argv"]
+        assert "migrate" in call["argv"]
+    assert "--expect-count" not in before["argv"]
+    assert after["argv"][-4:] == ["--expect-count", count, "--expect-sha256", digest]
+
+
+def test_a_rollback_that_changes_the_corrections_fails(tmp_path: Path) -> None:
+    proc = _drill(tmp_path, FAKE_DOCKER_FINGERPRINT_AFTER="2:" + "b" * 64)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    rep = report(tmp_path)
+    assert rep["rc"] == 1
+    assert rep["corrections"]["equal"] is False
+    assert rep["corrections"]["after"] == {"count": 2, "sha256": "b" * 64}
+    assert rep["steps"][-1] == {**rep["steps"][-1], "name": "fingerprint-after", "rc": 1}
+    assert "corrections" in proc.stderr
+
+
+def test_a_failed_fingerprint_before_stops_before_the_backup(tmp_path: Path) -> None:
+    proc = _drill(tmp_path, FAKE_DOCKER_FAIL="racket-integrity")
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert [s["name"] for s in report(tmp_path)["steps"]] == ["fingerprint-before"]
+    assert not [c for c in calls(tmp_path) if c.get("step") == "backup"]
+    assert not _downgrades(tmp_path)
+
+
+def test_no_fingerprint_after_when_the_health_check_fails(tmp_path: Path) -> None:
+    proc = _drill(tmp_path, FAKE_DOCKER_FAIL="healthz")
+    assert proc.returncode == 1
+    assert len(_integrity(tmp_path)) == 1
+    assert report(tmp_path)["corrections"]["after"] is None
+
+
 # ------------------------------------------------------------------ compose.release.yaml and make
 def test_the_release_override_tags_every_built_service_and_nothing_else() -> None:
     built = _built()
@@ -213,7 +300,16 @@ def test_the_release_override_tags_every_built_service_and_nothing_else() -> Non
     release = yaml.safe_load((REPO_ROOT / "infra" / "compose.release.yaml").read_text())
     assert set(release["services"]) == built
     for name, svc in release["services"].items():
-        assert svc == {"image": f"racket-{name}:${{IMAGE_TAG:?set IMAGE_TAG}}"}, name
+        assert set(svc) == {"image", "environment"}, name
+        assert svc["image"] == f"racket-{name}:${{IMAGE_TAG:?set IMAGE_TAG}}", name
+
+
+def test_the_release_override_pins_the_rc_runtime_settings_on_every_service() -> None:
+    # Security review F1 (PR #224; T5-RB-3): infra/.env from env.example says APP_ENV=dev and
+    # DEV_IDENTITY_ENABLED=true; a release must not inherit either, whatever infra/.env says.
+    release = yaml.safe_load((REPO_ROOT / "infra" / "compose.release.yaml").read_text())
+    for name, svc in release["services"].items():
+        assert svc["environment"] == {"APP_ENV": "staging", "DEV_IDENTITY_ENABLED": "false"}, name
 
 
 def _make_n(*args: str) -> str:

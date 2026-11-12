@@ -53,6 +53,11 @@ def set_flag_default(text: str, flag: str, value: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def set_setting(text: str, setting: str, value: str) -> str:
+    """Rewrite the RC value (second cell) of the Runtime settings row `setting`."""
+    return set_flag_default(text, setting, value)
+
+
 def strip_pn(text: str, row_id: str) -> str:
     """Remove every P-n reference (P7, P15, ...) from the row whose first cell is `row_id`."""
     out = []

@@ -2,7 +2,9 @@
 REL-1.2). The stand-in appends one JSON line per call (argv and IMAGE_TAG) to $FAKE_DOCKER_LOG,
 fails a call whose argv contains $FAKE_DOCKER_FAIL, reports `image inspect` of a reference that
 contains $FAKE_DOCKER_MISSING as missing, and prints $FAKE_DOCKER_REVISION for the revision
-query. Nothing reaches a Docker daemon."""
+query. For `racket-integrity` it prints the corrections fingerprint `$FAKE_DOCKER_FINGERPRINT`
+(`<count>:<sha256>`), or `$FAKE_DOCKER_FINGERPRINT_AFTER` when called with `--expect-count`, and
+compares like the real CLI (exit 1 when not equal). Nothing reaches a Docker daemon."""
 
 from __future__ import annotations
 
@@ -31,8 +33,24 @@ if argv[:2] == ["image", "inspect"] and missing and missing in joined:
     sys.exit(1)
 if "alembic_version" in joined:
     print(os.environ.get("FAKE_DOCKER_REVISION", ""))
+if "racket-integrity" in argv:
+    before = os.environ.get("FAKE_DOCKER_FINGERPRINT", "{default}")
+    now = before
+    if "--expect-count" in argv:
+        now = os.environ.get("FAKE_DOCKER_FINGERPRINT_AFTER", before)
+    count, digest = now.split(":")
+    result = {{"count": int(count), "sha256": digest}}
+    if "--expect-count" in argv:
+        expect = (int(argv[argv.index("--expect-count") + 1]),
+                  argv[argv.index("--expect-sha256") + 1])
+        result["equal"] = (int(count), digest) == expect
+        print(json.dumps({{"corrections": result}}))
+        sys.exit(0 if result["equal"] else 1)
+    print(json.dumps({{"corrections": result}}))
 sys.exit(0)
 """
+
+FINGERPRINT = "3:" + "a" * 64  # the stand-in's default corrections fingerprint
 
 NOTES = """---
 release: r1-rc1
@@ -50,7 +68,7 @@ def make_env(tmp_path: Path, tag: str, revision: str) -> dict[str, str]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     docker = bin_dir / "docker"
-    docker.write_text(FAKE_DOCKER.format(python=sys.executable))
+    docker.write_text(FAKE_DOCKER.format(python=sys.executable, default=FINGERPRINT))
     docker.chmod(docker.stat().st_mode | stat.S_IEXEC)
     (tmp_path / "notes.md").write_text(NOTES.format(tag=tag, revision=revision))
     env = {k: v for k, v in os.environ.items() if k not in {"IMAGE_TAG", "FAKE_DOCKER_FAIL"}}

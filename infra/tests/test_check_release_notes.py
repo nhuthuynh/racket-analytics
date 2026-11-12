@@ -14,6 +14,7 @@ from release_notes_fixtures import (
     drop_row,
     run_check,
     set_flag_default,
+    set_setting,
     strip_pn,
 )
 
@@ -62,6 +63,13 @@ previous_alembic_revision: "0020"
 | `FEATURE_AGE_GATE` | `false` | age confirmation | P16 |
 | `FEATURE_QUOTAS` | `false` | quotas | P8 |
 
+## Runtime settings
+
+| Setting | RC value | Why |
+|---|---|---|
+| `APP_ENV` | `staging` | no auto-migrate, no dev seed |
+| `DEV_IDENTITY_ENABLED` | `false` | no sign-in without a magic link |
+
 ## Known limitations
 
 | Id | Limitation | Waits on |
@@ -70,11 +78,22 @@ previous_alembic_revision: "0020"
 | L-2 | Drills are not reviewed by a human coach | P15 |
 """
 
+# The release override (infra/compose.release.yaml): every service pins the RC settings.
+RELEASE = """services:
+  api:
+    image: "racket-api:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: {APP_ENV: staging, DEV_IDENTITY_ENABLED: "false"}
+  web:
+    image: "racket-web:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: {APP_ENV: staging, DEV_IDENTITY_ENABLED: "false"}
+"""
 
-def _run(tmp_path: Path, notes: str, matrix: str = MATRIX, env: str = ENV):
+
+def _run(tmp_path: Path, notes: str, matrix: str = MATRIX, env: str = ENV, release: str = RELEASE):
     (tmp_path / "notes.md").write_text(notes)
     (tmp_path / "matrix.md").write_text(matrix)
     (tmp_path / "env.example").write_text(env)
+    (tmp_path / "release.yaml").write_text(release)
     return run_check(
         "--notes",
         str(tmp_path / "notes.md"),
@@ -82,6 +101,8 @@ def _run(tmp_path: Path, notes: str, matrix: str = MATRIX, env: str = ENV):
         str(tmp_path / "matrix.md"),
         "--env",
         str(tmp_path / "env.example"),
+        "--release",
+        str(tmp_path / "release.yaml"),
     )
 
 
@@ -138,6 +159,78 @@ def test_only_feature_variables_are_flags(tmp_path: Path) -> None:
     proc = _run(tmp_path, GOOD)
     assert "DEV_IDENTITY_ENABLED" not in proc.stdout
     assert "AGE_MINIMUM" not in proc.stdout
+
+
+# ---------------------------------------------------------------- T5-RB-3: no dev settings in the RC
+# Security review F1 (PR #224): `make up IMAGE_TAG=<tag>` reads infra/.env (APP_ENV=dev,
+# DEV_IDENTITY_ENABLED=true), so the RC mounted /dev/* and seeded the dev users.
+def test_notes_without_a_dev_identity_row_fail(tmp_path: Path) -> None:
+    lines = _fails(_run(tmp_path, drop_row(GOOD, "DEV_IDENTITY_ENABLED")), "DEV_IDENTITY_ENABLED")
+    assert any("T5-RB-3" in ln for ln in lines)
+
+
+def test_notes_with_dev_identity_on_fail(tmp_path: Path) -> None:
+    text = set_setting(GOOD, "DEV_IDENTITY_ENABLED", "true")
+    _fails(_run(tmp_path, text), "DEV_IDENTITY_ENABLED")
+
+
+@pytest.mark.parametrize("value", ["dev", "test", "anything"])
+def test_notes_with_a_non_deployed_app_env_fail(tmp_path: Path, value: str) -> None:
+    _fails(_run(tmp_path, set_setting(GOOD, "APP_ENV", value)), "APP_ENV")
+
+
+def test_notes_without_an_app_env_row_fail(tmp_path: Path) -> None:
+    _fails(_run(tmp_path, drop_row(GOOD, "APP_ENV")), "APP_ENV")
+
+
+def test_a_privacy_flag_on_by_default_fails_even_when_env_example_agrees(tmp_path: Path) -> None:
+    env = ENV.replace("FEATURE_AGE_GATE=false", "FEATURE_AGE_GATE=true")
+    text = set_flag_default(GOOD, "FEATURE_AGE_GATE", "true")
+    lines = _fails(_run(tmp_path, text, env=env), "FEATURE_AGE_GATE")
+    assert any("T5-RB-3" in ln and "privacy" in ln for ln in lines)
+
+
+@pytest.mark.parametrize(
+    "flag", ["FEATURE_AGE_GATE", "FEATURE_RETENTION_SETTING", "FEATURE_TRAINING_CONSENT"]
+)
+def test_every_privacy_flag_on_by_default_fails(tmp_path: Path, flag: str) -> None:
+    env = ENV + f"{flag}=true\n"
+    row = f"| `{flag}` | `true` | x | P16 |\n"
+    text = GOOD.replace("| `FEATURE_QUOTAS` |", row + "| `FEATURE_QUOTAS` |", 1)
+    if flag == "FEATURE_AGE_GATE":  # already a row and a line in the fixtures
+        env = ENV.replace(f"{flag}=false", f"{flag}=true")
+        text = set_flag_default(GOOD, flag, "true")
+    _fails(_run(tmp_path, text, env=env), flag, "privacy")
+
+
+def test_the_quota_flag_is_not_a_privacy_flag(tmp_path: Path) -> None:
+    env = ENV.replace("FEATURE_QUOTAS=false", "FEATURE_QUOTAS=true")
+    proc = _run(tmp_path, set_flag_default(GOOD, "FEATURE_QUOTAS", "true"), env=env)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_a_release_service_without_the_dev_identity_pin_fails(tmp_path: Path) -> None:
+    release = RELEASE.replace(
+        '{APP_ENV: staging, DEV_IDENTITY_ENABLED: "false"}', "{APP_ENV: staging}", 1
+    )
+    lines = _fails(_run(tmp_path, GOOD, release=release), "api", "DEV_IDENTITY_ENABLED")
+    assert not any(" web" in ln for ln in lines)
+
+
+def test_a_release_service_with_a_dev_app_env_fails(tmp_path: Path) -> None:
+    release = RELEASE.replace("{APP_ENV: staging,", "{APP_ENV: dev,")
+    _fails(_run(tmp_path, GOOD, release=release), "APP_ENV")
+
+
+def test_a_release_service_whose_app_env_differs_from_the_notes_fails(tmp_path: Path) -> None:
+    release = RELEASE.replace("{APP_ENV: staging,", "{APP_ENV: prod,")
+    _fails(_run(tmp_path, GOOD, release=release), "APP_ENV", "staging")
+
+
+def test_an_unreadable_release_override_is_a_usage_error(tmp_path: Path) -> None:
+    (tmp_path / "notes.md").write_text(GOOD)
+    proc = run_check("--notes", str(tmp_path / "notes.md"), "--release", str(tmp_path / "no.yaml"))
+    assert proc.returncode == 2, proc.stdout + proc.stderr
 
 
 # ------------------------------------------------------------------ REL-1.1: limitations
