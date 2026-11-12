@@ -445,8 +445,12 @@ def test_a_pending_glob_without_its_creating_ticket_fails(rt: ModuleType) -> Non
     assert len(problems) == 1
 
 
-def test_the_fault_seam_is_pending_on_st_075d(rt: ModuleType) -> None:
-    assert rt.PENDING_GLOBS.get("backend/src/racket/platform/fault*") == "ST-075d"
+def test_the_fault_seam_is_a_tier_2_rule_once_st_075d_creates_it(rt: ModuleType) -> None:
+    # ST-075d created backend/src/racket/platform/fault.py: the glob left PENDING_GLOBS for
+    # the tier 2 rules (TCR in docs/sprints/05/decisions/ST-075d.md).
+    glob = "backend/src/racket/platform/fault*"
+    assert glob not in rt.PENDING_GLOBS
+    assert rt.Rule(glob, 2) in rt.RULES
 
 
 # ------------------------------------------------- merge_ready imports the classifier

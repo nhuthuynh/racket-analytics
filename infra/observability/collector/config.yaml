@@ -1,0 +1,37 @@
+# OTel Collector for the `obs` Compose profile (ST-075b; ADR 0057 §3). Metrics only; traces stay
+# on Jaeger. OTLP/HTTP in on 4318 and the Prometheus exporter on 8889, both on the Compose
+# network only, never published (SEC-5 T5-OB-4). Checked by infra/tests/test_compose_obs_profile.py.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Second PII guard (T5-OB-1): keep only the attributes of docs/ops/sli-metrics.md.
+  transform/allowlist:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          - keep_keys(attributes, ["http.request.method", "http.response.status_code", "event", "reason"])
+  # The purge exports delta sums (ADR 0057 C4); one cumulative series across runs. 25h is longer
+  # than any PURGE_INTERVAL_S the scheduler accepts; the 5 m default would restart the series.
+  deltatocumulative:
+    max_stale: 25h
+  batch: {}
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    metric_expiration: 25h
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [transform/allowlist, deltatocumulative, batch]
+      exporters: [prometheus]
+  telemetry:
+    metrics:
+      level: none

@@ -48,14 +48,19 @@ Each method's author dry-runs it live, in the configuration it measures, and log
 # one Compose project for the whole block: infra/compose.yaml:6 sets name: racket-analytics and the
 # Makefile's COMPOSE has no -p, so every make target (up, demo, down) reads COMPOSE_PROJECT_NAME from the shell;
 # the four flags come from the shell too (shell values override infra/.env; make has no FLAGS variable)
+# ST-074: each Locust user seeds its own account, so the per-IP sign-in and match-creation limits
+# are raised for 3 runs x 50 accounts from one client (as the CI perf-baseline job raises them)
 export COMPOSE_PROJECT_NAME=racket-goal05-on FEATURE_AGE_GATE=true FEATURE_RETENTION_SETTING=true \
-  FEATURE_TRAINING_CONSENT=true FEATURE_QUOTAS=true
-make up && make demo
+  FEATURE_TRAINING_CONSENT=true FEATURE_QUOTAS=true AUTH_LINK_LIMIT_PER_IP=1000 \
+  AUTH_EXCHANGE_LIMIT_PER_IP=1000 MATCH_CREATIONS_PER_IP_PER_HOUR=1000
+# make up only: `make demo` fails with FEATURE_AGE_GATE on (seed_demo.py has no age confirmation;
+# ST-074 finding), and locustfile_r1.py seeds its own accounts
+make up
 for run in 1 2 3; do
   uvx --from locust==2.46.7 locust -f backend/tests/perf/locustfile_r1.py --headless \
-    -u 50 -r 50 -t 6m --csv reports/perf/r1-$run --only-summary
+    -u 50 -r 50 -t 8m --csv reports/perf/r1-$run --only-summary
   python3 scripts/ci/perf_verdict.py --stats reports/perf/r1-${run}_stats.csv --rps 50 \
-    --min-rps 49.5 --warmup-s 60 --p95-ms 300 --p99-ms 800 --max-error-pct 0.5 \
+    --min-rps 49.5 --warmup-s 60 --p95-ms 300 --p99-ms 800 --max-error-pct 0.5 --min-window 300 \
     --per-endpoint match,score-sheet,dashboard,plan --json reports/perf/r1-$run.json
 done
 ```
@@ -183,13 +188,13 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 
 | Metric | Author | Ticket | Date | Head | Command (as §4) | rc | Planted-failure rc |
 |---|---|---|---|---|---|---|---|
-| G05-01 | senior-backend-engineer | ST-074 | | | | | |
+| G05-01 | senior-backend-engineer | ST-074 | 2026-11-04 | `ea22fe1c` | the §4 G05-01 block: its `export`, `make up`, then the 3-run locust + verdict loop (`-t 8m`, `--min-window 300`). One deviation: `DOCKERHUB_REGISTRY=mirror.gcr.io` (Docker Hub answered 429). Default ports, all 3 runs, one stack; load average sampled each second (mean 3.2-3.8, max 6.0-7.3 on 4 CPUs: Locust, the stack and other lanes' test containers) | **0, 0, 0** (3 of 3): p95/p99 ms per run, match 63/140, 130/220, 96/190; score-sheet 67/140, 130/220, 100/190; dashboard 78/180, 150/240, 110/200; plan 65/140, 130/210, 95/170; 0 failures of 19,125 / 19,246 / 19,190; 50.08 / 49.97 / 49.93 RPS; windows 381 / 385 / 384 s (98 / 95 / 96 s excluded). Earlier failing runs are kept in `decisions/ST-074.md` ("Dry runs"): r1-1 (moved ports, second stack), QA runs 1-2 | 1 (`--p95-ms 1` on run 3's CSV: `FAIL` match, score-sheet, dashboard, plan) |
 | G05-02 | sre-devops-engineer | ST-075c | | | | | |
 | G05-03 | sre-devops-engineer | ST-076c | | | | | |
 | G05-04 | senior-frontend-engineer | ST-079 | | | | | |
 | G05-05 | senior-qa-engineer | ST-080 | | | | | |
 | G05-06 | senior-backend-engineer | ST-078d | | | | | |
-| G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | | | | | |
+| G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | 2026-11-05 | `2ed79c68` + the ST-078c checklist rows | the §4 G05-07 block, from the root (`--json` into the scratchpad) | **0** on the tool line (all chapters, no `--chapters`): V1-V17 124 Pass, 40 Fail (all owned: 36 by ADR 0059 draft / P19, 3 by ST-077, 1 by ADR 0031), 92 N/A, 0 not assessed, "0 problem(s)"; **0** on the BOLA line (28 passed). Not yet 0: `test_it_05_security_headers.py` → 4 (file is an ST-078e output); `cd web && npm run test -- hydration-lock` → 1, `Missing script: "test"` (method defect for QA-PIN-05; `npm run test:unit -- hydration-lock` → 1, no test files until ST-078e). Details: `decisions/ST-078c.md` | 1 (a copy with a planted `Not assessed` row, an unowned `Fail` and an unevidenced `Pass`: "3 problem(s)") |
 | G05-08 | sre-devops-engineer | CI-TIERS-b | | | | | |
 | G05-09 | senior-qa-engineer | QA-PIN-05 | | | | | |
 | G05-10 | senior-qa-engineer | QA-PIN-05 | | | | | |
@@ -199,3 +204,4 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 | G05-02 (planning dry-run, project name only) | engineering-manager | PLAN-05 | 2026-11-03 | `6c3ffcdd` | `docker compose -f infra/compose.yaml -p racket-obs05 up -d --no-deps web-tls`, then `COMPOSE_PROJECT_NAME=racket-obs05 make demo` (only web-tls running; the obs profile and `compose.fault-drill.yaml` do not exist yet) | 0 on the `cp web-tls` step (root.crt copied); the make rc is 2 only because the API is not running (`GET /dev/users: HTTP 502`) | 2 (`env -u COMPOSE_PROJECT_NAME make demo` → "the stack's web-tls service is not reachable; run 'make up' first"; the round 2 form of the method) |
 | G05-12 (planning dry-run) | engineering-manager | PLAN-05 | 2026-11-03 | `04c6a826` | `python3 scripts/measure/open_defects.py docs/sprints/04/review-rounds.md` (Sprint 4 ledger; the Sprint 5 ledger does not exist yet) | 0 (`open 0`) | n/a |
 | G05-06 (planning dry-run, paths and arguments; PE-PLAN05-07 / PLAN05-QA-08) | engineering-manager | PLAN-05 | 2026-11-03 | `244b8053` + the round 3 block text | the §4 G05-06 block, run from the repo root | step 1: 4 (pytest "file or directory not found": the three ITs are planned outputs of ST-077, ST-078d and ST-075a); `reports/g06-be.xml` was written at the root and the shell stayed at the root. Step 2: not run (`e2e/sprint-05/logout-hygiene.spec.ts` is an ST-078e output; `web/node_modules` is not installed in this worktree). Step 3 on that report: 1 (`selected 0`, all 3 `--require` patterns listed as missing, as expected before the tickets). Step 3 on a fixture report with the 3 ITs passing: **0** | 1 (`--require missing_suite`). The round 1-3 form: 2 from `web/` ("can't open file …/web/scripts/measure/junit_rate.py"), and 2 from the root too (argparse: `--include` is required) |
+| G05-07 (tool dry-run, V1-V5; the G05-07 row stays ST-078c's) | security-privacy-engineer | ST-078a | 2026-11-05 | `68dd23f2` | the §4 `asvs_status.py` line with `--chapters V1-V5` (`--json` into the scratchpad) | **0**: V1-V5 53 Pass, 5 Fail (owner P19), 20 N/A, 0 not assessed, "0 problem(s)". The §4 line as written (all chapters) → **1**, "116 problem(s)", all `not-assessed` in V6-V8 and V11-V16 (ST-078b/c) | 1 (planted `Not assessed`, `Fail` without owner, `Pass` without evidence: scenarios in `tests/features/asvs_status.feature`) |

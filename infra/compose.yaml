@@ -2,6 +2,8 @@
 #   cp infra/env.example infra/.env && docker compose -f infra/compose.yaml up -d --build --wait
 # Same backing services as production: Postgres 16 (DB + job queue), an S3-compatible store
 # (SeaweedFS, ADR 0008 part C), SMTP (Mailpit), OTLP tracing (Jaeger). Never SQLite [AQS/OPS-05].
+# SLI metrics backend (OTel Collector + Prometheus): profile `obs`, turned on by appending
+# infra/observability/obs.env to infra/.env (ST-075b, ADR 0057 §3).
 # Every setting comes from the environment; required ones fail fast via ${VAR:?} [AQS/OPS-01].
 name: racket-analytics
 
@@ -18,7 +20,7 @@ x-required-app-env: &app-env
   OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
   # Jaeger takes traces only. FastAPI's automatic telemetry would also send metrics and logs
   # to this endpoint and get 404 every minute (C-13, SRE-G2-01). The SLI metrics still export
-  # when OTEL_EXPORTER_OTLP_METRICS_ENDPOINT names a collector (docs/ops/sli-metrics.md).
+  # when OTEL_EXPORTER_OTLP_METRICS_ENDPOINT names a collector: api and purge only (ST-075b).
   OTEL_METRICS_EXPORTER: none
   OTEL_LOGS_EXPORTER: none
   # Sprint 4 coaching and R1 privacy/quota settings (ST-067; api-sprint-04 §11). Every service
@@ -237,6 +239,7 @@ services:
       target: api
     environment:
       <<: [*app-env, *sign-in-env, *media-store-access]
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
       OTEL_SERVICE_NAME: racket-api
       # The browser reaches the API through web-tls, which replaces any client X-Forwarded-For
       # with the real peer, and the web's /api rewrite, which forwards it unchanged (measured
@@ -387,6 +390,10 @@ services:
     environment:
       <<: [*app-env, *media-store-access]
       OTEL_SERVICE_NAME: racket-purge
+      # Empty = no export. Delta sums: each run is a short-lived process, and the collector's
+      # deltatocumulative processor rebuilds one series across runs (ADR 0057 C4).
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: delta
       PURGE_INTERVAL_S: ${PURGE_INTERVAL_S:-86400}
     restart: unless-stopped
     networks: [edge]
@@ -464,6 +471,54 @@ services:
       timeout: 3s
       retries: 30
 
+  otel-collector:
+    # OTLP/HTTP in (4318) -> attribute allowlist -> deltatocumulative -> Prometheus exporter
+    # (8889). No published port (SEC-5 T5-OB-4). The image has no shell: the healthcheck
+    # validates the mounted config; Prometheus's `up{job="otel-collector"}` proves the scrape.
+    image: ${DOCKERHUB_REGISTRY:-docker.io}/otel/opentelemetry-collector-contrib:0.135.0@sha256:89107a3a8f4636a396927edf7025bb9614b8da2d92f4cc3f43109e8d115736e2
+    profiles: [obs]
+    volumes:
+      - ./observability/collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks: [edge]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol-contrib/config.yaml"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  prometheus:
+    # Scrapes the collector; loads the listed rule files (ADR 0057 §3). No auth, so loopback only;
+    # no admin API, no remote-write or OTLP receiver (T5-OB-4). 31 days covers the 30-day SLO
+    # window; 1 GB caps the disk (T5-OB-7, docs/ops/disk-and-prune.md).
+    image: ${DOCKERHUB_REGISTRY:-docker.io}/prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
+    profiles: [obs]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=31d
+      - --storage.tsdb.retention.size=1GB
+    ports:
+      - 127.0.0.1:${PROMETHEUS_HOST_PORT:-9090}:9090
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    networks: [edge]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
 networks:
   edge: {}
   sandbox:
@@ -476,3 +531,4 @@ volumes:
   pgdata: {}
   s3data: {}
   caddy-data: {}
+  prometheus-data: {}
