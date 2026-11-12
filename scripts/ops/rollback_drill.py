@@ -7,8 +7,9 @@ rule 7).
 
 ``--to-previous-tag`` reads ``previous_release`` and ``previous_alembic_revision`` from the
 release notes (``--notes``, default ``docs/releases/r1-rc.md``). Order, as rule 7:
-0. refuse (exit 2) before any change when an image ``racket-<service>:<tag>`` of the previous or
-   the current release is missing, or no backup can be taken;
+0. refuse (exit 2) before any change when an image ``racket-<service>:<tag>`` is missing: of
+   the previous release, every built service step 3 starts (no profile); of the current release,
+   every built service (the ops-profile ``backup`` too); or when no backup can be taken;
 1. ``backup``: the on-demand backup (``--backup-cmd``, else the project's ``backup`` service in
    the current release image);
 2. ``downgrade``: ``alembic downgrade <revision>`` with the current release's ``migrate`` image
@@ -72,9 +73,14 @@ def front_matter(path: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def built_services() -> list[str]:
+def built_services(*, started_only: bool = False) -> list[str]:
+    """Services with ``build:``; ``started_only`` keeps those ``up`` starts without a profile."""
     services = yaml.safe_load(COMPOSE.read_text())["services"]
-    return [name for name, svc in services.items() if "build" in svc]
+    return [
+        name
+        for name, svc in services.items()
+        if "build" in svc and not (started_only and svc.get("profiles"))
+    ]
 
 
 class Drill:
@@ -171,10 +177,13 @@ def main(argv: list[str] | None = None) -> int:
                 "no current release to restore to: pass --current or set release in the notes"
             )
         drill = Drill(args.project, str(tag), str(revision), str(current))
+        # The previous tag only needs what step 3's `up` starts (no profile: the previous
+        # release may predate `backup`); the current tag also runs step 1's ops-profile backup.
+        wanted = [(drill.tag, svc) for svc in built_services(started_only=True)]
+        wanted += [(drill.current, svc) for svc in built_services()]
         missing = [
             f"racket-{svc}:{t}"
-            for t in (drill.tag, drill.current)
-            for svc in built_services()
+            for t, svc in wanted
             if subprocess.run(
                 ["docker", "image", "inspect", f"racket-{svc}:{t}"], capture_output=True
             ).returncode
