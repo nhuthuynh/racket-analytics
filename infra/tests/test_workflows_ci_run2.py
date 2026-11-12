@@ -62,10 +62,13 @@ def _job_runs(job: str) -> str:
 
 @pytest.mark.parametrize("job", BACKEND_SUITE_JOBS)
 def test_backend_suite_jobs_never_run_without_ffprobe(job: str) -> None:
-    runs = _job_runs(job)
-    assert "apt-get install" in runs, f"{job}: ffprobe not installed"
-    assert "ffmpeg" in runs, f"{job}: ffprobe not installed"
-    assert "ffprobe -version" in runs, f"{job}: ffprobe presence not checked"
+    # CI-FFMPEG (TCR, docs/sprints/05/decisions/CI-FFMPEG.md): the shared, cached,
+    # checksum-pinned action replaces `apt-get install ffmpeg`; same two checks as before.
+    steps = yaml.safe_load(CI.read_text())["jobs"][job]["steps"]
+    uses = [s.get("uses", "") for s in steps]
+    assert "./.github/actions/install-ffmpeg" in uses, f"{job}: ffprobe not installed"
+    action = (CI.parents[1] / "actions" / "install-ffmpeg" / "action.yml").read_text()
+    assert "ffprobe -version" in action, f"{job}: ffprobe presence not checked"
 
 
 @pytest.mark.parametrize("job", BACKEND_SUITE_JOBS)
