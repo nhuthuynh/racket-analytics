@@ -43,3 +43,18 @@ Main run 43281846173 (`1c3b648`, merge of #213, 2026-11-12) stopped the step `Do
 | 2026-11-12 | sre-devops-engineer | **Kept: budget 10 s, `DOMAIN_TEST_PATHS`, `-m "unit and not red_until"`, default Hypothesis profile, every `max_examples`, `-n auto --dist worksteal`.** No test edited, skipped or moved | `infra/tests/test_ci_domain_budget.py` unchanged and green | The ticket rules and ADR 0049 rules 1-2 |
 | 2026-11-12 | sre-devops-engineer | **Rejected for this PR: lazy imports of `alembic` (`racket.platform.db`), `boto3` (`racket.platform.storage`) and `psycopg.errors` (`racket.video_ingest.service`).** Together about 0.19 s of each worker's collection | `python -X importtime` on the domain collection: alembic 36 ms, boto3 81 ms, psycopg 69 ms cumulative | Product code owned by other lanes; `test_migration_failure_rolls_back.py` patches `db.command`, so a lazy alembic import changes a protected test. Worth a backend ticket if more headroom is needed |
 | 2026-11-12 | sre-devops-engineer | **Rejected: a higher `DOMAIN_UNIT_BUDGET_S`, fewer examples, fewer workers, `-p no:...` plugins off.** | — | Policy (NFR-073), QA's fuzz depth (QA-R1-07), duplicated collection per worker, ADR 0049 narrowing guard |
+
+## Result on CI (this PR)
+
+Runner speed read from the serial property step of the same job, as in the trend table.
+
+| Run (PR #235) | Commit | Domain step | Property step | Backend unit | Runner | Same-speed runners before (domain step) |
+|---|---|---|---|---|---|---|
+| 43295511747 | 7a4fe9d | 8.2 s | 57.9 s | 15.1 s | slow | 9.2-9.3 s at 59-61 s |
+| 43298772128 | 4aca7b0 | 8.0 s | 57.1 s | 15.4 s | slow | 9.2-9.3 s at 59-61 s |
+
+On slow runners the step drops 1.0-1.3 s (about 13%) to 80-82% of the budget; fast runners, scaled by the same CPU cut, land near 5 s (50%). **The ~70% target is met on fast runners and not on slow ones.** What is left is CPU the tests themselves need (Hypothesis generation, 6.7 of 7.5 s of serial test time) and each worker's start-up and collection (about 1.8 s of CPU, every worker collects all 1,862 tests).
+
+| Date | Who | Decision | Evidence | Reasoning |
+|---|---|---|---|---|
+| 2026-11-12 | sre-devops-engineer | **`DOMAIN_UNIT_BUDGET_S` stays 10; this PR does not raise it.** Whether to buy the rest of the margin on slow runners with product changes (lazy imports, about 0.3 s there) or with a budget change is for the principal-engineer and the product owner (NFR-073 owner), not an SRE edit | Table above; ADR 0049 "Considered options" 5 | A higher budget changes NFR-073, which ADR 0049 rules out; the speed-up in this PR stands on its own |
