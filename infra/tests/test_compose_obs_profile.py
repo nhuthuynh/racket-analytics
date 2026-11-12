@@ -196,7 +196,7 @@ def test_promtool_accepts_the_shipped_prometheus_config() -> None:
         capture_output=True, text=True, timeout=180, check=False,
     )  # fmt: skip
     assert res.returncode == 0, res.stdout + res.stderr
-    assert "SUCCESS: 1 rule files found" in res.stdout + res.stderr
+    assert "SUCCESS: 2 rule files found" in res.stdout + res.stderr
 
 
 @pytest.mark.unit
