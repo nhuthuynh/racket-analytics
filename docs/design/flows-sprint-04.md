@@ -331,3 +331,12 @@ The chair asks the engineering-manager to carry this item in the EM-ESC-05 note 
 ### 14.6 DR-01..DR-03 re-read (chair, 2026-11-03)
 
 No pending cell is left. `flows-sprint-01.md` §10 (DR-01) and `flows-sprint-02.md` §13 (DR-02): **Held** 2026-10-10 (ticket DR-HELD-03), every cell an accept. `flows-sprint-03.md` §13 (DR-03): **Held** 2026-10-17 (ticket C4-G12), the last cell being the business-analyst's R3-9 of 2026-10-15. Check: `grep -n '^|' docs/design/flows-sprint-0{1,2,3}.md | grep -i pending | grep -iv 'pending sign-in'` → one line only, `flows-sprint-03.md:264` (PD-FL3-03, an open item about a metric name "pending COACH-1", not a decider cell).
+
+### 14.7 After the 2026-11-05 deadline (chair, ticket PD-DR04, 2026-11-12)
+
+- **Result: DR-04 is still not held, and no waiver exists.** Read at `origin/main` `2f94797`: the §14.3 command (`check_flows.py … --review DR-04 --decider <five roles>`) → five `FAIL cell` lines, `check-flows: 5 problem(s)`, rc 1. All five §14.2 cells still read "pending".
+- **Deciders still unreachable:** `ListAgents` on 2026-11-12 → "No reachable agents". The chair still does not write their cells (ADR 0037 rule 2).
+- **PO answer to D1:** none on `origin/main`. `docs/sprints/05/po-escalations.md` D1 (deadline 2026-11-05) has no answer, and `docs/requirements/po-input-2026-10-05.md` records no DR-04 waiver (`git grep -n -i 'DR-04\|waive' origin/main -- docs/requirements/po-input-2026-10-05.md` → three lines (34 labels, 97 DR-01..03, 124 PR size), none about DR-04). So the D1 **default** applies: DR-04 stays "not held", and no waiver is assumed (§14.5).
+- **Gaps still Open, re-checked on the code:** PD-DR04-01 (`git grep -n -i 'shorter-retention\|Change to 30 days' origin/main -- web/src` → no match), PD-DR04-02 (`git ls-tree --name-only origin/main web/src/app/welcome/age/` → `page.tsx` only), PD-DR04-03 (`git grep -n '/settings/privacy' origin/main -- 'web/src/*.tsx'` → no match). Their ledger rows in `docs/sprints/05/review-rounds.md` (§ PD-DR04) stay Open with their owners; no new reject cell exists, so no new ledger row.
+- **DR-01..DR-03 re-read:** unchanged from §14.6. The same grep → one line only, `flows-sprint-03.md:264` (PD-FL3-03, not a decider cell).
+- **What closes it (unchanged options):** either the orchestrator invokes the five deciders with the §14.4 brief and each commits its own cell, or the PO answers D1 with (b). Until then RETRO-05 reports DR-04 as "not held" (retro-04 M5 repeated for one more sprint), and PD-5 holds DR-05 before its UI starts so the pattern does not continue.
