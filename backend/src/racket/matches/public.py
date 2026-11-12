@@ -33,13 +33,16 @@ from racket.matches.scorebook.domain import (
     Scorebook,
     project,
 )
+from racket.matches.scorebook.integrity import corrections_fingerprint
 from racket.matches.scorebook.repository import ScorebookRepository, match_rallies
 from racket.platform.errors import NotFound
 from racket.platform.ratelimit import RateLimiter
 from racket.sports.pickleball.rules import Side
 from racket.video_ingest.public import close_for_deleted_match, lock_upload_of_match
 
-__all__ = ["Tombstone", "confirm_deletion"]  # the deletion rules Identity & Players reuses
+# The deletion rules Identity & Players reuses; the corrections fingerprint for the restore
+# check (ST-076b; NFR-045.3), called by ``racket.platform.integrity``.
+__all__ = ["Tombstone", "confirm_deletion", "corrections_fingerprint"]
 
 
 def owns_match(session: Session, match_id: uuid.UUID, owner_id: uuid.UUID) -> bool:

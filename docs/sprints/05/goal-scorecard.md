@@ -208,7 +208,7 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 | G05-04 | senior-frontend-engineer | ST-079 | | | | | |
 | G05-05 | senior-qa-engineer | ST-080 | | | | | |
 | G05-06 | senior-backend-engineer | ST-078d | | | | | |
-| G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | | | | | |
+| G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | 2026-11-05 | `2ed79c68` + the ST-078c checklist rows | the §4 G05-07 block, from the root (`--json` into the scratchpad) | **0** on the tool line (all chapters, no `--chapters`): V1-V17 124 Pass, 40 Fail (all owned: 36 by ADR 0059 draft / P19, 3 by ST-077, 1 by ADR 0031), 92 N/A, 0 not assessed, "0 problem(s)"; **0** on the BOLA line (28 passed). Not yet 0: `test_it_05_security_headers.py` → 4 (file is an ST-078e output); `cd web && npm run test -- hydration-lock` → 1, `Missing script: "test"` (method defect for QA-PIN-05; `npm run test:unit -- hydration-lock` → 1, no test files until ST-078e). Details: `decisions/ST-078c.md` | 1 (a copy with a planted `Not assessed` row, an unowned `Fail` and an unevidenced `Pass`: "3 problem(s)") |
 | G05-08 | sre-devops-engineer | CI-TIERS-b | | | | | |
 | G05-09 | senior-qa-engineer | QA-PIN-05 | | | | | |
 | G05-10 | senior-qa-engineer | QA-PIN-05 | | | | | |

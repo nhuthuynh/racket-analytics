@@ -40,6 +40,7 @@ def dockerfile_defaults(dockerfile: str) -> tuple[str, dict[str, str]]:
 BASE_ARG = {
     "infra/docker/backend.Dockerfile": "PYTHON_IMAGE",
     "infra/docker/web.Dockerfile": "NODE_IMAGE",
+    "infra/docker/backup/Dockerfile": "PG_IMAGE",  # ST-076a; its PYTHON_IMAGE is checked below
 }
 
 
@@ -60,7 +61,9 @@ def test_no_built_service_pulls_the_dockerfile_frontend_from_docker_hub_uncondit
     offenders = [
         name
         for name, build in built().items()
-        if not (build.get("args") or {}).get("BUILDKIT_SYNTAX", "").startswith(f"{REG}/docker/dockerfile:")
+        if not (build.get("args") or {})
+        .get("BUILDKIT_SYNTAX", "")
+        .startswith(f"{REG}/docker/dockerfile:")
     ]
     assert offenders == [], f"syntax frontend ignores DOCKERHUB_REGISTRY: {offenders}"
 
@@ -68,7 +71,16 @@ def test_no_built_service_pulls_the_dockerfile_frontend_from_docker_hub_uncondit
 # ---------------------------------------------------------------- positive cases
 @pytest.mark.unit
 def test_the_six_app_services_are_the_built_ones() -> None:
-    assert sorted(built()) == ["api", "mailer", "migrate", "purge", "web", "worker"]
+    # ST-076a adds the ops-profile `backup` service (TCR row: docs/sprints/05/decisions/ST-076a.md).
+    assert sorted(built()) == ["api", "backup", "mailer", "migrate", "purge", "web", "worker"]
+
+
+@pytest.mark.unit
+def test_the_backup_image_takes_both_its_bases_from_the_registry() -> None:
+    args = built()["backup"]["args"]
+    _, defaults = dockerfile_defaults("infra/docker/backup/Dockerfile")
+    for arg in ("PG_IMAGE", "PYTHON_IMAGE"):
+        assert args[arg] == f"{REG}/library/{defaults[arg]}", arg
 
 
 @pytest.mark.unit

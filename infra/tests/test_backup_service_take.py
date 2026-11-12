@@ -7,19 +7,28 @@ disk only as age ciphertext for the configured recipient, ``backup.json`` is wri
 ``status: complete`` and digests equal to ``file_digest`` of each file, and a failing dump or
 ``age`` gives exit 1, an ERROR ``backup.run`` line, no ``backup.json``, and an unchanged
 ``--status``. No database: the live dump and restore is ``test_backup_service_dump_live.py``.
+
+ST-076a-part2 adds the third artefact, ``objects.tar.age`` (ADR 0058 rule 1): every run here
+mirrors a local fake media bucket (``fake_s3.py``), and a run with no store configured fails
+closed (exit 1, no ``backup.json``) instead of writing a set without the objects.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tarfile
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from fake_s3 import FakeS3
+from fake_s3 import serve as serve_s3
 from test_backup_service import SCRIPT, events, load, plant_set
 
 pytestmark = pytest.mark.unit
@@ -27,6 +36,12 @@ pytestmark = pytest.mark.unit
 AGE_HEADER = b"age-encryption.org/v1\n"
 MARKER = b"PLAINTEXT-MARKER-076a"
 SECRET = "pw-never-logged-076a"
+OBJ_MARKER = b"OBJECT-PLAINTEXT-076a"
+OBJECTS = {
+    "matches/a/review.mp4": OBJ_MARKER + b" a" * 300,
+    "matches/b/clip one.mp4": OBJ_MARKER + b" b",
+}
+STORE_ENV: dict[str, str] = {}
 STUB_PG = f"""#!/bin/sh
 echo "$0 $*" >> "$STUB_LOG"
 name=$(basename "$0")
@@ -66,6 +81,13 @@ def keypair(tmp_path: Path) -> tuple[Path, str]:
     return ident, recipient
 
 
+@pytest.fixture(autouse=True)
+def media_store(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeS3]:
+    with serve_s3(dict(OBJECTS)) as store:
+        monkeypatch.setattr(sys.modules[__name__], "STORE_ENV", store.env())
+        yield store
+
+
 @pytest.fixture
 def stubs(tmp_path: Path) -> Path:
     bin_dir = tmp_path / "bin"
@@ -76,7 +98,7 @@ def stubs(tmp_path: Path) -> Path:
 
 
 def run(
-    backups: Path, stubs: Path, recipient: str | None, *args: str, **extra: str
+    backups: Path, stubs: Path, recipient: str | None, *args: str, store: bool = True, **extra: str
 ) -> subprocess.CompletedProcess[str]:
     clean = {k: v for k, v in os.environ.items() if not k.startswith(("BACKUP_", "PG", "S3_"))}
     env = {
@@ -87,6 +109,7 @@ def run(
         "STUB_LOG": str(stubs.parent / "calls.log"),
         "STUB_FAIL": "",
         **({"BACKUP_AGE_RECIPIENT": recipient} if recipient else {}),
+        **(STORE_ENV if store else {}),
         **extra,
     }
     return subprocess.run(
@@ -160,9 +183,24 @@ def test_a_failing_age_exits_1_and_writes_no_backup_json(
     assert_no_secret(proc, ident)
 
 
+def test_a_run_without_a_media_store_fails_closed_and_writes_no_backup_json(
+    tmp_path: Path, stubs: Path, keypair: tuple[Path, str]
+) -> None:
+    ident, recipient = keypair
+    backups = tmp_path / "backups"
+    proc = run(backups, stubs, recipient, "--once", store=False)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    line = run_line(proc)
+    assert (line["level"], line["status"], line["last_complete_at"]) == ("ERROR", "failed", None)
+    assert list(backups.rglob("backup.json*")) == []
+    status = run(backups, stubs, recipient, "--status")
+    assert (status.returncode, json.loads(status.stdout)["state"]) == (1, "missing")
+    assert_no_secret(proc, ident)
+
+
 # ---------------------------------------------------------------- the happy path
 def test_once_writes_only_age_ciphertext_for_the_recipient_and_backup_json_last(
-    tmp_path: Path, stubs: Path, keypair: tuple[Path, str]
+    tmp_path: Path, stubs: Path, keypair: tuple[Path, str], media_store: FakeS3
 ) -> None:
     ident, recipient = keypair
     backups = tmp_path / "backups"
@@ -176,10 +214,12 @@ def test_once_writes_only_age_ciphertext_for_the_recipient_and_backup_json_last(
         "backup.json",
         "db.dump.age",
         "globals.sql.age",
+        "objects.tar.age",
     ]
     assert set_dir.stat().st_mode & 0o777 == 0o700
     for path, data in all_bytes(backups):
         assert MARKER not in data, f"plaintext reached {path}"
+        assert OBJ_MARKER not in data, f"object plaintext reached {path}"
 
     bk = load()
     meta = json.loads((set_dir / "backup.json").read_text())
@@ -191,7 +231,7 @@ def test_once_writes_only_age_ciphertext_for_the_recipient_and_backup_json_last(
     assert meta["alembic_revision"] == "0042_planted"
     assert meta["postgres_server_version"] == "16.4"
     assert meta["image_tag"] == "t-076a"
-    assert set(meta["artefacts"]) == {"globals.sql.age", "db.dump.age"}
+    assert set(meta["artefacts"]) == {"globals.sql.age", "db.dump.age", "objects.tar.age"}
     for name, digest in meta["artefacts"].items():
         assert digest == bk.file_digest(set_dir / name)
     # Written last: every artefact was closed before backup.json was renamed into place.
@@ -207,6 +247,26 @@ def test_once_writes_only_age_ciphertext_for_the_recipient_and_backup_json_last(
             ["age", "-d", "-i", str(ident), str(set_dir / name)], capture_output=True, check=True
         ).stdout
         assert plain == MARKER + b" " + tool.encode() + b"\n"
+
+    tar_path = tmp_path / "objects.tar"
+    subprocess.run(
+        ["age", "-d", "-i", str(ident), "-o", str(tar_path), str(set_dir / "objects.tar.age")],
+        check=True,
+    )
+    with tarfile.open(tar_path) as tar:
+        assert tar.getnames() == [f"objects/{k}" for k in sorted(OBJECTS)] + [
+            "objects.manifest.json"
+        ]
+        for key, body in OBJECTS.items():
+            member = tar.extractfile(f"objects/{key}")
+            assert member is not None
+            assert member.read() == body
+        manifest = tar.extractfile("objects.manifest.json")
+        assert manifest is not None
+        raw = manifest.read()
+    assert meta["objects"] == {"count": len(OBJECTS), "sha256": hashlib.sha256(raw).hexdigest()}
+    assert {method for method, _ in media_store.requests} == {"GET"}
+    assert "fake-backup-secret" not in proc.stdout + proc.stderr
 
     calls = (tmp_path / "calls.log").read_text()
     assert "pg_dumpall --globals-only --no-role-passwords" in calls
