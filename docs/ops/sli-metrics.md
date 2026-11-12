@@ -17,8 +17,10 @@ No user ID, email, path, match or file data in attributes (NFR-069.1): every att
 
 | SLI | Definition | Pure function (unit-tested) | Prometheus query (OTel → Prometheus naming) |
 |---|---|---|---|
-| Availability (NFR-041) | non-5xx / all responses, 429 excluded from both | `availability(status_codes)` | `sum(rate(http_server_request_duration_seconds_count{http_response_status_code!~"5..\|429"}[w])) / sum(rate(http_server_request_duration_seconds_count{http_response_status_code!="429"}[w]))` |
-| Upload completion (NFR-042) | completed / (created − rejected − cancelled); expired or still-open uploads stay in the base | `upload_completion(lifecycles)` → `(good, base)` | `sum(increase(racket_upload_sessions_total{event="completed"}[w])) / (sum(increase(racket_upload_sessions_total{event="created"}[w])) - sum(increase(racket_upload_sessions_total{event=~"rejected\|cancelled"}[w])))` |
+| Availability (NFR-041) | non-5xx / all responses, 429 excluded from both | `availability(status_codes)` | `sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!~"5..\|429"}[w])) / sum(rate(http_server_request_duration_seconds_count{otel_scope_name="racket",http_response_status_code!="429"}[w]))` |
+| Upload completion (NFR-042) | completed / (created − rejected − cancelled); expired or still-open uploads stay in the base | `upload_completion(lifecycles)` → `(good, base)` | `sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="completed"}[w])) / (sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event="created"}[w])) - sum(increase(racket_upload_sessions_total{otel_scope_name="racket",event=~"rejected\|cancelled"}[w])))` |
+
+Only the `racket` meter scope is the SLI: FastAPI's own instrumentation exports `http.server.request.duration` too, as `otel_scope_name="fastapi"`, for a different set of requests (ST-075c, `docs/ops/slo.md`).
 
 Dashboard: `infra/observability/dashboards/slis.json` (Grafana; import it and choose the Prometheus data source).
 

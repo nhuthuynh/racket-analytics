@@ -1,0 +1,13 @@
+# Drill-only override for the G05-02 SLO drill (ST-075c; NFR-041.5; ADR 0012, ADR 0057).
+# Adds one setting, the ST-075d fault seam value, to the api service; nothing else.
+# The seam is honoured only when APP_ENV=test (Settings.from_env drops it otherwise), and
+# APP_ENV=test comes from the operator's shell for the drill's own Compose project only:
+#   APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml \
+#     --env-file infra/.env -p racket-obs05 --profile obs up -d --build --wait
+# Never used by `make up`; infra/compose.yaml and infra/env.example (APP_ENV=dev) do not name
+# the seam variable (infra/tests/test_compose_fault_drill.py). Local, loopback ports only, and
+# torn down after the drill (`down -v --rmi local`). Runbook: docs/ops/slo.md "Drill".
+services:
+  api:
+    environment:
+      RACKET_FAULT_INJECTION: api:5xx_on_header
