@@ -309,7 +309,18 @@ def test_the_release_override_pins_the_rc_runtime_settings_on_every_service() ->
     # DEV_IDENTITY_ENABLED=true; a release must not inherit either, whatever infra/.env says.
     release = yaml.safe_load((REPO_ROOT / "infra" / "compose.release.yaml").read_text())
     for name, svc in release["services"].items():
-        assert svc["environment"] == {"APP_ENV": "staging", "DEV_IDENTITY_ENABLED": "false"}, name
+        pins = {k: svc["environment"].get(k) for k in ("APP_ENV", "DEV_IDENTITY_ENABLED")}
+        assert pins == {"APP_ENV": "staging", "DEV_IDENTITY_ENABLED": "false"}, name
+
+
+@pytest.mark.parametrize("name", ["api", "worker", "mailer", "purge"])
+def test_every_settings_service_gets_what_a_deployed_app_env_requires(name: str) -> None:
+    # Settings.from_env refuses APP_ENV=staging without these three (settings.py); worker,
+    # mailer and purge build Settings too, so the release override must hand them over.
+    base = yaml.safe_load((REPO_ROOT / "infra" / "compose.yaml").read_text())["services"]
+    release = yaml.safe_load((REPO_ROOT / "infra" / "compose.release.yaml").read_text())
+    env = {**base[name].get("environment", {}), **release["services"][name]["environment"]}
+    assert {"ALLOWED_ORIGINS", "PUBLIC_WEB_ORIGIN", "AUTH_EMAIL_KEY"} <= set(env), name
 
 
 def _make_n(*args: str) -> str:

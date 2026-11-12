@@ -3,11 +3,44 @@
 # the working tree, `make up IMAGE_TAG=<tag>` starts that set with --no-build, so an old tag is
 # never rebuilt from a newer tree. Without a tag, compose.yaml keeps Compose's per-project image
 # names, so parallel evidence projects stay apart and `down --rmi local` still removes them.
+#
+# RC runtime settings (T5-RB-3; security review F1 on PR #224): a release never inherits
+# APP_ENV=dev or DEV_IDENTITY_ENABLED=true from infra/.env. `staging` turns off the API's
+# auto-migrate, the dev-user seed and /dev/*, and makes the API refuse to start without an https
+# PUBLIC_WEB_ORIGIN, ALLOWED_ORIGINS and a real AUTH_EMAIL_KEY (>= 32 characters, not the
+# env.example placeholder). These literals win over infra/.env and the shell; the release notes'
+# "Runtime settings" table lists the same values, and check_release_notes.py compares them.
+x-release-env: &release-env
+  APP_ENV: staging
+  DEV_IDENTITY_ENABLED: "false"
+# worker, mailer and purge build the same Settings as the API (settings.py), which outside dev and
+# test requires these three. They come from infra/.env or the shell, as for the API; the key is
+# the HMAC key of the sign-in e-mail (players/service.py) and must be a real secret.
+x-release-deployed: &release-deployed
+  <<: *release-env
+  ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS}
+  PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?set PUBLIC_WEB_ORIGIN}
+  AUTH_EMAIL_KEY: ${AUTH_EMAIL_KEY:?set AUTH_EMAIL_KEY}
+
 services:
-  migrate: {image: "racket-migrate:${IMAGE_TAG:?set IMAGE_TAG}"}
-  api: {image: "racket-api:${IMAGE_TAG:?set IMAGE_TAG}"}
-  worker: {image: "racket-worker:${IMAGE_TAG:?set IMAGE_TAG}"}
-  mailer: {image: "racket-mailer:${IMAGE_TAG:?set IMAGE_TAG}"}
-  purge: {image: "racket-purge:${IMAGE_TAG:?set IMAGE_TAG}"}
-  web: {image: "racket-web:${IMAGE_TAG:?set IMAGE_TAG}"}
-  backup: {image: "racket-backup:${IMAGE_TAG:?set IMAGE_TAG}"}
+  migrate:
+    image: "racket-migrate:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: *release-env
+  api:
+    image: "racket-api:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: *release-env
+  worker:
+    image: "racket-worker:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: *release-deployed
+  mailer:
+    image: "racket-mailer:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: *release-deployed
+  purge:
+    image: "racket-purge:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: *release-deployed
+  web:
+    image: "racket-web:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: *release-env
+  backup:
+    image: "racket-backup:${IMAGE_TAG:?set IMAGE_TAG}"
+    environment: *release-env

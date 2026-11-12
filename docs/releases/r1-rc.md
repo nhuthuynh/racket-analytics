@@ -82,6 +82,17 @@ Every `FEATURE_*` flag of `infra/env.example`. The default is the value a new de
 | `FEATURE_TRAINING_CONSENT` | `false` | the training-data consent (FR-009; OQ-06) | P16, P11 |
 | `FEATURE_QUOTAS` | `false` | the match-creation rate limit and the storage quota (FR-160; OQ-13) | P8 |
 
+## Runtime settings
+
+The settings the release candidate runs with (T5-RB-3, `docs/security/threat-notes-sprint-05.md` §5). `infra/compose.release.yaml` pins them on every release service, so `make up IMAGE_TAG=<tag>` never inherits `APP_ENV=dev` or `DEV_IDENTITY_ENABLED=true` from `infra/.env` (made from `infra/env.example`). `scripts/ci/check_release_notes.py` fails when a row is missing, when `APP_ENV` is not a deployed environment, when `DEV_IDENTITY_ENABLED` is not `false`, when a privacy flag above is on by default, or when the override pins other values.
+
+| Setting | RC value | Why |
+|---|---|---|
+| `APP_ENV` | `staging` | No auto-migrate at API start (the `migrate` service runs the migrations), no dev-user seed, no `/dev/*` routes, no public API docs. The API refuses to start without an https `PUBLIC_WEB_ORIGIN`, `ALLOWED_ORIGINS` and a real `AUTH_EMAIL_KEY`. |
+| `DEV_IDENTITY_ENABLED` | `false` | Nobody signs in without a magic link. The API refuses `true` outside `dev` and `test` (C-19). |
+
+`AUTH_EMAIL_KEY` comes from the secret store or the shell, never from `infra/env.example`: the API refuses its `dev-only` placeholder and any key shorter than 32 characters when `APP_ENV` is `staging`. Values in the shell override `infra/.env`, for example `AUTH_EMAIL_KEY="$(<secret store read>)" make up IMAGE_TAG=r1-rc1`.
+
 ## Known limitations
 
 | Id | Limitation | Waits on |
@@ -110,4 +121,5 @@ Every `FEATURE_*` flag of `infra/env.example`. The default is the value a new de
     -f infra/compose.release.yaml --env-file infra/.env build
   git worktree remove .local/prev
   ```
-- **Rollback order:** `python3 scripts/ops/rollback_drill.py --project <compose project> --to-previous-tag` first checks that the images `racket-<service>:<tag>` exist (it refuses with exit 2 before any change otherwise): of the previous release, the built services step 3 starts (no Compose profile, so not `backup`, which the previous release does not have); of the current release, every built service including `racket-backup:<release>`, then (1) takes the on-demand backup with the project's `backup` service in the current release image (or `--backup-cmd "<on-demand backup>"`), (2) runs `alembic downgrade <previous_alembic_revision>` with the current release's image `racket-migrate:<release>`, never a per-project build, (3) starts the previous tag set with `--no-build` and waits for the API's `/healthz`, (4) when step 2 or 3 fails, runs `--restore-cmd` (the restore of ADR 0058 rule 4) and then redeploys the **current** release (`release` in the front matter), whose schema the restored backup has, or stops and names the restore runbook. It never runs an older image on a newer schema, so after a restore it does not start the previous tag.
+- **Rollback order:** `python3 scripts/ops/rollback_drill.py --project <compose project> --to-previous-tag` first checks that the images `racket-<service>:<tag>` exist (it refuses with exit 2 before any change otherwise): of the previous release, the built services step 3 starts (no Compose profile, so not `backup`, which the previous release does not have); of the current release, every built service including `racket-backup:<release>`, then (0b) records the confirmed-corrections fingerprint with `racket-integrity` (ST-076b, NFR-045.3) in `racket-migrate:<release>`, (1) takes the on-demand backup with the project's `backup` service in the current release image (or `--backup-cmd "<on-demand backup>"`), (2) runs `alembic downgrade <previous_alembic_revision>` with the current release's image `racket-migrate:<release>`, never a per-project build, (3) starts the previous tag set with `--no-build` and waits for the API's `/healthz`, (4) when step 2 or 3 fails, runs `--restore-cmd` (the restore of ADR 0058 rule 4) and then redeploys the **current** release (`release` in the front matter), whose schema the restored backup has, or stops and names the restore runbook. It never runs an older image on a newer schema, so after a restore it does not start the previous tag. (5) Once a redeploy is healthy, it runs `racket-integrity --expect-count N --expect-sha256 H` in the same `racket-migrate:<release>` image (the previous release predates the CLI) and exits 1 when the corrections differ (T5-RB-4); the report's `corrections` holds `before`, `after` and `equal`.
+- **Settings for a live run:** the release services run with `APP_ENV=staging` (see Runtime settings), so the drill's shell needs a real `AUTH_EMAIL_KEY` (and an https `PUBLIC_WEB_ORIGIN`, as in `infra/env.example`); with the placeholder the redeployed API refuses to start and the drill falls back.
