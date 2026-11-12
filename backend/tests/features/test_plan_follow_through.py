@@ -5,10 +5,16 @@ Through the API on the committed test database (``api`` fixture): the worked exa
 the follow-through routes are ``POST/DELETE /me/plan/sessions/{id}/done`` and
 ``POST /me/plan/assignments/{id}/swap``. Plans are graded with the QA harness's independent
 reference (``scripts/measure/planlib.py``), which imports nothing from ``racket.coaching``.
+ST-081a: a single-weakness plan keeps one weakness of the real ranking (the ranking ACL is
+wrapped, as in IT-04-02); a library with one fitting drill is a pruned copy of
+``content/drills`` set through ``RACKET_DRILL_LIBRARY``.
 """
 
 from __future__ import annotations
 
+import shutil
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -219,3 +225,108 @@ def done_once(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
     assert plan["version"] == ctx["plan"]["version"] + 1 == first["plan_version"]
     assert [s["done"] for s in plan["sessions"]] == [True] + [False] * 5
     assert plan["sessions"][0]["done_at"] == first["done_at"]
+
+
+# ---------------------------------------------------------------- ST-081a single-weakness plans
+LIBRARY_ENV = "RACKET_DRILL_LIBRARY"
+
+
+def _solo_wall_drill(doc: dict[str, Any], target: str) -> bool:
+    """``doc`` fits the solo+wall preferences, is not a warm-up and cites ``target`` (by share for
+    AN-07), from the drill documents alone (no ``racket.coaching`` import)."""
+    levels = ["beginner", "intermediate", "advanced"]
+    metric, _, share = target.partition(":")
+    return (
+        doc["review_status"] in ("coach-reviewed", "verified")
+        and not doc.get("deprecated_by")
+        and "warm-up" not in doc["skills"]
+        and doc["players"] <= 1
+        and set(doc["needs"]) <= {"wall"}
+        and levels.index(doc["level_min"]) <= 1 <= levels.index(doc["level_max"])
+        and doc["duration_min"] <= 12
+        and metric in doc["target_metrics"]
+        and (not share or f"share:{share}" in doc["skills"])
+    )
+
+
+def _rank_one(monkeypatch: pytest.MonkeyPatch, ctx: dict[str, Any]) -> None:
+    """Wrap the ranking ACL: record the real ranking; keep only ``ctx["single"]`` once chosen."""
+    from racket.coaching.weakness import acl as ranking
+
+    if "ranked" in ctx:
+        return
+    real = ranking.ranking_for
+
+    def ranked(session: Any, owner_id: Any) -> Any:
+        found = real(session, owner_id)
+        ctx["ranked"] = [(w.id, w.plan_target, w.rank) for w in found.weaknesses]
+        if "single" not in ctx:
+            return found
+        kept = tuple(replace(w, rank=1) for w in found.weaknesses if w.id == ctx["single"])
+        return replace(found, weaknesses=kept)
+
+    monkeypatch.setattr(ranking, "ranking_for", ranked)
+
+
+def _choose_single(
+    api: ApiDriver, monkeypatch: pytest.MonkeyPatch, ctx: dict[str, Any], user: str
+) -> str:
+    """The ranked weakness whose solo+wall cell has the most drills (the lowest rank on a tie)."""
+    if "single" not in ctx:
+        _rank_one(monkeypatch, ctx)
+        _new_plan(api, ctx, user, SOLO_WALL)  # records the real ranking
+        docs = planlib.load_library(REPO / "content" / "drills").values()
+        n = {t: sum(_solo_wall_drill(d, t) for d in docs) for _, t, _ in ctx["ranked"]}
+        best = max(n.values())
+        _, ctx["single"], ctx["single_target"] = min(
+            (rank, w, t) for w, t, rank in ctx["ranked"] if n[t] == best
+        )
+    return str(ctx["single_target"])
+
+
+@given(parsers.parse('"{user}" has a plan that trains one weakness as a solo player with a wall'))
+def has_single_weakness_plan(
+    api: ApiDriver, monkeypatch: pytest.MonkeyPatch, ctx: dict[str, Any], user: str
+) -> None:
+    _choose_single(api, monkeypatch, ctx, user)
+    _new_plan(api, ctx, user, SOLO_WALL)
+    held = {a["weakness_id"] for s in ctx["plan"]["sessions"] for a in s["assignments"]}
+    assert held - {None} == {ctx["single"]}, ctx["plan"]
+    assert [w["id"] for w in ctx["plan"]["ranking"]["weaknesses"]] == [ctx["single"]]
+    ctx["before"] = _plan(api, user)
+
+
+@given("the library has one fitting drill for the metric of the single weakness")
+def one_fitting_drill(
+    api: ApiDriver,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    ctx: dict[str, Any],
+) -> None:
+    target = _choose_single(api, monkeypatch, ctx, "ivy")
+    copy = tmp_path / "drills"
+    shutil.copytree(REPO / "content" / "drills", copy)
+    fitting = sorted(
+        r for r, d in planlib.load_library(copy).items() if _solo_wall_drill(d, target)
+    )
+    assert len(fitting) >= 2, fitting  # otherwise the step proves nothing
+    for ref in fitting[1:]:
+        shutil.rmtree(copy / ref.split("@")[0])
+    monkeypatch.setenv(LIBRARY_ENV, str(copy))
+    ctx["library"] = copy
+
+
+@when(parsers.parse('"{user}" says "Not for me" to the second drill of the first session'))
+def swap_second(api: ApiDriver, ctx: dict[str, Any], user: str) -> None:
+    ctx["response"] = _swap(api, user, ctx["assignment"])
+
+
+@then("a different drill for the same metric that fits the preferences replaces it")
+def fitting_replacement(ctx: dict[str, Any]) -> None:
+    new, old = ctx["session"]["assignments"][1], ctx["original"]
+    assert (new["id"], new["weakness_id"]) == (old["id"], ctx["single"])
+    assert _ref(new) != _ref(old)
+    assert _ref(new) not in {_ref(a) for a in ctx["session"]["assignments"] if a is not new}
+    assert new["citation"]["metric_id"] == old["citation"]["metric_id"]
+    library = planlib.load_library(REPO / "content" / "drills")
+    assert _solo_wall_drill(library[_ref(new)], ctx["single_target"]), _ref(new)

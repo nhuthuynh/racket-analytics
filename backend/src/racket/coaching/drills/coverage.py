@@ -16,6 +16,14 @@ and fit its session's drill cap, so "Not for me" has a second drill to offer. Ga
 ``check_profiles`` is pure. ``check_profile_pairs`` (PE-R1-1) adds: a plan training targets t
 and u can hold one shared drill for u beside t's drill, so t needs >= 2 drills apart from it;
 gaps read ``AN-01 with AN-05 x intermediate x solo+wall: drills: 1``.
+
+Session-size rule (ST-081a; FR-141.R1; checklist §3.1.1), on with ``--session-size``: a session
+of profile p holds at most S = floor((minutes - 5) / m) weakness drills, m the smallest
+``duration_min`` of p's counted drills, so a single-weakness plan (or a 3+-drill session whose
+drills overlap) needs S + 1 swap-counted drills (``duration_min`` <= m) per target x level x
+profile cell for the first "Not for me" to swap. Gaps read
+``AN-02 x intermediate x solo+wall: drills: 2 < 3 (single-weakness swap)``.
+``check_session_size`` is pure.
 """
 
 from __future__ import annotations
@@ -28,7 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from racket.coaching.drills.schema_check import drill_schema, errors
-from racket.coaching.plan.domain.model import LEVELS, Drill, Preferences
+from racket.coaching.plan.domain.model import LEVELS, WARM_UP_MINUTES, Drill, Preferences
 
 TARGETS = ("AN-01", "AN-02", "AN-04", "AN-05", "AN-07:fault", "AN-07:forced-error")
 SHARE_TARGETS = frozenset(TARGETS[4:])
@@ -162,6 +170,12 @@ class ProfileReport:
         return not self.gaps
 
 
+def _fitting(in_cells: Iterable[Drill], prefs: Preferences) -> list[Drill]:
+    """The drills the plan can place for ``prefs``: ``Drill.fits`` (QD-PL-02) and
+    ``duration_min`` under the drill cap (QD-PL-03)."""
+    return [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+
+
 def check_profiles(
     drills: Iterable[Drill], profiles: Iterable[Profile] = PROFILES
 ) -> ProfileReport:
@@ -172,7 +186,7 @@ def check_profiles(
     for profile in profiles:
         for level in profile.levels:
             prefs = profile.preferences(level)
-            fit = [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+            fit = _fitting(in_cells, prefs)
             for target in TARGETS:
                 n = sum(target in d.plan_targets for d in fit)
                 cells.append(ProfileCell(target, level, profile.name, n))
@@ -189,7 +203,7 @@ def check_profile_pairs(
     for profile in profiles:
         for level in profile.levels:
             prefs = profile.preferences(level)
-            fit = [d for d in in_cells if d.fits(prefs) and d.duration_min <= prefs.drill_cap]
+            fit = _fitting(in_cells, prefs)
             by = {t: {d.ref for d in fit if t in d.plan_targets} for t in TARGETS}
             for t in (t for t in TARGETS if len(by[t]) >= MIN_DRILLS):
                 for u in (u for u in TARGETS if u != t and by[t] & by[u]):
@@ -197,6 +211,59 @@ def check_profile_pairs(
                         cell = f"{t} with {u} {TIMES} {level} {TIMES} {profile.name}"
                         gaps.append(f"{cell}: drills: {n}")
     return tuple(gaps)
+
+
+def session_size(minutes_per_session: int, shortest: int) -> int:
+    """S: the most weakness drills of ``shortest`` minutes after the shortest warm-up."""
+    return (minutes_per_session - WARM_UP_MINUTES[0]) // shortest
+
+
+@dataclass(frozen=True, slots=True)
+class SessionSizeCell:
+    """One target x level x profile cell: its swap-counted drills and the S + 1 it needs."""
+
+    target: str
+    level: str
+    profile: str
+    drills: int
+    need: int
+
+    def gaps(self) -> list[str]:
+        if self.drills >= self.need:
+            return []
+        name = f"{self.target} {TIMES} {self.level} {TIMES} {self.profile}"
+        return [f"{name}: drills: {self.drills} < {self.need} (single-weakness swap)"]
+
+
+@dataclass(frozen=True, slots=True)
+class SessionSizeReport:
+    cells: tuple[SessionSizeCell, ...]
+    gaps: tuple[str, ...]
+
+    @property
+    def ok(self) -> bool:
+        return not self.gaps
+
+
+def check_session_size(
+    drills: Iterable[Drill], profiles: Iterable[Profile] = PROFILES
+) -> SessionSizeReport:
+    """Per profile, level and target: the swap-counted drills (counted for the profile as in
+    ``check_profiles`` and ``duration_min`` <= m) against S + 1. With no fitting drill, m is
+    the drill cap."""
+    in_cells = [d for d in _counted(drills) if not d.is_warm_up]
+    cells = []
+    for profile in profiles:
+        for level in profile.levels:
+            prefs = profile.preferences(level)
+            fit = _fitting(in_cells, prefs)
+            m = min((d.duration_min for d in fit), default=prefs.drill_cap)
+            need = session_size(profile.minutes_per_session, m) + 1
+            short = [d for d in fit if d.duration_min <= m]
+            for target in TARGETS:
+                n = sum(target in d.plan_targets for d in short)
+                cells.append(SessionSizeCell(target, level, profile.name, n, need))
+    return SessionSizeReport(tuple(cells), tuple(g for c in cells for g in c.gaps()))
 
 
 def render(report: CoverageReport) -> list[str]:
@@ -212,6 +279,13 @@ def render_profiles(report: ProfileReport) -> list[str]:
     rows: list[tuple[object, ...]] = [("target", "level", "profile", "drills")]
     rows += [(c.target, c.level, c.profile, c.drills) for c in report.cells]
     return [f"{t:<20}{lv:<14}{p:<11}{n:>7}" for t, lv, p, n in rows]
+
+
+def render_session_size(report: SessionSizeReport) -> list[str]:
+    """A header, then one row per cell in profile x level x target order."""
+    rows: list[tuple[object, ...]] = [("target", "level", "profile", "swap-counted", "need")]
+    rows += [(c.target, c.level, c.profile, c.drills, c.need) for c in report.cells]
+    return [f"{t:<20}{lv:<14}{p:<11}{n:>13}{k:>6}" for t, lv, p, n, k in rows]
 
 
 def load_library(root: Path) -> tuple[list[Drill], list[str]]:
@@ -234,7 +308,13 @@ def load_library(root: Path) -> tuple[list[Drill], list[str]]:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="racket-drill-coverage", description=__doc__)
     parser.add_argument("library", type=Path, help="a drill library directory")
-    root: Path = parser.parse_args(argv).library
+    parser.add_argument(
+        "--session-size",
+        action="store_true",
+        help="also check S + 1 swap-counted drills per profile cell (ST-081a)",
+    )
+    args = parser.parse_args(argv)
+    root: Path = args.library
     if not root.is_dir():
         print(f"ERROR {root}: no such directory", file=sys.stderr)
         return 2
@@ -244,6 +324,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     problems = [*broken, *report.gaps, *profiles.gaps, *check_profile_pairs(drills)]
     print("\n".join(render(report)))
     print("\n".join(render_profiles(profiles)))
+    if args.session_size:
+        sizes = check_session_size(drills)
+        problems += sizes.gaps
+        print("\n".join(render_session_size(sizes)))
     print(f"library: {report.counted} reviewed drill(s), {report.warm_ups} warm-up(s)")
     print("".join(f"FAIL {p}\n" for p in problems), end="")
     print(f"{root}: {'FAILED' if problems else 'ok'}, {len(problems)} problem(s)")

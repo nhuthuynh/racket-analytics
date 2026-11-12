@@ -28,6 +28,26 @@ Feature: Plan follow-through
       And the plan still keeps every rule QD-PL-01 to QD-PL-03
       And the swapped-out drill is not offered again for that assignment
 
+  Rule: FR-124.R1 Swap on a single-weakness plan returns a fitting alternative
+    # ST-081a (drill-review-checklist §3.1.1): a plan that trains one weakness holds up to S drills
+    # of it in one session, so the swap needs a drill that is neither of them. The single weakness
+    # is the player's ranked weakness whose solo+wall cell has the most drills.
+
+    Scenario: Solo player with a wall swaps a drill of a single-weakness plan
+      Given "ivy" has tagged the worked example
+      And "ivy" has a plan that trains one weakness as a solo player with a wall
+      When "ivy" says "Not for me" to the second drill of the first session
+      Then the answer is 200 with the session and the next plan version
+      And a different drill for the same metric that fits the preferences replaces it
+
+    Scenario: No alternative on a single-weakness plan
+      Given "ivy" has tagged the worked example
+      And the library has one fitting drill for the metric of the single weakness
+      And "ivy" has a plan that trains one weakness as a solo player with a wall
+      When "ivy" says "Not for me" to the second drill of the first session
+      Then the answer is 409 "no_alternative" with the reason "No other drill fits your settings for this."
+      And "ivy" reads the same plan at the same version as before
+
   Rule: Marking a session done is idempotent
 
     Scenario: Mark done offline twice
