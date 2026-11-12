@@ -68,20 +68,34 @@ Met when all three verdict files say `pass` for all 4 endpoints. Planted failure
 
 ### G05-02 (author: sre-devops-engineer, ST-075c)
 ```
-docker run --rm -v "$PWD/infra/observability/alerts:/a" prom/prometheus:v2.53.2 \
-  promtool test rules /a/slo.test.yml           # 8 cases
+# promtool image = PROMTOOL_IMAGE in infra/tests/billing_alert_fixtures.py (ADR 0057; ST-075c: the
+# v2.53.2 form without --entrypoint exits 1, "prometheus: error: unexpected promtool")
+docker run --rm --network=none --entrypoint=/bin/promtool -v "$PWD/infra/observability/alerts:/a:ro" -w /a \
+  mirror.gcr.io/prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+  test rules slo.test.yml                      # 8 cases
 # drill-only stack: APP_ENV=test from the shell overrides infra/.env for this project only; shipped
 # infra/env.example (APP_ENV=dev) and infra/compose.yaml are unchanged; the override adds only the seam value
 # one Compose project for the whole block (PE-PLAN05-R2-01): infra/compose.yaml:6 sets name: racket-analytics and
 # the Makefile's COMPOSE has no -p, so `make demo` without this export copies web-tls from the wrong project
+# the obs overlay points the API at the collector (ST-075b); without it nothing reaches Prometheus
+cat infra/env.example infra/observability/obs.env > infra/.env
 export COMPOSE_PROJECT_NAME=racket-obs05
+APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml --env-file infra/.env \
+  -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
+# clean run first (ST-075c): after a burst the slow-burn alert can fire until its 30 m window clears
+python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 0 --minutes 10 \
+  --expect-no-alert --prom http://localhost:9090 --json reports/slo-clean.json
+# fresh stack for the drill (PE-075c-R1-01): the clean run's 6000 good requests stay in the 1 h window
+# and hold a 10-minute 10 % burst at 600/12000 = 5 %, under the 7.2 % fast-burn threshold
+docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml -p "$COMPOSE_PROJECT_NAME" \
+  --profile obs down -v
 APP_ENV=test docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml --env-file infra/.env \
   -p "$COMPOSE_PROJECT_NAME" --profile obs up -d --build --wait && make demo
 python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 10 --minutes 10 \
   --expect-alert ApiAvailabilityFastBurn --prom http://localhost:9090 --json reports/slo-drill.json
-python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 0 --minutes 10 \
-  --expect-no-alert --prom http://localhost:9090 --json reports/slo-clean.json
 curl -s 'http://localhost:9090/api/v1/query?query=racket_upload_sessions_total' | jq '.data.result|length'
+docker compose -f infra/compose.yaml -f infra/compose.fault-drill.yaml -p "$COMPOSE_PROJECT_NAME" \
+  --profile obs down -v --rmi local
 ```
 Planted failure: a rule file with the fast-burn threshold at 100 % → the promtool case fails. Negative (NFR-041.6): `python3 scripts/ops/inject_5xx.py --base-url https://localhost:3000 --rate 100 --minutes 1 --expect-no-5xx --json reports/slo-seam-off.json` against a `make up` stack (`APP_ENV=dev`, no override) → 0 responses with status 500 (the seam is dropped outside `APP_ENV=test`).
 
@@ -191,7 +205,7 @@ One row per metric, rc 0 on the real method plus the planted-failure rc, in the 
 | G05-01 | senior-backend-engineer | ST-074 | 2026-11-04 | `ea22fe1c` | the §4 G05-01 block: its `export`, `make up`, then the 3-run locust + verdict loop (`-t 8m`, `--min-window 300`). One deviation: `DOCKERHUB_REGISTRY=mirror.gcr.io` (Docker Hub answered 429). Default ports, all 3 runs, one stack; load average sampled each second (mean 3.2-3.8, max 6.0-7.3 on 4 CPUs: Locust, the stack and other lanes' test containers) | **0, 0, 0** (3 of 3): p95/p99 ms per run, match 63/140, 130/220, 96/190; score-sheet 67/140, 130/220, 100/190; dashboard 78/180, 150/240, 110/200; plan 65/140, 130/210, 95/170; 0 failures of 19,125 / 19,246 / 19,190; 50.08 / 49.97 / 49.93 RPS; windows 381 / 385 / 384 s (98 / 95 / 96 s excluded). Earlier failing runs are kept in `decisions/ST-074.md` ("Dry runs"): r1-1 (moved ports, second stack), QA runs 1-2 | 1 (`--p95-ms 1` on run 3's CSV: `FAIL` match, score-sheet, dashboard, plan) |
 | G05-02 | sre-devops-engineer | ST-075c | | | | | |
 | G05-03 | sre-devops-engineer | ST-076c | | | | | |
-| G05-04 | senior-frontend-engineer | ST-079 | | | | | |
+| G05-04 | senior-frontend-engineer | ST-079 | 2026-11-05 | `264c8bd8` | the §4 G05-04 loop and `browser_matrix.py`, for `chromium` and `android-chrome` only (local WebKit is not installed; CI is the `webkit` evidence of record). Local deviations: ports moved (origin `https://localhost:43000`), Chromium 1243 via a wrapper `executablePath` (`decisions/ST-079.md`, Dry runs). Run 1 rc 1 (android-chrome flaky E2E-04-02 loading in the sign-in setup, AF-ST079-01); run 2 rc 0 | 0 (`chromium: ok (18 passed x 3)`, `android-chrome: ok (18 passed x 3)`) | 1 (`--require …,firefox` → `firefox: no report`) |
 | G05-05 | senior-qa-engineer | ST-080 | | | | | |
 | G05-06 | senior-backend-engineer | ST-078d | | | | | |
 | G05-07 | security-privacy-engineer (tool) / senior-backend-engineer (tests) | ST-078c | 2026-11-05 | `2ed79c68` + the ST-078c checklist rows | the §4 G05-07 block, from the root (`--json` into the scratchpad) | **0** on the tool line (all chapters, no `--chapters`): V1-V17 124 Pass, 40 Fail (all owned: 36 by ADR 0059 draft / P19, 3 by ST-077, 1 by ADR 0031), 92 N/A, 0 not assessed, "0 problem(s)"; **0** on the BOLA line (28 passed). Not yet 0: `test_it_05_security_headers.py` → 4 (file is an ST-078e output); `cd web && npm run test -- hydration-lock` → 1, `Missing script: "test"` (method defect for QA-PIN-05; `npm run test:unit -- hydration-lock` → 1, no test files until ST-078e). Details: `decisions/ST-078c.md` | 1 (a copy with a planted `Not assessed` row, an unowned `Fail` and an unevidenced `Pass`: "3 problem(s)") |

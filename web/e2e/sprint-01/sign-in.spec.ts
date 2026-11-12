@@ -12,7 +12,7 @@ import {
   uniqueEmail,
 } from '../helpers/sprint-01';
 
-test.describe('Sign in without a memorised password', () => {
+test.describe('Sign in without a memorised password', { tag: '@critical' }, () => {
   test('Sign up with an email sign-in link', async ({ page }, testInfo) => {
     await signInByLink(page);
     await expect(page.getByText('Record your first match').first()).toBeVisible();
