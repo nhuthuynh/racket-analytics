@@ -85,3 +85,9 @@ Findings returned in rounds 2 and 3: 9 ids from the reviewers (round 2: PE "-08"
 | PE-PLAN06-11 | minor | Fixed: A6 now reads "95 % interval per the pattern's `interval_method` (`wilson` for proportions, FR-171.R1; `order_statistic_median` for AN-13, min_n ≥ 6, FR-171.R4)" (`docs/sprints/06/requirements-breakdown.md`); `check_atomic_breakdown.py` rc 0 | engineering-manager | — |
 | PE-PLAN06-12 | nit | Deferred to PE-6a (ADR 0061, principal-engineer, Sprint 6): the PE-6a row already settles one owner (sport-plugin content read by Coaching through the ACL, not a Coaching aggregate); ADR 0061 states that the `coaching/reference/` (planned) module is the ACL read side, and ST-170a's Context and Dirs follow ADR 0061 before ST-170a is Ready | principal-engineer | PE-6a |
 | QA06-PLAN-02 / PE-PLAN06-13 | nit | Deferred to QA-PIN-06 (senior-qa-engineer, Sprint 6, `infra/tests/`): tighten the Then step to a word-boundary match, with a TCR row (it changes an accepted test). Not fixed in PLAN-06 because it is not needed for a correct result today (the check fails only the planted row) and a second test change in a plan PR needs its own QA decision | senior-qa-engineer | QA-PIN-06 |
+
+## PE-6a (ADR 0061), principal-engineer, 2026-11-13: dispositions of findings owned by PE-6a
+
+| Finding | Severity | Disposition | Owner (Sprint 6) | Waits on |
+|---|---|---|---|---|
+| PE-PLAN06-12 | nit | Fixed in the PE-6a PR: ADR 0061 Rule 1 states that `racket.coaching.reference` (planned) is only the ACL read side (translate, filter to `coach-reviewed` and `verified`, fail closed) and that the schema, loader, lint and lock belong to the publisher, `racket.sports.references` (planned); context map row R13 records it. ST-170a's Context and Dirs follow ADR 0061 when BA-6 marks ST-170 Ready | principal-engineer | — |
