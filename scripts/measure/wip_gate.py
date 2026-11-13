@@ -8,22 +8,23 @@ QA or merge work instead.
 
 Stage of each open ticket PR into main (title "[ID] ..."), from GitHub REST only:
 - in progress: the PR is a draft (ADR 0052);
-- awaiting merge: ready, the latest verdicts of principal-engineer and senior-qa-engineer are
-  "Verdict: APPROVE" on the head SHA and the head's `ci-gate` check run succeeded;
-- awaiting QA: ready, principal-engineer approves the head and senior-qa-engineer has no
-  verdict on it yet;
-- in review: every other ready PR (no verdicts yet, an approve on an older head, a CHANGES
-  REQUESTED on the head, or approves with a red or missing `ci-gate`).
+- awaiting merge: `scripts/ci/merge_ready.py` exits 0 on the head (working-agreement §3); it is
+  run only for ready PRs with an APPROVE and no CHANGES REQUESTED on the head;
+- awaiting QA: ready, not merge-ready, principal-engineer approves the head and
+  senior-qa-engineer has no verdict on it yet;
+- in review: every other ready PR (no verdicts yet, an approve on an older head only, a CHANGES
+  REQUESTED on the head, or approves that `merge_ready.py` still refuses).
 The verdict rule (submitted reviews by trusted authors, "Reviewer: <role>" on the next line,
-latest per role) is `scripts/ci/merge_ready.py`'s, reused unchanged.
+latest per role) is `merge_ready.py`'s, reused unchanged.
 
 A start is refused when it would put "in progress" over its limit, or when a later stage it
 must pass through is full (count >= limit). Limits: 4, 3, 2, 1 (sprint-06 §2.1).
 
-Usage: wip_gate.py --repo OWNER/NAME --stage start [--limits 4,3,2,1]
+Usage: wip_gate.py --repo OWNER/NAME --stage start [--limits 4,3,2,1] [--merge-ready PATH]
+(--merge-ready: the merge-readiness script to run, default scripts/ci/merge_ready.py.)
 Env: GITHUB_TOKEN or GH_TOKEN (optional for a public repo); GITHUB_API_URL (default GitHub).
-Exit codes: 0 start allowed, 1 start refused (the full stages are named),
-2 GitHub could not be read or bad arguments (fail closed: no start, ADR 0014).
+Exit codes: 0 start allowed, 1 start refused (the full stages are named), 2 GitHub or
+merge_ready.py could not answer, or bad arguments (fail closed: no start, ADR 0014).
 """
 
 from __future__ import annotations
@@ -33,9 +34,10 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.request
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -50,11 +52,13 @@ LIMITS = (4, 3, 2, 1)  # sprint-06 §2.1
 TICKET = re.compile(r"^\[[A-Za-z0-9][\w.-]*\]")
 
 
+MERGE_READY = Path(__file__).resolve().parents[1] / "ci" / "merge_ready.py"
+
+
 def _merge_ready() -> ModuleType:
-    path = Path(__file__).resolve().parents[1] / "ci" / "merge_ready.py"
-    spec = importlib.util.spec_from_file_location("merge_ready", path)
+    spec = importlib.util.spec_from_file_location("merge_ready", MERGE_READY)
     if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load {path}")
+        raise ImportError(f"cannot load {MERGE_READY}")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -75,47 +79,54 @@ def head(pr: Mapping[str, Any]) -> str:
     return (pr.get("head") or {}).get("sha") or ""
 
 
-def gate_green(check_runs: Sequence[Mapping[str, Any]]) -> bool:
-    return any(
-        (r.get("name"), r.get("status"), r.get("conclusion")) == (MR.GATE, "completed", "success")
-        for r in check_runs
+def on_head(pr: Mapping[str, Any], reviews: Sequence[dict[str, Any]]) -> dict[str, str]:
+    """role -> verdict, for each role whose latest verdict was given on the PR's head SHA."""
+    sha = head(pr)
+    return {role: v for role, (v, at) in MR.verdicts(list(reviews)).items() if at == sha}
+
+
+def merge_candidate(pr: Mapping[str, Any], reviews: Sequence[dict[str, Any]]) -> bool:
+    """A ready ticket PR with an APPROVE and no CHANGES REQUESTED on its head: the only PRs
+    `merge_ready.py` is asked about (it cannot pass without one; tier 0 needs any one role)."""
+    verdicts = on_head(pr, reviews).values()
+    return (
+        is_ticket_pr(pr)
+        and not pr.get("draft")
+        and MR.APPROVE in verdicts
+        and MR.CHANGES not in verdicts
     )
 
 
-def verdict_stage(pr: Mapping[str, Any], reviews: Sequence[dict[str, Any]]) -> str | None:
-    """The stage the drafts and verdicts alone decide; AWAITING_MERGE still needs a green
-    `ci-gate` on the head (`stage_of`). None when the PR is not a ticket PR into main."""
+def stage_of(
+    pr: Mapping[str, Any], reviews: Sequence[dict[str, Any]], merge_ready: bool = False
+) -> str | None:
+    """The stage of one open PR, or None when it is not a ticket PR into main. `merge_ready` is
+    whether `scripts/ci/merge_ready.py` exits 0 on the PR's head."""
     if not is_ticket_pr(pr):
         return None
     if pr.get("draft"):
         return IN_PROGRESS
-    sha = head(pr)
-    on_head = {role: v for role, (v, at) in MR.verdicts(list(reviews)).items() if at == sha}
-    if MR.CHANGES in on_head.values() or on_head.get(MR.PRINCIPAL) != MR.APPROVE:
-        return IN_REVIEW
-    return AWAITING_MERGE if MR.QA in on_head else AWAITING_QA
-
-
-def stage_of(
-    pr: Mapping[str, Any],
-    reviews: Sequence[dict[str, Any]],
-    check_runs: Sequence[Mapping[str, Any]],
-) -> str | None:
-    """The stage of one open PR, or None when it is not a ticket PR into main."""
-    found = verdict_stage(pr, reviews)
-    if found == AWAITING_MERGE and not gate_green(check_runs):
-        return IN_REVIEW
-    return found
+    if merge_ready and merge_candidate(pr, reviews):
+        return AWAITING_MERGE
+    verdicts = on_head(pr, reviews)
+    if (
+        MR.CHANGES not in verdicts.values()
+        and verdicts.get(MR.PRINCIPAL) == MR.APPROVE
+        and MR.QA not in verdicts
+    ):
+        return AWAITING_QA
+    return IN_REVIEW
 
 
 def count_stages(
     pulls: Sequence[Mapping[str, Any]],
     reviews: Mapping[int, Sequence[dict[str, Any]]],
-    check_runs: Mapping[str, Sequence[Mapping[str, Any]]],
+    merge_ready: Collection[int] = (),
 ) -> dict[str, int]:
     counts = dict.fromkeys(STAGES, 0)
     for pr in pulls:
-        found = stage_of(pr, reviews.get(pr["number"], ()), check_runs.get(head(pr), ()))
+        n = pr["number"]
+        found = stage_of(pr, reviews.get(n, ()), n in merge_ready)
         if found:
             counts[found] += 1
     return counts
@@ -162,11 +173,23 @@ def _pages(url: str, key: str | None = None) -> list[dict[str, Any]]:
     return items
 
 
+def _merge_ready_rc(args: argparse.Namespace, pr: Mapping[str, Any]) -> int:
+    """0 merge-ready, 1 not; anything else is unknown and raises (fail closed)."""
+    cmd = [sys.executable, str(args.merge_ready), "--repo", args.repo, "--pr", str(pr["number"])]
+    done = subprocess.run(  # noqa: S603 (fixed script, arguments from the REST listing)
+        [*cmd, "--sha", head(pr)], capture_output=True, text=True, timeout=300, check=False
+    )
+    if done.returncode not in (0, 1):
+        raise ValueError(f"merge_ready.py on #{pr['number']} exited {done.returncode}")
+    return done.returncode
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--repo", required=True, help="OWNER/NAME")
     ap.add_argument("--stage", required=True, choices=["start"], help="the move to check")
     ap.add_argument("--limits", default=",".join(map(str, LIMITS)))
+    ap.add_argument("--merge-ready", type=Path, default=MERGE_READY)
     args = ap.parse_args(argv)
     try:
         limits = tuple(int(x) for x in args.limits.split(","))
@@ -181,16 +204,16 @@ def main(argv: list[str] | None = None) -> int:
         pulls = [p for p in _pages(f"{base}/pulls?state=open") if is_ticket_pr(p)]
         ready = [p for p in pulls if not p.get("draft")]
         reviews = {p["number"]: _pages(f"{base}/pulls/{p['number']}/reviews") for p in ready}
-        # Check runs are read only where the verdicts already say "awaiting merge".
-        runs = {
-            head(p): _pages(f"{base}/commits/{head(p)}/check-runs", "check_runs")
+        merge_ready = {
+            p["number"]
             for p in ready
-            if verdict_stage(p, reviews[p["number"]]) == AWAITING_MERGE
+            if merge_candidate(p, reviews[p["number"]]) and _merge_ready_rc(args, p) == 0
         }
-    except (OSError, ValueError, KeyError, TypeError) as exc:  # URLError is an OSError
-        print(f"wip-gate: unknown (GitHub could not be read: {exc})")
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+        # URLError is an OSError; a merge_ready.py exit other than 0 or 1 is a ValueError.
+        print(f"wip-gate: unknown (GitHub or merge_ready.py could not answer: {exc})")
         return 2
-    counts = count_stages(pulls, reviews, runs)
+    counts = count_stages(pulls, reviews, merge_ready)
     print(stage_line(counts))
     found = start_refusals(counts, limits)
     if found:
