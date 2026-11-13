@@ -1,0 +1,52 @@
+{
+  "current": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "We could not find that.",
+        "support_ref": "ref_4c2238f5fff8b896"
+      }
+    }
+  },
+  "reviewed_by_id": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "We could not find that.",
+        "support_ref": "ref_556f310349298515"
+      }
+    }
+  },
+  "draft_by_id": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "We could not find that.",
+        "support_ref": "ref_f96105a3ba7271ef"
+      }
+    }
+  },
+  "unknown_by_id": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "We could not find that.",
+        "support_ref": "ref_6715bcf55f164f3f"
+      }
+    }
+  },
+  "signed_out": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "We could not find that.",
+        "support_ref": "ref_fac183c5dff76510"
+      }
+    }
+  }
+}

@@ -61,9 +61,14 @@ def authenticated_gets(app: Any) -> list[str]:
 
 
 def fill(template: str, resources: Mapping[str, str]) -> str:
-    """The owner's URL for ``template``: her tagged match (video received, one rally)."""
+    """The owner's URL for ``template``: her tagged match (video received, one rally); a
+    reference route reads a ``coach-reviewed`` entry of the test reference tree (ST-170b)."""
     return template.format(
-        match_id=resources["tagged"], rally_id=resources["rally"], metric_id="AN-01"
+        match_id=resources["tagged"],
+        rally_id=resources["rally"],
+        metric_id="AN-01",
+        version=1,
+        entry_id="REF-AN09-D-INT",
     )
 
 

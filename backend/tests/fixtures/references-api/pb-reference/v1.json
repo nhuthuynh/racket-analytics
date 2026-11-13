@@ -1,0 +1,79 @@
+{
+  "schema": "reference-set/v1",
+  "set": "pb-reference",
+  "version": 1,
+  "entries": [
+    {
+      "id": "REF-AN09-D-INT",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.45,
+        0.7
+      ],
+      "status": "coach-reviewed",
+      "version": 1
+    },
+    {
+      "id": "REF-AN09-D-ADV",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "level_band": "advanced",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.5,
+        0.75
+      ],
+      "status": "verified",
+      "version": 1
+    },
+    {
+      "id": "REF-AN13-D-INT",
+      "pattern_id": "AN-13",
+      "definition_version": "0.1",
+      "better_direction": "higher",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0001"
+      },
+      "band": [
+        4,
+        8
+      ],
+      "status": "coach-reviewed",
+      "version": 1
+    },
+    {
+      "id": "REF-AN09-D-BEG",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "level_band": "beginner",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.3,
+        0.6
+      ],
+      "status": "draft",
+      "version": 1
+    }
+  ]
+}

@@ -39,6 +39,11 @@ from tests.support.written_keys import WrittenKeys
 # The suite always runs as APP_ENV=test, whatever the shell exports (QA-R1-06). Tests that
 # need another value set it with monkeypatch.
 os.environ["APP_ENV"] = "test"
+# The reference read API (ST-170b) serves the committed test tree, not the repository's content,
+# so route inventories (IT-05-06, the BOLA matrix) reach a reviewed entry whatever COACH-6c ships.
+os.environ["RACKET_REFERENCE_ROOT"] = str(
+    Path(__file__).resolve().parent / "fixtures" / "references-api"
+)
 
 # ----------------------------------------------------------------- Hypothesis profiles
 settings.register_profile("dev", max_examples=100)
