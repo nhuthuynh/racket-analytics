@@ -48,8 +48,8 @@ def latest(runs: Iterable[dict[str, Any]], path: str) -> dict[str, Any] | None:
     return max(found, key=lambda r: (r.get("created_at") or "", r["id"]), default=None)
 
 
-def is_red(run: dict[str, Any] | None) -> bool:
-    return run is not None and run.get("conclusion") in RED
+def is_red(run: dict[str, Any]) -> bool:
+    return run.get("conclusion") in RED
 
 
 def describe(run: dict[str, Any]) -> str:
