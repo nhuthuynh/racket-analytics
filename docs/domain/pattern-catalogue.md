@@ -85,6 +85,11 @@ The counting rules below are rule-free (they count labelled hits and bounces); o
 | AN-12 | Lost in transition | rallies lost from the transition zone / rallies lost | CV | 20 | wilson | lower | needs CV (7.1) |
 | STACK | Stacking | share of service turns stacked | CV | 20 | wilson | none (descriptive) | needs CV (7.1) |
 | SPACING | Partner spacing (AN-16, middle left open) | rally time with a wide partner gap / rally time | CV | 20 | wilson | lower | needs CV (7.1) |
+| AN-05 | Serve faults | tagged serve faults / serves by the side (metric dictionary AN-05 [SRC-0017]) | QT | 20 | wilson | lower | ST-171a (P0), wave A |
+| AN-07 | Unforced-error share (`AN-07:unforced-error`) | unforced errors / rallies the side ended (metric dictionary AN-07 [SRC-0017]) | QT | 20 | wilson | lower | ST-171a (P0), wave A |
+| AN-04 | Unforced errors per game | unforced errors / games (metric dictionary AN-04) | QT | 2 games | none | none (context only) | ST-171a (P0), wave A, never ranked |
+
+**Wave A rows (COACH-6c).** AN-05, AN-07 and AN-04 keep the metric dictionary's v0.1 definitions (`coach-reviewed` 2026-10-07); these rows only add what the reference lint and the gap rule read. AN-07 is compared on its unforced-error share alone (`AN-07:unforced-error`, ADR 0061 Rule 3.1); its other three shares are descriptive. AN-04 has no interval method, so it gets no reference entry and is shown as context, never ranked (ADR 0061 Rule 3.1).
 
 ## 2. AN-09 third-shot drop share
 
@@ -509,3 +514,4 @@ Censored share (§5, §10 Q5): on `gp1-doubles` 13 of A's 25 dink rallies and 15
 |---|---|---|
 | 2026-11-13 | pickleball-domain-coach | v0.1 written with COACH-6a: rules §0, AN-09, AN-10, AN-08, AN-13 (FT), AN-11, AN-12, STACK, SPACING (CV, needs 7.1); worked label examples W-09-a, W-10-a, W-08-a, W-13-a |
 | 2026-11-13 | pickleball-domain-coach | §11 gold fixture GS-PAT-1 v1 tables and `pattern_example.py --check` (COACH-6b); Q5 note; no definition changed, statuses stay `draft` |
+| 2026-11-13 | pickleball-domain-coach | §1 wave A rows AN-05, AN-07 (unforced-error share) and AN-04 (context only) for the reference set v1 (COACH-6c); no definition changed |
