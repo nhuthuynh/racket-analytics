@@ -390,6 +390,8 @@ Moderated, ≥ 5 players on their own phones (waiting on **P9**). Seeded with th
 
 **Hold rule (chair's step, after the six decider steps):** DR-06 is held when `python3 docs/design/tools/check_flows.py docs/design/flows-sprint-06.md --review DR-06 --decider pickleball-domain-coach --decider senior-ml-cv-engineer --decider security-privacy-engineer --decider senior-frontend-engineer --decider business-analyst --decider product-manager` exits 0 **and** no cell is a reject. The chair then writes "Held (date)" in the Outcome column; each reject gets a ledger row and a ticket the same day (kickoff PD-5), and the UI tickets it touches stay blocked until it is closed. ST-170c, ST-172c and ST-173d start only after "Held" (kickoff FE-4).
 
+**Merge hold (review round 1, F1 and QA-DR06-01):** the DR-06 PR stays a draft (ADR 0052) until the six decider rows have landed on its branch and the hold-rule command above exits 0 with no reject cell; only then does the chair mark it ready. The merge step must not run on the DR-06 PR before that command exits 0 at the head SHA with no reject. `check_docs.py` and `merge_ready.py` do not enforce this: `check_docs.py` runs `--decider` only on role rows that already exist, so both pass with zero decider rows, and this hold is the only guard.
+
 **Decider cells:**
 
 | Role | Items | Cell |
