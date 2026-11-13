@@ -1,0 +1,6 @@
+{
+  "schema": "reference-set-lock/v1",
+  "sets": {
+    "golden-reference@1": "4956c7ad18fd1d83a596a63ffe2aeb80ba33f67afb55f92f97d1155e422ad6d9"
+  }
+}

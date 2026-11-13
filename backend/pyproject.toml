@@ -83,6 +83,7 @@ markers = [
     "conservation: FR-109 attribution conservation, incl. the >= 1,000-match property (Gherkin @conservation; G03-08 c)",
     "coaching: weakness ranking and training plan (Gherkin @coaching; G04-03 b)",
     "weakness_golden: weakness ranking equals the coach's worked examples, catalogue §7 (G04-03 a)",
+    "golden_patterns: GS-PAT-1 x golden reference v1 frozen vectors and their integrity (QA-REF-GOLD; G06-02, G06-03)",
     "needs_verification: depends on a pickleball rule not yet verified by the domain coach (DOM G1); reported separately",
     "milestone(name=...): spec milestone tag from Gherkin, e.g. @M0",
     "story(id=...): story tag from Gherkin, e.g. @story-ST-008",
