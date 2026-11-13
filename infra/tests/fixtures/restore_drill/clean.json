@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "project": "racket-drill05",
+  "flags": "on",
+  "planted": null,
+  "backup_set": "20261112T101500Z",
+  "taken_at": "2026-11-12T10:15:00Z",
+  "drill_started_at": "2026-11-12T10:16:12Z",
+  "rpo_hours": 0.02,
+  "rto_minutes": 3.41,
+  "alembic_revision": {"backup": "0021", "restored": "0021", "equal": true},
+  "corrections": {
+    "before": {"count": 3, "sha256": "9b5e3c1d6c1f0f43fd3c2b7cba4f6f1e2c0b9e5f4a5d1c3b2a1f0e9d8c7b6a59"},
+    "after": {"count": 3, "sha256": "9b5e3c1d6c1f0f43fd3c2b7cba4f6f1e2c0b9e5f4a5d1c3b2a1f0e9d8c7b6a59"},
+    "equal": true
+  },
+  "objects": {
+    "before": {"count": 2, "sha256": "1f3a0c5e7d9b2a4c6e8f0a1b3c5d7e9f1a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d"},
+    "after": {"count": 2, "sha256": "1f3a0c5e7d9b2a4c6e8f0a1b3c5d7e9f1a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d"},
+    "manifest_equal": true,
+    "equal": true
+  },
+  "dangling_object_refs": [],
+  "healthz": 200
+}
