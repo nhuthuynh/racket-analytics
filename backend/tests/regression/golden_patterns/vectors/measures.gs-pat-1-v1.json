@@ -1,0 +1,326 @@
+{
+ "schema": "golden-pattern-measures/v1",
+ "gold_set": "GS-PAT-1",
+ "gold_set_version": 1,
+ "catalogue_version": "0.1",
+ "ticket": "QA-REF-GOLD",
+ "written_by": "senior-qa-engineer",
+ "date": "2026-11-13",
+ "input": "docs/domain/hand-counts/GS-PAT-1-v1.json: matches.<match>.labels",
+ "method": "QA replay of docs/domain/pattern-catalogue.md v0.1 sections 0-5, written from the catalogue text and importing neither the product, scripts/measure nor docs/domain/tools/pattern_example.py; equal bucket by bucket to the coach's hand count (counts) of GS-PAT-1 v1; gp2-singles also recounted by hand from the rally sheet. Wilson z = 1.959963984540054 (ADR 0005); order-statistic interval per FR-171.R4. Floats unrounded; compare with tolerance_abs.",
+ "tolerance_abs": 1e-09,
+ "compared_fields": [
+  "value",
+  "n",
+  "interval",
+  "interval_method",
+  "low_sample",
+  "rankable",
+  "n_excluded",
+  "definition_version",
+  "unavailable_reason",
+  "n_censored (AN-13)"
+ ],
+ "documentary_fields": "k, mix, samples, l, excluded (per reason), unassigned: for the port and the hand-count cross-check",
+ "measures": {
+  "gp1-doubles": {
+   "format": "doubles",
+   "unassigned": {
+    "no_serve_hit": 1,
+    "replay": 1
+   },
+   "A": {
+    "AN-09": {
+     "value": 0.8,
+     "n": 20,
+     "interval": [
+      0.5839825677481064,
+      0.919342337420202
+     ],
+     "interval_method": "wilson",
+     "low_sample": false,
+     "rankable": true,
+     "n_excluded": 4,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 16,
+     "mix": {
+      "drive": 3,
+      "drop": 16,
+      "lob": 1
+     },
+     "excluded": {
+      "facet_missing": 1,
+      "no_third_shot": 2,
+      "side_order_invalid": 1
+     }
+    },
+    "AN-08": {
+     "value": 0.6842105263157895,
+     "n": 19,
+     "interval": [
+      0.46010407675327475,
+      0.8463562091220773
+     ],
+     "interval_method": "wilson",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 3,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 13,
+     "excluded": {
+      "bounce_missing": 1,
+      "no_return": 1,
+      "not_in_play": 1
+     }
+    },
+    "AN-13": {
+     "value": 2.0,
+     "n": 12,
+     "interval": [
+      1,
+      3
+     ],
+     "interval_method": "order_statistic_median",
+     "low_sample": false,
+     "rankable": true,
+     "n_excluded": 12,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "n_censored": 13,
+     "samples": [
+      0,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      3,
+      3,
+      4
+     ],
+     "l": 3,
+     "excluded": {
+      "facet_missing": 2,
+      "no_dink_exchange": 10
+     }
+    }
+   },
+   "B": {
+    "AN-09": {
+     "value": 0.3333333333333333,
+     "n": 18,
+     "interval": [
+      0.1627877475083369,
+      0.5625053270405489
+     ],
+     "interval_method": "wilson",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 4,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 6,
+     "mix": {
+      "drive": 11,
+      "drop": 6,
+      "lob": 1
+     },
+     "excluded": {
+      "facet_missing": 1,
+      "no_third_shot": 3
+     }
+    },
+    "AN-08": {
+     "value": 0.65,
+     "n": 20,
+     "interval": [
+      0.43285427668523624,
+      0.818808175898918
+     ],
+     "interval_method": "wilson",
+     "low_sample": false,
+     "rankable": true,
+     "n_excluded": 4,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 13,
+     "excluded": {
+      "bounce_missing": 2,
+      "no_return": 1,
+      "side_order_invalid": 1
+     }
+    },
+    "AN-13": {
+     "value": 2.0,
+     "n": 10,
+     "interval": [
+      1,
+      3
+     ],
+     "interval_method": "order_statistic_median",
+     "low_sample": false,
+     "rankable": true,
+     "n_excluded": 12,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "n_censored": 15,
+     "samples": [
+      0,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      3,
+      3,
+      4
+     ],
+     "l": 2,
+     "excluded": {
+      "facet_missing": 2,
+      "no_dink_exchange": 10
+     }
+    }
+   }
+  },
+  "gp2-singles": {
+   "format": "singles",
+   "unassigned": {
+    "replay": 1
+   },
+   "A": {
+    "AN-09": {
+     "value": 0.6,
+     "n": 5,
+     "interval": [
+      0.2307242812760128,
+      0.882379225767352
+     ],
+     "interval_method": "wilson",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 0,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 3,
+     "mix": {
+      "drive": 1,
+      "drop": 3,
+      "lob": 1
+     },
+     "excluded": {}
+    },
+    "AN-08": {
+     "value": 0.6666666666666666,
+     "n": 3,
+     "interval": [
+      0.2076596008020477,
+      0.9385080552796037
+     ],
+     "interval_method": "wilson",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 3,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 2,
+     "excluded": {
+      "bounce_missing": 1,
+      "not_in_play": 1,
+      "side_order_invalid": 1
+     }
+    },
+    "AN-13": {
+     "value": 1.0,
+     "n": 2,
+     "interval": null,
+     "interval_method": "order_statistic_median",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 3,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "n_censored": 3,
+     "samples": [
+      1,
+      1
+     ],
+     "l": null,
+     "excluded": {
+      "facet_missing": 1,
+      "no_dink_exchange": 2
+     }
+    }
+   },
+   "B": {
+    "AN-09": {
+     "value": 0.6666666666666666,
+     "n": 3,
+     "interval": [
+      0.2076596008020477,
+      0.9385080552796037
+     ],
+     "interval_method": "wilson",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 3,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 2,
+     "mix": {
+      "drive": 1,
+      "drop": 2
+     },
+     "excluded": {
+      "facet_missing": 1,
+      "no_third_shot": 1,
+      "side_order_invalid": 1
+     }
+    },
+    "AN-08": {
+     "value": 0.6,
+     "n": 5,
+     "interval": [
+      0.2307242812760128,
+      0.882379225767352
+     ],
+     "interval_method": "wilson",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 0,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "k": 3,
+     "excluded": {}
+    },
+    "AN-13": {
+     "value": 1.0,
+     "n": 2,
+     "interval": null,
+     "interval_method": "order_statistic_median",
+     "low_sample": true,
+     "rankable": false,
+     "n_excluded": 3,
+     "definition_version": "0.1",
+     "unavailable_reason": null,
+     "n_censored": 3,
+     "samples": [
+      0,
+      2
+     ],
+     "l": null,
+     "excluded": {
+      "facet_missing": 1,
+      "no_dink_exchange": 2
+     }
+    }
+   }
+  }
+ }
+}

@@ -68,7 +68,7 @@ def test_gap_reference_rows_are_the_golden_reference_entries() -> None:
                 case["format"],
             ), ref["id"]
             assert ref["band"] == entry["band"], ref["id"]
-            assert ref["status"] == entry["status"], ref["id"]
+            assert ref["version"] == entry["version"], ref["id"]
             assert row["better_direction"] == entry["better_direction"], ref["id"]
 
 

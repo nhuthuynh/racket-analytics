@@ -1,0 +1,20 @@
+{
+  "schema": "golden-patterns-lock/v1",
+  "rule": "A frozen file changes only with a new row that names a new ADR (docs/decisions/NNNN-*.md that names QA-REF-GOLD) and the new sha256; checked by integrity.py (test_integrity.py, golden_patterns.feature).",
+  "changes": [
+    {
+      "date": "2026-11-13",
+      "ticket": "QA-REF-GOLD",
+      "by": "senior-qa-engineer",
+      "adr": "docs/decisions/0061-reference-patterns-and-player-vs-reference-comparison.md",
+      "reason": "first freeze of GS-PAT-1 v1 measures and golden reference v1 gap vectors, written before ST-171b/c/d and ST-172a (ADR 0061 Rule 6)",
+      "files": {
+        "backend/tests/regression/golden_patterns/vectors/measures.gs-pat-1-v1.json": "7fae67b1d9c45febcae99440393831da423ef0c3712cebce6bd5849511d18a0e",
+        "backend/tests/regression/golden_patterns/vectors/gaps.gs-pat-1-v1.golden-reference-v1.json": "43614adbc7d78f522baacbd448f83deb9da73bb2cd050f09eae99b13f4990b59",
+        "backend/tests/regression/golden_patterns/references/golden-reference/v1.json": "4560ce003c23b78de8a7f7b4eba2c539cfec73ed7d4f0b386098dd2556793235",
+        "backend/tests/regression/golden_patterns/references/references.lock": "deaae0d3789b2cdf3fea33e984a25fe8024e84b71622fa12bb13c310fee2421d",
+        "docs/domain/hand-counts/GS-PAT-1-v1.json": "3727ca702c31b3c6077c88e2f5b3cee874826a081beb1c0bea058d161375ae05"
+      }
+    }
+  ]
+}

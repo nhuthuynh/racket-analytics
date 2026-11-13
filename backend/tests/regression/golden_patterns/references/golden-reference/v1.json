@@ -1,0 +1,151 @@
+{
+  "schema": "reference-set/v1",
+  "set": "golden-reference",
+  "version": 1,
+  "entries": [
+    {
+      "id": "GOLD-AN09-D-BEG",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "level_band": "beginner",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.2,
+        0.45
+      ],
+      "status": "draft",
+      "version": 1
+    },
+    {
+      "id": "GOLD-AN08-D-BEG",
+      "pattern_id": "AN-08",
+      "definition_version": "0.1",
+      "better_direction": "higher",
+      "level_band": "beginner",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.2,
+        0.4
+      ],
+      "status": "draft",
+      "version": 1
+    },
+    {
+      "id": "GOLD-AN09-D-INT",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.45,
+        0.7
+      ],
+      "status": "draft",
+      "version": 1
+    },
+    {
+      "id": "GOLD-AN08-D-INT",
+      "pattern_id": "AN-08",
+      "definition_version": "0.1",
+      "better_direction": "higher",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.4,
+        0.7
+      ],
+      "status": "draft",
+      "version": 1
+    },
+    {
+      "id": "GOLD-AN13-D-INT",
+      "pattern_id": "AN-13",
+      "definition_version": "0.1",
+      "better_direction": "higher",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        3,
+        6
+      ],
+      "status": "draft",
+      "version": 1
+    },
+    {
+      "id": "GOLD-AN09-D-ADV",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "level_band": "advanced",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.3,
+        0.55
+      ],
+      "status": "draft",
+      "version": 1
+    },
+    {
+      "id": "GOLD-AN08-D-ADV",
+      "pattern_id": "AN-08",
+      "definition_version": "0.1",
+      "better_direction": "higher",
+      "level_band": "advanced",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        0.85,
+        0.95
+      ],
+      "status": "draft",
+      "version": 1
+    },
+    {
+      "id": "GOLD-AN13-D-ADV",
+      "pattern_id": "AN-13",
+      "definition_version": "0.1",
+      "better_direction": "higher",
+      "level_band": "advanced",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-0002"
+      },
+      "band": [
+        4,
+        8
+      ],
+      "status": "draft",
+      "version": 1
+    }
+  ]
+}

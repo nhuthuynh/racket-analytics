@@ -1,0 +1,796 @@
+{
+ "schema": "golden-pattern-gaps/v1",
+ "gold_set": "GS-PAT-1",
+ "gold_set_version": 1,
+ "catalogue_version": "0.1",
+ "reference_set": "golden-reference",
+ "reference_version": 1,
+ "ticket": "QA-REF-GOLD",
+ "written_by": "senior-qa-engineer",
+ "date": "2026-11-13",
+ "rule": "ADR 0061 Rule 3 and FR-172.R1-R4: no reference -> no_reference_yet; not rankable -> not_enough_data; weakness only when the player's interval lies wholly on the worse side (touching ends overlap); gap_size in band widths; order by (-gap_size, -rallies_lost_linked, catalogue_order, pattern_id).",
+ "tolerance_abs": 1e-09,
+ "not_frozen": "a pattern with neither a reference nor min_n (state precedence open, QA-REF-GOLD decision file); equal gap sizes (GS-PAT-1 has none; ST-172a unit and property tests); singles (no singles reference).",
+ "cases": [
+  {
+   "id": "G1-A-INT",
+   "match": "gp1-doubles",
+   "side": "A",
+   "level_band": "intermediate",
+   "format": "doubles",
+   "rows": [
+    {
+     "pattern_id": "AN-09",
+     "better_direction": "inside_band",
+     "min_n": 20,
+     "catalogue_order": 1,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.8,
+      "n": 20,
+      "interval": [
+       0.5839825677481064,
+       0.919342337420202
+      ],
+      "interval_method": "wilson",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN09-D-INT",
+      "version": 1,
+      "band": [
+       0.45,
+       0.7
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-08",
+     "better_direction": "higher",
+     "min_n": 20,
+     "catalogue_order": 3,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.6842105263157895,
+      "n": 19,
+      "interval": [
+       0.46010407675327475,
+       0.8463562091220773
+      ],
+      "interval_method": "wilson",
+      "low_sample": true,
+      "rankable": false,
+      "n_excluded": 3,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN08-D-INT",
+      "version": 1,
+      "band": [
+       0.4,
+       0.7
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-13",
+     "better_direction": "higher",
+     "min_n": 10,
+     "catalogue_order": 4,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 2.0,
+      "n": 12,
+      "interval": [
+       1,
+       3
+      ],
+      "interval_method": "order_statistic_median",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 12,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN13-D-INT",
+      "version": 1,
+      "band": [
+       3,
+       6
+      ]
+     }
+    }
+   ],
+   "expected": {
+    "order": [],
+    "results": [
+     {
+      "pattern_id": "AN-09",
+      "n": 20,
+      "min_n": 20,
+      "reference_id": "GOLD-AN09-D-INT",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "no_clear_gap"
+     },
+     {
+      "pattern_id": "AN-08",
+      "n": 19,
+      "min_n": 20,
+      "reference_id": "GOLD-AN08-D-INT",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "not_enough_data"
+     },
+     {
+      "pattern_id": "AN-13",
+      "n": 12,
+      "min_n": 10,
+      "reference_id": "GOLD-AN13-D-INT",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "no_clear_gap"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G1-B-INT",
+   "match": "gp1-doubles",
+   "side": "B",
+   "level_band": "intermediate",
+   "format": "doubles",
+   "rows": [
+    {
+     "pattern_id": "AN-09",
+     "better_direction": "inside_band",
+     "min_n": 20,
+     "catalogue_order": 1,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.3333333333333333,
+      "n": 18,
+      "interval": [
+       0.1627877475083369,
+       0.5625053270405489
+      ],
+      "interval_method": "wilson",
+      "low_sample": true,
+      "rankable": false,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN09-D-INT",
+      "version": 1,
+      "band": [
+       0.45,
+       0.7
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-08",
+     "better_direction": "higher",
+     "min_n": 20,
+     "catalogue_order": 3,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.65,
+      "n": 20,
+      "interval": [
+       0.43285427668523624,
+       0.818808175898918
+      ],
+      "interval_method": "wilson",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN08-D-INT",
+      "version": 1,
+      "band": [
+       0.4,
+       0.7
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-13",
+     "better_direction": "higher",
+     "min_n": 10,
+     "catalogue_order": 4,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 2.0,
+      "n": 10,
+      "interval": [
+       1,
+       3
+      ],
+      "interval_method": "order_statistic_median",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 12,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN13-D-INT",
+      "version": 1,
+      "band": [
+       3,
+       6
+      ]
+     }
+    }
+   ],
+   "expected": {
+    "order": [],
+    "results": [
+     {
+      "pattern_id": "AN-09",
+      "n": 18,
+      "min_n": 20,
+      "reference_id": "GOLD-AN09-D-INT",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "not_enough_data"
+     },
+     {
+      "pattern_id": "AN-08",
+      "n": 20,
+      "min_n": 20,
+      "reference_id": "GOLD-AN08-D-INT",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "no_clear_gap"
+     },
+     {
+      "pattern_id": "AN-13",
+      "n": 10,
+      "min_n": 10,
+      "reference_id": "GOLD-AN13-D-INT",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "no_clear_gap"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G1-A-ADV",
+   "match": "gp1-doubles",
+   "side": "A",
+   "level_band": "advanced",
+   "format": "doubles",
+   "rows": [
+    {
+     "pattern_id": "AN-09",
+     "better_direction": "inside_band",
+     "min_n": 20,
+     "catalogue_order": 1,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.8,
+      "n": 20,
+      "interval": [
+       0.5839825677481064,
+       0.919342337420202
+      ],
+      "interval_method": "wilson",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN09-D-ADV",
+      "version": 1,
+      "band": [
+       0.3,
+       0.55
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-08",
+     "better_direction": "higher",
+     "min_n": 20,
+     "catalogue_order": 3,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.6842105263157895,
+      "n": 19,
+      "interval": [
+       0.46010407675327475,
+       0.8463562091220773
+      ],
+      "interval_method": "wilson",
+      "low_sample": true,
+      "rankable": false,
+      "n_excluded": 3,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN08-D-ADV",
+      "version": 1,
+      "band": [
+       0.85,
+       0.95
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-13",
+     "better_direction": "higher",
+     "min_n": 10,
+     "catalogue_order": 4,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 2.0,
+      "n": 12,
+      "interval": [
+       1,
+       3
+      ],
+      "interval_method": "order_statistic_median",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 12,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN13-D-ADV",
+      "version": 1,
+      "band": [
+       4,
+       8
+      ]
+     }
+    }
+   ],
+   "expected": {
+    "order": [
+     "AN-13",
+     "AN-09"
+    ],
+    "results": [
+     {
+      "pattern_id": "AN-09",
+      "n": 20,
+      "min_n": 20,
+      "reference_id": "GOLD-AN09-D-ADV",
+      "side": "above",
+      "gap_size": 0.13593027099242547,
+      "rank": 2,
+      "state": "weakness"
+     },
+     {
+      "pattern_id": "AN-08",
+      "n": 19,
+      "min_n": 20,
+      "reference_id": "GOLD-AN08-D-ADV",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "not_enough_data"
+     },
+     {
+      "pattern_id": "AN-13",
+      "n": 12,
+      "min_n": 10,
+      "reference_id": "GOLD-AN13-D-ADV",
+      "side": "below",
+      "gap_size": 0.25,
+      "rank": 1,
+      "state": "weakness"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G1-B-ADV",
+   "match": "gp1-doubles",
+   "side": "B",
+   "level_band": "advanced",
+   "format": "doubles",
+   "rows": [
+    {
+     "pattern_id": "AN-09",
+     "better_direction": "inside_band",
+     "min_n": 20,
+     "catalogue_order": 1,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.3333333333333333,
+      "n": 18,
+      "interval": [
+       0.1627877475083369,
+       0.5625053270405489
+      ],
+      "interval_method": "wilson",
+      "low_sample": true,
+      "rankable": false,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN09-D-ADV",
+      "version": 1,
+      "band": [
+       0.3,
+       0.55
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-08",
+     "better_direction": "higher",
+     "min_n": 20,
+     "catalogue_order": 3,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.65,
+      "n": 20,
+      "interval": [
+       0.43285427668523624,
+       0.818808175898918
+      ],
+      "interval_method": "wilson",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN08-D-ADV",
+      "version": 1,
+      "band": [
+       0.85,
+       0.95
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-13",
+     "better_direction": "higher",
+     "min_n": 10,
+     "catalogue_order": 4,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 2.0,
+      "n": 10,
+      "interval": [
+       1,
+       3
+      ],
+      "interval_method": "order_statistic_median",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 12,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN13-D-ADV",
+      "version": 1,
+      "band": [
+       4,
+       8
+      ]
+     }
+    }
+   ],
+   "expected": {
+    "order": [
+     "AN-08",
+     "AN-13"
+    ],
+    "results": [
+     {
+      "pattern_id": "AN-09",
+      "n": 18,
+      "min_n": 20,
+      "reference_id": "GOLD-AN09-D-ADV",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "not_enough_data"
+     },
+     {
+      "pattern_id": "AN-08",
+      "n": 20,
+      "min_n": 20,
+      "reference_id": "GOLD-AN08-D-ADV",
+      "side": "below",
+      "gap_size": 0.31191824101082016,
+      "rank": 1,
+      "state": "weakness"
+     },
+     {
+      "pattern_id": "AN-13",
+      "n": 10,
+      "min_n": 10,
+      "reference_id": "GOLD-AN13-D-ADV",
+      "side": "below",
+      "gap_size": 0.25,
+      "rank": 2,
+      "state": "weakness"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G1-A-BEG",
+   "match": "gp1-doubles",
+   "side": "A",
+   "level_band": "beginner",
+   "format": "doubles",
+   "rows": [
+    {
+     "pattern_id": "AN-09",
+     "better_direction": "inside_band",
+     "min_n": 20,
+     "catalogue_order": 1,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.8,
+      "n": 20,
+      "interval": [
+       0.5839825677481064,
+       0.919342337420202
+      ],
+      "interval_method": "wilson",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN09-D-BEG",
+      "version": 1,
+      "band": [
+       0.2,
+       0.45
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-08",
+     "better_direction": "higher",
+     "min_n": 20,
+     "catalogue_order": 3,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.6842105263157895,
+      "n": 19,
+      "interval": [
+       0.46010407675327475,
+       0.8463562091220773
+      ],
+      "interval_method": "wilson",
+      "low_sample": true,
+      "rankable": false,
+      "n_excluded": 3,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN08-D-BEG",
+      "version": 1,
+      "band": [
+       0.2,
+       0.4
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-13",
+     "better_direction": "higher",
+     "min_n": 10,
+     "catalogue_order": 4,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 2.0,
+      "n": 12,
+      "interval": [
+       1,
+       3
+      ],
+      "interval_method": "order_statistic_median",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 12,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": null
+    }
+   ],
+   "expected": {
+    "order": [
+     "AN-09"
+    ],
+    "results": [
+     {
+      "pattern_id": "AN-09",
+      "n": 20,
+      "min_n": 20,
+      "reference_id": "GOLD-AN09-D-BEG",
+      "side": "above",
+      "gap_size": 0.5359302709924256,
+      "rank": 1,
+      "state": "weakness"
+     },
+     {
+      "pattern_id": "AN-08",
+      "n": 19,
+      "min_n": 20,
+      "reference_id": "GOLD-AN08-D-BEG",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "not_enough_data"
+     },
+     {
+      "pattern_id": "AN-13",
+      "n": 12,
+      "min_n": 10,
+      "reference_id": null,
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "no_reference_yet"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G1-B-BEG",
+   "match": "gp1-doubles",
+   "side": "B",
+   "level_band": "beginner",
+   "format": "doubles",
+   "rows": [
+    {
+     "pattern_id": "AN-09",
+     "better_direction": "inside_band",
+     "min_n": 20,
+     "catalogue_order": 1,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.3333333333333333,
+      "n": 18,
+      "interval": [
+       0.1627877475083369,
+       0.5625053270405489
+      ],
+      "interval_method": "wilson",
+      "low_sample": true,
+      "rankable": false,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN09-D-BEG",
+      "version": 1,
+      "band": [
+       0.2,
+       0.45
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-08",
+     "better_direction": "higher",
+     "min_n": 20,
+     "catalogue_order": 3,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 0.65,
+      "n": 20,
+      "interval": [
+       0.43285427668523624,
+       0.818808175898918
+      ],
+      "interval_method": "wilson",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 4,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": {
+      "id": "GOLD-AN08-D-BEG",
+      "version": 1,
+      "band": [
+       0.2,
+       0.4
+      ]
+     }
+    },
+    {
+     "pattern_id": "AN-13",
+     "better_direction": "higher",
+     "min_n": 10,
+     "catalogue_order": 4,
+     "rallies_lost_linked": 0,
+     "measure": {
+      "value": 2.0,
+      "n": 10,
+      "interval": [
+       1,
+       3
+      ],
+      "interval_method": "order_statistic_median",
+      "low_sample": false,
+      "rankable": true,
+      "n_excluded": 12,
+      "definition_version": "0.1",
+      "unavailable_reason": null
+     },
+     "reference": null
+    }
+   ],
+   "expected": {
+    "order": [],
+    "results": [
+     {
+      "pattern_id": "AN-09",
+      "n": 18,
+      "min_n": 20,
+      "reference_id": "GOLD-AN09-D-BEG",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "not_enough_data"
+     },
+     {
+      "pattern_id": "AN-08",
+      "n": 20,
+      "min_n": 20,
+      "reference_id": "GOLD-AN08-D-BEG",
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "no_clear_gap"
+     },
+     {
+      "pattern_id": "AN-13",
+      "n": 10,
+      "min_n": 10,
+      "reference_id": null,
+      "side": null,
+      "gap_size": null,
+      "rank": null,
+      "state": "no_reference_yet"
+     }
+    ]
+   }
+  }
+ ]
+}
