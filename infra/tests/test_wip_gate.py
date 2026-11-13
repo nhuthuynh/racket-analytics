@@ -192,10 +192,41 @@ def test_an_approve_from_an_untrusted_author_does_not_count() -> None:
 @pytest.mark.unit
 def test_only_open_ticket_prs_into_main_are_counted() -> None:
     stub = WipStub()
-    stub.pulls += [ticket_pr(1, ticket=""), ticket_pr(2, base="s06/other"), ticket_pr(3)]
+    stub.pulls += [
+        ticket_pr(1, ticket="", branch="feature/no-ticket"),
+        ticket_pr(2, base="s06/other"),
+        ticket_pr(3),
+    ]
     assert stage(stub.pulls[0]) is None
     assert stage(stub.pulls[1]) is None
     assert counts(stub)["in review"] == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "branch",
+    [
+        "s05/ci-tiers-a-r3-sec1-consent-security-paths-tier-2",  # live #231
+        "s05/owners-ci-domain-budget",  # live #236 (owner-row PR)
+    ],
+)
+def test_an_untitled_pr_from_a_ticket_branch_is_counted(branch: str) -> None:
+    """PE-QWG-01: a ticket PR is known by its head branch s<nn>/<id> (merge_ready.py's
+    _TICKET_BRANCH) or by its "[ID]" title; either one is enough."""
+    pr = ticket_pr(1, ticket="", branch=branch)
+    assert stage(pr) == "in review"
+    assert stage(ticket_pr(2, ticket="", branch=branch, draft=True)) == "in progress"
+
+
+@pytest.mark.unit
+def test_a_titled_pr_from_another_branch_is_still_counted() -> None:
+    assert stage(ticket_pr(1, branch="feature/x")) == "in review"
+
+
+@pytest.mark.unit
+def test_a_branch_that_only_starts_like_a_ticket_branch_is_not_one() -> None:
+    for branch in ("s5/x", "s06/", "s06/Upper", "xs06/t-1", "s06/t-1/sub"):
+        assert stage(ticket_pr(1, ticket="", branch=branch)) is None, branch
 
 
 @pytest.mark.unit
@@ -256,6 +287,21 @@ def test_the_script_refuses_a_fourth_start_over_rest_and_names_the_stage(tmp_pat
     # REST only, paged past the end (two items a page): no GraphQL, no Link header.
     assert all(r.startswith(f"/repos/{REPO}/") for r in stub.requests), stub.requests
     assert any("page=3" in r for r in stub.requests if "/pulls?" in r)
+
+
+@pytest.mark.integration
+def test_the_script_counts_an_untitled_ticket_branch_pr_over_rest(tmp_path: Path) -> None:
+    """PE-QWG-01: two titled PRs in review plus one untitled ticket-branch PR fill the stage."""
+    stub = WipStub()
+    stub.in_review(1)
+    stub.in_review(2)
+    stub.pulls.append(ticket_pr(3, ticket="", branch="s05/owners-ci-domain-budget"))
+    stub.pulls.append(ticket_pr(4, ticket="", branch="feature/no-ticket"))
+    with serve(stub):
+        result = run_script(stub, tmp_path)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "In progress 0 · in review 3 · awaiting QA 0 · awaiting merge 0" in result.stdout
+    assert "wip-gate: start refused: in review 3 of 3" in result.stdout
 
 
 @pytest.mark.integration

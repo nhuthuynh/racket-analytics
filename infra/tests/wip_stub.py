@@ -35,6 +35,7 @@ def ticket_pr(
     ticket: str | None = None,
     base: str = "main",
     sha: str | None = None,
+    branch: str | None = None,
 ) -> dict[str, Any]:
     """An open pull request as `GET /repos/{repo}/pulls` lists it (only the fields read)."""
     tid = ticket if ticket is not None else f"T-{number}"
@@ -44,7 +45,7 @@ def ticket_pr(
         "state": "open",
         "draft": draft,
         "base": {"ref": base},
-        "head": {"ref": f"s06/t-{number}", "sha": sha or head_of(number)},
+        "head": {"ref": branch or f"s06/t-{number}", "sha": sha or head_of(number)},
     }
 
 
