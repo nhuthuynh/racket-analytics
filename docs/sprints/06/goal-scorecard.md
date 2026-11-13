@@ -107,7 +107,7 @@ CI's NFR-073 integration form (pinned), the nightly mutation job, `python3 scrip
 python3 scripts/measure/flow_metrics.py --repo nhuthuynh/racket-analytics --since 2026-11-13 \
   --decisions docs/sprints/06/decisions --json reports/flow06.json
 ```
-Plus `wip_gate.py` (planned) against a stub with 3 PRs in review (expects rc 1). Values go to the sprint report; only "measured and complete" is a target.
+Plus `wip_gate.py` against a stub with 3 PRs in review (expects rc 1). Values go to the sprint report; only "measured and complete" is a target.
 
 ### G06-11 (author: engineering-manager, RETRO-06 close checks)
 ```

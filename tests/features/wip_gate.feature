@@ -3,9 +3,9 @@
 # implementation. Binding: infra/tests/test_wip_gate_scenarios.py runs
 # scripts/measure/wip_gate.py over HTTP against the local GitHub REST stub
 # (infra/tests/wip_stub.py).
-@ticket-QA-WIP-GATE
+@story-PRC-06 @ticket-QA-WIP-GATE
 Feature: A ticket start is refused while a stage is full
-  Rule: the stage counts come from the GitHub REST API; a start must not push "in progress"
+  Rule: PRC-12.1 the stage counts come from the GitHub REST API; a start must not push "in progress"
         over 4, and no ticket starts while in review (3), awaiting QA (2) or awaiting merge (1)
         is full
 

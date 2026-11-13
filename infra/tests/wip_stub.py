@@ -1,8 +1,9 @@
 """A local stand-in for the GitHub REST endpoints `scripts/measure/wip_gate.py` reads
 (QA-WIP-GATE, PRC-12.1): `pulls?state=open` and `pulls/{n}/reviews`. Real HTTP on
 127.0.0.1. It pages with `?page=N` (two items a page, an empty page past the end) and sends no
-`Link` header, as `flow_stub.py` does, because the agent proxy refuses the `repositories/{id}` form GitHub puts in `Link`. Every request is
-recorded so a test can assert that only REST paths under `/repos/` were read.
+`Link` header, as `flow_stub.py` does, because the agent proxy refuses the `repositories/{id}`
+form GitHub puts in `Link`. Every request is recorded so a test can assert that only REST
+paths under `/repos/` were read.
 
 `merge_ready.py` is replaced by `fake_merge_ready()`, a script that exits 0 for the PRs in
 `WipStub.merge_ready` and 1 for the others, and logs each call: its own REST reads are
