@@ -10,29 +10,42 @@
 
 ## Product Goal
 
-- **Owner:** product-manager (ticket PM-5, 2026-11-03; working-agreement §3, planning step 2). Kept current at each sprint planning. Decisions and the S5 priority record: [`05/decisions/PM-5.md`](05/decisions/PM-5.md).
-- **Status:** team text (ADR 0047). It restates the R1 exit criterion of §4 and does not change any milestone "Done when"; the S5 "Done when" change is a PO question in EM-ESC-05.
+- **Owner:** product-manager (ticket PM-6, 2026-11-13, re-scoped for the video-analysis slice; PM-5 wrote the first version on 2026-11-03; working-agreement §3, planning step 2). Kept current at each sprint planning. Decisions, pattern priority waves and out-of-scope list: [`06/decisions/PM-6.md`](06/decisions/PM-6.md); the S5 record: [`05/decisions/PM-5.md`](05/decisions/PM-5.md).
+- **Status:** team text (ADR 0047). It does not change any milestone "Done when". Making S6 the video-analysis sprint and moving the Go port to S7 is an orchestrator proposal confirmed by the team, **not a PO decision**; the PO is asked in EM-ESC-06 (**P21**). The renumbering of §2 (calendar), §4 (release map) and §7 (spikes) waits until P21 is answered; this section does not touch them.
 - **Product Goal vs Sprint Goal:** the Product Goal is the long-term objective the sprints work towards; each Sprint Goal is one step to it, agreed at planning [ASB/AGL-01, a mirror of the Scrum Guide, not the official site].
 
-**Product Goal (R1, Sprints 0-5):** a real amateur pickleball player, on their own phone, goes from an uploaded match to a 2-week training plan in ≤ 15 min of median effort, and can trace every number and every drill back to the rallies behind it; the PO signs R1 off as a release candidate.
+**Product Goal (video-analysis slice, from S6):** a player sees how their own play differs from a versioned, cited reference pattern set, and gets drills that close the largest measured gaps; every reference value says where it came from, every gap carries n and an interval, and every drill says why, citing the metric and the reference.
 
-**Why (judgment):** the "upload → stats → plan" chain is the north star (spec §7, M0 with subsets of M4 and M5). A player trusts a number only if the rallies behind it are one tap away (FR-103) and acts on a drill only if it says why (FR-122). Effort is the main reason a manual-first product fails, so the 15 min ceiling is part of the goal, not a nice-to-have (NFR-036).
+**Why (judgment):** the PO's instruction of 2026-11-12 asks to "analyse the videos from training, pro matches, ... getting best practices and patterns, then work out any weaknesses and provide or recommend the exercises to fix those weaknesses" (`docs/requirements/po-input-2026-10-05.md`, addendum "Video analysis (PO 2026-11-12)"). No footage with rights or consent exists yet (P11) and no vision accuracy is measured (§7.1, NFR-006), so the first slice analyses **tagged** video (Quick Tag and Full Tag events) against a **coach-authored, cited** reference. That is honest only if the product can show where each value came from and how sure it is; the three measures below are the ones the slice can fail.
 
 How it is measured (each measure is one the product can fail; human-only measures stay outside sprint goals as "not met: waiting on P-n" rows, PO decision P12):
 
 | Measure | Target | Method | Who can measure it |
 |---|---|---|---|
-| Median effort, upload → plan, 3-game match (NFR-036 c) | ≤ 15 min | Moderated usability test, ≥ 5 players on their own phones | Human: waits on **P9** (scorecard row S5-P9) |
-| Taps or keys to fix any call from where it is seen (NFR-036 d) | ≤ 2 | E2E | Agent (G05-05) |
-| Every metric shows n, an uncertainty band and its evidence rallies (FR-101, FR-103) | 100 % of metric cards | E2E and integration tests | Agent |
-| Every drill in a plan says why, with a linked metric (FR-122) | 100 % of plan drills | Plan eval at pass^3 = 100 % (NFR-005a) | Agent |
-| Score sheet says "unofficial scoring" until the rulebook is verified (FR-055) | label present while OQ-01 is open | E2E; release notes check (ST-082) | Agent; official scoring waits on **P7** |
-| Real users only after the legal review (NFR-070) | no real-user exposure before the ADR | flags default-off | Human: **P16** |
-| R1 release-candidate sign-off (release-level DoD) | PO accepts | PM readiness recommendation after VERIFY-05 | Human: **P18** |
+| Reference values with provenance: source_type, a resolvable source id, status and version (FR-170.R1, R4, R5) | 100 % of entries of the current reference set; 0 values labelled "pro" without a pro source | `racket-reference-lint` rc 0 and the reference API test (G06-01) | Agent |
+| Listed gaps with n and an interval; no gap ranked below min_n or with overlapping intervals (FR-171.R1, FR-172.R1-R2) | 100 % of listed patterns | weakness API on the demo stack and planted fixtures (G06-03) | Agent |
+| Recommended drills with a cited Why: pattern id, value, n, interval, reference id, version and status (FR-173.R2) | 100 % of recommended drills | Why validator and plan eval pass^3 = 100 % (G06-04) | Agent |
+| The slice runs end to end on `make up` + `make demo` (DEMO-6.1-6.4) | 100 % @critical journey pass, 0 flaky | E2E (G06-05) | Agent |
+| Reference values reviewed by a human coach (`verified`) | every shown value | coach review | Human: waits on **P15** (default: `coach-reviewed` with the UI notice) |
+| Reference values measured from pro matches or player training video | any | licensed or consented footage with a provenance record (FR-174) | Human: waits on **P11** (and P16 for consent and pose data) |
 
-**Not part of this Product Goal:** payments and the pricing fake door (FR-162, see PM-5 recommendation), computer vision (R2), opponent scouting, sharing, live mode (functional-requirements §J).
+FR-170..FR-174 rules: `docs/sprints/06/requirements-breakdown.md` (BA-6 carries them into the FR document).
 
-**Next Product Goal (draft for S6, PM-6 rewrites it; judgment):** a player sees how their own play differs from a cited reference pattern set and gets drills that close the largest measured gap, each gap with n and uncertainty (sprint-06 §1). **R2 Product Goal (outline, S8-S11 after the S7 Go port if P21 confirms the re-plan):** the same player gets the same traceable stats and plan with half the Quick Tag effort, because the system finds rally boundaries itself (rally segmentation F1 ≥ 90 % on the frozen gold set, NFR-006; Quick Tag effort −50 %, PROD §11). It is restated at S7 planning.
+**Pattern priority waves** (order to protect when capacity runs short; detail in PM-6 §2):
+
+| Wave | Patterns | Data source | When |
+|---|---|---|---|
+| A | AN-04 unforced errors per game, AN-05 serve fault %, AN-07 rally-ending mix | Quick Tag (exists today) | S6, first |
+| B | AN-09 third-shot drop vs drive share, AN-13 dink-rally tolerance | Full Tag labels | S6, after A |
+| C | CV patterns: kitchen-line arrival and transition, partner spacing and stacking, serve and return depth from ball tracking, pose-derived patterns | computer vision | only after the §7.1 gates pass on measured spikes (P11 footage first) |
+
+AN-08 return depth (Full Tag bounce labels) is S6 stretch (ST-171d, P2), outside waves A and B; it slips first.
+
+**Not part of this Product Goal:** automatic CV in the user path; scraped pro footage (broadcast or YouTube without a licence); LLM-written Why; opponent scouting; payments and the pricing fake door (FR-162); sharing; live mode (functional-requirements §J). Full list with reasons: PM-6 §3.
+
+**R1 Product Goal (Sprints 0-5, open until the PO signs R1 off, P18):** a real amateur pickleball player, on their own phone, goes from an uploaded match to a 2-week training plan in ≤ 15 min of median effort, and can trace every number and every drill back to the rallies behind it; the PO signs R1 off as a release candidate. Its measures (NFR-036 c and d, FR-101, FR-103, FR-122, FR-055, NFR-070, P18) are unchanged; PM-5's measures table moved verbatim to [`06/decisions/PM-6.md`](06/decisions/PM-6.md) §5; R1's human-only rows stay open (P9, P7, P16, P18).
+
+**R2 Product Goal (outline, S8-S11 after the S7 Go port if P21 confirms the re-plan):** the same player gets the same traceable stats and plan with half the Quick Tag effort, because the system finds rally boundaries itself (rally segmentation F1 ≥ 90 % on the frozen gold set, NFR-006; Quick Tag effort −50 %, PROD §11). Wave C patterns join it when their §7.1 gate passes. It is restated at S7 planning.
 
 ## 1. Principles
 
