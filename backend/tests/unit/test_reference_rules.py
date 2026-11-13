@@ -158,7 +158,7 @@ def test_an_entry_for_a_pattern_with_no_supported_interval_method_is_refused() -
 def test_a_published_entry_with_a_non_finite_number_is_refused(
     changes: dict[str, Any], field: str
 ) -> None:
-    """json.loads accepts NaN and Infinity; none may reach the gap rule (review SEC-R1-ST170a-01)."""
+    """json.loads accepts NaN and Infinity; none may reach the gap rule (SEC-R1-ST170a-01)."""
     assert (
         "REF-AN09-D-INT", field, "must be a finite number"
     ) in _problems([_published(**changes)])  # fmt: skip

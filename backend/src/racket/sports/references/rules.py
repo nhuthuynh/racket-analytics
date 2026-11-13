@@ -5,8 +5,9 @@ A version file ``<set>/v<N>.json`` is ``{"schema": "reference-set/v1", "set", "v
 ``better_direction`` (equal to the pattern catalogue's), ``level_band``, ``format``,
 ``source_type``, ``source``, ``status`` and ``version`` (the set's). By source type:
 
-* ``judgment``: ``source.citation_id`` is a row of the sources register; a ``band`` and no n;
-  never level band ``pro`` (no pro claim without a pro source).
+* ``judgment``: ``source.citation_id`` is a ``resolved`` row of the sources register (sources.md
+  §1 rule 2: nothing is cited from an ``exists-unfetched`` or ``unresolved`` row); a ``band`` and
+  no n; never level band ``pro`` (no pro claim without a pro source).
 * ``published``: the citation is a ``resolved`` row of kind ``statistic``; ``value`` and ``n``;
   a ``wilson`` pattern needs ``k`` with value = k/n (the reader computes the interval from k and
   n, so it is never hand-typed); an ``order_statistic_median`` pattern needs ``interval``.
@@ -14,11 +15,14 @@ A version file ``<set>/v<N>.json`` is ``{"schema": "reference-set/v1", "set", "v
   provenance record permits "reference-library". No record is committed in Sprint 6 (ADR 0062
   planned), so the CLI passes none and every measured entry is refused (fail closed).
 
-An ``inside_band`` pattern always needs a ``band``. Each problem names the file, entry and field.
+An ``inside_band`` pattern always needs a ``band``. A pattern whose ``interval_method`` is not
+``wilson`` or ``order_statistic_median`` gets no entry (ADR 0061 Rule 3.1). Every number is finite
+(``json.loads`` accepts NaN and Infinity). Each problem names the file, entry and field.
 """
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -30,6 +34,8 @@ FORMATS = frozenset({"singles", "doubles"})
 LEVEL_BANDS = frozenset({"beginner", "intermediate", "advanced", "pro"})
 SOURCE_TYPES = frozenset({"judgment", "published", "measured"})
 REFERENCE_LIBRARY = "reference-library"
+INTERVAL_METHODS = frozenset({"wilson", "order_statistic_median"})  # ADR 0061 Rule 3.1
+NUMERIC = ("value", "band", "interval", "n", "k")
 REQUIRED = (
     "id", "pattern_id", "definition_version", "better_direction", "level_band", "format",
     "source_type", "source", "status", "version",
@@ -74,7 +80,13 @@ class Problem:
 
 
 def _number(value: object) -> bool:
-    return isinstance(value, int | float) and not isinstance(value, bool)
+    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _non_finite(value: object) -> bool:
+    """A NaN or infinity, alone or inside a list (a band or an interval)."""
+    items = value if isinstance(value, list) else [value]
+    return any(isinstance(v, float) and not math.isfinite(v) for v in items)
 
 
 def _count(value: object) -> bool:
@@ -107,6 +119,8 @@ def _source_problems(
     row = sources[cid]
     if kind == "published" and (row.kind, row.status) != ("statistic", "resolved"):
         return [("source", f"{cid} cannot back a published value")]
+    if row.status != "resolved":
+        return [("source", f"unresolved citation {cid} ({row.status})")]
     return []
 
 
@@ -117,7 +131,9 @@ def _band_ok(band: object, proportion: bool) -> bool:
 
 
 def _value_problems(e: Mapping[str, Any], pattern: Pattern) -> list[tuple[str, str]]:
-    found: list[tuple[str, str]] = []
+    found = [(f, "must be a finite number") for f in NUMERIC if f in e and _non_finite(e[f])]
+    if found:
+        return found
     proportion = pattern.interval_method == "wilson"
     if "band" in e:
         if not _band_ok(e["band"], proportion):
@@ -170,6 +186,10 @@ def _entry_problems(
         bad.append(("pattern_id", "not a ranked pattern of the catalogue"))
     if bad or pattern is None:
         return bad
+    if pattern.interval_method not in INTERVAL_METHODS:
+        supported = ", ".join(sorted(INTERVAL_METHODS))
+        method = f"{e['pattern_id']} has interval_method {pattern.interval_method}"
+        return [("interval_method", f"{method}; supported: {supported}")]
     found: list[tuple[str, str]] = []
     if e["definition_version"] != pattern.definition_version:
         found.append(("definition_version", f"catalogue has {pattern.definition_version}"))

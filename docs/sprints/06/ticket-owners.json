@@ -88,6 +88,11 @@
       "owner": "senior-backend-engineer"
     },
     {
+      "id": "CI-REF-BASE-LOCK",
+      "branch": "s06/ci-ref-base-lock",
+      "owner": "sre-devops-engineer"
+    },
+    {
       "id": "COACH-6c",
       "branch": "s06/coach-6c",
       "owner": "pickleball-domain-coach"
