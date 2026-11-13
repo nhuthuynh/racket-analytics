@@ -1,0 +1,16 @@
+# SEC-6 decisions
+
+Per-ticket decision file (working-agreement §3, "Daily sync"). Ticket: SEC-6, "Threat notes Sprint 6: T6-FT, T6-PO, T6-PL, T6-WK, T6-MD, T6-LC; DC-4 and DC-1 decisions; P16 question list; P19 re-ask text" (`docs/sprints/sprint-06.md` §3.2, Wave 1 gates). Owner: security-privacy-engineer. Review tier 0 (ADR 0056). Everything here is team text (ADR 0047); items that need the PO are marked **PO** and go to EM-ESC-06.
+
+**TDD does not apply:** the ticket writes threat notes and decisions only (`docs/security/threat-notes-sprint-06.md`, two status cells and the status line of `docs/security/data-classification.md`, this file); there is no executable behaviour to drive. The controls are acceptance criteria of ST-170a/b, ST-171e, ST-172b, ST-173a, ST-175a/b and ST-176a/b, whose PRs write the red tests named in the notes. The gate is the existing checker, run before the file existed (rc 2) and after (rc 0); doc checks run instead (PR description, "Test evidence").
+
+## 1. Decisions
+
+| Date | Role | Decision | Evidence | Reason |
+|---|---|---|---|---|
+| 2026-11-13 | security-privacy-engineer | **DC-4 decided: coarsen.** On a 429 from a key that is not the caller's own account key, `retry_at` = refused request time + window and `Retry-After` = the window; fix ticket SEC-DC4 (proposed, XS, tier 2, senior-backend-engineer, P2), gate G-DEPLOY | `RateLimiter.hit` in `backend/src/racket/platform/ratelimit.py` returns `oldest + window`; threat notes §10 | Timing side channel on another person's sign-in activity; the fix is a few lines, so it is not carried as a residual (judgment) |
+| 2026-11-13 | security-privacy-engineer | **DC-1 decided:** ADR 0034 gets criterion E9 (at-rest encryption of the Postgres volume, media bucket and backup target, keys off the volume) at **G-DEPLOY**; principal-engineer adds the text, sre-devops-engineer proves it | `grep -n -i 'encrypt' docs/decisions/0034-deployment-edge-acceptance-criteria.md` → no storage criterion; threat notes §11 | A staging copy with real data is as exposed as a beta; "before beta" was too late (judgment) |
+| 2026-11-13 | security-privacy-engineer | **No new residual risk in Sprint 6**; every T6 threat is a designed control of a story | threat notes §15 | Residuals need the PO (NFR-050.9); nothing in the slice needs one |
+| 2026-11-13 | security-privacy-engineer | **Findings SEC-S6-TM-01..04** raised against ST-175a (who writes provenance records), ST-175b (pickle weights), ST-172b (query-parameter id outside the BOLA inventory), ST-176a (decoder sandbox) | threat notes §14; `id_routes` in `backend/tests/regression/bola.py` matches path parameters only | Each is a gap in the drafts ADR 0061/0062 (PR #248, #247) that a story must close |
+| 2026-11-13 | security-privacy-engineer | **P16 questions Q5-Q12** (biometric status of pose, training-video consent, uploader attestation, pro-match licences and dataset terms, derived statistics, withdrawal, retention, cross-border) | threat notes §12 | **PO**: legal adequacy is not decided by the team |
+| 2026-11-13 | security-privacy-engineer | **P19 re-ask text** written for EM-ESC-06, default unchanged (ADR 0059 stays Proposed, no deployment beyond localhost after 2026-11-26) | threat notes §13; `docs/sprints/06/po-escalations.md` P19 | **PO**: risk acceptance is the PO's alone |
