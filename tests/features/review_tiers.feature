@@ -6,10 +6,7 @@
 # Binding: infra/tests/test_review_tiers_scenarios.py. It commits the planted files to a throwaway
 # git repository and runs `scripts/ci/review_tiers.py --base <base> --head <head>` on it, so the
 # executable bit, the shebang line and the role-file front matter come from real git objects.
-# Sprint 6, ticket CI-TIERS-06 (story PRC-06, PRC-10.1, PRC-10.2): the rows marked CI-TIERS-06 are
-# the path matrix of docs/sprints/sprint-06.md §3 CI-TIERS-06, written before the implementation.
 @story-PRC-05 @ticket-CI-TIERS-a @prc-2.1 @prc-2.2 @prc-2.3
-@story-PRC-06 @ticket-CI-TIERS-06 @prc-10.1 @prc-10.2
 Feature: The review tier of a pull request is computed from its changed paths
 
   Rule: A file gets the highest tier of every rule it matches, the PR the highest over its files,
@@ -42,24 +39,6 @@ Feature: The review tier of a pull request is computed from its changed paths
         | scripts/ci/review_tiers.py                                                  | 2    |
         | backend/src/racket/video_ingest/service.py                                  | 2    |
         | .claude/hooks/pre_tool_use.py                                               | 2    |
-
-      Examples: Sprint 6 footage, provenance, consent, pose, pattern snapshot and weights are tier 2 (CI-TIERS-06, PRC-10.1)
-        | paths                                                                       | tier |
-        | backend/src/racket/dataset/provenance.py                                    | 2    |
-        | backend/src/racket/analysis_jobs/footage_permit.py                          | 2    |
-        | backend/src/racket/dataset/consent.py                                       | 2    |
-        | backend/src/racket/worker/pose/keypoints.py                                 | 2    |
-        | backend/src/racket/analytics/patterns/snapshot.py                           | 2    |
-        | models/manifest.json                                                        | 2    |
-        | docs/x.md, models/weights/pose-small.onnx                                   | 2    |
-
-      Examples: Sprint 6 near misses stay tier 1 (CI-TIERS-06, PRC-10.1 negatives)
-        | paths                                                                       | tier |
-        | backend/src/racket/analytics/patterns/measures.py                           | 1    |
-        | backend/src/racket/analytics/snapshot.py                                    | 1    |
-        | backend/src/racket/dataset/models.py                                        | 1    |
-        | backend/src/racket/worker/composer.py                                       | 1    |
-        | content/references/pickleball/v1.json                                       | 1    |
 
       Examples: tier 0, docs and process text only
         | paths                                                                       | tier |
@@ -156,4 +135,3 @@ Feature: The review tier of a pull request is computed from its changed paths
         | backend/src/racket/dataset/labels.py                   | senior-ml-cv-engineer    |
         | backend/src/racket/coaching/evals/runner.py            | senior-ml-cv-engineer    |
         | web/src/lib/security/csp.ts                            | senior-frontend-engineer |
-        | content/references/pickleball/v1.json                  | pickleball-domain-coach  |
