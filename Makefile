@@ -3,6 +3,10 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f infra/compose.yaml
 ENV_FILE := infra/.env
+# Free-space floor (GB) checked before any image build (OPS-DISK-06, docs/ops/disk-and-prune.md):
+# a fresh build of the app images takes about 6 GB on top of the 10 GB run floor.
+BUILD_MIN_FREE_GB ?= 16
+DISK_PRECHECK = RA_MIN_FREE_GB=$(BUILD_MIN_FREE_GB) bash scripts/disk-precheck.sh
 
 .PHONY: help
 help: ## List targets
@@ -17,7 +21,8 @@ $(ENV_FILE):
 env: $(ENV_FILE) ## Create infra/.env from infra/env.example
 
 .PHONY: up
-up: $(ENV_FILE) ## Build and start the full stack, wait until healthy
+up: $(ENV_FILE) ## Build and start the full stack, wait until healthy (disk precheck first)
+	$(DISK_PRECHECK)
 	$(COMPOSE) up -d --build --wait
 
 .PHONY: up-deps

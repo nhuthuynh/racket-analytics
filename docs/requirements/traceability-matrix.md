@@ -32,6 +32,7 @@ The epics come from PROD §5. E16 is added by the BA (judgment), because many NF
 | E14 | Coach multi-player view | Later | Won't |
 | E15 | Cost guardrails and usage quotas | R1 (quotas), R2 (GPU) | Must |
 | E16 | Platform, quality gates and operability (BA addition) | R1 onward | Must |
+| E17 | Video analysis: reference patterns, weaknesses and exercises (PO 2026-11-12; BA addition, BA-6) | post-R1 (Sprint 6 slice; place in R2 pending P21) | Must (FR-170..FR-173), Should (FR-174) |
 
 Test-level key: U unit · I integration · S scenario (Gherkin) · E2E Playwright · A11y · P performance · MQ model-quality · LE coaching-LLM eval · OPS production SLI · R review/checklist · CI static check [testing-strategy §2].
 
@@ -122,16 +123,21 @@ Test-level key: U unit · I integration · S scenario (Gherkin) · E2E Playwrigh
 | FR-160 | Upload and job rate limits | Must | R1 | needs-PO-decision (OQ-13) | E15 | S4 | I (quota suite), S |
 | FR-161 | Monthly analysis quota | Must | R2 | needs-PO-decision (OQ-13, OQ-14) | E15 | S9 | I (quota suite), S |
 | FR-162 | Pricing fake door | Could | R1 | needs-PO-decision (OQ-14) | E15 | S5 (Could, stretch) | E2E |
+| FR-170 | Reference pattern set | Must | post-R1 | ready-candidate (mechanics); values needs-verification (P15); citations needs-PO-decision (P22) | E17 | S6 (ST-170) | U, lint, I, contract, component, E2E |
+| FR-171 | Player pattern measurement | Must | post-R1 | ready-candidate | E17 | S6 (ST-171) | U, property, I |
+| FR-172 | Reference-gap ranking (weakness view) | Must | post-R1 | ready-candidate | E17 | S6 (ST-172) | U, property, I (BOLA), component, E2E |
+| FR-173 | Exercise recommendation with a cited Why | Must | post-R1 | ready-candidate | E17 | S6 (ST-173) | U, I, eval, CI coverage |
+| FR-174 | Footage provenance | Should | post-R1 | ready-candidate (gate); footage needs-PO-decision (OQ-06, P11) | E17 | S6 (ST-175) | U, I (tier 2) |
 
 ## 3. Counts (computed)
 
 | Priority | FRs |
 |---|---|
-| Must | 42 |
-| Should | 28 |
+| Must | 46 |
+| Should | 29 |
 | Could | 10 |
 | Won't | 3 |
-| **Total** | **83** |
+| **Total** | **88** |
 
 | Epic | FRs |
 |---|---|
@@ -148,6 +154,7 @@ Test-level key: U unit · I integration · S scenario (Gherkin) · E2E Playwrigh
 | E11 | 3 |
 | E12 | 3 |
 | E15 | 3 |
+| E17 | 5 |
 
 ## 4. Non-functional requirements
 
@@ -620,3 +627,38 @@ Baseline rows for Sprint 5, from `docs/sprints/05/requirements-breakdown.md` (at
 | PRC-7.1 atomic breakdown check | PRC-05 | QA-DOR-CHECK (#192) | `tests/features/atomic_breakdown.feature` | merged with #192 | — | Ready (merged) |
 | PRC-8.1 method pins (planned) | PRC-05 | QA-PIN-05 | — | `infra/tests/` pin tests | — (pins the §4 methods) | Ready |
 | NFR-070 legal gate | — | — | — | human (P16) | §5 P16 | — |
+
+## 21. Sprint 6 requirement → story → scenario → test file (business-analyst, 2026-11-13, ticket BA-6)
+
+Baseline rows for Sprint 6, from `docs/sprints/06/requirements-breakdown.md` (atomic items) and `docs/sprints/sprint-06.md` §3.7 (test files). As in Sprint 5 (rule BA-5), each ticket PR updates its own row when its tests land: it replaces "(planned)" with the merged path and adds its PR number. "Human" items are scorecard §5 rows, never agent goals. DoR is the verdict in breakdown §7 at `91a58c78`.
+
+| Requirement (atomic items) | Story | Ticket(s) | Scenario (feature file) | Test file(s) | Scorecard | DoR (BA-6) |
+|---|---|---|---|---|---|---|
+| FR-170.R1-R3 reference entry, immutable versions, measured needs rights (planned) | ST-170 | ST-170a, COACH-6c | `tests/features/reference_set.feature` | IT-06-01; unit per lint refusal under `backend/tests/unit/coaching/` | G06-01 | Not Ready: PE-6a, COACH-6a, SEC-6, CI-TIERS-06, E1 |
+| FR-170.R4 reference read API, coach-reviewed only (planned) | ST-170 | ST-170b | — (IT + contract) | IT-06-02; `web/tests/contract/reference-set.contract.test.ts`; BOLA rows in `backend/tests/regression/test_bola_matrix.py` | G06-01, G06-08 | Not Ready: as ST-170 |
+| FR-170.R5 provenance label on every shown value (planned) | ST-170 | ST-170c | — (component + E2E) | component tests per state under `web/tests/unit/`; `web/e2e/sprint-06/reference-slice.spec.ts` | G06-01 | Not Ready: as ST-170, DR-06 |
+| FR-171.R1, R5, R6 Quick Tag measures, unavailable, low sample (planned) | ST-171 | ST-171a | `tests/features/pattern_measure.feature` | IT-06-03 (equivalence on GS-AN-1); unit under `backend/tests/unit/analytics/` | G06-02 | Not Ready: PE-6a, COACH-6a, E1 |
+| FR-171.R2-R4, R7 AN-09, AN-13, AN-08 from Full Tag (planned) | ST-171 | ST-171b, ST-171c, ST-171d | `tests/features/pattern_measure.feature` | unit + Hypothesis property; `docs/domain/tools/pattern_example.py --check` on `docs/domain/hand-counts/GS-PAT-1-v1.json`; `backend/tests/regression/golden_patterns/` (QA-REF-GOLD) | G06-02 | Not Ready: PE-6a, COACH-6a, COACH-6b, E1 |
+| NFR-063.3, NFR-066.10, NFR-075.1 snapshot classification, deletion, stored inputs (planned) | ST-171 | ST-171e | — (IT only) | IT-05-05 extended; IT-06-04 deletion; migration round-trip | G06-03, G06-08 | Not Ready: PE-6a, SEC-6, E1 |
+| FR-172.R1-R4 gap rule, not enough data, no reference, ordering (planned) | ST-172 | ST-172a | `tests/features/reference_gap.feature` | unit + property (deterministic, permutation-stable) | G06-03 | Not Ready: PE-6a, E1 |
+| FR-172.R6, NFR-010.10-.12, NFR-050.10, NFR-069.2, NFR-075.2 weakness API (planned) | ST-172 | ST-172b | — (IT, contract, perf) | IT-06-05 (statement count), IT-06-06 (golden replay); BOLA rows; `backend/tests/perf/locustfile_r1.py` `weakness-view` task | G06-03, G06-06, G06-08 | Not Ready: PE-6a, SEC-6, E1 |
+| FR-172.R5, NFR-027.11, .12, .14 weakness view UI (planned) | ST-172 | ST-172c | — (component + E2E) | component per state and table-equals-chart under `web/tests/unit/`; `docs/design/tools/contrast_check.py` | G06-04, G06-07 | Not Ready: PD-6, DR-06, E1 |
+| FR-173.R1, R2, R4 gap → drills, Why validator, version change (planned) | ST-173 | ST-173a | `tests/features/exercise_why.feature` | IT-06-07 (plan API); validator unit; eval cases in `backend/src/racket/coaching/evals/` at pass^3 | G06-04 | Not Ready: COACH-6a, ST-172a, E1 |
+| FR-173.R3 coverage for the new targets (planned) | ST-173 | ST-173b, ST-173c | — (unit + CI) | coverage unit test; drill lint and lock in CI | G06-04 | Not Ready: COACH-6a, E1 |
+| FR-173.R2 Why shown in the plan (planned) | ST-173 | ST-173d | — (component) | `web/tests/unit/` PlanView component tests | G06-04 | Not Ready: ST-173a, DR-06, E1 |
+| DEMO-6.1-6.4 demo slice (planned) | ST-174 | ST-174a, ST-174b | — (infra + E2E) | `infra/tests/test_seed_demo_plan.py` (extended); `web/e2e/sprint-06/reference-slice.spec.ts` | G06-05 | Not Ready: ST-172b, ST-173a, COACH-6c |
+| NFR-027.10, .13 axe and target size (planned) | ST-174 | ST-174b | — (E2E) | `web/e2e/sprint-06/reference-slice.spec.ts` | G06-07 | Not Ready: as ST-174 |
+| FR-174.R1-R3, NFR-063.4 provenance gate and classification (planned) | ST-175 | ST-175a | `tests/features/footage_provenance.feature` | IT-06-08; unit per refusal; IT-05-05 rows | G06-08 | Not Ready: PE-6b, SEC-6, E1 |
+| NFR-062.1-.3 licence gate over image and weights (planned) | ST-175 | ST-175b | — (lint + IT) | `infra/tests/test_licence_gate.py` | G06-08 | Not Ready: PE-6b, E1 |
+| NFR-006.7, SPK-1.2 eval harness dry-run (planned) | ST-176 | ST-176a | — | harness unit tests; report under `docs/evals/` | G06-09 | Not Ready: ML-6, E1 |
+| NFR-006.8, SPK-1.1, SPK-1.3 spike plans and source matrix | ST-176 | ML-6, ST-176b | — (doc-check) | `scripts/ci/check_docs.py` | — | ML-6: gate (wave 1); ST-176b: Not Ready (ML-6, PE-6b) |
+| NFR-006.9 calibration and pose accuracy on real footage | ST-176 | — | — | human (P11 footage) | §5 S6-P11 | — |
+| PRC-9.1 scheduled reds reach the status record (planned) | PRC-06 | CI-SCHEDULED-RED (#242, open) | `tests/features/scheduled_red.feature` | `infra/tests/test_scheduled_red.py` | — | Ready |
+| PRC-10.1-.2 tier 2 paths for footage, pose, provenance (planned) | PRC-06 | CI-TIERS-06 | — | `infra/tests/test_review_tiers.py` | G06-08 | Ready (after #231 per sprint-06 §3.6) |
+| PRC-11.1-.3 doc-check extensions (planned) | PRC-06 | CI-DOC-CHECK-06 | — | `infra/tests/test_doc_check.py` | — | Ready (PRC-11.1 waits on COACH-6a) |
+| PRC-12.1 WIP gate (planned) | PRC-06 | QA-WIP-GATE | — | unit with stubbed REST under `infra/tests/` | G06-10 | Ready |
+| PRC-13.1 disk precheck and worktree report (planned) | PRC-06 | OPS-DISK-06 (#244, open) | — | `infra/tests/test_makefile_disk_precheck.py` | — | Ready |
+| PRC-14.1 method pins | PRC-06 | QA-PIN-06 | — | `infra/tests/` pin tests | — | Ready (after ST-172b, ST-174b) |
+| NFR-050.11-.12 magic-link TTL, tus checksum | SEC-R | SEC-R05, SEC-R11 | — (IT) | settings unit test + expired-link IT; tus contract IT | G06-09 | Not Ready: SEC-6, E1 |
+| Reference values verified by a human coach | ST-170 | — | — | human (P15) | §5 S6-P15 | — |
+| Licensed pro footage and consented training footage | ST-175 | — | — | human (P11, OQ-06) | §5 S6-P11 | — |

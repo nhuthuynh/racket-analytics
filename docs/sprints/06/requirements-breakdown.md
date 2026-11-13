@@ -244,16 +244,36 @@ Common method for .10-.12: the NFR-010 Locust method of Sprint 5 (`locustfile_r1
 | A-Q2 | Sprint 6 = video analysis and the Go port moved to Sprint 7 (orchestrator note, not a PO decision; conflicts with "Port the product to Go (PO decision 2026-10-06)": "before any computer-vision work") | proceed with a CV-optional, tag-based slice that survives either answer | PO | EM-ESC-06 Q2 (P21) |
 | A6 | min_n per new pattern = 20 opportunities (AN-07 rule 0.3 analogue), 95 % interval per the pattern's `interval_method` (`wilson` for proportions, FR-171.R1; `order_statistic_median` for AN-13, min_n ≥ 6, FR-171.R4) | coach + ML default (judgment) | COACH, ML | COACH-6a |
 
-## 7. Definition of Ready verdict per story (at planning; BA-6 updates it with PR numbers)
+## 7. Definition of Ready verdict per story (BA-6, 2026-11-13 03:41Z, `origin/main` `91a58c78`)
 
-| Story | Atomic items | Gates | DoR at planning |
+Rule BA-1 (kickoff): a story is **Ready** only when every gate ticket is merged, named by its PR number, and E1 holds for wave 2 stories; there is no "Ready on condition". Gate PR states come from `gh api 'repos/nhuthuynh/racket-analytics/pulls?state=all&per_page=60'` at the time above: no PR exists yet for PE-6a, PE-6b, COACH-6a, COACH-6b, COACH-6c, SEC-6, PD-6, DR-06, ML-6, CI-TIERS-06 or CI-DOC-CHECK-06; EM-ESC-06 is #243 (open, draft), PM-6 #245 (open), CI-SCHEDULED-RED #242 (open), OPS-DISK-06 #244 (open). **E1 does not hold:** the 13 Sprint 5 PRs (#201, #218, #220, #224, #226, #230, #231, #232, #234, #235, #236, #238, #239) are open and VERIFY-05 and RETRO-05 are not merged. The orchestrator re-reads this table, and a gate ticket's PR adds its number here when it merges (BA-6 rule, as BA-5 in Sprint 5).
+
+Atomic-breakdown items of the DoR, re-checked by BA-6 on every row of §1-§5: every FR rule has a happy and a negative Example; every NFR row names characteristic, metric and unit, method, target and test level; every id parses; `check_atomic_breakdown.py` rc 0. Register rows FR-170..FR-174 exist (BA-6). Glossary terms exist (BA-6). The footage provenance DoR line exists (BA-6). The "Gates" column below is what remains.
+
+| Story | Atomic items | Gates (PR, state) | DoR verdict (BA-6) |
 |---|---|---|---|
-| ST-170 reference set | FR-170.R1-R5 | PE-6a, COACH-6a, SEC-6, CI-TIERS-06 | Not Ready: waiting on PE-6a, COACH-6a, SEC-6 |
-| ST-171 player pattern measures | FR-171.R1-R7, NFR-063.3, NFR-066.10, NFR-075.1 | PE-6a, COACH-6a, COACH-6b (GS-PAT-1) | Not Ready: waiting on PE-6a, COACH-6a/b |
-| ST-172 weakness view | FR-172.R1-R6, NFR-010.10-.12, NFR-027.10-.14, NFR-050.10, NFR-069.2, NFR-075.2 | PE-6a, SEC-6, PD-6 + DR-06 (UI part) | Not Ready: waiting on PE-6a, SEC-6, DR-06 |
-| ST-173 exercises | FR-173.R1-R4 | COACH-6a, ST-172a | Not Ready: waiting on COACH-6a |
-| ST-174 demo slice | DEMO-6.1-6.4 | ST-172b, ST-173a, COACH-6c | Not Ready |
-| ST-175 footage provenance and licence gate | FR-174.R1-R3, NFR-062.1-.3, NFR-063.4 | PE-6b, SEC-6 | Not Ready: waiting on PE-6b, SEC-6 |
-| ST-176 eval harness and spike plans | NFR-006.7-.8, SPK-1.1-1.3 | ML-6 | ST-176a Ready after ML-6; ST-176b after PE-6b |
-| PRC-06 | PRC-9.1 … PRC-14.1 | none | Ready |
-| SEC-R | NFR-050.11-.12 | SEC-6 | Not Ready: waiting on SEC-6 |
+| ST-170 reference set | FR-170.R1-R5 | PE-6a (no PR), COACH-6a (no PR), SEC-6 (no PR), CI-TIERS-06 (no PR; after #231, open), DR-06 for ST-170c (no PR), E1 (not met) | **Not Ready**: waiting on PE-6a, COACH-6a, SEC-6, CI-TIERS-06, E1 |
+| ST-171 player pattern measures | FR-171.R1-R7, NFR-063.3, NFR-066.10, NFR-075.1 | PE-6a (no PR), COACH-6a (no PR), COACH-6b (no PR; GS-PAT-1), SEC-6 for ST-171e (no PR), E1 (not met) | **Not Ready**: waiting on PE-6a, COACH-6a, COACH-6b, SEC-6, E1 |
+| ST-172 weakness view | FR-172.R1-R6, NFR-010.10-.12, NFR-027.10-.14, NFR-050.10, NFR-069.2, NFR-075.2 | PE-6a (no PR), SEC-6 (no PR), PD-6 (no PR), DR-06 (no PR), E1 (not met) | **Not Ready**: waiting on PE-6a, SEC-6, PD-6, DR-06, E1 |
+| ST-173 exercises | FR-173.R1-R4 | COACH-6a (no PR), ST-172a (not started), DR-06 for ST-173d (no PR), E1 (not met) | **Not Ready**: waiting on COACH-6a, ST-172a, E1 |
+| ST-174 demo slice | DEMO-6.1-6.4, NFR-027.10, .13 | ST-172b, ST-173a, COACH-6c (none started) | **Not Ready**: waiting on the ST-172 and ST-173 build tickets and COACH-6c |
+| ST-175 footage provenance and licence gate | FR-174.R1-R3, NFR-062.1-.3, NFR-063.4 | PE-6b (no PR), SEC-6 (no PR), E1 (not met); real footage is human (S6-P11), not a gate | **Not Ready**: waiting on PE-6b, SEC-6, E1 |
+| ST-176 eval harness and spike plans | NFR-006.7-.8, SPK-1.1-1.3 | ML-6 (no PR), PE-6b for ST-176b (no PR), E1 for ST-176a (not met) | **Not Ready**: ST-176a waits on ML-6 and E1; ST-176b on ML-6 and PE-6b |
+| PRC-06 | PRC-9.1 … PRC-14.1 | none (CI-TIERS-06 after #231; PRC-11.1 after COACH-6a) | **Ready** (CI-SCHEDULED-RED #242 and OPS-DISK-06 #244 in progress) |
+| SEC-R | NFR-050.11-.12 | SEC-6 (no PR), E1 (not met) | **Not Ready**: waiting on SEC-6, E1 |
+
+Open [NEEDS CLARIFICATION] items (§6 A5, A-Q1) do not block a story's mechanics: A5 affects only which citations COACH-6c may use (default applies until P22); A-Q1 adds no scope (the team adds nothing). A-Q2 (P21) is carried by EM-ESC-06 #243.
+
+## 8. Three Amigos per story (business-analyst with pickleball-domain-coach, senior-ml-cv-engineer, senior-qa-engineer; BA-6)
+
+One row per story: the question each amigo must answer before the story is Ready, and where the answer is recorded. The BA prepared the questions from the kickoff advice; each amigo's answer is their own review or gate PR, never written by the BA (rule BA5-PE-01 of Sprint 5: agreement is cited, not inferred). The senior-qa-engineer's test-level agreement for every item is requested in the review of this PR.
+
+| Story | Domain coach | ML / CV | QA (testability, level) | Recorded in |
+|---|---|---|---|---|
+| ST-170 | Which patterns get a v1 entry per level band and format, and which source type each has (no "pro" without a pro source) | Does a `measured` entry need a footage id now? (No: none exists until S6-P11) | Is the lint refusal list complete (source, better_direction, band, rights, lock)? Unit + lint per refusal | COACH-6a, COACH-6c; QA review of ST-170a |
+| ST-171 | Operational definition of AN-09 third shot and AN-13 dink run, with worked counts on GS-PAT-1 | Full Tag facets used (`trajectory`, hitter, bounce `court_xy_m`); interval methods (`wilson`, `order_statistic_median`) | Property "counted ∪ excluded = all"; QA recount of one match by hand | COACH-6a, COACH-6b; ML review of ST-171b/c |
+| ST-172 | Level bands; pro-only value shown as direction (A2) | n per pattern on demo data vs min_n | Numeric Examples per state; permutation-stable property; BOLA row | PE-6a (A4); QA-REF-GOLD |
+| ST-173 | Drills for AN-09 and AN-13 per players and equipment, safety class | — | Why validator rejects each missing part; coverage cell named | ST-173b, ST-173c; eval cases in ST-173a |
+| ST-174 | Demo players differ for a coaching reason, not by fixture trick | — | DEMO-6.2 negative: identical output fails | ST-174b |
+| ST-175 | — | Which artefacts (clips, keypoints, weights) need a record | Refusal codes `provenance_missing`, `consent_incomplete`; tier 2 | PE-6b, SEC-6; ST-175a |
+| ST-176 | — | Spike cut-offs written before runs; dataset licence per ADR 0015 | Planted regression → rc 1 | ML-6, ST-176b |
