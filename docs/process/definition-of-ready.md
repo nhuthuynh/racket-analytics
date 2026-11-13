@@ -32,6 +32,7 @@ These three items apply to stories pulled into Sprint 5 and later. The existing 
 - [ ] For a new component, contract or cross-context change, a design doc or ADR is reviewed and approved [DPA/DESIGN-15].
 - [ ] For UI, the flow and all states are specified by the principal-designer, with the HAX and WCAG checklists done [DPA/DESIGN-11, DPA/DESIGN-01].
 - [ ] For security-relevant work (uploads, auth, personal data, LLM), the threat-model notes from security-privacy-engineer are attached.
+- [ ] For work that reads, stores or derives data from video footage (training sessions or matches), every footage asset it uses, fixtures included, has a footage provenance record (glossary "Footage source"): source, rights holder, rights basis (owned, licensed or consented), permitted uses covering this use, expiry, and for training video a consent reference for each filmed person. Pro-match footage is used only when the rights are held. A story with no such asset says "team-made or synthetic fixtures only". Pose or body tracking is personal data: such a story is review tier 2 with the security-privacy-engineer (FR-174; Sprint 6 kickoff SEC-2; added by BA-6, 2026-11-13).
 
 ## Delivery
 - [ ] It is sized relatively and meets INVEST (see Basis): in particular Small (it lands in ticket PRs of about 100 production lines each, within the size unit of working-agreement §5) and Testable, with an independent test that shows its value on its own [EP/ENG-15, EP/ENG-04, ASB/AGL-04].
