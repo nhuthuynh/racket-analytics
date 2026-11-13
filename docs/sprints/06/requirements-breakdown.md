@@ -219,7 +219,7 @@ Common method for .10-.12: the NFR-010 Locust method of Sprint 5 (`locustfile_r1
 | PRC-11.1 | `doc-check` fails when a reference entry's citation id does not resolve to a row of `docs/domain/sources.md` (planned) (planned; COACH-6a) (ADR 0056 required ticket b: paths, citations, front matter, extended) | unit + CI | CI-DOC-CHECK-06 |
 | PRC-11.2 | `doc-check` runs `docs/security/tools/check_threat_notes.py` on the newest `threat-notes-sprint-NN.md` | unit + CI | CI-DOC-CHECK-06 |
 | PRC-11.3 | `pr-policy` fails a ready (non-draft) ticket PR whose `docs/sprints/<nn>/decisions/<ID>.md` has no cost-per-PR table (ADR 0056 decision 1; Sprint 5: 9 of 39 merged tickets had one) | unit + CI | CI-DOC-CHECK-06 |
-| PRC-12.1 | `wip_gate.py` (planned) exits 1 naming the stage when a "start ticket" step would exceed in-progress 4, in-review 3, awaiting-QA 2 or awaiting-merge 1, from GitHub REST counts (negative: 3 PRs in review → a 4th start refused) | unit (stubbed REST) | QA-WIP-GATE |
+| PRC-12.1 | `wip_gate.py` exits 1 naming the stage when a "start ticket" step would exceed in-progress 4, in-review 3, awaiting-QA 2 or awaiting-merge 1, from GitHub REST counts (negative: 3 PRs in review → a 4th start refused) | unit (stubbed REST) | QA-WIP-GATE |
 | PRC-13.1 | `disk-precheck.sh` runs before every Compose build target in the Makefile, and `scripts/ops/worktree_report.py` (planned) lists every worktree under `/home/user/wt` with its branch's PR state (merged or closed → "remove") | unit + infra test | OPS-DISK-06 |
 | PRC-14.1 | Every timed or thresholded method in `goal-scorecard.md` §4 is pinned by an infra test to the CI step or command it mirrors | unit (infra test) | QA-PIN-06 |
 
