@@ -29,7 +29,7 @@ Training plan, session, drill assignment (= exercise), drill, library version, "
 - The LLM never invents drills. Every drill ID and metric is validated before persisting [AQS/SEC-08 API10] (NFR-059).
 - Only pseudonymous aggregates are sent to the LLM (NFR-068).
 - C1: drills are a module, not a separate context, until coaches author drills independently (context map CM-3).
-- Reference gap (ADR 0061 Rule 3, in `racket.coaching.weakness`): a weakness only when the player's 95 % interval lies wholly on the worse side of the reference interval or band; ordered by gap size in reference widths, then rallies lost on the linked ADR 0003 cell. ADR 0003 stays the plan's primary ordering; ranked gaps add targets after its top 3, up to 5 targets (Rule 4). A drill fits a gap through `target_metrics` (Rule 5).
+- Reference gap (ADR 0061 Rule 3, in `racket.coaching.weakness`): a weakness only when the player's 95 % interval lies wholly on the worse side of the reference interval or band; ordered by gap size in reference widths, then rallies lost on the linked ADR 0003 cell. ADR 0003 still chooses the plan's top 3 targets (FR-121, `MAX_WEAKNESSES`); ranked gaps add no target, cite the reference on a target they share, and otherwise show as "not in this plan" with fitting drills (Rule 4). A drill fits a gap through `target_metrics` (Rule 5).
 
 ## Assumptions
 About 80 drills at M5 (spec).

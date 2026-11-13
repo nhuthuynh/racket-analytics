@@ -91,3 +91,19 @@ Findings returned in rounds 2 and 3: 9 ids from the reviewers (round 2: PE "-08"
 | Finding | Severity | Disposition | Owner (Sprint 6) | Waits on |
 |---|---|---|---|---|
 | PE-PLAN06-12 | nit | Fixed in the PE-6a PR: ADR 0061 Rule 1 states that `racket.coaching.reference` (planned) is only the ACL read side (translate, filter to `coach-reviewed` and `verified`, fail closed) and that the schema, loader, lint and lock belong to the publisher, `racket.sports.references` (planned); context map row R13 records it. ST-170a's Context and Dirs follow ADR 0061 when BA-6 marks ST-170 Ready | principal-engineer | — |
+
+## PE-6a (PR #248), review round 1: principal-engineer (review 5886129385, head `71a3d272`)
+
+Rows written by the ticket owner (§7 step 3d): the reviewer returned the findings in the review body and wrote no rows.
+
+| Finding | Severity | Disposition | Owner (Sprint 6) | Waits on |
+|---|---|---|---|---|
+| PE-6a-R1-01 | major | Open: ADR 0061 Rule 3.3 (judgment entry = band, no n) conflicts with FR-170.R1 (n and interval on every entry) and records no amendment | principal-engineer | — |
+| PE-6a-R1-02 | major | Open: ADR 0061 Rule 4 allows up to 5 plan targets, against FR-121 (top 3) and the `TrainingPlan` invariant `MAX_WEAKNESSES = 3` | principal-engineer | — |
+
+## PE-6a (PR #248), round 1 reconciliation (principal-engineer)
+
+| Finding | Severity | Disposition | Owner (Sprint 6) | Waits on |
+|---|---|---|---|---|
+| PE-6a-R1-01 | major | Fixed: ADR 0061 Rule 3.3 now states `published`/`measured` entries carry n (interval computed by the lint) and `judgment` entries a band with no n, and records an amendment to FR-170.R1 with the replacement clause and two Examples; owner business-analyst (BA-6) updates the breakdown and the register row before ST-170a or COACH-6c is Ready; decision row in `docs/sprints/06/decisions/PE-6a.md` | principal-engineer | — |
+| PE-6a-R1-02 | major | Fixed: ADR 0061 Rule 4 keeps the plan at the ADR 0003 top 3 (FR-121); `MAX_WEAKNESSES`, the validator in `_shape` and the slice in `assemble` are named and unchanged; gaps only add a reference citation on a chosen weakness that shares the AN id, and every other gap shows as "not in this plan" with fitting drills; more targets need an FR-121 amendment by the PO and a new ADR. Coaching canvas, Q3-3 option text, Evidence and Confirmation updated | principal-engineer | — |
