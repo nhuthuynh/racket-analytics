@@ -5,13 +5,14 @@ plain dicts, no git and no network."""
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
 from conftest import SCRIPTS_DIR
 
 sys.path.insert(0, str(SCRIPTS_DIR / "ops"))
-import worktree_report as wr  # noqa: E402
+import worktree_report as wr
 
 pytestmark = pytest.mark.unit
 
@@ -28,7 +29,11 @@ def pulls(*items: dict[str, Any]) -> Any:
 
 
 def pr(state: str, merged: bool = False, number: int = 5) -> dict[str, Any]:
-    return {"number": number, "state": state, "merged_at": "2026-11-12T00:00:00Z" if merged else None}
+    return {
+        "number": number,
+        "state": state,
+        "merged_at": "2026-11-12T00:00:00Z" if merged else None,
+    }
 
 
 def test_a_merged_pr_is_remove() -> None:
@@ -69,3 +74,9 @@ def test_the_query_names_owner_and_branch() -> None:
     assert fetch.calls == [
         "https://api/repos/nhuthuynh/racket-analytics/pulls?head=nhuthuynh%3As06%2Fa%20b&state=all"
     ]
+
+
+def test_a_directory_that_is_not_a_worktree_is_checked_by_hand(tmp_path: Path) -> None:
+    (tmp_path / "plain").mkdir()
+    rows = wr.report(tmp_path, pulls(), "o/r", "https://api")
+    assert [(r["state"], r["action"]) for r in rows] == [("not a worktree", "check")]

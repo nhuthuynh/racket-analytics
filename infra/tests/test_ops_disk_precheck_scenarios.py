@@ -34,7 +34,7 @@ def ctx(tmp_path: Path) -> dict[str, Any]:
 @pytest.fixture
 def pulls_api(ctx: dict[str, Any]) -> Iterator[str]:
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802 (http.server API)
+        def do_GET(self) -> None:
             head = parse_qs(urlsplit(self.path).query).get("head", [""])[0]
             branch = head.split(":", 1)[-1]
             body = json.dumps(ctx["prs"].get(branch, [])).encode()
