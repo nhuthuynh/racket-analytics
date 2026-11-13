@@ -15,9 +15,9 @@ import re
 from typing import Any
 
 import pytest
-from racket.analytics.patterns.full_tag import AN09, full_tag_measures, read_rallies
-from racket.analytics.patterns.third_shot import AN09_MIN_N, third_shots
 
+from racket.analytics.patterns.full_tag import full_tag_measures, read_rallies
+from racket.analytics.patterns.third_shot import AN09, AN09_MIN_N, third_shots
 from racket.analytics.uncertainty import wilson
 from racket.dataset.labels import validate_labels
 from racket.sports.references.loader import parse_catalogue

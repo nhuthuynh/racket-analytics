@@ -7,6 +7,7 @@ is a rally whose hits are, in frame order, A1 (serve), B1 (return) and A2 with t
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 Hit = str | tuple[str, str]
@@ -31,7 +32,7 @@ def doc(*rallies: dict[str, Any]) -> dict[str, Any]:
             "rallies": list(rallies)}  # fmt: skip
 
 
-def third_shots(server: str, trajectories: list[str | None], start: int = 1) -> list[Any]:
+def third_shots(server: str, trajectories: Sequence[str | None], start: int = 1) -> list[Any]:
     """One rally per entry, served by ``server``'s side, whose third shot has that trajectory
     (``None``: no facet)."""
     returner, third = ("B1", "A2") if server == "A" else ("A1", "B2")

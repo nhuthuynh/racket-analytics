@@ -14,16 +14,15 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+
 from racket.analytics.patterns.full_tag import (
     AGREEMENT_LABELS,
-    AN09,
     UntranslatableLabels,
     full_tag_measures,
     read_rallies,
 )
-from racket.analytics.patterns.third_shot import third_shots
-
 from racket.analytics.patterns.measure import InvalidMeasure, PatternMeasure
+from racket.analytics.patterns.third_shot import AN09, third_shots
 from racket.analytics.uncertainty import wilson
 from racket.dataset import labels as published
 from tests.unit.analytics.full_tag_docs import doc, rally
@@ -101,8 +100,8 @@ def test_drop_share_value_n_interval_and_low_sample(
 ) -> None:
     m = _an09(doc(*served("A", trajectories)))
     k = trajectories.count("drop")
-    assert (m.value, m.n, m.n_excluded, m.low_sample) == (pytest.approx(value), n, n_excluded,
-                                                         low_sample)  # fmt: skip
+    assert m.value == pytest.approx(value)
+    assert (m.n, m.n_excluded, m.low_sample) == (n, n_excluded, low_sample)
     assert m.interval == wilson(k, n)
     assert (m.interval_method, m.definition_version) == ("wilson", "0.1")
     assert m.rankable is not low_sample

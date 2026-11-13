@@ -9,14 +9,15 @@ examples) in CI's serial property step.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from racket.analytics.patterns.full_tag import AN09, full_tag_measures, read_rallies
-from racket.analytics.patterns.third_shot import third_shots
 
+from racket.analytics.patterns.full_tag import full_tag_measures, read_rallies
+from racket.analytics.patterns.third_shot import AN09, third_shots
 from tests.unit.analytics.full_tag_docs import doc, rally
 
 pytestmark = [pytest.mark.unit]
@@ -36,7 +37,7 @@ def documents(draw: Any) -> dict[str, Any]:
     ))  # fmt: skip
 
 
-def _ids(buckets: dict[str, tuple[str, ...]]) -> list[str]:
+def _ids(buckets: Mapping[str, tuple[str, ...]]) -> list[str]:
     return [rid for ids in buckets.values() for rid in ids]
 
 

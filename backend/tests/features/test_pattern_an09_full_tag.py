@@ -6,12 +6,13 @@ the Analytics ACL by ``racket.analytics.patterns.full_tag``; no API and no datab
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
-from racket.analytics.patterns.full_tag import AGREEMENT_LABELS, full_tag_measures
 
+from racket.analytics.patterns.full_tag import AGREEMENT_LABELS, full_tag_measures
 from tests.unit.analytics.full_tag_docs import doc, rally, third_shots
 
 scenarios("pattern_an09_full_tag.feature")
@@ -22,7 +23,7 @@ def ctx() -> dict[str, Any]:
     return {"rallies": []}
 
 
-def _serve(ctx: dict[str, Any], trajectories: list[str | None]) -> None:
+def _serve(ctx: dict[str, Any], trajectories: Sequence[str | None]) -> None:
     ctx["rallies"] += third_shots("A", trajectories, start=len(ctx["rallies"]) + 1)
 
 
