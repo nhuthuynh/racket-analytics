@@ -32,7 +32,7 @@ How it is measured (each measure is one the product can fail; human-only measure
 
 **Not part of this Product Goal:** payments and the pricing fake door (FR-162, see PM-5 recommendation), computer vision (R2), opponent scouting, sharing, live mode (functional-requirements §J).
 
-**Next Product Goal (outline, R2, S7-S10 after the S6 Go port):** the same player gets the same traceable stats and plan with half the Quick Tag effort, because the system finds rally boundaries itself (rally segmentation F1 ≥ 90 % on the frozen gold set, NFR-006; Quick Tag effort −50 %, PROD §11). It is restated at S7 planning.
+**Next Product Goal (draft for S6, PM-6 rewrites it; judgment):** a player sees how their own play differs from a cited reference pattern set and gets drills that close the largest measured gap, each gap with n and uncertainty (sprint-06 §1). **R2 Product Goal (outline, S8-S11 after the S7 Go port if P21 confirms the re-plan):** the same player gets the same traceable stats and plan with half the Quick Tag effort, because the system finds rally boundaries itself (rally segmentation F1 ≥ 90 % on the frozen gold set, NFR-006; Quick Tag effort −50 %, PROD §11). It is restated at S7 planning.
 
 ## 1. Principles
 
@@ -56,14 +56,14 @@ All sprints are 2 weeks (working-agreement §3, judgment). Planning is on the fi
 | S4 | 2026-11-30 → 2026-12-11 | 2026-12-11 | R1 |
 | S5 | 2026-12-14 → 2026-12-22 (shortened, 7 working days, judgment) | 2026-12-22 | **R1 release candidate** |
 | — | 2026-12-23 → 2027-01-01 | holiday break (judgment; PO availability assumed low) | — |
-| S6 | 2027-01-04 → 2027-01-15 | 2027-01-15 | **Go port** of the whole product, tooling and tests (PO 2026-10-06; parity DoD in `po-input-2026-10-05.md`) |
+| S6 | 2027-01-04 → 2027-01-15 | 2027-01-15 | **First video-analysis slice** on tagged video (PO 2026-11-12; S6/S7 order pending P21, see §5 note) |
 | S7 | 2027-01-18 → 2027-01-29 | 2027-01-29 | R2 |
 | S8 | 2027-02-01 → 2027-02-12 | 2027-02-12 | R2 |
 | S9 | 2027-02-15 → 2027-02-26 | 2027-02-26 | R2 |
 | S10 | 2027-03-01 → 2027-03-12 | 2027-03-12 | **R2 release candidate** (MVP = R1 + R2) |
 | S11-S13 | 2027-03-15 → 2027-04-23 | each last Friday | R3 (post-MVP), outline only |
 
-Renumbered at Sprint 4 planning (2026-10-17, ADR 0051): the Go port (PO 2026-10-06) is S6, so the R2 sprints are S7-S10 and R3 is S11-S13. Sprint 4 keeps its planned dates; like Sprints 1-3 it runs in a compressed session before them.
+**Re-plan at Sprint 6 planning (2026-11-13, PLAN-06; orchestrator proposal confirmed by the team, not a PO decision, pending P21):** §5 and §6 now show S6 = video analysis, S7 = Go port, S8 = M1 calibration and tracking, and the old S8-S10 move one sprint later (S9-S11), so R2 ends one sprint later and R3 becomes S12-S14. The dates in this table and the release map in §4 are updated by PM-6 only after the PO answers P21; until then the S7-S13 rows of this table, the §4 release map and the §7 spike table keep their earlier sprint numbers and dates. Renumbered at Sprint 4 planning (2026-10-17, ADR 0051): the Go port (PO 2026-10-06) is S6, so the R2 sprints are S7-S10 and R3 is S11-S13. Sprint 4 keeps its planned dates; like Sprints 1-3 it runs in a compressed session before them.
 
 ## 3. Capacity assumptions for the agent team (ADR 0010, all judgment)
 
@@ -110,12 +110,13 @@ Planned load per sprint (units; capacity in brackets is lanes × 16 × load fact
 | **S3** | Starter stats with uncertainty and evidence; deletion; labelling tools | Stats dashboard for AN-01..AN-07 with n, Wilson interval and low-sample flag; "Show me" opens the rallies; delete a match or account; internal Full Tag tool; drill schema lint in CI | FR-006, 007, 100, 101, 102, 103, 109, 140, 150, 151; stretch FR-047 if not done | NFR-004, 011, 038, 039, 066 (a, b), 078 (gold sets) |
 | **S4** | Runnable R1 prototype: rules-only training plan and drill library; then R1 privacy and quotas behind flags (ADR 0051) | `make up` + `make demo` show a plan; weakness ranking by rallies lost (serve/receive, side-out part `@needs-verification`); 2-week plan within time, players and equipment, every drill citing metric, value, n and rallies; ≥ 20 coach-reviewed drills (`verified` waits on P15); mark done offline, "Not for me"; age gate, retention and consent settings, rate limits and quota behind default-off flags with interim wording; billing alert rules; E2E journey complete | FR-003, 008, 009, 120, 121, 122, 123, 124, 141, 160 | NFR-005 (a), 019 (rules-only), 022 (R1 alerts), 023, 066 (c) |
 | **S5** | R1 hardening and release readiness (shortened) | Moderated usability test with ≥ 5 players; SLOs and alerts; restore drill; ASVS L2 review; performance gates; browser matrix; R1 release candidate for PO sign-off; R2 spike ADRs | — (FR-162 out of S5; PM-5) | NFR-010 (gate), 024 (gate), 036, 041, 042, 045, 049, 050, 063, 070 (human gate) |
-| **S6** | **Go port** (PO 2026-10-06) | Every Gherkin scenario, HTTP-level IT, Playwright E2E and live scorecard journey passes against the Go backend; no Python left | — (parity) | parity of every NFR measured so far |
-| **S7** | M1: court calibration, player tracking, identity, heatmaps | Calibration by tap or keys (no drag); 4 players tracked on a multi-court video; "who is who" with one-tap swap fix; position heatmaps with printed values (spec M1 "Done when") | FR-025 (court visibility), 031 (Could), 059, 080 (full lifecycle), 081 (normalise), 082, 083, 105, 106 | NFR-006 (calibration, HOTA), 009 (positioning), 025 (normalise), 030 (calibration), 062 (CV licences) |
-| **S8** | M2 part 1: ball, audio, hits, bounces; analysis levels | Ball track with "ball hidden" gaps; hits fused from audio and video; bounce landing spots; explicit analysis level; "analysis ready" notification; GPU-s per match-minute on a dashboard | FR-026, 029, 084, 085, 086, 090 (start) | NFR-006 (ball, hit, bounce), 008 (start), 018, 020, 022 (GPU alerts), 043, 044, 048 |
-| **S9** | M2 part 2: rally segmentation, review queue, confidence, re-processing | Rally boundaries pre-filled in Quick Tag; "Needs your eyes" queue ordered by score impact; calibrated bands; re-run on a new pipeline version keeps corrections (spec M2 "Done when" with ADR 0004's F1) | FR-056, 057, 060, 087, 089, 090 | NFR-006 (rally F1 gate), 008 |
-| **S10** | LLM-written explanations, efficacy, trends → R2 release candidate | Validated LLM plan with fallback; AI-text label and off switch; "improved / not enough data" follow-up; trends over 5 matches; monthly analysis quota; export | FR-010, 043 (if verified), 104, 125, 126, 127, 161 | NFR-005 (b, c), 019 (LLM), 021, 059, 068, 082 |
-| S11-S13 | R3 outline | see §6 | FR-030, 058, 061, 088, 107, 108 | NFR-007, 009 (shot-level), 040 |
+| **S6** | **First video-analysis slice: cited reference patterns → the player's measured gaps → exercises** (PO 2026-11-12; order pending P21) | `make up` + `make demo` show a versioned, cited reference pattern set; the player's patterns from Quick Tag and Full Tag with n and intervals; gaps ranked only when intervals do not overlap; drills whose Why cites the pattern and the reference; footage provenance and licence gates; eval harness and CV spike plans (no CV in the user path) | FR-170, FR-171, FR-172, FR-173, FR-174 (new, BA-6); FR-107 (AN-08, AN-09, AN-13 from Full Tag, partial); FR-122, FR-141 (extended) | NFR-006 (preparation only), 010 (weakness view), 027, 050 (R-05, R-11), 062 (weights), 063, 066, 069, 075 |
+| **S7** | **Go port** (PO 2026-10-06; moved from S6 by the orchestrator proposal, pending P21) | Every Gherkin scenario, HTTP-level IT, Playwright E2E and live scorecard journey passes against the Go backend; no Python left | — (parity) | parity of every NFR measured so far |
+| **S8** | M1: court calibration, player tracking, identity, heatmaps | Calibration by tap or keys (no drag); 4 players tracked on a multi-court video; "who is who" with one-tap swap fix; position heatmaps with printed values (spec M1 "Done when") | FR-025 (court visibility), 031 (Could), 059, 080 (full lifecycle), 081 (normalise), 082, 083, 105, 106 | NFR-006 (calibration, HOTA), 009 (positioning), 025 (normalise), 030 (calibration), 062 (CV licences) |
+| **S9** | M2 part 1: ball, audio, hits, bounces; analysis levels | Ball track with "ball hidden" gaps; hits fused from audio and video; bounce landing spots; explicit analysis level; "analysis ready" notification; GPU-s per match-minute on a dashboard | FR-026, 029, 084, 085, 086, 090 (start) | NFR-006 (ball, hit, bounce), 008 (start), 018, 020, 022 (GPU alerts), 043, 044, 048 |
+| **S10** | M2 part 2: rally segmentation, review queue, confidence, re-processing | Rally boundaries pre-filled in Quick Tag; "Needs your eyes" queue ordered by score impact; calibrated bands; re-run on a new pipeline version keeps corrections (spec M2 "Done when" with ADR 0004's F1) | FR-056, 057, 060, 087, 089, 090 | NFR-006 (rally F1 gate), 008 |
+| **S11** | LLM-written explanations, efficacy, trends → R2 release candidate | Validated LLM plan with fallback; AI-text label and off switch; "improved / not enough data" follow-up; trends over 5 matches; monthly analysis quota; export | FR-010, 043 (if verified), 104, 125, 126, 127, 161 | NFR-005 (b, c), 019 (LLM), 021, 059, 068, 082 |
+| S12-S14 | R3 outline | see §6 | FR-030, 058, 061, 088, 107, 108 | NFR-007, 009 (shot-level), 040 |
 | Later | — | — | FR-012, 110, 128; live mode; coach view | — |
 | Any sprint after OQ-01 | Official scoring | Coach records rule numbers; preset `USAP-2026` replaces `PROVISIONAL-UNVERIFIED`; hand-scored games match (QD-GD-02) | FR-040..046, 048, 049, 053 (b) | NFR-003 |
 
@@ -169,35 +170,43 @@ Backlog outline:
 - R2 readiness: SPIKE-01 (done in S0), SPIKE-02, SPIKE-03, SPIKE-05, SPIKE-07 ADRs; regression-tolerance ADR for model evals (testing-strategy §6, ADR 0004 follow-up); vision gold set QD-GD-04 v1 frozen.
 - R1 release notes and rollback path; PO sign-off (release DoD).
 
-### S6: Go port (2027-01-04 → 2027-01-15)
+### S6: First video-analysis slice (2027-01-04 → 2027-01-15)
 
-**Goal:** the whole product, tooling and tests run on Go with behaviour parity (PO 2026-10-06, `po-input-2026-10-05.md` "Port the product to Go"). The port ADR and, if parity cannot be reached in one sprint, a strangler split are written at S6 planning (principal-engineer).
+> **Planned in detail** in `sprint-06.md` on 2026-11-13 (PLAN-06). The PO's instruction of 2026-11-12 is quoted in `po-input-2026-10-05.md`, addendum "Video analysis (PO 2026-11-12)". Making S6 the video-analysis sprint and moving the Go port to S7 is an **orchestrator proposal confirmed by the team, not a PO decision**; it is P21 in EM-ESC-06.
 
-### S7: M1 calibration, tracking, identity (2027-01-18 → 2027-01-29)
+**Goal:** on the local stack a player sees a versioned, cited reference pattern set, their own measured gaps against it ranked with n and uncertainty, and drills chosen to close the top gaps, each citing the metric and the reference; every value says where it came from.
+
+Backlog outline: entry condition = Sprint 5 closed (13 open PRs, VERIFY-05, RETRO-05) and CI green incl. scheduled runs; gates (pattern catalogue and sources register, ADR 0061 reference patterns and comparison, ADR 0062 footage provenance and ADR 0015 review closure, threat notes, flows and DR-06); reference set schema, lint, lock and read API (FR-170); player pattern measures from Quick Tag (AN-01..AN-07 reused) and Full Tag (AN-09 third-shot drop vs drive, AN-13 dink tolerance, AN-08 return depth as stretch) (FR-171); gap ranking with non-overlap, min_n and level bands (FR-172); drills with a cited Why and an extended coverage axis (FR-173); footage provenance gate and licence gate over weights (FR-174, NFR-062); eval harness and CPU-only spike plans for calibration and pose (no CV story Ready, §7.1). Pro footage and consented training footage wait on P11; reference values stay `coach-reviewed` (P15).
+
+### S7: Go port (2027-01-18 → 2027-01-29, if P21 confirms the re-plan)
+
+**Goal:** the whole product, tooling and tests run on Go with behaviour parity (PO 2026-10-06, `po-input-2026-10-05.md` "Port the product to Go"). The port ADR and, if parity cannot be reached in one sprint, a strangler split are written at S7 planning (principal-engineer). The S6 slice adds pure domain modules and JSON content only, to keep the port's growth small.
+
+### S8: M1 calibration, tracking, identity (was S7; dates move one sprint after P21)
 
 **Goal:** on real footage, the court is calibrated with taps or keys, the 4 on-court players are tracked and named once per match, and each player sees a position heatmap.
 
 Backlog outline: analysis job lifecycle with stages and explicit degraded levels (FR-080, FR-026 groundwork); normalisation to CFR, 16 kHz audio and 720p review video (FR-081); court calibration proposal and no-drag adjust (FR-082, NFR-030) [DPA/DESIGN-05]; player detection and tracking with the licence posture from SPIKE-01 (FR-083, NFR-062) [DOM/CV-04, DOM/CV-05]; "who is who" with the 2-per-side constraint (FR-059) [DOM G4 P4]; team-relative frame (FR-105, `@needs-verification` end switching); heatmaps and partner spacing (FR-106); court-visibility estimate (FR-025); framing check (FR-031, Could). Model-quality layer: HOTA via TrackEval [DOM/CV-08], calibration success and reprojection error (NFR-006).
 
-### S8: M2 part 1, ball, audio, hits, bounces (2027-02-01 → 2027-02-12)
+### S9: M2 part 1, ball, audio, hits, bounces (was S8)
 
 **Goal:** a processed match shows the ball track with honest gaps, hits fused from audio and video, and bounce landing spots, with GPU cost measured per match-minute.
 
 Backlog outline: ball tracking with visibility (FR-084) [DOM/CV-01]; audio onset plus visual fusion, never audio alone (FR-085) [DOM/CV-14]; bounce detection and landing positions (FR-086) [DOM/CV-12]; analysis level shown (FR-026); "analysis ready" notification (FR-029) [AQS/STACK-04]; confidence exposed on every value (FR-090 start); GPU-s per match-minute ≤ 120 at R2 entry with alerts (NFR-020); time-to-results gate p90 ≤ 2.0x (NFR-018); analysis SLOs (NFR-043, NFR-044); bounded retries (NFR-048).
 
-### S9: M2 part 2, rally segmentation, review queue, re-processing (2027-02-15 → 2027-02-26)
+### S10: M2 part 2, rally segmentation, review queue, re-processing (was S9)
 
 **Goal:** Quick Tag opens with rally boundaries already set, low-confidence calls are queued by score impact, and re-processing never overwrites a user's correction.
 
 Backlog outline: automatic rally segmentation pre-filling Quick Tag (FR-087), gated at F1 ≥ 90% with ±1.0 s matching (NFR-006, ADR 0004); "Needs your eyes" queue (FR-057) [DPA/DESIGN-11]; confidence word bands backed by gold-set accuracy (FR-090, NFR-008; OQ-10); corrections survive re-processing (FR-056); re-processing with a "what changed" summary (FR-089); correction reason (FR-060, Could). Spike: SPIKE-08 rally-outcome inference (prepares R3).
 
-### S10: LLM explanations, efficacy, trends; R2 release candidate (2027-03-01 → 2027-03-12)
+### S11: LLM explanations, efficacy, trends; R2 release candidate (was S10)
 
 **Goal:** plans gain clear, validated, AI-written explanations (with an off switch), follow-ups never over-claim, and R2 is ready for sign-off.
 
 Backlog outline: coaching eval set of 30 cases from real tagged matches built in S5-S9 (QD-GD-05) [DPA/AI-05]; LLM ordering and "why" with validator, single retry and rules-only fallback (FR-125, NFR-059) [AQS/SEC-08, DPA/AI-01]; minimal data to the LLM (NFR-068); AI-text label and control (FR-126) [DPA/DESIGN-11]; efficacy with Wilson non-overlap (FR-127, ADR 0005); trends (FR-104); monthly analysis quota (FR-161; OQ-13, OQ-14); export (FR-010, Could); rally scoring if verified (FR-043); stub second sport contract test (NFR-082); token budget per plan (NFR-021); model-grader and coach agreement (NFR-005 b, c).
 
-### S11-S13: R3 automatic scoring (outline only)
+### S12-S14: R3 automatic scoring (outline only; was S11-S13)
 
 Shot facets in coarse-first order, after the taxonomy ADR and κ ≥ 0.7 agreement (FR-088, QD-TX-03/04) [DOM/CV-18]; automatic rally outcomes with confirmations (FR-058, NFR-007 per ADR 0004); full rally timeline (FR-061); shot-level analytics and patterns (FR-107, FR-108, NFR-009); evidence clips (FR-030); review effort (NFR-040).
 

@@ -1,0 +1,231 @@
+{
+  "sprint": 6,
+  "schema": "one row per ticket: id, head branch, owner role (a file name under .claude/agents/ without .md). Read by merge_ready.py (CI-TIERS-b) to compute the PR author role; tier 2 (CI-TIERS-a). sprint-06.md section 15 is the human view and must match (drift check in CI-TIERS-b).",
+  "tickets": [
+    {
+      "id": "CI-SCHEDULED-RED",
+      "branch": "s06/ci-scheduled-red",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "OPS-DISK-06",
+      "branch": "s06/ops-disk-06",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "EM-ESC-06",
+      "branch": "s06/em-esc-06",
+      "owner": "engineering-manager"
+    },
+    {
+      "id": "PM-6",
+      "branch": "s06/pm-6",
+      "owner": "product-manager"
+    },
+    {
+      "id": "BA-6",
+      "branch": "s06/ba-6",
+      "owner": "business-analyst"
+    },
+    {
+      "id": "PE-6a",
+      "branch": "s06/pe-6a",
+      "owner": "principal-engineer"
+    },
+    {
+      "id": "PE-6b",
+      "branch": "s06/pe-6b",
+      "owner": "principal-engineer"
+    },
+    {
+      "id": "SEC-6",
+      "branch": "s06/sec-6",
+      "owner": "security-privacy-engineer"
+    },
+    {
+      "id": "COACH-6a",
+      "branch": "s06/coach-6a",
+      "owner": "pickleball-domain-coach"
+    },
+    {
+      "id": "COACH-6b",
+      "branch": "s06/coach-6b",
+      "owner": "pickleball-domain-coach"
+    },
+    {
+      "id": "PD-6",
+      "branch": "s06/pd-6",
+      "owner": "principal-designer"
+    },
+    {
+      "id": "DR-06",
+      "branch": "s06/dr-06",
+      "owner": "principal-designer"
+    },
+    {
+      "id": "ML-6",
+      "branch": "s06/ml-6",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "CI-TIERS-06",
+      "branch": "s06/ci-tiers-06",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "CI-DOC-CHECK-06",
+      "branch": "s06/ci-doc-check-06",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "QA-WIP-GATE",
+      "branch": "s06/qa-wip-gate",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "ST-170a",
+      "branch": "s06/st-170a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "COACH-6c",
+      "branch": "s06/coach-6c",
+      "owner": "pickleball-domain-coach"
+    },
+    {
+      "id": "QA-REF-GOLD",
+      "branch": "s06/qa-ref-gold",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "ST-170b",
+      "branch": "s06/st-170b",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-170c",
+      "branch": "s06/st-170c",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "id": "ST-171a",
+      "branch": "s06/st-171a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-171b",
+      "branch": "s06/st-171b",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "ST-171c",
+      "branch": "s06/st-171c",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "ST-171d",
+      "branch": "s06/st-171d",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "ST-171e",
+      "branch": "s06/st-171e",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-172a",
+      "branch": "s06/st-172a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-172b",
+      "branch": "s06/st-172b",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-172c",
+      "branch": "s06/st-172c",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "id": "ST-173a",
+      "branch": "s06/st-173a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-173b",
+      "branch": "s06/st-173b",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-173c",
+      "branch": "s06/st-173c",
+      "owner": "pickleball-domain-coach"
+    },
+    {
+      "id": "ST-173d",
+      "branch": "s06/st-173d",
+      "owner": "senior-frontend-engineer"
+    },
+    {
+      "id": "ST-174a",
+      "branch": "s06/st-174a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-174b",
+      "branch": "s06/st-174b",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "ST-175a",
+      "branch": "s06/st-175a",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "ST-175b",
+      "branch": "s06/st-175b",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "ST-176a",
+      "branch": "s06/st-176a",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "ST-176b",
+      "branch": "s06/st-176b",
+      "owner": "senior-ml-cv-engineer"
+    },
+    {
+      "id": "SEC-R05",
+      "branch": "s06/sec-r05",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "SEC-R11",
+      "branch": "s06/sec-r11",
+      "owner": "senior-backend-engineer"
+    },
+    {
+      "id": "QA-PIN-06",
+      "branch": "s06/qa-pin-06",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "VERIFY-06",
+      "branch": "s06/verify-06-r1",
+      "owner": "senior-qa-engineer"
+    },
+    {
+      "id": "SMOKE-06",
+      "branch": "s06/smoke-06",
+      "owner": "sre-devops-engineer"
+    },
+    {
+      "id": "RETRO-06",
+      "branch": "s06/retro-06",
+      "owner": "engineering-manager"
+    }
+  ]
+}
