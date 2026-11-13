@@ -17,9 +17,11 @@
 Filter axes modelled: pattern id × level band × format (singles, doubles) × source_type × status.
 
 ```gherkin
-Rule: FR-170.R1 A reference entry is accepted only with pattern id, definition version, value or band, n, interval, level band, format, source_type, a source id that resolves (citation id or footage id with rights record), status and reference-set version
+Rule: FR-170.R1 A reference entry is accepted only with pattern id, definition version, better_direction (`higher`, `lower` or `inside_band`, copied from the pattern catalogue for that definition version), value or band, n, interval, level band, format, source_type, a source id that resolves (citation id or footage id with rights record), status and reference-set version
   Example: a complete coach-reviewed entry with a published citation → lint rc 0 (happy)
   Example: an entry with no source id → `racket-reference-lint` rc 1 naming the entry and the field "source" (negative)
+  Example: an entry with no better_direction, or one that differs from the catalogue's value for its definition version → rc 1 naming the entry and the field "better_direction" (negative)
+  Example: an entry with better_direction `inside_band` and a point value instead of a band → rc 1 naming the entry and "band" (negative)
 Rule: FR-170.R2 A published reference-set version is immutable; a change is a new version with a new lock hash
   Example: v1 locked, v2 added with a changed value → lint rc 0 and both hashes in the lock (happy)
   Example: v1 edited in place → lint rc 1 "published version changed" (negative)
@@ -41,7 +43,7 @@ Test levels: R1-R3 unit + lint (CI); R4 integration (reference API boundary) + c
 Filter axes: pattern × data source (QT, FT) × format × side (serving, receiving) × player.
 
 ```gherkin
-Rule: FR-171.R1 A Quick Tag pattern measure reuses the AN-01..AN-07 computation unchanged and carries value, n, Wilson 95% interval, low_sample flag and definition version
+Rule: FR-171.R1 A Quick Tag pattern measure reuses the AN-01..AN-07 computation unchanged and carries value, n, Wilson 95% interval with interval_method `wilson` (proportions only), low_sample flag and definition version
   Example: AN-05 serve fault % on GS-AN-1 gm1 equals the starter-stats value and n (happy)
   Example: a pattern measure whose value differs from the starter-stats value for the same match → the equivalence test fails (negative)
 Rule: FR-171.R2 AN-09 third-shot drop share = third shots with trajectory drop / third shots with an admitted trajectory facet; the third shot is the serving side's first hit after the return
@@ -50,9 +52,10 @@ Rule: FR-171.R2 AN-09 third-shot drop share = third shots with trajectory drop /
 Rule: FR-171.R3 A third shot with no trajectory facet is excluded and counted in n_excluded with reason facet_missing
   Example: 10 third shots, 2 without facet → n = 8, n_excluded = 2 (happy)
   Example: a missing facet counted as drive → the property test "excluded ∪ counted = all third shots" fails (negative)
-Rule: FR-171.R4 AN-13 dink tolerance = number of consecutive dinks by the player's side before the side's dink error, per dink rally, reported as median and n of dink rallies
-  Example: dink rallies with runs 3, 5, 8 ending in the side's error → median 5, n = 3 (happy)
-  Example: a dink rally won by the side is not a tolerance sample (negative)
+Rule: FR-171.R4 AN-13 dink tolerance = number of consecutive dinks by the player's side before the side's dink error, per dink rally that ends in that error, reported as median, n of those rallies, n_censored (the side's dink rallies that ended any other way) and a 95% distribution-free order-statistic interval for the median, interval_method `order_statistic_median`: [x(l), x(n−l+1)] with l the largest rank where P(Binomial(n, 0.5) ≤ l−1) ≤ 0.025; below n = 6 the interval does not exist and the measure is not rankable (COACH-6a sets AN-13 min_n ≥ 6)
+  Example: 10 error-ended dink rallies with runs 2, 3, 3, 4, 5, 5, 6, 7, 8, 10 → median 5, n = 10, l = 2, interval [3, 8] (happy)
+  Example: runs 3, 5, 8 → median 5, n = 3, interval unavailable, rankable false, never a Wilson interval (negative)
+  Example: a dink rally won by the side is counted in n_censored, never as a tolerance sample (negative)
 Rule: FR-171.R5 A pattern that needs a data source the match does not have is reported unavailable with a reason, never as zero
   Example: a Quick Tag-only match → AN-09 unavailable, reason no_shot_facets (happy)
   Example: AN-09 reported as 0.0 on a Quick Tag-only match (negative)
@@ -71,16 +74,19 @@ Test levels: R1 integration (analytics service boundary) + unit; R2-R4, R7 unit 
 Filter axes: level band of the player vs reference band × format × n (below, at, above min_n) × interval overlap × number of gaps (0, 1, ≥ 3) × reference missing.
 
 ```gherkin
-Rule: FR-172.R1 A pattern is a weakness only when the player's measure is rankable and its 95% interval lies wholly on the worse side of the reference interval or band (no overlap)
-  Example: player AN-09 0.20 [0.11, 0.33], reference band [0.45, 0.70] → weakness (happy)
+Rule: FR-172.R1 A pattern is a weakness only when the player's measure is rankable and its 95% interval (by the measure's interval_method) lies wholly on the worse side of the reference interval or band (no overlap). The worse side comes from the pattern's better_direction (FR-170.R1): `higher` → below the reference; `lower` → above it; `inside_band` → either side of the band (two-sided), and the weakness names the side ("below band" or "above band")
+  Example: AN-09 (`inside_band`) player 0.20 [0.11, 0.33], reference band [0.45, 0.70] → weakness "below band" (happy)
+  Example: AN-09 (`inside_band`) player 0.86 [0.80, 0.92], reference band [0.45, 0.70] → weakness "above band" (happy)
   Example: player [0.30, 0.55] overlaps reference [0.45, 0.70] → state "no clear gap", not ranked (negative)
+  Example: a `higher` pattern with player [0.80, 0.92] above reference band [0.45, 0.70] → "no clear gap", never a weakness: the better side is not ranked (negative)
+  Example: a `lower` pattern (AN-05 serve fault %) with player [0.12, 0.25] above reference [0.03, 0.08] → weakness "above reference" (happy)
 Rule: FR-172.R2 A pattern with n below min_n is listed as "not enough data" with n and the min_n it needs, never ranked
   Example: n = 25, min_n 20 → eligible (happy)
   Example: n = 7 → "not enough data (7 of 20)" (negative)
 Rule: FR-172.R3 A pattern with no coach-reviewed reference for the player's level band and format is listed as "no reference yet", never ranked
   Example: doubles reference present for band 3.0-3.5 → compared (happy)
   Example: only a pro-band reference exists for a 3.5 player → "no reference for your level" and the pro value shown as direction only (negative)
-Rule: FR-172.R4 Weaknesses are ordered by gap size in reference-band widths; ties are broken by rallies lost on the linked ADR 0003 cell, then by catalogue order
+Rule: FR-172.R4 Weaknesses are ordered by gap size in reference-band widths (distance from the player's interval edge nearest the reference to the band edge on that side, divided by the band width; for a point reference the width is its 95% interval width); ties are broken by rallies lost on the linked ADR 0003 cell, then by catalogue order
   Example: gaps 1.4 and 0.6 band widths → order 1.4, 0.6 (happy)
   Example: two gaps of equal size → the one with more rallies lost first; reversing the input order gives the same output (negative, property test)
 Rule: FR-172.R5 The view shows every pattern with its state; zero weaknesses shows "no clear gap against the reference" and the ADR 0003 rallies-lost ranking stays visible

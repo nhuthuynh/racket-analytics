@@ -57,7 +57,7 @@ All sprints are 2 weeks (working-agreement §3, judgment). Planning is on the fi
 | S5 | 2026-12-14 → 2026-12-22 (shortened, 7 working days, judgment) | 2026-12-22 | **R1 release candidate** |
 | — | 2026-12-23 → 2027-01-01 | holiday break (judgment; PO availability assumed low) | — |
 | S6 | 2027-01-04 → 2027-01-15 | 2027-01-15 | **First video-analysis slice** on tagged video (PO 2026-11-12; S6/S7 order pending P21, see §5 note) |
-| S7 | 2027-01-18 → 2027-01-29 | 2027-01-29 | R2 |
+| S7 | 2027-01-18 → 2027-01-29 | 2027-01-29 | Go port or R2, pending P21 (see §5 note) |
 | S8 | 2027-02-01 → 2027-02-12 | 2027-02-12 | R2 |
 | S9 | 2027-02-15 → 2027-02-26 | 2027-02-26 | R2 |
 | S10 | 2027-03-01 → 2027-03-12 | 2027-03-12 | **R2 release candidate** (MVP = R1 + R2) |

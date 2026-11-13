@@ -44,3 +44,19 @@ In progress 1 (this PR) · in review 12 (limit 3, **breach**: the Sprint 5 PRs w
 | Round | wall_time_min | total_cost_usd | Note |
 |---|---|---|---|
 | Author build (planning) | not measured | not measured | the session does not expose per-ticket wall time or cost to the agent |
+
+## Review round 1 (2026-11-13, head `94f46ff8`)
+
+Reviews: principal-engineer 5884845775, senior-qa-engineer 5884863089.
+
+| Finding | Severity | Fix |
+|---|---|---|
+| PE-PLAN06-01, QA06-PLAN-01 | blocker | The QA-DOR-CHECK scenarios pick their planted rows from the current breakdown (`first_nfr_row_with`, `first_fr_rule_with_negative`, `first_prc_id` in `infra/tests/atomic_breakdown_fixtures.py`); new `infra/tests/test_atomic_breakdown_pickers.py` runs them on every sprint's breakdown. TCR row 1 in `docs/sprints/06/test-change-requests.md` (QA decision pending) |
+| PE-PLAN06-02 | major | `better_direction` (`higher` / `lower` / `inside_band`) in FR-170.R1, the COACH-6a catalogue fields and the ST-170a schema; FR-172.R1 defines the worse side from it, with Examples below band, above band, better side not ranked, and a `lower` pattern |
+| PE-PLAN06-03 | major | FR-171.R4 states the AN-13 interval: distribution-free order-statistic CI for the median (`order_statistic_median`), none below n = 6; `interval_method` is a `PatternMeasure` field (FR-171.R1 `wilson`); won dink rallies counted as `n_censored`, and COACH-6a must justify the error-ended sample or switch to a censored estimate |
+| PE-PLAN06-04 | minor | Measure snapshot key (subject, pattern id, match version, rules_version, definition version) split from the gap-result key (+ reference_version) in ST-171e and PE-6a |
+| PE-PLAN06-05 | minor | PE-6a / ADR 0061 settles one owner: sport-plugin content read by Coaching through the ACL |
+| PE-PLAN06-06 | minor | Roadmap §2 S7 row: "Go port or R2, pending P21" |
+| PE-PLAN06-07 | nit | FR-172.R4 defines the gap and the width (interval width for a point reference) |
+
+TDD for the test change: red first (the 6 scenario failures on `94f46ff8`, and the picker tests' `ImportError` before the pickers existed), then the pickers. The evidence commands and results are in the PR thread replies.
