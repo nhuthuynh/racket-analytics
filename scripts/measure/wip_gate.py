@@ -77,9 +77,23 @@ def head(pr: Mapping[str, Any]) -> str:
 
 def gate_green(check_runs: Sequence[Mapping[str, Any]]) -> bool:
     return any(
-        r.get("name") == MR.GATE and r.get("status") == "completed" and r.get("conclusion") == "success"
+        (r.get("name"), r.get("status"), r.get("conclusion")) == (MR.GATE, "completed", "success")
         for r in check_runs
     )
+
+
+def verdict_stage(pr: Mapping[str, Any], reviews: Sequence[dict[str, Any]]) -> str | None:
+    """The stage the drafts and verdicts alone decide; AWAITING_MERGE still needs a green
+    `ci-gate` on the head (`stage_of`). None when the PR is not a ticket PR into main."""
+    if not is_ticket_pr(pr):
+        return None
+    if pr.get("draft"):
+        return IN_PROGRESS
+    sha = head(pr)
+    on_head = {role: v for role, (v, at) in MR.verdicts(list(reviews)).items() if at == sha}
+    if MR.CHANGES in on_head.values() or on_head.get(MR.PRINCIPAL) != MR.APPROVE:
+        return IN_REVIEW
+    return AWAITING_MERGE if MR.QA in on_head else AWAITING_QA
 
 
 def stage_of(
@@ -88,18 +102,10 @@ def stage_of(
     check_runs: Sequence[Mapping[str, Any]],
 ) -> str | None:
     """The stage of one open PR, or None when it is not a ticket PR into main."""
-    if not is_ticket_pr(pr):
-        return None
-    if pr.get("draft"):
-        return IN_PROGRESS
-    sha = head(pr)
-    latest = MR.verdicts(list(reviews))
-    on_head = {role: v for role, (v, at) in latest.items() if at == sha}
-    if MR.CHANGES in on_head.values() or on_head.get(MR.PRINCIPAL) != MR.APPROVE:
+    found = verdict_stage(pr, reviews)
+    if found == AWAITING_MERGE and not gate_green(check_runs):
         return IN_REVIEW
-    if MR.QA not in on_head:
-        return AWAITING_QA
-    return AWAITING_MERGE if gate_green(check_runs) else IN_REVIEW
+    return found
 
 
 def count_stages(
@@ -129,7 +135,8 @@ def start_refusals(counts: Mapping[str, int], limits: Sequence[int] = LIMITS) ->
 
 def stage_line(counts: Mapping[str, int]) -> str:
     """The stage-count line of working-agreement §7 3c, as flow_metrics.py parses it."""
-    return " · ".join(f"{s} {counts[s]}" for s in STAGES).capitalize().replace("qa", "QA")
+    line = " · ".join(f"{stage} {counts[stage]}" for stage in STAGES)
+    return line[0].upper() + line[1:]
 
 
 def _get(url: str) -> Any:
@@ -174,11 +181,11 @@ def main(argv: list[str] | None = None) -> int:
         pulls = [p for p in _pages(f"{base}/pulls?state=open") if is_ticket_pr(p)]
         ready = [p for p in pulls if not p.get("draft")]
         reviews = {p["number"]: _pages(f"{base}/pulls/{p['number']}/reviews") for p in ready}
+        # Check runs are read only where the verdicts already say "awaiting merge".
         runs = {
             head(p): _pages(f"{base}/commits/{head(p)}/check-runs", "check_runs")
             for p in ready
-            if stage_of(p, reviews[p["number"]], [{"name": MR.GATE, "status": "completed", "conclusion": "success"}])
-            == AWAITING_MERGE
+            if verdict_stage(p, reviews[p["number"]]) == AWAITING_MERGE
         }
     except (OSError, ValueError, KeyError, TypeError) as exc:  # URLError is an OSError
         print(f"wip-gate: unknown (GitHub could not be read: {exc})")
