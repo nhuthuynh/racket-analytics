@@ -43,12 +43,12 @@ _ENTRY: dict[str, Any] = {
     "source": {"citation_id": "SRC-0002"},
     "band": [0.45, 0.70],
     "status": "coach-reviewed",
-    "version": 1,
 }
 
 
 def entry(**changes: Any) -> dict[str, Any]:
-    """A complete, valid AN-09 judgment entry; ``field=None`` removes the field."""
+    """A complete, valid AN-09 judgment entry; ``field=None`` removes the field. ``version``
+    is added by ``reference_doc`` (the set's) unless given here."""
     made = copy.deepcopy(_ENTRY)
     for key, value in changes.items():
         if value is None:

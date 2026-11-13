@@ -76,7 +76,10 @@ def _published(**changes: Any) -> dict[str, Any]:
      "source_type", "source", "band", "status", "version"],
 )  # fmt: skip
 def test_a_missing_field_is_refused_naming_the_entry_and_the_field(field: str) -> None:
-    problems = _problems([entry(**{field: None})])
+    doc = reference_doc([entry()])
+    del doc["entries"][0][field]
+
+    problems = _problems([], doc=doc)
 
     assert any(f == field and "missing field" in r for _, f, r in problems), problems
 
