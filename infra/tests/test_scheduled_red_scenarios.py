@@ -82,7 +82,9 @@ def exits(result: subprocess.CompletedProcess[str], code: int) -> None:
 
 
 @then(parsers.parse('it prints a red line naming "{name}", run {run_id:d} and "{conclusion}"'))
-def red_line(result: subprocess.CompletedProcess[str], name: str, run_id: int, conclusion: str):
+def red_line(
+    result: subprocess.CompletedProcess[str], name: str, run_id: int, conclusion: str
+) -> None:
     [red] = red_lines(result.stdout.splitlines())
     assert name in red
     assert str(run_id) in red

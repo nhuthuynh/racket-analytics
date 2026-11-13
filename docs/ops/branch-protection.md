@@ -93,6 +93,14 @@ of these hold on that SHA:
   progress still wins, so a newer failure is never hidden. If every run of a workflow on the SHA
   was cancelled, the check refuses with `all <workflow> runs on <SHA> were cancelled`
   (`docs/sprints/03/decisions/CI-MERGE-READY-CANCELLED.md`).
+- The **latest scheduled CI run on `main`** is not red (`failure`, `cancelled`, `timed_out` or
+  `startup_failure`). The check reads `GET /repos/{repo}/actions/workflows/ci.yml/runs?event=schedule&branch=main&status=completed`
+  and refuses with `the latest scheduled CI run <id> at <sha> ended <conclusion> ... on main: fix
+  main first (CI FIRST)`; the next green scheduled run clears it. The fix itself may merge once a
+  `workflow_dispatch` CI run on its head (`gh workflow run ci.yml --ref <branch>`) is green, since
+  dispatch runs the scheduled-only jobs. `scripts/measure/scheduled_red.py --repo <repo>` prints
+  the CI and Nightly quality lines for the EM status record
+  (`docs/sprints/06/decisions/CI-SCHEDULED-RED.md`).
 - The **verdict set of the PR's review tier** starts with `Verdict: APPROVE` on that SHA
   (CI-TIERS-b, ADR 0056 decision 2; `docs/sprints/05/decisions/CI-TIERS-b.md`). The tier is
   computed from the PR's changed files by `scripts/ci/review_tiers.py` (CI-TIERS-a), never read
