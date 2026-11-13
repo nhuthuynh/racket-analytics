@@ -96,3 +96,15 @@ Reviews: round 2 principal-engineer 5885000282 and senior-qa-engineer 5885019428
 | PE-PLAN06-11 | minor | Assumption A6 states the interval per `interval_method` (Wilson for proportions, order-statistic median for AN-13) |
 | PE-PLAN06-12 | nit | Deferred to PE-6a (ADR 0061 states the `coaching/reference/` module is the ACL read side; ST-170a follows it) |
 | QA06-PLAN-02, PE-PLAN06-13 | nit | Deferred to QA-PIN-06 (word-boundary match in the Then step, with its own TCR row) |
+
+Re-run of the PR-policy commands on the fixed tree (PE-PLAN06-10). The PR-policy decision above (`qa-approved-test-change` granted, no `size-waiver`) covers the head that carries this table; no test changed since `e6e9e518`. Run in the PLAN-06 worktree on the committed head:
+
+| Check | Command | Result |
+|---|---|---|
+| Doc check | `python3 scripts/ci/check_docs.py --base origin/main --head HEAD` | rc 0, "doc-check: 0 problem(s) in 9 file(s)" (flows skipped, `flows-sprint-06.md` planned) |
+| Decisions joined to the ledger | `python3 scripts/measure/reconcile_due.py --pr --base origin/main --head HEAD` | rc 0, "reconcile-due --pr: 0 problems" |
+| Open blocker/major | `python3 scripts/measure/open_defects.py docs/sprints/06/review-rounds.md` | rc 0, `"open": 0` |
+| Atomic breakdown | `python3 scripts/ci/check_atomic_breakdown.py` | rc 0, "atomic breakdown: 0 problem(s)" |
+| PR size | `python3 scripts/ci/check_pr_size.py --base origin/main --head HEAD` | rc 0, 0 changed lines of production code |
+| Red first | `python3 scripts/ci/check_red_first.py --base origin/main --head HEAD` | rc 0, "ok, 7 commit(s) checked" |
+| Scenario and picker tests | `cd infra && uv run pytest -q tests/test_atomic_breakdown_scenarios.py tests/test_atomic_breakdown_pickers.py tests/test_merge_ready_tiers.py` | see the PR thread reply (run on this head) |
