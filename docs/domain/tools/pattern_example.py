@@ -26,7 +26,11 @@ import json
 import math
 import re
 import sys
+from itertools import pairwise
 from pathlib import Path
+from typing import Any
+
+Json = dict[str, Any]
 
 REPO = Path(__file__).resolve().parents[3]
 CATALOGUE = REPO / "docs" / "domain" / "pattern-catalogue.md"
@@ -40,7 +44,7 @@ Z95 = 1.959963984540054
 TABLES = ("AN-09", "AN-13", "AN-08", "unassigned")
 
 
-# ------------------------------------------------------------------------------ geometry (§0.7)
+# ------------------------------------------------------------ geometry (§0.7)
 def other(side: str) -> str:
     return "B" if side == "A" else "A"
 
@@ -56,25 +60,26 @@ def dist(xy: list[float]) -> float:
     return abs(xy[1] - NET)
 
 
-# ------------------------------------------------------------------------------ rally reading (§0.1)
-def hits(rally: dict) -> list[dict]:
+# ------------------------------------------------------------------- rally reading (§0.1)
+def hits(rally: Json) -> list[Json]:
     return [e for e in rally["events"] if e["type"] == "hit"]
 
 
-def side_of(hit: dict) -> str:
-    return hit["hitter"][0]
+def side_of(hit: Json) -> str:
+    return str(hit["hitter"])[0]
 
 
-def traj(hit: dict) -> str | None:
-    return hit.get("facets", {}).get("trajectory")
+def traj(hit: Json) -> str | None:
+    value = hit.get("facets", {}).get("trajectory")
+    return None if value is None else str(value)
 
 
-def alternates(hs: list[dict]) -> bool:
+def alternates(hs: list[Json]) -> bool:
     first = hs[:3]
-    return all(side_of(a) != side_of(b) for a, b in zip(first, first[1:]))
+    return all(side_of(a) != side_of(b) for a, b in pairwise(first))
 
 
-def bounce_after(rally: dict, n: int) -> dict | None:
+def bounce_after(rally: Json, n: int) -> Json | None:
     """First bounce after hit n (1-based), before hit n+1 or the rally end."""
     seen = 0
     for e in rally["events"]:
@@ -83,15 +88,16 @@ def bounce_after(rally: dict, n: int) -> dict | None:
             if seen > n:
                 return None
         elif seen == n:
-            return e
+            bounce: Json = e
+            return bounce
     return None
 
 
-def lost_by(rally: dict, side: str) -> bool:
-    return rally["outcome"]["winning_side"] == other(side)
+def lost_by(rally: Json, side: str) -> bool:
+    return bool(rally["outcome"]["winning_side"] == other(side))
 
 
-def unassigned(rally: dict) -> str | None:
+def unassigned(rally: Json) -> str | None:
     if rally["outcome"]["ending"] == "replay":
         return "replay"
     return None if hits(rally) else "no_serve_hit"
@@ -112,8 +118,8 @@ class Tally:
         self.excluded.setdefault(reason, []).append(rid)
 
 
-# ------------------------------------------------------------------------------ patterns (§2-§5)
-def an09(doc: dict, s: str) -> Tally:
+# ------------------------------------------------------------ patterns (§2-§5)
+def an09(doc: Json, s: str) -> Tally:
     t = Tally()
     for r in doc["rallies"]:
         hs = hits(r)
@@ -123,17 +129,17 @@ def an09(doc: dict, s: str) -> Tally:
             t.exclude("no_third_shot", r["id"])
         elif not alternates(hs):
             t.exclude("side_order_invalid", r["id"])
-        elif traj(hs[2]) is None:
+        elif (third := traj(hs[2])) is None:
             t.exclude("facet_missing", r["id"])
         else:
             t.n.append(r["id"])
-            t.mix.setdefault(traj(hs[2]), []).append(r["id"])
-            if traj(hs[2]) == "drop":
+            t.mix.setdefault(third, []).append(r["id"])
+            if third == "drop":
                 t.k.append(r["id"])
     return t
 
 
-def is_attack(hit: dict | None) -> bool | None:
+def is_attack(hit: Json | None) -> bool | None:
     """§3: True attack, False decidedly not (absent, or both facets labelled non-attack)."""
     if hit is None:
         return False
@@ -143,7 +149,7 @@ def is_attack(hit: dict | None) -> bool | None:
     return False if "trajectory" in f and "intent" in f else None
 
 
-def an10(doc: dict, s: str) -> Tally:
+def an10(doc: Json, s: str) -> Tally:
     t = Tally()
     drops = set(an09(doc, s).k)
     for r in doc["rallies"]:
@@ -167,7 +173,7 @@ def an10(doc: dict, s: str) -> Tally:
     return t
 
 
-def an08(doc: dict, s: str, serve: bool = False) -> Tally:
+def an08(doc: Json, s: str, serve: bool = False) -> Tally:
     """Return depth of returner s (AN-08), or serve depth of server s (AN-08S)."""
     t = Tally()
     shot = 1 if serve else 2
@@ -195,18 +201,18 @@ def an08(doc: dict, s: str, serve: bool = False) -> Tally:
     return t
 
 
-def dink_run(hs: list[dict]) -> list[dict]:
+def dink_run(hs: list[Json]) -> list[Json]:
     """Last maximal run of consecutive rally shots (hit 3+) with trajectory dink."""
-    run: list[dict] = []
-    best: list[dict] = []
+    run: list[Json] = []
+    best: list[Json] = []
     for h in hs[2:]:
-        run = run + [h] if traj(h) == "dink" else []
+        run = [*run, h] if traj(h) == "dink" else []
         if len(run) >= 2:
             best = run
     return best
 
 
-def an13(doc: dict, s: str) -> Tally:
+def an13(doc: Json, s: str) -> Tally:
     t = Tally()
     for r in doc["rallies"]:
         hs = hits(r)
@@ -228,7 +234,7 @@ def an13(doc: dict, s: str) -> Tally:
     return t
 
 
-# ------------------------------------------------------------------------------ uncertainty (§0.3)
+# ------------------------------------------------------------ uncertainty (§0.3)
 def wilson(k: int, n: int) -> tuple[float, float]:
     p, z2 = k / n, Z95 * Z95
     centre = (p + z2 / (2 * n)) / (1 + z2 / n)
@@ -246,11 +252,11 @@ def order_l(n: int) -> int | None:
     if n < 6:
         return None
     best, cdf = None, 0.0
-    for l in range(1, n + 1):
-        cdf += math.comb(n, l - 1) / 2**n
+    for rank in range(1, n + 1):
+        cdf += math.comb(n, rank - 1) / 2**n
         if cdf > 0.025:
             break
-        best = l
+        best = rank
     return best
 
 
@@ -258,12 +264,12 @@ def num(v: float) -> str:
     return f"{v:g}"
 
 
-# ------------------------------------------------------------------------------ check 1: examples
-def measure(doc: dict, key: str) -> dict:
+# ------------------------------------------------------------ check 1: examples
+def measure(doc: Json, key: str) -> Json:
     pattern, s = key.split("@")
     fn = {"AN-09": an09, "AN-10": an10, "AN-08": an08, "AN-13": an13}
     t = an08(doc, s, serve=True) if pattern == "AN-08S" else fn[pattern](doc, s)
-    out: dict = {"k": len(t.k), "n": len(t.n) if pattern != "AN-13" else len(t.runs)}
+    out: Json = {"k": len(t.k), "n": len(t.n) if pattern != "AN-13" else len(t.runs)}
     out["excluded"] = {r: len(ids) for r, ids in t.excluded.items()}
     out["mix"] = {m: len(ids) for m, ids in t.mix.items()}
     out["runs"] = sorted(x for _, x in t.runs)
@@ -305,17 +311,17 @@ def figure_diffs(text: str) -> tuple[int, list[str]]:
     for xs, m, rest in re.findall(r"<!-- median: (\[[^\]]*\]) (\S+) (\S+) -->", text):
         seen += 1
         values = json.loads(xs)
-        ys, l = sorted(values), order_l(len(values))
-        iv = "none" if l is None else f"l={l}:[{ys[l - 1]},{ys[len(ys) - l]}]"
+        ys, rank = sorted(values), order_l(len(values))
+        iv = "none" if rank is None else f"l={rank}:[{ys[rank - 1]},{ys[len(ys) - rank]}]"
         if (num(median(values)), iv) != (m, rest):
             out.append(f"median {xs}: stated {m} {rest}, computed {num(median(values))} {iv}")
     return seen, out
 
 
-# ------------------------------------------------------------------------------ GS-PAT-1 replay
-def replay(doc: dict) -> dict:
+# ------------------------------------------------------------ GS-PAT-1 replay
+def replay(doc: Json) -> Json:
     """Same shape as `counts` in GS-PAT-1-v1.json (rally ids per bucket)."""
-    out: dict = {}
+    out: Json = {}
     for s in "AB":
         t9, t8, t13 = an09(doc, s), an08(doc, s), an13(doc, s)
         out.setdefault("AN-09", {})[s] = {
@@ -349,15 +355,32 @@ def canon(v: object) -> object:
     return v
 
 
-def count_diffs(fixture: dict) -> tuple[int, list[str]]:
+def leaf_diffs(where: str, hand: object, got: object) -> list[str]:
+    """One line per differing bucket, naming the rally ids only one side has."""
+    if isinstance(hand, dict) and isinstance(got, dict):
+        return [
+            d
+            for k in sorted(set(hand) | set(got))
+            for d in leaf_diffs(f"{where} {k}", hand.get(k, []), got.get(k, []))
+        ]
+    if hand == got:
+        return []
+    if isinstance(hand, list) and isinstance(got, list):
+        only_h = sorted(set(hand) - set(got))
+        only_g = sorted(set(got) - set(hand))
+        return [f"{where}: hand count only {only_h}, replay only {only_g}"]
+    return [f"{where}: hand count {hand}, replay {got}"]
+
+
+def count_diffs(fixture: Json) -> tuple[int, list[str]]:
     out, seen = [], 0
     for mid, match in fixture["matches"].items():
-        got, hand = canon(replay(match["labels"])), canon(match["counts"])
+        got: Json = canon(replay(match["labels"]))  # type: ignore[assignment]
+        hand: Json = canon(match["counts"])  # type: ignore[assignment]
         for pattern in sorted(set(got) | set(hand)):
-            g, h = got.get(pattern, {}), hand.get(pattern, {})
             seen += 1
-            if g != h:
-                out.append(f"GS-PAT-1 {mid} {pattern}: hand count {h} != replay {g}")
+            where = f"GS-PAT-1 {mid} {pattern}"
+            out += leaf_diffs(where, hand.get(pattern, {}), got.get(pattern, {}))
     return seen, out
 
 
@@ -369,7 +392,7 @@ def reasons(ex: dict[str, list[str]]) -> str:
     return ", ".join(f"{r} {len(ids)}" for r, ids in sorted(ex.items())) or "none"
 
 
-def tables(fixture: dict) -> dict[str, list[str]]:
+def tables(fixture: Json) -> dict[str, list[str]]:
     rows: dict[str, list[str]] = {t: [] for t in TABLES}
     for mid, match in fixture["matches"].items():
         doc = match["labels"]
@@ -385,8 +408,8 @@ def tables(fixture: dict) -> dict[str, list[str]]:
         for s in "AB":
             t = an13(doc, s)
             xs = sorted(x for _, x in t.runs)
-            n, l = len(xs), order_l(len(xs))
-            iv = "none" if l is None else f"[{xs[l - 1]}, {xs[n - l]}] (l = {l})"
+            n, rank = len(xs), order_l(len(xs))
+            iv = "none" if rank is None else f"[{xs[rank - 1]}, {xs[n - rank]}] (l = {rank})"
             rows["AN-13"].append(
                 f"| {mid} | {s} | {', '.join(map(str, xs))} | {n} | {num(median(xs))} | {iv} | "
                 f"{state(n, 'AN-13')} | {len(t.censored)} | {reasons(t.excluded)} |"
@@ -400,10 +423,8 @@ def tables(fixture: dict) -> dict[str, list[str]]:
                 f"{state(n, 'AN-08')} | {reasons(t.excluded)} |"
             )
         un = replay(doc)["unassigned"]
-        rows["unassigned"].append(
-            f"| {mid} | {match['labels']['players'].__len__() == 4 and 'doubles' or 'singles'} | "
-            f"{len(doc['rallies'])} | {reasons(un)} |"
-        )
+        fmt = "doubles" if len(doc["players"]) == 4 else "singles"
+        rows["unassigned"].append(f"| {mid} | {fmt} | {len(doc['rallies'])} | {reasons(un)} |")
     return rows
 
 
@@ -423,7 +444,7 @@ def table_diffs(text: str, rows: dict[str, list[str]]) -> tuple[int, list[str]]:
                 body.append(ln)
             elif body:
                 break
-        have = [ln for ln in body[2:]]  # skip header and separator
+        have = body[2:]  # skip header and separator
         for r in want:
             if r not in have:
                 out.append(f"table GS-PAT-1 {name}: missing row {r}")
@@ -433,7 +454,7 @@ def table_diffs(text: str, rows: dict[str, list[str]]) -> tuple[int, list[str]]:
     return seen, out
 
 
-# ------------------------------------------------------------------------------ main
+# ------------------------------------------------------------ main
 def main() -> int:
     text = CATALOGUE.read_text()
     fixture = json.loads(FIXTURE.read_text()) if FIXTURE.exists() else None
