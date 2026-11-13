@@ -22,7 +22,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeGuard
 
 SCHEMA = "reference-set/v1"
 STATUSES = frozenset({"draft", "coach-reviewed", "verified"})  # ADR 0044 ladder
@@ -81,7 +81,8 @@ def _count(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
-def _pair(value: object) -> bool:
+def _pair(value: object) -> TypeGuard[list[float]]:
+    """``[low, high]``: two numbers (the band and interval shape)."""
     return isinstance(value, list) and len(value) == 2 and all(_number(v) for v in value)
 
 
@@ -110,7 +111,7 @@ def _source_problems(
 
 
 def _band_ok(band: object, proportion: bool) -> bool:
-    if not (isinstance(band, list) and _pair(band) and band[0] < band[1]):
+    if not (_pair(band) and band[0] < band[1]):
         return False
     return not proportion or (band[0] >= 0 and band[1] <= 1)
 
@@ -142,9 +143,7 @@ def _value_problems(e: Mapping[str, Any], pattern: Pattern) -> list[tuple[str, s
             return [("k", "must be a count of successes, 0 <= k <= n")]
         if abs(value - k / n) > 5e-4:
             return [("value", "must equal k / n")]
-    elif not (
-        isinstance(interval, list) and _pair(interval) and interval[0] <= value <= interval[1]
-    ):
+    elif not (_pair(interval) and interval[0] <= value <= interval[1]):
         return [("interval", "must be [low, high] around value")]
     return []
 
