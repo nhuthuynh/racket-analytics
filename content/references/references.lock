@@ -1,4 +1,6 @@
 {
   "schema": "reference-set-lock/v1",
-  "sets": {}
+  "sets": {
+    "pickleball@1": "02840174446f9c5ec42e9e1dab06f6055b93c8897d3708fea81f9c7b2e2c555a"
+  }
 }
