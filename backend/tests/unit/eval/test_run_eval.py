@@ -19,7 +19,8 @@ from tests.support.paths import REPO
 def _load() -> ModuleType:
     path = REPO / "scripts" / "eval" / "run_eval.py"
     spec = importlib.util.spec_from_file_location("run_eval", path)
-    assert spec is not None and spec.loader is not None, path
+    assert spec is not None, path
+    assert spec.loader is not None, path
     module = importlib.util.module_from_spec(spec)
     sys.modules["run_eval"] = module
     spec.loader.exec_module(module)

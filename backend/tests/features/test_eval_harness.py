@@ -93,14 +93,16 @@ def all_rows(ctx: dict[str, Any]) -> None:
 def provenance(ctx: dict[str, Any]) -> None:
     report = ctx["report"]
     assert "dry-run-synthetic v1" in report
-    assert "Weights sha256" in report and "Weights licence" in report
+    assert "Weights sha256" in report
+    assert "Weights licence" in report
     assert '"ball_px_threshold": 10' in report
 
 
 @then("the report gives a CPU-seconds per match-minute value above zero")
 def cpu(ctx: dict[str, Any]) -> None:
     found = re.search(r"CPU-seconds per match-minute \| ([\d.]+)", ctx["report"])
-    assert found and float(found.group(1)) > 0, ctx["report"]
+    assert found, ctx["report"]
+    assert float(found.group(1)) > 0, ctx["report"]
 
 
 @then(parsers.parse('the report marks M1 and M7 as "fail" and every other measured row as "pass"'))

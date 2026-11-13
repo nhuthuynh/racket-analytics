@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -74,7 +75,7 @@ def test_cpu_seconds_cover_every_phone_profile_clip(tmp_path: Path) -> None:
 
 
 def _rows(report: str) -> list[str]:
-    return [line for line in report.splitlines() if line.startswith("| M")]
+    return [line for line in report.splitlines() if re.match(r"\| M\d+ \|", line)]
 
 
 def test_the_committed_dry_run_report_matches_a_fresh_run(tmp_path: Path) -> None:
