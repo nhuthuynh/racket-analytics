@@ -242,7 +242,7 @@ Common method for .10-.12: the NFR-010 Locust method of Sprint 5 (`locustfile_r1
 | A5 | The reference set may cite published secondary statistics when the citation resolves | **[NEEDS CLARIFICATION]** | PO | EM-ESC-06 Q3 |
 | A-Q1 | What the "..." in the PO's list ("training, pro matches, ...") covers | **[NEEDS CLARIFICATION]**; the team adds nothing | PO | EM-ESC-06 Q1 |
 | A-Q2 | Sprint 6 = video analysis and the Go port moved to Sprint 7 (orchestrator note, not a PO decision; conflicts with "Port the product to Go (PO decision 2026-10-06)": "before any computer-vision work") | proceed with a CV-optional, tag-based slice that survives either answer | PO | EM-ESC-06 Q2 (P21) |
-| A6 | min_n per new pattern = 20 opportunities (AN-07 rule 0.3 analogue), interval 95 % Wilson | coach + ML default (judgment) | COACH, ML | COACH-6a |
+| A6 | min_n per new pattern = 20 opportunities (AN-07 rule 0.3 analogue), 95 % interval per the pattern's `interval_method` (`wilson` for proportions, FR-171.R1; `order_statistic_median` for AN-13, min_n ≥ 6, FR-171.R4) | coach + ML default (judgment) | COACH, ML | COACH-6a |
 
 ## 7. Definition of Ready verdict per story (at planning; BA-6 updates it with PR numbers)
 

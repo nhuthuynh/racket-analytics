@@ -83,3 +83,16 @@ Why the test change is approved (it does not weaken the check):
 4. It is the fix review 5884863089 (QA06-PLAN-01) named as the better option, and it stops the next plan PR stranding the scenarios again.
 
 Residual note (not a blocker): the pickers take the *first* matching row, so the scenarios always exercise one row per sprint; the per-sprint unit tests cover the other breakdowns. Acceptable for a doc-check guard.
+
+## Review rounds 2 and 3 (2026-11-13, heads `9346a3d4` and `e6e9e518`)
+
+Reviews: round 2 principal-engineer 5885000282 and senior-qa-engineer 5885019428 (both APPROVE on `9346a3d4`); round 3 principal-engineer 5885060980 and senior-qa-engineer 5885067391 (both CHANGES REQUESTED on `e6e9e518`). The ledger is `docs/sprints/06/review-rounds.md`, created in this fix (it also holds the round 1 rows and the EM reconciliation rows). The principal-engineer reused PE-PLAN06-08..10 in rounds 2 and 3; the round 2 findings are ledgered as PE-PLAN06-11..13 (renumbering note in the ledger).
+
+| Finding | Severity | Fix |
+|---|---|---|
+| PE-PLAN06-08, QA06-PLAN-04 | major | `docs/sprints/06/review-rounds.md` created: an Open row per returned id (rounds 1 to 3) attributed to its reviewer, then an EM reconciliation row per finding with its disposition (working-agreement §7 3b, 3d) |
+| PE-PLAN06-09, QA06-PLAN-03 | major | The ledger path cited in the PR policy section now exists, so the doc check passes again |
+| PE-PLAN06-10 | nit | The PR-policy commands are re-run below on the tree that carries the ledger; the decision covers that head (SHA in the PR thread replies) |
+| PE-PLAN06-11 | minor | Assumption A6 states the interval per `interval_method` (Wilson for proportions, order-statistic median for AN-13) |
+| PE-PLAN06-12 | nit | Deferred to PE-6a (ADR 0061 states the `coaching/reference/` module is the ACL read side; ST-170a follows it) |
+| QA06-PLAN-02, PE-PLAN06-13 | nit | Deferred to QA-PIN-06 (word-boundary match in the Then step, with its own TCR row) |
