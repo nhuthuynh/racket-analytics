@@ -13,13 +13,20 @@ On the Markdown files a change adds or modifies (``--base``/``--head``), or on t
    mapping with non-empty ``name``, ``description`` and ``tools``;
 4. PRC-3.4 ``docs/design/tools/check_flows.py --decider`` runs on the current sprint's flows file
    (``docs/design/flows-sprint-NN.md``, NN = newest ``docs/sprints/sprint-NN.md``) for every role
-   row of its DR-NN decider table, whether or not the change touches it; skipped until it exists.
+   row of its DR-NN decider table, whether or not the change touches it; skipped until it exists;
+5. PRC-11.1 (CI-DOC-CHECK-06) every ``source.citation_id`` in ``content/references/**/*.json``
+   (whole tree, changed or not) is a row id of ``docs/domain/sources.md``; a file that does not
+   parse fails; skipped while no reference file exists;
+6. PRC-11.2 (CI-DOC-CHECK-06) ``docs/security/tools/check_threat_notes.py`` runs on the newest
+   ``docs/security/threat-notes-sprint-NN.md``; skipped while none exists.
+The cost-per-PR table rule (PRC-11.3) is ``check_cost_table.py`` in the pr-policy job.
 Exit 0 all pass; 1 at least one problem (one ``FAIL`` line each); 2 usage or git error.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -29,6 +36,10 @@ import yaml
 
 REGISTER = "docs/research/agentic-sdlc-best-practices.md"
 FLOWS_TOOL = "docs/design/tools/check_flows.py"
+SOURCES = "docs/domain/sources.md"
+REFERENCES = "content/references"
+THREAT_TOOL = "docs/security/tools/check_threat_notes.py"
+SOURCE_ROW = re.compile(r"^\| (SRC-\d{4}) \|", re.M)
 SUBPROJECTS = ("backend", "web", "infra")
 CODE = re.compile(r"`([^`\n]+)`")
 LINK = re.compile(r"\]\(([^)\s]+)\)")
@@ -189,6 +200,76 @@ def flows_problems(root: Path) -> tuple[list[str], list[str]]:
     return [f"FAIL flows: {label}: {ln}" for ln in fails], [info]
 
 
+def citation_ids(node: object, where: str = "") -> list[tuple[str, object]]:
+    """(JSON path, value) of every ``source.citation_id`` that is present and not null."""
+    out: list[tuple[str, object]] = []
+    if isinstance(node, dict):
+        src = node.get("source")
+        if isinstance(src, dict) and src.get("citation_id") is not None:
+            out.append((f"{where}.source.citation_id".lstrip("."), src["citation_id"]))
+        for key, value in node.items():
+            out += citation_ids(value, f"{where}.{key}")
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            out += citation_ids(value, f"{where}[{i}]")
+    return out
+
+
+def reference_problems(root: Path) -> tuple[list[str], list[str]]:
+    """PRC-11.1: (problems, info lines) for the citation ids of every reference set file."""
+    files = sorted((root / REFERENCES).rglob("*.json"))
+    if not files:
+        return [], [f"references: no {REFERENCES}/**/*.json; skipped (PRC-11.1)"]
+    register = root / SOURCES
+    rows = (
+        set(SOURCE_ROW.findall(register.read_text(encoding="utf-8")))
+        if register.is_file()
+        else None
+    )
+    problems, resolved = [], 0
+    for path in files:
+        rel = path.relative_to(root).as_posix()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            problems.append(f"FAIL reference: {rel}: does not parse as JSON ({exc})")
+            continue
+        for where, cid in citation_ids(data):
+            if rows is None:
+                problems.append(f"FAIL reference: {rel}: {where} {cid}: {SOURCES} not found")
+            elif isinstance(cid, str) and cid in rows:
+                resolved += 1
+            else:
+                shown = cid if isinstance(cid, str) and cid else repr(cid)
+                problems.append(f"FAIL reference: {rel}: {where} {shown} is not a row of {SOURCES}")
+    info = f"references: {len(files)} file(s), {resolved} citation(s) resolved in {SOURCES}"
+    return problems, [info]
+
+
+def threat_notes_problems(root: Path) -> tuple[list[str], list[str]]:
+    """PRC-11.2: (problems, info lines) of check_threat_notes.py on the newest threat notes."""
+    notes = sorted(
+        (root / "docs" / "security").glob("threat-notes-sprint-[0-9]*.md"),
+        key=lambda p: int(re.sub(r"\D", "", p.stem) or 0),
+    )
+    if not notes:
+        return [], ["threat-notes: no docs/security/threat-notes-sprint-NN.md; skipped (PRC-11.2)"]
+    rel = notes[-1].relative_to(root).as_posix()
+    tool = root / THREAT_TOOL
+    if not tool.is_file():
+        return [f"FAIL threat-notes: {THREAT_TOOL} not found (needed for {rel})"], []
+    proc = subprocess.run(
+        [sys.executable, str(tool), str(notes[-1]), "--decisions", str(root / "docs/decisions")],
+        capture_output=True,
+        text=True,
+    )
+    info = f"threat-notes: {rel}: rc {proc.returncode}"
+    if proc.returncode == 0:
+        return [], [info]
+    fails = [ln.removeprefix("FAIL ") for ln in proc.stdout.splitlines() if ln.startswith("FAIL")]
+    return [f"FAIL threat-notes: {rel}: {ln}" for ln in fails or [proc.stderr.strip()]], [info]
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("files", nargs="*", help="Markdown files to check whole (default: the diff)")
@@ -226,8 +307,11 @@ def main(argv: list[str] | None = None) -> int:
             problems += citation_problems(register or {}, rel, n, line)
         if re.fullmatch(r"\.claude/agents/[^/]+\.md", rel):
             problems += front_matter_problems(rel, text)
-    flow_fails, info = flows_problems(root)
-    problems += flow_fails
+    info: list[str] = []
+    for rule in (flows_problems, reference_problems, threat_notes_problems):
+        fails, lines = rule(root)
+        problems += fails
+        info += lines
     print("\n".join([*info, *problems]))
     print(f"doc-check: {len(problems)} problem(s) in {len(targets)} file(s)")
     return 1 if problems else 0
