@@ -24,6 +24,13 @@ drills overlap) needs S + 1 swap-counted drills (``duration_min`` <= m) per targ
 profile cell for the first "Not for me" to swap. Gaps read
 ``AN-02 x intermediate x solo+wall: drills: 2 < 3 (single-weakness swap)``.
 ``check_session_size`` is pure.
+
+Pattern axis (ST-173b; FR-173.R3), on with ``--patterns``: each rankable reference pattern
+(``PATTERN_TARGETS``) x level x players (1, 2, 4) x equipment setup (wall; no wall: a court;
+ball machine: a court and a ball machine) needs >= 1 counted drill the plan could assign there
+(``Drill.fits`` and the drill cap of a 30-minute session), else the plan says "no exercise yet
+for this gap". Gaps read ``AN-13 x intermediate x 1 player x wall: no fitting drill``.
+``check_patterns`` is pure.
 """
 
 from __future__ import annotations
@@ -266,6 +273,60 @@ def check_session_size(
     return SessionSizeReport(tuple(cells), tuple(g for c in cells for g in c.gaps()))
 
 
+PATTERN_TARGETS = ("AN-09", "AN-13")  # rankable new patterns (pattern-catalogue §1)
+PLAYER_COUNTS = (1, 2, 4)
+COURT = frozenset({"half_court", "full_court"})
+EQUIPMENT_SETUPS = (
+    ("wall", frozenset({"wall"})),
+    ("no wall", COURT),
+    ("ball machine", COURT | {BALL_MACHINE}),
+)
+
+
+@dataclass(frozen=True, slots=True)
+class PatternCell:
+    """One pattern x level x players x equipment cell: the counted drills that fit it."""
+
+    target: str
+    level: str
+    players: int
+    equipment: str
+    drills: int
+
+    def gaps(self) -> list[str]:
+        if self.drills:
+            return []
+        who = f"{self.players} player{'s' if self.players > 1 else ''}"
+        cell = f" {TIMES} ".join((self.target, self.level, who, self.equipment))
+        return [f"{cell}: no fitting drill"]
+
+
+@dataclass(frozen=True, slots=True)
+class PatternReport:
+    cells: tuple[PatternCell, ...]
+    gaps: tuple[str, ...]
+
+    @property
+    def ok(self) -> bool:
+        return not self.gaps
+
+
+def check_patterns(drills: Iterable[Drill]) -> PatternReport:
+    """Per pattern, level, players and equipment setup: the counted non-warm-up drills the plan
+    could assign (``Drill.fits``, QD-PL-02; ``duration_min`` under the drill cap, QD-PL-03)."""
+    in_cells = [d for d in _counted(drills) if not d.is_warm_up]
+    cells = []
+    for target in PATTERN_TARGETS:
+        for level in LEVELS:
+            for players in PLAYER_COUNTS:
+                for name, equipment in EQUIPMENT_SETUPS:
+                    profile = Profile(name, players, equipment, (level,))
+                    fit = _fitting(in_cells, profile.preferences(level))
+                    n = sum(target in d.plan_targets for d in fit)
+                    cells.append(PatternCell(target, level, players, name, n))
+    return PatternReport(tuple(cells), tuple(g for c in cells for g in c.gaps()))
+
+
 def render(report: CoverageReport) -> list[str]:
     """A header, then one row per cell in target x level order."""
     head = ("target", "level", "drills", f"players{AT_MOST}{SMALL_GROUP}", "no_ball_machine")
@@ -286,6 +347,13 @@ def render_session_size(report: SessionSizeReport) -> list[str]:
     rows: list[tuple[object, ...]] = [("target", "level", "profile", "swap-counted", "need")]
     rows += [(c.target, c.level, c.profile, c.drills, c.need) for c in report.cells]
     return [f"{t:<20}{lv:<14}{p:<11}{n:>13}{k:>6}" for t, lv, p, n, k in rows]
+
+
+def render_patterns(report: PatternReport) -> list[str]:
+    """A header, then one row per cell in pattern x level x players x equipment order."""
+    rows: list[tuple[object, ...]] = [("pattern", "level", "players", "equipment", "drills")]
+    rows += [(c.target, c.level, c.players, c.equipment, c.drills) for c in report.cells]
+    return [f"{t:<8}{lv:<14}{p:>7}  {e:<14}{n:>6}" for t, lv, p, e, n in rows]
 
 
 def load_library(root: Path) -> tuple[list[Drill], list[str]]:
@@ -313,6 +381,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="also check S + 1 swap-counted drills per profile cell (ST-081a)",
     )
+    parser.add_argument(
+        "--patterns",
+        action="store_true",
+        help="also check each rankable pattern x level x players x equipment cell (ST-173b)",
+    )
     args = parser.parse_args(argv)
     root: Path = args.library
     if not root.is_dir():
@@ -328,6 +401,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         sizes = check_session_size(drills)
         problems += sizes.gaps
         print("\n".join(render_session_size(sizes)))
+    if args.patterns:
+        patterns = check_patterns(drills)
+        problems += patterns.gaps
+        print("\n".join(render_patterns(patterns)))
     print(f"library: {report.counted} reviewed drill(s), {report.warm_ups} warm-up(s)")
     print("".join(f"FAIL {p}\n" for p in problems), end="")
     print(f"{root}: {'FAILED' if problems else 'ok'}, {len(problems)} problem(s)")
