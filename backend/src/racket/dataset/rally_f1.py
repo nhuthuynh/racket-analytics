@@ -8,9 +8,11 @@ no I/O. The rules, from ADR 0004 ("start and end each within ±1.0 s, not merged
   ``2.1 - 1.1`` does not turn exactly 1.0 s into a miss.
 * R2 (NFR-006.2): a prediction that overlaps two gold rallies which do not overlap each other is
   a merge and matches nothing.
-* R3 (NFR-006.3): a gold rally overlapped by two predictions which do not overlap each other is
-  a split and matches nothing. Two predictions that overlap each other are duplicates, not
-  pieces, so they fall under R4.
+* R3 (NFR-006.3): a gold rally with two pieces that do not overlap each other is a split and
+  matches nothing. A piece is a prediction that overlaps the gold rally, lies inside it with the
+  1.0 s slack on each side, and is not itself a merge (R2), so a merge or a prediction running
+  well past the gold rally does not cancel a correct match. Two predictions that overlap each
+  other are duplicates, not pieces, so they fall under R4.
 * R4 (NFR-006.4): matching is one-to-one and of maximum size (augmenting paths), so the count
   does not depend on input order.
 
@@ -78,7 +80,7 @@ def match_rallies(predicted: Sequence[Rally], gold: Sequence[Rally]) -> RallyF1:
         [
             j
             for j, g in enumerate(gold)
-            if _within_tolerance(p, g) and not _cut(p, gold) and not _cut(g, predicted)
+            if _within_tolerance(p, g) and not _cut(p, gold) and not _split(g, predicted, gold)
         ]
         for p in predicted
     ]
@@ -94,6 +96,21 @@ def _within_tolerance(p: Rally, g: Rally) -> bool:
     return (
         round(abs(p.start_s - g.start_s) * 1000) <= TOLERANCE_MS
         and round(abs(p.end_s - g.end_s) * 1000) <= TOLERANCE_MS
+    )
+
+
+def _split(g: Rally, predicted: Sequence[Rally], gold: Sequence[Rally]) -> bool:
+    """True when gold rally ``g`` has two pieces that do not overlap each other (R3)."""
+    pieces = [p for p in predicted if _piece_of(p, g) and not _cut(p, gold)]
+    return any(not a.overlaps(b) for k, a in enumerate(pieces) for b in pieces[k + 1 :])
+
+
+def _piece_of(p: Rally, g: Rally) -> bool:
+    """True when ``p`` overlaps ``g`` and lies inside it, with the 1.0 s slack on each side."""
+    return (
+        p.overlaps(g)
+        and round((g.start_s - p.start_s) * 1000) <= TOLERANCE_MS
+        and round((p.end_s - g.end_s) * 1000) <= TOLERANCE_MS
     )
 
 
