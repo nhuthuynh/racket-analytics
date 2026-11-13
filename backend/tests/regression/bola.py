@@ -153,7 +153,14 @@ _PROBES += [
 MATRIX: dict[RouteKey, Probe] = {(p.method, p.template): p for p in _PROBES}
 
 # Routes with a path parameter that is not an owned resource ID. Each needs a reason.
-EXEMPT: dict[RouteKey, str] = {}
+EXEMPT: dict[RouteKey, str] = {
+    # ST-170b (SEC-6 §8 row 2): reference entries are shared, coach-owned content with no owner,
+    # so an owner/attacker pair does not apply. The row's rule (a draft entry is the 404 of an
+    # unknown id for every signed-in user; a coach-reviewed entry of the same version answers
+    # 200 as the positive control; anonymous 401) is IT-06-02
+    # (tests/integration/test_it_06_02_reference_read_api.py).
+    ("GET", "/reference-sets/{version}/entries/{entry_id}"): "shared reference content (IT-06-02)",
+}
 
 
 def all_routes(app: Any) -> set[RouteKey]:

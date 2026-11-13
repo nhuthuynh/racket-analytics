@@ -1,0 +1,24 @@
+{
+  "source": "backend create_app().openapi() at a13efa2e: the /reference-sets paths, response codes only (ST-170b); regenerate with the command in docs/sprints/06/decisions/ST-170b.md",
+  "paths": {
+    "/reference-sets/current": {
+      "get": {
+        "responses": [
+          "200",
+          "401",
+          "404"
+        ]
+      }
+    },
+    "/reference-sets/{version}/entries/{entry_id}": {
+      "get": {
+        "responses": [
+          "200",
+          "401",
+          "404",
+          "422"
+        ]
+      }
+    }
+  }
+}

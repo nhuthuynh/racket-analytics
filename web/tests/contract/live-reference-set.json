@@ -1,0 +1,145 @@
+{
+  "current": {
+    "status": 200,
+    "body": {
+      "set": "pb-reference",
+      "version": 1,
+      "entries": [
+        {
+          "id": "REF-AN09-D-ADV",
+          "pattern_id": "AN-09",
+          "definition_version": "0.1",
+          "better_direction": "inside_band",
+          "interval_method": "wilson",
+          "level_band": "advanced",
+          "format": "doubles",
+          "source_type": "judgment",
+          "provenance_label": "coach judgment, not measured from pro matches",
+          "citation_id": "SRC-0002",
+          "status": "verified",
+          "version": 1,
+          "value": null,
+          "band": [
+            0.5,
+            0.75
+          ],
+          "n": null,
+          "k": null,
+          "interval": [
+            0.5,
+            0.75
+          ]
+        },
+        {
+          "id": "REF-AN09-D-INT",
+          "pattern_id": "AN-09",
+          "definition_version": "0.1",
+          "better_direction": "inside_band",
+          "interval_method": "wilson",
+          "level_band": "intermediate",
+          "format": "doubles",
+          "source_type": "judgment",
+          "provenance_label": "coach judgment, not measured from pro matches",
+          "citation_id": "SRC-0002",
+          "status": "coach-reviewed",
+          "version": 1,
+          "value": null,
+          "band": [
+            0.45,
+            0.7
+          ],
+          "n": null,
+          "k": null,
+          "interval": [
+            0.45,
+            0.7
+          ]
+        },
+        {
+          "id": "REF-AN13-D-INT",
+          "pattern_id": "AN-13",
+          "definition_version": "0.1",
+          "better_direction": "higher",
+          "interval_method": "order_statistic_median",
+          "level_band": "intermediate",
+          "format": "doubles",
+          "source_type": "judgment",
+          "provenance_label": "coach judgment, not measured from pro matches",
+          "citation_id": "SRC-0001",
+          "status": "coach-reviewed",
+          "version": 1,
+          "value": null,
+          "band": [
+            4,
+            8
+          ],
+          "n": null,
+          "k": null,
+          "interval": [
+            4,
+            8
+          ]
+        }
+      ]
+    }
+  },
+  "reviewed_by_id": {
+    "status": 200,
+    "body": {
+      "set": "pb-reference",
+      "id": "REF-AN09-D-INT",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "interval_method": "wilson",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "judgment",
+      "provenance_label": "coach judgment, not measured from pro matches",
+      "citation_id": "SRC-0002",
+      "status": "coach-reviewed",
+      "version": 1,
+      "value": null,
+      "band": [
+        0.45,
+        0.7
+      ],
+      "n": null,
+      "k": null,
+      "interval": [
+        0.45,
+        0.7
+      ]
+    }
+  },
+  "draft_by_id": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "We could not find that.",
+        "support_ref": "ref_528d9b7e7f666663"
+      }
+    }
+  },
+  "unknown_by_id": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "We could not find that.",
+        "support_ref": "ref_aa401e5bb3d50f40"
+      }
+    }
+  },
+  "signed_out": {
+    "status": 401,
+    "body": {
+      "error": {
+        "code": "unauthenticated",
+        "message": "Please sign in.",
+        "support_ref": "ref_b8a0b096a40d9991"
+      }
+    }
+  }
+}
