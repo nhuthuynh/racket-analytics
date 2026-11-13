@@ -107,6 +107,8 @@ class PullRequest:
         event = {
             "toJSON(github.event.pull_request.labels.*.name)": json.dumps(payload_labels or []),
             "github.event.pull_request.number": str(PR_NUMBER),
+            # No "[ID]" prefix: the cost-table step (CI-DOC-CHECK-06) skips a non-ticket PR.
+            "github.event.pull_request.title": "planted policy change",
             "github.token": "stub-token" if api else "",
             "github.event.pull_request.base.sha": self.base_sha,
             "github.event.pull_request.head.sha": self.head_sha,

@@ -366,7 +366,9 @@ def test_reference_citation_without_a_sources_register_fails(repo: tuple[Path, s
     commit(root)
     rc, out = check(root, base)
     assert rc == 1, out
-    assert f"FAIL reference: {REF}: entries[0].source.citation_id SRC-0001: {SOURCES} not found" in out
+    assert (
+        f"FAIL reference: {REF}: entries[0].source.citation_id SRC-0001: {SOURCES} not found" in out
+    )
 
 
 def test_no_reference_set_yet_is_skipped_and_reported(repo: tuple[Path, str]) -> None:

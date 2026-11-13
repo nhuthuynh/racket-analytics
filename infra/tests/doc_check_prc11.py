@@ -28,7 +28,9 @@ SOURCES_TEXT = """# Sources register (domain citations)
 """
 
 THREAT_ROW_OK = "| T6-FT-1 | S | Footage without rights | Gate G1 | V2 | ST-175a | IT-06-08 | D |"
-THREAT_ROW_NO_STATUS = "| T6-FT-1 | S | Footage without rights | Gate G1 | V2 | ST-175a | IT-06-08 | |"
+THREAT_ROW_NO_STATUS = (
+    "| T6-FT-1 | S | Footage without rights | Gate G1 | V2 | ST-175a | IT-06-08 | |"
+)
 
 COST_TABLE = """## Cost per PR
 
@@ -45,7 +47,9 @@ def reference(*citations: str | None, footage: str | None = None) -> str:
         source: dict[str, str | None] = {"citation_id": cid}
         if cid is None:
             source["footage_id"] = footage or "FT-0001"
-        entries.append({"pattern_id": f"AN-{8 + i:02d}", "source_type": "judgment", "source": source})
+        entries.append(
+            {"pattern_id": f"AN-{8 + i:02d}", "source_type": "judgment", "source": source}
+        )
     return json.dumps({"set": "planted", "version": 1, "entries": entries}, indent=2) + "\n"
 
 
