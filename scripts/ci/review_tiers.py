@@ -97,6 +97,9 @@ _TIER2 = (
     "scripts/ci/merge_ready.py",
     "scripts/ci/review_tiers.py",
     "scripts/measure/scheduled_red.py",  # merge_ready imports its gate rule (SEC-242-01)
+    # the NFR-062 licence gate and its exception allowlist (`--allow` in ci.yml; SEC-255-01)
+    "scripts/ci/check_licences.py",
+    "infra/licence-exceptions.json",
 )
 
 # A tier 2 glob whose path a named ticket creates. Classified like `RULES`; exempt from the
@@ -105,13 +108,17 @@ PENDING_GLOBS: dict[str, str] = {
     # Sprint 6 (CI-TIERS-06, PRC-10.1): footage rights and consent per filmed person (ADR 0062,
     # planned), pose data (High, NFR-063.4), the pattern-measure snapshot (ADR 0061) and model
     # weights with their licence manifest (NFR-062). Named, so not tier 2 only by fail-closed.
+    # Each concern as a module name and as a package directory (`<name>*/**`, review round 1 M1).
     "backend/src/racket/**/provenance*": "ST-175a",
-    "backend/src/racket/**/provenance/**": "ST-175a",
+    "backend/src/racket/**/provenance*/**": "ST-175a",
     "backend/src/racket/**/footage*": "ST-175a",
+    "backend/src/racket/**/footage*/**": "ST-175a",
     "backend/src/racket/**/consent*": "ST-175a",
+    "backend/src/racket/**/consent*/**": "ST-175a",
     "backend/src/racket/**/pose*": "ST-175a",
-    "backend/src/racket/**/pose/**": "ST-175a",
+    "backend/src/racket/**/pose*/**": "ST-175a",
     "backend/src/racket/analytics/patterns/snapshot*": "ST-171e",
+    "backend/src/racket/analytics/patterns/snapshot*/**": "ST-171e",
     "models/**": "ST-175b",
 }
 
