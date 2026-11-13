@@ -169,6 +169,8 @@ class GitHubStub:
     contents: dict[tuple[str, str], bytes] = field(default_factory=default_contents)
     modes: dict[str, str] = field(default_factory=dict)  # path -> git mode; default 100644
     tree_truncated: bool = False
+    # CI-SCHEDULED-RED: runs listed by GET /actions/runs?event=schedule&branch=..., newest first.
+    scheduled_runs: list[dict[str, Any]] = field(default_factory=list)
 
     def content(self, path: str, ref: str) -> bytes | None:
         """A changed file that is not removed has plain text at the head unless set."""
@@ -215,6 +217,18 @@ def _handler(stub: GitHubStub) -> type[BaseHTTPRequestHandler]:
                 runs = [r for r in stub.check_runs if r.get("head_sha", HEAD_SHA) == m.group(1)]
                 chunk, more = self._page(runs, page)
                 return self._send({"total_count": len(runs), "check_runs": chunk}, more, page)
+            if parts.path == f"{base}/actions/runs" and "event" in parse_qs(parts.query):
+                q = {k: v[0] for k, v in parse_qs(parts.query).items()}
+                listed = sorted(stub.scheduled_runs, key=lambda r: r["id"], reverse=True)
+                keep = [
+                    r
+                    for r in listed
+                    if r.get("event") == q["event"]
+                    and r.get("head_branch") == q.get("branch", r.get("head_branch"))
+                    and r.get("status") == q.get("status", r.get("status"))
+                ]
+                chunk, more = self._page(keep, page)
+                return self._send({"total_count": len(keep), "workflow_runs": chunk}, more, page)
             if parts.path == f"{base}/actions/runs":
                 sha = parse_qs(parts.query).get("head_sha", [""])[0]
                 wruns = [r for r in stub.workflow_runs if r["head_sha"] == sha]
