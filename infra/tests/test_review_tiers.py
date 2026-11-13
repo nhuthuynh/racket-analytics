@@ -489,3 +489,141 @@ def test_every_module_merge_ready_imports_is_tier_2(rt: ModuleType) -> None:
     assert "scripts/measure/scheduled_red.py" in imported
     assert "scripts/ci/review_tiers.py" in imported
     assert {p: tier(rt, p) for p in imported} == dict.fromkeys(imported, 2)
+
+
+# ------------------------------------------- Sprint 6 paths (CI-TIERS-06; PRC-10.1, PRC-10.2)
+# The path matrix of docs/sprints/sprint-06.md §3 CI-TIERS-06 and §5 (red-first column): footage,
+# provenance, pose, consent, the pattern-measure snapshot and model weights are tier 2 by a NAMED
+# rule (not only by the fail-closed default); content/references/** is tier 1 and flags the
+# pickleball-domain-coach; tier 1-2 still need a senior-qa-engineer APPROVE on the head.
+# Each path below is tier 1 (or tier 2 by fail-closed only) on main before this ticket.
+SPRINT6_TIER2 = [
+    ("backend/src/racket/dataset/provenance.py", "ST-175a"),
+    ("backend/src/racket/video_ingest/provenance/record.py", "ST-175a"),
+    ("backend/src/racket/analysis_jobs/provenance_gate.py", "ST-175a"),
+    ("backend/src/racket/dataset/footage.py", "ST-175a"),
+    ("backend/src/racket/analysis_jobs/footage_permit.py", "ST-175a"),
+    ("backend/src/racket/dataset/consent.py", "ST-175a"),
+    ("backend/src/racket/players/consent_refs.py", "ST-175a"),
+    ("backend/src/racket/worker/pose.py", "ST-175a"),
+    ("backend/src/racket/worker/pose/keypoints.py", "ST-175a"),
+    ("backend/src/racket/analytics/patterns/snapshot.py", "ST-171e"),
+    ("backend/src/racket/analytics/patterns/snapshot_repository.py", "ST-171e"),
+    ("models/manifest.json", "ST-175b"),
+    ("models/weights/pose-small.onnx", "ST-175b"),
+    # Review round 1 (M1): the same concerns as a package directory, not only as a module name.
+    ("backend/src/racket/footage/rights.py", "ST-175a"),
+    ("backend/src/racket/footage_rights/record.py", "ST-175a"),
+    ("backend/src/racket/consent/x.py", "ST-175a"),
+    ("backend/src/racket/dataset/consent_records/grant.py", "ST-175a"),
+    ("backend/src/racket/pose_estimation/model.py", "ST-175a"),
+    ("backend/src/racket/dataset/provenance_records/entry.py", "ST-175a"),
+    ("backend/src/racket/analytics/patterns/snapshots/repo.py", "ST-171e"),
+]
+# Negatives per path: near misses that stay tier 1 (no Sprint 6 tier 2 rule matches them).
+SPRINT6_NOT_TIER2 = [
+    "backend/src/racket/analytics/patterns/measures.py",
+    "backend/src/racket/analytics/patterns/third_shot.py",
+    "backend/src/racket/analytics/snapshot.py",  # the ADR 0040 metric snapshot, unchanged
+    "backend/src/racket/dataset/models.py",  # models/** is the repo-root weights folder only
+    "backend/src/racket/worker/composer.py",  # "pose" not at the start of a name
+    "backend/src/racket/coaching/reference/loader.py",
+    "content/references/pickleball/v1.json",
+]
+
+
+def _named_rule_tier(rt: ModuleType, path: str) -> int | None:
+    """The highest tier of the rules (RULES and PENDING_GLOBS) that name `path`, or None when
+    only the fail-closed default would classify it."""
+    rules = (*rt.RULES, *(rt.Rule(g, 2) for g in rt.PENDING_GLOBS))
+    return max((r.tier for r in rules if rt.glob_match(r.glob, path)), default=None)
+
+
+@pytest.mark.parametrize(("path", "ticket"), SPRINT6_TIER2)
+def test_a_sprint_6_personal_data_or_licence_path_is_tier_2_by_a_named_rule(
+    rt: ModuleType, path: str, ticket: str
+) -> None:
+    assert _named_rule_tier(rt, path) == 2, path
+    assert tier(rt, path) == 2
+    assert tier(rt, "docs/x.md", path) == 2
+
+
+@pytest.mark.parametrize(("path", "ticket"), SPRINT6_TIER2)
+def test_a_sprint_6_glob_that_matches_nothing_yet_names_its_creating_ticket(
+    rt: ModuleType, path: str, ticket: str
+) -> None:
+    pending = {g: t for g, t in rt.PENDING_GLOBS.items() if rt.glob_match(g, path)}
+    live = [r.glob for r in rt.RULES if r.tier == 2 and rt.glob_match(r.glob, path)]
+    assert pending or live, path
+    for glob, named in pending.items():
+        assert named == ticket, (glob, named)
+
+
+@pytest.mark.parametrize("path", SPRINT6_NOT_TIER2)
+def test_a_sprint_6_near_miss_stays_tier_1(rt: ModuleType, path: str) -> None:
+    assert tier(rt, path) == 1
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "content/references/pickleball/v1.json",
+        "content/references/pickleball/v2.json",
+        "content/references/references.lock",
+    ],
+)
+def test_a_reference_set_file_is_tier_1_and_flags_the_coach(rt: ModuleType, path: str) -> None:
+    got = rt.classify([rt.ChangedFile(path)])
+    assert got.tier == 1
+    assert "pickleball-domain-coach" in got.specialists
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["content/referencesx/v1.json", "docs/domain/references.md", "content/glossary.yaml"],
+)
+def test_a_path_outside_content_references_does_not_flag_the_coach(
+    rt: ModuleType, path: str
+) -> None:
+    assert "pickleball-domain-coach" not in rt.classify([rt.ChangedFile(path)]).specialists
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("content/references/pickleball/v1.json", 1),
+        ("backend/src/racket/analytics/patterns/snapshot.py", 2),
+        ("models/manifest.json", 2),
+        ("backend/src/racket/dataset/consent.py", 2),
+    ],
+)
+def test_merge_ready_still_requires_the_qa_approve_on_sprint_6_paths(
+    rt: ModuleType, path: str, expected: int
+) -> None:
+    mr = _load("merge_ready", MERGE_READY)
+    got = mr.review_tier([rt.ChangedFile(path)])
+    assert got.tier == expected
+    required = mr.Gate(tier=got.tier, specialists=got.specialists).required()
+    assert "senior-qa-engineer" in required
+    assert "principal-engineer" in required
+    assert ("security-privacy-engineer" in required) is (expected == 2)
+
+
+# Review round 1 (SEC-255-01): the NFR-062 licence gate and its exception allowlist (the `--allow`
+# file the CI licence step passes) are tier 2 by a live rule, so loosening either one, or adding an
+# AGPL exception, needs the security-privacy-engineer, as models/** does.
+LICENCE_GATE = ["scripts/ci/check_licences.py", "infra/licence-exceptions.json"]
+
+
+@pytest.mark.parametrize("path", LICENCE_GATE)
+def test_the_licence_gate_and_its_allowlist_are_tier_2_by_a_live_rule(
+    rt: ModuleType, path: str
+) -> None:
+    live = [r.glob for r in rt.RULES if r.tier == 2 and rt.glob_match(r.glob, path)]
+    assert live, path
+    assert tier(rt, path) == 2
+    assert tier(rt, "docs/x.md", path) == 2
+    mr = _load("merge_ready", MERGE_READY)
+    got = mr.review_tier([rt.ChangedFile(path)])
+    required = mr.Gate(tier=got.tier, specialists=got.specialists).required()
+    assert "security-privacy-engineer" in required
