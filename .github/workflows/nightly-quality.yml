@@ -4,7 +4,8 @@
 # * mutation: mutmut on sports/pickleball/rules (NFR-072). Sprint 1 records a baseline; the
 #             >= 85% gate starts in Sprint 2. Since SRE-VERIFY04R3-03 (sprint-04 §8, retro C5) also
 #             coaching/plan and coaching/weakness, each gated at >= 0.80 and from an empty
-#             mutants/ (mutmut 3 keeps earlier results there).
+#             mutants/ (mutmut 3 keeps earlier results there). Sprint 5 adds
+#             matches/scorebook/integrity.py (ST-076b) and dataset/rally_f1.py (ST-084b).
 # * perf-r1:  R1 reads at 50 RPS per endpoint on a flags-on Compose stack (ST-074; NFR-010.1-.9;
 #             G05-01): the goal-scorecard §4 G05-01 command, 3 runs, every run must pass. Not
 #             PR-blocking at first (sprint-05 §8.4, judgment) and not needed by publish.
@@ -127,6 +128,15 @@ jobs:
             --project . --target src/racket/matches/scorebook/integrity.py \
             --tests tests/unit/matches/test_corrections_integrity.py \
             --min-score 0.80 --out ../reports/mutation-matches-integrity.json
+      # Sprint-05 §8 (ST-084b): the rally-segmentation F1 matcher (NFR-006.1-.4), one module, >= 0.80.
+      - name: mutmut run, dataset/rally_f1 >= 0.80 (sprint-05 §8)
+        if: success() || failure()
+        run: |
+          rm -rf mutants
+          uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
+            --project . --target src/racket/dataset/rally_f1.py \
+            --tests tests/unit/dataset/test_rally_f1.py \
+            --min-score 0.80 --out ../reports/mutation-dataset-rally-f1.json
       - name: Report as job output
         id: report
         if: always()
