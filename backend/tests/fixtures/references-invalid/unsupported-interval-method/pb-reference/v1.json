@@ -1,0 +1,25 @@
+{
+  "schema": "reference-set/v1",
+  "set": "pb-reference",
+  "version": 1,
+  "entries": [
+    {
+      "id": "REF-AN04-D-INT",
+      "pattern_id": "AN-04",
+      "definition_version": "0.1",
+      "better_direction": "lower",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "judgment",
+      "source": {
+        "citation_id": "SRC-9999"
+      },
+      "band": [
+        1.0,
+        3.0
+      ],
+      "status": "coach-reviewed",
+      "version": 1
+    }
+  ]
+}

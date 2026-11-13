@@ -8,7 +8,8 @@
   refuses a reference change that breaks a rule.
 * A missing path exits 2.
 
-Runs the real CLI against the real pattern catalogue and sources register (no mocks).
+Runs the real CLI against the real pattern catalogue and sources register (no mocks); a planted
+tree that needs a pattern the catalogue does not have carries its own ``pattern-catalogue.md``.
 Written red first: before ST-170a nothing checks a reference entry.
 """
 
@@ -43,12 +44,26 @@ REFUSALS = {
     ),
     "inside-band-point-value": ("REF-AN09-D-INT", "band", "missing field"),
     "published-no-n": ("REF-AN13-D-INT", "n", "missing field"),
+    # review round 1 (PE-R1-ST170a-01, F1, COACH-170a-01, SEC-R1-ST170a-01)
+    "unsupported-interval-method": ("REF-AN04-D-INT", "interval_method", "none"),
+    "citation-unresolved": ("REF-AN09-D-INT", "source", "unresolved citation SRC-0010"),
+    "citation-exists-unfetched": ("REF-AN09-D-INT", "source", "unresolved citation SRC-0008"),
+    "non-finite-band": ("REF-AN09-D-INT", "band", "must be a finite number"),
+    "non-finite-wilson-value": ("REF-AN10-D-INT", "value", "must be a finite number"),
+    "non-finite-median-value": ("REF-AN13-D-INT", "value", "must be a finite number"),
 }
+
+
+def _catalogue(root: Path) -> Path:
+    """A planted tree may carry its own ``pattern-catalogue.md`` (a pattern the repository
+    catalogue does not have yet); otherwise the repository catalogue."""
+    planted = root / "pattern-catalogue.md"
+    return planted if planted.exists() else CATALOGUE
 
 
 def _lint(root: Path, capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
     capsys.readouterr()
-    rc = LINT.load()(lint_args(root))
+    rc = LINT.load()([*lint_args(root), "--catalogue", str(_catalogue(root))])
     out, err = capsys.readouterr()
     return int(rc), out + err
 
@@ -88,7 +103,7 @@ def test_loader_refuses_a_planted_fixture(rule: str) -> None:
     loader = LOADER.load()
 
     with pytest.raises(loader.ReferenceSetRefused) as refused:
-        loader.load_reference_sets(INVALID / rule, CATALOGUE, SOURCES)
+        loader.load_reference_sets(INVALID / rule, _catalogue(INVALID / rule), SOURCES)
 
     assert refused.value.problems
 

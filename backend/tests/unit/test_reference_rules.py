@@ -24,6 +24,7 @@ def _catalogue() -> dict[str, Any]:
         "AN-09": rules.Pattern("0.1", "inside_band", "wilson"),
         "AN-13": rules.Pattern("0.1", "higher", "order_statistic_median"),
         "AN-10": rules.Pattern("0.1", "higher", "wilson"),
+        "AN-04": rules.Pattern("0.1", "lower", "none"),
     }
 
 
@@ -33,6 +34,8 @@ def _sources() -> dict[str, Any]:
         "SRC-0002": rules.Source("definition", "resolved"),
         "SRC-0012": rules.Source("statistic", "unresolved"),
         "SRC-0100": rules.Source("statistic", "resolved"),
+        "SRC-0010": rules.Source("definition", "unresolved"),
+        "SRC-0008": rules.Source("rule", "exists-unfetched"),
     }
 
 
@@ -94,6 +97,18 @@ def test_an_unresolved_citation_is_refused() -> None:
     assert ("REF-AN09-D-INT", "source", "unresolved citation SRC-9999") in problems
 
 
+@pytest.mark.parametrize(
+    ("cid", "status"), [("SRC-0010", "unresolved"), ("SRC-0008", "exists-unfetched")]
+)
+def test_a_judgment_citation_whose_register_row_is_not_resolved_is_refused(
+    cid: str, status: str
+) -> None:
+    """FR-170.R1 "a source id that resolves"; sources.md §1 rule 2 (review F1, COACH-170a-01)."""
+    problems = _problems([entry(source={"citation_id": cid})])
+
+    assert ("REF-AN09-D-INT", "source", f"unresolved citation {cid} ({status})") in problems
+
+
 def test_a_published_value_needs_a_resolved_statistic_row() -> None:
     problems = _problems([_published(source={"citation_id": "SRC-0012"})])
 
@@ -116,6 +131,52 @@ def test_a_published_median_needs_an_interval_around_its_value() -> None:
     assert _problems([median]) == []
     assert "interval" in _fields(_problems([{**median, "interval": [7, 9]}]))
     assert "interval" in _fields(_problems([{k: v for k, v in median.items() if k != "interval"}]))
+
+
+def test_an_entry_for_a_pattern_with_no_supported_interval_method_is_refused() -> None:
+    """ADR 0061 Rule 3.1: no reference entry for a pattern whose interval_method is not
+    ``wilson`` or ``order_statistic_median`` (review PE-R1-ST170a-01)."""
+    problems = _problems([entry(pattern_id="AN-04", better_direction="lower")])
+
+    assert (
+        "REF-AN09-D-INT", "interval_method",
+        "AN-04 has interval_method none; supported: order_statistic_median, wilson",
+    ) in problems  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    ("changes", "field"),
+    [
+        ({"value": float("nan"), "n": 10, "k": 5}, "value"),
+        ({"value": float("inf"), "n": 10, "k": 5}, "value"),
+        ({"pattern_id": "AN-13", "value": float("inf"), "n": 12, "k": None,
+          "interval": [0, float("inf")]}, "value"),
+        ({"pattern_id": "AN-13", "value": 6, "n": 12, "k": None,
+          "interval": [float("-inf"), 8]}, "interval"),
+    ],
+)  # fmt: skip
+def test_a_published_entry_with_a_non_finite_number_is_refused(
+    changes: dict[str, Any], field: str
+) -> None:
+    """json.loads accepts NaN and Infinity; none may reach the gap rule (review SEC-R1-ST170a-01)."""
+    assert (
+        "REF-AN09-D-INT", field, "must be a finite number"
+    ) in _problems([_published(**changes)])  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    ("changes", "field"),
+    [
+        ({"band": [float("-inf"), float("inf")]}, "band"),
+        ({"band": [0.45, float("nan")]}, "band"),
+        ({"value": float("nan")}, "value"),
+        ({"interval": [0.4, float("inf")]}, "interval"),
+    ],
+)
+def test_a_judgment_entry_with_a_non_finite_number_is_refused(
+    changes: dict[str, Any], field: str
+) -> None:
+    assert ("REF-AN09-D-INT", field, "must be a finite number") in _problems([entry(**changes)])
 
 
 def test_a_judgment_entry_carries_no_n() -> None:

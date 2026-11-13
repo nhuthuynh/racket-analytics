@@ -22,6 +22,18 @@ Feature: A reference value always says where it came from
       When racket-reference-lint runs
       Then it exits 1 naming the entry and "unresolved citation"
 
+    Example: citation of a register row that is not resolved
+      Given reference set "pb-reference" v1 with an AN-09 entry citing "SRC-0010"
+      And "SRC-0010" is a row of the sources register
+      When racket-reference-lint runs
+      Then it exits 1 naming the entry and "unresolved citation SRC-0010 (unresolved)"
+
+    Example: citation of a register row that exists but was never read
+      Given reference set "pb-reference" v1 with an AN-09 entry citing "SRC-0008"
+      And "SRC-0008" is a row of the sources register
+      When racket-reference-lint runs
+      Then it exits 1 naming the entry and "unresolved citation SRC-0008 (exists-unfetched)"
+
     Example: better_direction differs from the catalogue
       Given reference set "pb-reference" v1 with an AN-09 entry citing "SRC-0002"
       And the entry's "better_direction" is "higher"
