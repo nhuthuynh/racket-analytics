@@ -653,11 +653,11 @@ Baseline rows for Sprint 6, from `docs/sprints/06/requirements-breakdown.md` (at
 | NFR-006.7, SPK-1.2 eval harness dry-run (planned) | ST-176 | ST-176a | — | harness unit tests; report under `docs/evals/` | G06-09 | Not Ready: ML-6, E1 |
 | NFR-006.8, SPK-1.1, SPK-1.3 spike plans and source matrix | ST-176 | ML-6, ST-176b | — (doc-check) | `scripts/ci/check_docs.py` | — | ML-6: gate (wave 1); ST-176b: Not Ready (ML-6, PE-6b) |
 | NFR-006.9 calibration and pose accuracy on real footage | ST-176 | — | — | human (P11 footage) | §5 S6-P11 | — |
-| PRC-9.1 scheduled reds reach the status record | PRC-06 | CI-SCHEDULED-RED (#242, open) | `tests/features/scheduled_red.feature` | `infra/tests/test_scheduled_red.py` | — | Ready |
-| PRC-10.1-.2 tier 2 paths for footage, pose, provenance | PRC-06 | CI-TIERS-06 | — | `infra/tests/test_review_tiers.py` | G06-08 | Ready (after #231 per sprint-06 §3.6) |
-| PRC-11.1-.3 doc-check extensions | PRC-06 | CI-DOC-CHECK-06 | — | `infra/tests/test_doc_check.py` | — | Ready (PRC-11.1 waits on COACH-6a) |
-| PRC-12.1 WIP gate | PRC-06 | QA-WIP-GATE | — | unit with stubbed REST under `infra/tests/` | G06-10 | Ready |
-| PRC-13.1 disk precheck and worktree report | PRC-06 | OPS-DISK-06 (#244, open) | — | `infra/tests/test_makefile_disk_precheck.py` | — | Ready |
+| PRC-9.1 scheduled reds reach the status record (planned) | PRC-06 | CI-SCHEDULED-RED (#242, open) | `tests/features/scheduled_red.feature` | `infra/tests/test_scheduled_red.py` | — | Ready |
+| PRC-10.1-.2 tier 2 paths for footage, pose, provenance (planned) | PRC-06 | CI-TIERS-06 | — | `infra/tests/test_review_tiers.py` | G06-08 | Ready (after #231 per sprint-06 §3.6) |
+| PRC-11.1-.3 doc-check extensions (planned) | PRC-06 | CI-DOC-CHECK-06 | — | `infra/tests/test_doc_check.py` | — | Ready (PRC-11.1 waits on COACH-6a) |
+| PRC-12.1 WIP gate (planned) | PRC-06 | QA-WIP-GATE | — | unit with stubbed REST under `infra/tests/` | G06-10 | Ready |
+| PRC-13.1 disk precheck and worktree report (planned) | PRC-06 | OPS-DISK-06 (#244, open) | — | `infra/tests/test_makefile_disk_precheck.py` | — | Ready |
 | PRC-14.1 method pins | PRC-06 | QA-PIN-06 | — | `infra/tests/` pin tests | — | Ready (after ST-172b, ST-174b) |
 | NFR-050.11-.12 magic-link TTL, tus checksum | SEC-R | SEC-R05, SEC-R11 | — (IT) | settings unit test + expired-link IT; tus contract IT | G06-09 | Not Ready: SEC-6, E1 |
 | Reference values verified by a human coach | ST-170 | — | — | human (P15) | §5 S6-P15 | — |
