@@ -3,7 +3,7 @@
 - **Owner:** pickleball-domain-coach (COACH-6a, Sprint 6, 2026-11-13). The coach owns each definition; the business-analyst owns the `FR-171.Rk` rules these definitions make operational (BA-6), and is asked to co-review every worked example on the COACH-6a PR. Where the BA already wrote an Example in `docs/sprints/06/requirements-breakdown.md` §1, it is reused here word for word.
 - **Status of every entry:** `draft` (definition v0.1). An entry becomes `coach-reviewed` after the QD-AN-03 hand count on the gold fixture GS-PAT-1 (COACH-6b; ADR 0044) and `verified` only after a human coach recomputes it (P15). Every coaching sense below is **(judgment)**: no coaching source resolves yet ([SRC-0010], [SRC-0012]; `docs/domain/sources.md` §3).
 - **Requirements:** FR-171.R2-R7 (pattern measures), FR-170.R1 (`better_direction` comes from here), FR-172.R1-R3 (what is rankable), A2 (level bands), A6 (min_n and interval method) [SRC-0002]. Formulas start from QD §3.2 [SRC-0001].
-- **Who uses it:** ST-171b/c/d (extractors), COACH-6b (gold fixture and `docs/domain/tools/pattern_example.py --check` (planned)), COACH-6c (reference set v1), ST-170a (lint copies `better_direction` and `interval_method` from here), ML-6 (pattern-source matrix), PD-6 (copy and states), ST-173b/c (drill `target_metrics` use the AN id).
+- **Who uses it:** ST-171b/c/d (extractors), COACH-6b (gold fixture GS-PAT-1 and `docs/domain/tools/pattern_example.py --check`, §11), COACH-6c (reference set v1), ST-170a (lint copies `better_direction` and `interval_method` from here), ML-6 (pattern-source matrix), PD-6 (copy and states), ST-173b/c (drill `target_metrics` use the AN id).
 - **Citations** are `[SRC-nnnn]` rows of `docs/domain/sources.md`. `@needs-verification` marks every line whose meaning depends on an unverified rule or coaching claim.
 - **Sprint 6 build scope:** AN-09 and AN-13 (wave B), AN-08 (stretch) [SRC-0002]. AN-10 is defined here for the next wave. AN-11, AN-12, stacking and partner spacing are defined but marked **needs CV (7.1)**: no Sprint 6 story may build them (roadmap §7.1, NFR-006).
 
@@ -453,10 +453,59 @@ Rule: SPACING.1 A rally counts as "middle open" when more than a quarter of its 
 | Q2 | AN-08 deep line: FR-171.R7 (d ≥ 4.47 m) or QD (d ≥ 5.18 m); and an AN id for serve depth | business-analyst | FR-171.R7; serve depth defined, not built |
 | Q3 | Add a rules-queue row 11 "court dimensions, NVZ depth, line-in" to `docs/domain/rules-verified.md` §5 | pickleball-domain-coach (next coach ticket), P7 | patterns carry `@needs-verification` |
 | Q4 | Add a `hybrid` third-shot trajectory value ([SRC-0011], unresolved; QD-TX-01) | coach, senior-ml-cv-engineer | not added; AN-09 counts hybrids as the labeller's nearest value |
-| Q5 | AN-13 censored estimate (Kaplan-Meier) in v0.2 if the censored share is above one half on GS-PAT-1 or the demo data | coach, senior-ml-cv-engineer | error-ended median with n_censored shown |
+| Q5 | AN-13 censored estimate (Kaplan-Meier) in v0.2 if the censored share is above one half on GS-PAT-1 or the demo data. COACH-6b: the share is about one half by construction (each error-ended rally censors the other side, §11); state the trigger on the rallies the side ended itself (its own dink errors plus its own winning speed-ups)? | coach, senior-ml-cv-engineer | error-ended median with n_censored shown |
+
+## 11. Gold fixture GS-PAT-1 (COACH-6b)
+
+GS-PAT-1 v1 is `docs/domain/hand-counts/GS-PAT-1-v1.json`: two team-made Full Tag label documents (no video, no real people; clip names are placeholders), a plain-language rally sheet per match, and the coach's hand count of AN-09, AN-13 and AN-08 per side with the rally ids of every bucket. `gp1-doubles` (48 rallies) reaches min_n for some measures; `gp2-singles` (12 rallies) holds every exclusion reason in a few rallies and is the match QA recounts by hand. Both documents pass `validate_labels` (labels v1).
+
+The rows below are printed by `python3 docs/domain/tools/pattern_example.py`; `--check` fails unless (1) every worked example of §2-§5 gives its `expect` fields, (2) every stated Wilson and median figure is exact, (3) the replay of §0-§5 equals the hand count in the fixture bucket by bucket, and (4) every table below is exactly these rows. The tool imports neither the product nor `scripts/measure/` (ADR 0044). These are fixture values, never reference values: they do not feed a band (§0.6; COACH-6c). Statuses stay `draft` until the product equals this hand count (ADR 0044).
+
+AN-09 third-shot drop share (§2; side = server; min_n 20):
+
+<!-- table: GS-PAT-1 AN-09 -->
+| Match | Side | Drops k | Third shots n | Share | Wilson 95 % | State | Excluded | Mix (companions) |
+|---|---|---|---|---|---|---|---|---|
+| gp1-doubles | A | 16 | 20 | 0.800 | 0.584-0.919 | rankable | facet_missing 1, no_third_shot 2, side_order_invalid 1 | drive 3, drop 16, lob 1 |
+| gp1-doubles | B | 6 | 18 | 0.333 | 0.163-0.563 | low_sample | facet_missing 1, no_third_shot 3 | drive 11, drop 6, lob 1 |
+| gp2-singles | A | 3 | 5 | 0.600 | 0.231-0.882 | low_sample | none | drive 1, drop 3, lob 1 |
+| gp2-singles | B | 2 | 3 | 0.667 | 0.208-0.939 | low_sample | facet_missing 1, no_third_shot 1, side_order_invalid 1 | drive 1, drop 2 |
+
+AN-13 dink tolerance (§5; min_n 10; interval `order_statistic_median`, none below n = 6):
+
+<!-- table: GS-PAT-1 AN-13 -->
+| Match | Side | Samples x (sorted) | n | Median | Interval | State | n_censored | Excluded |
+|---|---|---|---|---|---|---|---|---|
+| gp1-doubles | A | 0, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4 | 12 | 2 | [1, 3] (l = 3) | rankable | 13 | facet_missing 2, no_dink_exchange 10 |
+| gp1-doubles | B | 0, 1, 1, 1, 2, 2, 2, 3, 3, 4 | 10 | 2 | [1, 3] (l = 2) | rankable | 15 | facet_missing 2, no_dink_exchange 10 |
+| gp2-singles | A | 1, 1 | 2 | 1 | none | low_sample | 3 | facet_missing 1, no_dink_exchange 2 |
+| gp2-singles | B | 0, 2 | 2 | 1 | none | low_sample | 3 | facet_missing 1, no_dink_exchange 2 |
+
+AN-08 return depth (§4; side = returner; deep when d ≥ 4.47 m; min_n 20). Serve depth is not tabled (§10 Q2):
+
+<!-- table: GS-PAT-1 AN-08 -->
+| Match | Side (returner) | Deep k | Returns in play n | Share | Wilson 95 % | State | Excluded |
+|---|---|---|---|---|---|---|---|
+| gp1-doubles | A | 13 | 19 | 0.684 | 0.460-0.846 | low_sample | bounce_missing 1, no_return 1, not_in_play 1 |
+| gp1-doubles | B | 13 | 20 | 0.650 | 0.433-0.819 | rankable | bounce_missing 2, no_return 1, side_order_invalid 1 |
+| gp2-singles | A | 2 | 3 | 0.667 | 0.208-0.939 | low_sample | bounce_missing 1, not_in_play 1, side_order_invalid 1 |
+| gp2-singles | B | 3 | 5 | 0.600 | 0.231-0.882 | low_sample | none |
+
+Match-level rallies of neither side (§0.2):
+
+<!-- table: GS-PAT-1 unassigned -->
+| Match | Format | Rallies | Unassigned (match level) |
+|---|---|---|---|
+| gp1-doubles | doubles | 48 | no_serve_hit 1, replay 1 |
+| gp2-singles | singles | 12 | replay 1 |
+
+Conservation (FR-171.R3), `gp1-doubles`: AN-09 A 20 + 4 = 24 served, B 18 + 4 = 22 served, unassigned 2 → 48 rallies; AN-13 universe 37 rallies (≥ 4 hits, not a replay) = A 12 + 13 + 12 = B 10 + 15 + 12; AN-08 B 20 + 4 = 24 returns faced, A 19 + 3 = 22. `gp2-singles`: AN-09 5 + 0 and 3 + 3 → 11 + 1 unassigned = 12; AN-13 universe 8 = 2 + 3 + 3 per side; AN-08 B 5 + 0, A 3 + 3.
+
+Censored share (§5, §10 Q5): on `gp1-doubles` 13 of A's 25 dink rallies and 15 of B's are censored, above one half. This is by construction, not a finding about play: every error-ended dink rally is a sample for the side that erred and censored for the other. Q5's trigger is reworded as a question in §10 (COACH-6b).
 
 ## Changelog
 
 | Date | Who | Change |
 |---|---|---|
 | 2026-11-13 | pickleball-domain-coach | v0.1 written with COACH-6a: rules §0, AN-09, AN-10, AN-08, AN-13 (FT), AN-11, AN-12, STACK, SPACING (CV, needs 7.1); worked label examples W-09-a, W-10-a, W-08-a, W-13-a |
+| 2026-11-13 | pickleball-domain-coach | §11 gold fixture GS-PAT-1 v1 tables and `pattern_example.py --check` (COACH-6b); Q5 note; no definition changed, statuses stay `draft` |

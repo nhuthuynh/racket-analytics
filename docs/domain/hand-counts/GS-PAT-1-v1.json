@@ -1,0 +1,1151 @@
+{
+ "by": "pickleball-domain-coach",
+ "date": "2026-11-13",
+ "gold_set": "GS-PAT-1",
+ "gold_set_version": 1,
+ "catalogue_version": "0.1",
+ "provenance": "team-made Full Tag label documents (full-tag-labels/v1); no video and no real people: the clip names are placeholders and the players are slots only",
+ "method": "QD-AN-03 hand count from docs/domain/pattern-catalogue.md v0.1 (sections 0-5), tallied rally by rally from the rally sheet (`sheet`) by the coach; checked against the coach's replay docs/domain/tools/pattern_example.py --check, which imports neither the product nor scripts/measure/ (ADR 0044). Court frame as catalogue section 0.7 (UNVERIFIED until P7).",
+ "buckets": {
+  "AN-09": "mix: third shots counted per trajectory (drop = k, all = n); excluded: rally ids per reason",
+  "AN-13": "samples: rally id -> x (the side's dinks in the run minus the erring one); censored: the side's other dink rallies; excluded: rally ids per reason",
+  "AN-08": "returns by the side: deep (k), not_deep (n - k); excluded: rally ids per reason",
+  "unassigned": "match-level rallies of neither side, per reason"
+ },
+ "matches": {
+  "gp1-doubles": {
+   "format": "doubles",
+   "sheet": {
+    "r1": "A serves; return deep; third shot drop; 6 dinks (hits 4-9); A errs on its 3rd dink of the run (unforced_error)",
+    "r2": "A serves; return short; third shot drop; 5 dinks (hits 4-8); B errs on its 3rd dink of the run (unforced_error)",
+    "r3": "A serves; return deep; third shot drop; 4 dinks (hits 4-7); A errs on its 2nd dink of the run (unforced_error)",
+    "r4": "A serves; return deep; third shot drop; 8 dinks (hits 4-11); A errs on its 4th dink of the run (forced_error)",
+    "r5": "A serves; return short; third shot drop; 3 dinks (hits 4-6); B errs on its 2nd dink of the run (fault)",
+    "r6": "A serves; return deep; third shot drop; 2 dinks (hits 4-5); A errs on its 1st dink of the run (unforced_error)",
+    "r7": "A serves; return short; third shot drop; 4 dinks (hits 4-7); B speeds up on hit 8 and wins (winner)",
+    "r8": "A serves; return deep; third shot drive; 5 hits, rally shots after hit 3 are drives; A wins (winner)",
+    "r9": "A serves; return deep; third shot drive; B cannot return it (forced_error, B1 responsible)",
+    "r10": "A serves; return short; third shot drop; 10 dinks (hits 4-13); A errs on its 5th dink of the run (unforced_error)",
+    "r11": "A serves; return deep; third shot drop; 7 dinks (hits 4-10); B errs on its 4th dink of the run (unforced_error)",
+    "r12": "A serves; return short; third shot lob; 5 hits, rally shots after hit 3 are drives; A wins (winner)",
+    "r13": "A serves; return deep; third shot drop; 6 dinks (hits 4-9); A errs on its 3rd dink of the run (fault)",
+    "r14": "A serves; return deep; third shot WITHOUT trajectory facet; 7 hits, hits 4-7 dinks; A errs (unforced_error)",
+    "r15": "A serves; return deep; A does not reach it (return winner by B)",
+    "r16": "A serves into the net (fault, serve)",
+    "r17": "A serves; return short; third shot drop; 5 dinks (hits 4-8); B errs on its 3rd dink of the run (unforced_error)",
+    "r18": "A serves; return bounce without position; third shot drop; 4 dinks (hits 4-7); A errs on its 2nd dink of the run (unforced_error)",
+    "r19": "A serves; return deep; third shot drive; 6 hits, rally shots after hit 3 are drives; B errs (unforced_error), A wins",
+    "r20": "A serves; return deep; third shot drop; 9 dinks (hits 4-12); B errs on its 5th dink of the run (forced_error)",
+    "r21": "A serves; return deep; third shot drop; 6 dinks (hits 4-9); A errs on its 3rd dink of the run (unforced_error)",
+    "r22": "A serves; return bounce not labelled; third shot drop; 5 dinks (hits 4-8); A speeds up on hit 9 and wins (winner)",
+    "r23": "A serves; return short; third shot drop; 5 hits, rally shots after hit 3 are drives; A wins (winner)",
+    "r24": "A serves; B returns; B's partner also hits the ball (hits do not alternate; fault, other)",
+    "r25": "B serves; return deep; third shot drive; 6 hits, rally shots after hit 3 are drives; A errs (unforced_error), B wins",
+    "r26": "B serves; return short; third shot drop; 4 dinks (hits 4-7); B errs on its 2nd dink of the run (unforced_error)",
+    "r27": "B serves; return deep; third shot drive; 4 hits, rally shots after hit 3 are drives; A errs (forced_error), B wins",
+    "r28": "B serves; return deep; third shot drop; 5 dinks (hits 4-8); A errs on its 3rd dink of the run (unforced_error)",
+    "r29": "B serves; return short; third shot lob over both A players (winner B)",
+    "r30": "B serves; return deep; third shot drive; 4 dinks (hits 4-7); B errs on its 2nd dink of the run (unforced_error)",
+    "r31": "B serves; return short; third shot drop; 3 dinks (hits 4-6); A errs on its 2nd dink of the run (unforced_error)",
+    "r32": "B serves; return deep; third shot drive; 7 hits, rally shots after hit 3 are drives; B wins (winner)",
+    "r33": "B serves; return deep; third shot drive; 6 dinks (hits 4-9); B errs on its 3rd dink of the run (fault)",
+    "r34": "B serves; return deep; B does not reach it (return winner by A)",
+    "r35": "B serves; return short; third shot drop; 7 dinks (hits 4-10); A errs on its 4th dink of the run (unforced_error)",
+    "r36": "B serves; return deep; third shot drive into the net (unforced_error B)",
+    "r37": "B serves; return deep; third shot WITHOUT trajectory facet; 5 hits, hits 4-5 dinks; B errs (unforced_error)",
+    "r38": "B serves; return short; third shot drive; 2 dinks (hits 4-5); B errs on its 1st dink of the run (unforced_error)",
+    "r39": "B serves; return deep; third shot drop; 6 dinks (hits 4-9); A speeds up on hit 10 and wins (winner)",
+    "r40": "B serves; return bounce without position; third shot drive; 6 hits, rally shots after hit 3 are drives; A wins (winner)",
+    "r41": "B serves; return deep; third shot drive; 8 dinks (hits 4-11); B errs on its 4th dink of the run (forced_error)",
+    "r42": "B serves long (fault, serve)",
+    "r43": "B serves; return deep; third shot drive; 4 hits, rally shots after hit 3 are drives; A errs (unforced_error), B wins",
+    "r44": "B serves; return short; third shot drop; 5 dinks (hits 4-8); A errs on its 3rd dink of the run (fault)",
+    "r45": "B serves; return deep; third shot drive; 6 hits, rally shots after hit 3 are drives; A errs (forced_error), B wins",
+    "r46": "B serves; A's return lands behind B's baseline (out; unforced_error A)",
+    "r47": "A serves; a ball rolls on court (replay)",
+    "r48": "no hit labelled: the clip starts after the serve (fault)"
+   },
+   "counts": {
+    "AN-09": {
+     "A": {
+      "mix": {
+       "drop": ["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r10", "r11", "r13", "r17", "r18", "r20", "r21", "r22", "r23"],
+       "drive": ["r8", "r9", "r19"],
+       "lob": ["r12"]
+      },
+      "excluded": {
+       "no_third_shot": ["r15", "r16"],
+       "side_order_invalid": ["r24"],
+       "facet_missing": ["r14"]
+      }
+     },
+     "B": {
+      "mix": {
+       "drop": ["r26", "r28", "r31", "r35", "r39", "r44"],
+       "drive": ["r25", "r27", "r30", "r32", "r33", "r36", "r38", "r40", "r41", "r43", "r45"],
+       "lob": ["r29"]
+      },
+      "excluded": {
+       "no_third_shot": ["r34", "r42", "r46"],
+       "facet_missing": ["r37"]
+      }
+     }
+    },
+    "AN-13": {
+     "A": {
+      "samples": {
+       "r1": 2,
+       "r3": 1,
+       "r4": 3,
+       "r6": 0,
+       "r10": 4,
+       "r13": 2,
+       "r18": 1,
+       "r21": 2,
+       "r28": 2,
+       "r31": 1,
+       "r35": 3,
+       "r44": 2
+      },
+      "censored": ["r2", "r5", "r7", "r11", "r17", "r20", "r22", "r26", "r30", "r33", "r38", "r39", "r41"],
+      "excluded": {
+       "facet_missing": ["r14", "r37"],
+       "no_dink_exchange": ["r8", "r12", "r19", "r23", "r25", "r27", "r32", "r40", "r43", "r45"]
+      }
+     },
+     "B": {
+      "samples": {
+       "r2": 2,
+       "r5": 1,
+       "r11": 3,
+       "r17": 2,
+       "r20": 4,
+       "r26": 1,
+       "r30": 1,
+       "r33": 2,
+       "r38": 0,
+       "r41": 3
+      },
+      "censored": ["r1", "r3", "r4", "r6", "r7", "r10", "r13", "r18", "r21", "r22", "r28", "r31", "r35", "r39", "r44"],
+      "excluded": {
+       "facet_missing": ["r14", "r37"],
+       "no_dink_exchange": ["r8", "r12", "r19", "r23", "r25", "r27", "r32", "r40", "r43", "r45"]
+      }
+     }
+    },
+    "AN-08": {
+     "A": {
+      "deep": ["r25", "r27", "r28", "r30", "r32", "r33", "r34", "r36", "r37", "r39", "r41", "r43", "r45"],
+      "not_deep": ["r26", "r29", "r31", "r35", "r38", "r44"],
+      "excluded": {
+       "no_return": ["r42"],
+       "bounce_missing": ["r40"],
+       "not_in_play": ["r46"]
+      }
+     },
+     "B": {
+      "deep": ["r1", "r3", "r4", "r6", "r8", "r9", "r11", "r13", "r14", "r15", "r19", "r20", "r21"],
+      "not_deep": ["r2", "r5", "r7", "r10", "r12", "r17", "r23"],
+      "excluded": {
+       "no_return": ["r16"],
+       "side_order_invalid": ["r24"],
+       "bounce_missing": ["r18", "r22"]
+      }
+     }
+    },
+    "unassigned": {
+     "replay": ["r47"],
+     "no_serve_hit": ["r48"]
+    }
+   },
+   "labels": {
+    "schema": "full-tag-labels/v1",
+    "clip": "clips/gs-pat-1/gp1-doubles.mp4",
+    "fps": 60,
+    "frame_count": 12360,
+    "players": ["A1", "A2", "B1", "B2"],
+    "rallies": [
+     {
+      "id": "r1",
+      "start_frame": 0,
+      "end_frame": 280,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 10, "hitter": "A1"},
+       {"type": "hit", "frame": 40, "hitter": "B1"},
+       {"type": "bounce", "frame": 55, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 70, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 100, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 130, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 160, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 190, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 220, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 250, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r2",
+      "start_frame": 340,
+      "end_frame": 590,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 350, "hitter": "A1"},
+       {"type": "hit", "frame": 380, "hitter": "B1"},
+       {"type": "bounce", "frame": 395, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 410, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 440, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 470, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 500, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 530, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 560, "hitter": "B2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r3",
+      "start_frame": 650,
+      "end_frame": 870,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A2"},
+      "events": [
+       {"type": "hit", "frame": 660, "hitter": "A1"},
+       {"type": "hit", "frame": 690, "hitter": "B1"},
+       {"type": "bounce", "frame": 705, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 720, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 750, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 780, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 810, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 840, "hitter": "A2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r4",
+      "start_frame": 930,
+      "end_frame": 1270,
+      "outcome": {"ending": "forced_error", "winning_side": "B", "responsible_player": "A2"},
+      "events": [
+       {"type": "hit", "frame": 940, "hitter": "A1"},
+       {"type": "hit", "frame": 970, "hitter": "B1"},
+       {"type": "bounce", "frame": 985, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 1000, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 1030, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1060, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1090, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1120, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1150, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1180, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1210, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1240, "hitter": "A2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r5",
+      "start_frame": 1330,
+      "end_frame": 1520,
+      "outcome": {"ending": "fault", "winning_side": "A", "responsible_player": "B1", "fault_kind": "nvz"},
+      "events": [
+       {"type": "hit", "frame": 1340, "hitter": "A1"},
+       {"type": "hit", "frame": 1370, "hitter": "B1"},
+       {"type": "bounce", "frame": 1385, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 1400, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 1430, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1460, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1490, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r6",
+      "start_frame": 1580,
+      "end_frame": 1740,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 1590, "hitter": "A1"},
+       {"type": "hit", "frame": 1620, "hitter": "B1"},
+       {"type": "bounce", "frame": 1635, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 1650, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 1680, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1710, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r7",
+      "start_frame": 1800,
+      "end_frame": 2050,
+      "outcome": {"ending": "winner", "winning_side": "B", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 1810, "hitter": "A1"},
+       {"type": "hit", "frame": 1840, "hitter": "B1"},
+       {"type": "bounce", "frame": 1855, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 1870, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 1900, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1930, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1960, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1990, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2020, "hitter": "B2", "facets": {"trajectory": "drive", "intent": "speed_up"}}
+      ]
+     },
+     {
+      "id": "r8",
+      "start_frame": 2110,
+      "end_frame": 2270,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 2120, "hitter": "A1"},
+       {"type": "hit", "frame": 2150, "hitter": "B1"},
+       {"type": "bounce", "frame": 2165, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 2180, "hitter": "A2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 2210, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 2240, "hitter": "A1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r9",
+      "start_frame": 2330,
+      "end_frame": 2430,
+      "outcome": {"ending": "forced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 2340, "hitter": "A1"},
+       {"type": "hit", "frame": 2370, "hitter": "B1"},
+       {"type": "bounce", "frame": 2385, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 2400, "hitter": "A2", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r10",
+      "start_frame": 2490,
+      "end_frame": 2890,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 2500, "hitter": "A1"},
+       {"type": "hit", "frame": 2530, "hitter": "B1"},
+       {"type": "bounce", "frame": 2545, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 2560, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 2590, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2620, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2650, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2680, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2710, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2740, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2770, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2800, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2830, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2860, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r11",
+      "start_frame": 2950,
+      "end_frame": 3260,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 2960, "hitter": "A1"},
+       {"type": "hit", "frame": 2990, "hitter": "B1"},
+       {"type": "bounce", "frame": 3005, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 3020, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 3050, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3080, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3110, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3140, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3170, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3200, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3230, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r12",
+      "start_frame": 3320,
+      "end_frame": 3480,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 3330, "hitter": "A1"},
+       {"type": "hit", "frame": 3360, "hitter": "B1"},
+       {"type": "bounce", "frame": 3375, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 3390, "hitter": "A2", "facets": {"trajectory": "lob"}},
+       {"type": "hit", "frame": 3420, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 3450, "hitter": "A1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r13",
+      "start_frame": 3540,
+      "end_frame": 3820,
+      "outcome": {"ending": "fault", "winning_side": "B", "responsible_player": "A1", "fault_kind": "nvz"},
+      "events": [
+       {"type": "hit", "frame": 3550, "hitter": "A1"},
+       {"type": "hit", "frame": 3580, "hitter": "B1"},
+       {"type": "bounce", "frame": 3595, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 3610, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 3640, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3670, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3700, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3730, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3760, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 3790, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r14",
+      "start_frame": 3880,
+      "end_frame": 4100,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A2"},
+      "events": [
+       {"type": "hit", "frame": 3890, "hitter": "A1"},
+       {"type": "hit", "frame": 3920, "hitter": "B1"},
+       {"type": "bounce", "frame": 3935, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 3950, "hitter": "A2"},
+       {"type": "hit", "frame": 3980, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4010, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4040, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4070, "hitter": "A2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r15",
+      "start_frame": 4160,
+      "end_frame": 4230,
+      "outcome": {"ending": "winner", "winning_side": "B", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 4170, "hitter": "A1"},
+       {"type": "hit", "frame": 4200, "hitter": "B1"},
+       {"type": "bounce", "frame": 4215, "visible": true, "court_xy_m": [3.0, 1.5]}
+      ]
+     },
+     {
+      "id": "r16",
+      "start_frame": 4290,
+      "end_frame": 4330,
+      "outcome": {"ending": "fault", "winning_side": "B", "responsible_player": "A1", "fault_kind": "serve"},
+      "events": [
+       {"type": "hit", "frame": 4300, "hitter": "A1"}
+      ]
+     },
+     {
+      "id": "r17",
+      "start_frame": 4390,
+      "end_frame": 4640,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 4400, "hitter": "A1"},
+       {"type": "hit", "frame": 4430, "hitter": "B1"},
+       {"type": "bounce", "frame": 4445, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 4460, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 4490, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4520, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4550, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4580, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4610, "hitter": "B2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r18",
+      "start_frame": 4700,
+      "end_frame": 4920,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A2"},
+      "events": [
+       {"type": "hit", "frame": 4710, "hitter": "A1"},
+       {"type": "hit", "frame": 4740, "hitter": "B1"},
+       {"type": "bounce", "frame": 4755, "visible": false, "court_xy_m": null},
+       {"type": "hit", "frame": 4770, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 4800, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4830, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4860, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 4890, "hitter": "A2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r19",
+      "start_frame": 4980,
+      "end_frame": 5170,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 4990, "hitter": "A1"},
+       {"type": "hit", "frame": 5020, "hitter": "B1"},
+       {"type": "bounce", "frame": 5035, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 5050, "hitter": "A2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 5080, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 5110, "hitter": "A1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 5140, "hitter": "B1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r20",
+      "start_frame": 5230,
+      "end_frame": 5600,
+      "outcome": {"ending": "forced_error", "winning_side": "A", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 5240, "hitter": "A1"},
+       {"type": "hit", "frame": 5270, "hitter": "B1"},
+       {"type": "bounce", "frame": 5285, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 5300, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 5330, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5360, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5390, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5420, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5450, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5480, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5510, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5540, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5570, "hitter": "B2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r21",
+      "start_frame": 5660,
+      "end_frame": 5940,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 5670, "hitter": "A1"},
+       {"type": "hit", "frame": 5700, "hitter": "B1"},
+       {"type": "bounce", "frame": 5715, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 5730, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 5760, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5790, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5820, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5850, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5880, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 5910, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r22",
+      "start_frame": 6000,
+      "end_frame": 6280,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 6010, "hitter": "A1"},
+       {"type": "hit", "frame": 6040, "hitter": "B1"},
+       {"type": "hit", "frame": 6070, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 6100, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 6130, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 6160, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 6190, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 6220, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 6250, "hitter": "A1", "facets": {"trajectory": "drive", "intent": "speed_up"}}
+      ]
+     },
+     {
+      "id": "r23",
+      "start_frame": 6340,
+      "end_frame": 6500,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 6350, "hitter": "A1"},
+       {"type": "hit", "frame": 6380, "hitter": "B1"},
+       {"type": "bounce", "frame": 6395, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 6410, "hitter": "A2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 6440, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 6470, "hitter": "A1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r24",
+      "start_frame": 6560,
+      "end_frame": 6660,
+      "outcome": {"ending": "fault", "winning_side": "A", "responsible_player": "B2", "fault_kind": "other"},
+      "events": [
+       {"type": "hit", "frame": 6570, "hitter": "A1"},
+       {"type": "hit", "frame": 6600, "hitter": "B1"},
+       {"type": "hit", "frame": 6630, "hitter": "B2", "facets": {"trajectory": "drop"}}
+      ]
+     },
+     {
+      "id": "r25",
+      "start_frame": 6720,
+      "end_frame": 6910,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 6730, "hitter": "B1"},
+       {"type": "hit", "frame": 6760, "hitter": "A1"},
+       {"type": "bounce", "frame": 6775, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 6790, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 6820, "hitter": "A2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 6850, "hitter": "B1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 6880, "hitter": "A1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r26",
+      "start_frame": 6970,
+      "end_frame": 7190,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 6980, "hitter": "B1"},
+       {"type": "hit", "frame": 7010, "hitter": "A1"},
+       {"type": "bounce", "frame": 7025, "visible": true, "court_xy_m": [3.0, 9.5]},
+       {"type": "hit", "frame": 7040, "hitter": "B2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 7070, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 7100, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 7130, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 7160, "hitter": "B2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r27",
+      "start_frame": 7250,
+      "end_frame": 7380,
+      "outcome": {"ending": "forced_error", "winning_side": "B", "responsible_player": "A2"},
+      "events": [
+       {"type": "hit", "frame": 7260, "hitter": "B1"},
+       {"type": "hit", "frame": 7290, "hitter": "A1"},
+       {"type": "bounce", "frame": 7305, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 7320, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 7350, "hitter": "A2", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r28",
+      "start_frame": 7440,
+      "end_frame": 7690,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A2"},
+      "events": [
+       {"type": "hit", "frame": 7450, "hitter": "B1"},
+       {"type": "hit", "frame": 7480, "hitter": "A1"},
+       {"type": "bounce", "frame": 7495, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 7510, "hitter": "B2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 7540, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 7570, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 7600, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 7630, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 7660, "hitter": "A2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r29",
+      "start_frame": 7750,
+      "end_frame": 7850,
+      "outcome": {"ending": "winner", "winning_side": "B", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 7760, "hitter": "B1"},
+       {"type": "hit", "frame": 7790, "hitter": "A1"},
+       {"type": "bounce", "frame": 7805, "visible": true, "court_xy_m": [3.0, 9.5]},
+       {"type": "hit", "frame": 7820, "hitter": "B2", "facets": {"trajectory": "lob"}}
+      ]
+     },
+     {
+      "id": "r30",
+      "start_frame": 7910,
+      "end_frame": 8130,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 7920, "hitter": "B1"},
+       {"type": "hit", "frame": 7950, "hitter": "A1"},
+       {"type": "bounce", "frame": 7965, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 7980, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 8010, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8040, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8070, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8100, "hitter": "B2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r31",
+      "start_frame": 8190,
+      "end_frame": 8380,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 8200, "hitter": "B1"},
+       {"type": "hit", "frame": 8230, "hitter": "A1"},
+       {"type": "bounce", "frame": 8245, "visible": true, "court_xy_m": [3.0, 9.5]},
+       {"type": "hit", "frame": 8260, "hitter": "B2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 8290, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8320, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8350, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r32",
+      "start_frame": 8440,
+      "end_frame": 8660,
+      "outcome": {"ending": "winner", "winning_side": "B", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 8450, "hitter": "B1"},
+       {"type": "hit", "frame": 8480, "hitter": "A1"},
+       {"type": "bounce", "frame": 8495, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 8510, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 8540, "hitter": "A2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 8570, "hitter": "B1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 8600, "hitter": "A1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 8630, "hitter": "B2", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r33",
+      "start_frame": 8720,
+      "end_frame": 9000,
+      "outcome": {"ending": "fault", "winning_side": "A", "responsible_player": "B1", "fault_kind": "nvz"},
+      "events": [
+       {"type": "hit", "frame": 8730, "hitter": "B1"},
+       {"type": "hit", "frame": 8760, "hitter": "A1"},
+       {"type": "bounce", "frame": 8775, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 8790, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 8820, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8850, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8880, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8910, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8940, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 8970, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r34",
+      "start_frame": 9060,
+      "end_frame": 9130,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 9070, "hitter": "B1"},
+       {"type": "hit", "frame": 9100, "hitter": "A1"},
+       {"type": "bounce", "frame": 9115, "visible": true, "court_xy_m": [3.0, 12.0]}
+      ]
+     },
+     {
+      "id": "r35",
+      "start_frame": 9190,
+      "end_frame": 9500,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 9200, "hitter": "B1"},
+       {"type": "hit", "frame": 9230, "hitter": "A1"},
+       {"type": "bounce", "frame": 9245, "visible": true, "court_xy_m": [3.0, 9.5]},
+       {"type": "hit", "frame": 9260, "hitter": "B2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 9290, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 9320, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 9350, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 9380, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 9410, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 9440, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 9470, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r36",
+      "start_frame": 9560,
+      "end_frame": 9660,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 9570, "hitter": "B1"},
+       {"type": "hit", "frame": 9600, "hitter": "A1"},
+       {"type": "bounce", "frame": 9615, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 9630, "hitter": "B2", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r37",
+      "start_frame": 9720,
+      "end_frame": 9880,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 9730, "hitter": "B1"},
+       {"type": "hit", "frame": 9760, "hitter": "A1"},
+       {"type": "bounce", "frame": 9775, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 9790, "hitter": "B2"},
+       {"type": "hit", "frame": 9820, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 9850, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r38",
+      "start_frame": 9940,
+      "end_frame": 10100,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 9950, "hitter": "B1"},
+       {"type": "hit", "frame": 9980, "hitter": "A1"},
+       {"type": "bounce", "frame": 9995, "visible": true, "court_xy_m": [3.0, 9.5]},
+       {"type": "hit", "frame": 10010, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 10040, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10070, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r39",
+      "start_frame": 10160,
+      "end_frame": 10470,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 10170, "hitter": "B1"},
+       {"type": "hit", "frame": 10200, "hitter": "A1"},
+       {"type": "bounce", "frame": 10215, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 10230, "hitter": "B2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 10260, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10290, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10320, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10350, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10380, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10410, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10440, "hitter": "A1", "facets": {"trajectory": "drive", "intent": "speed_up"}}
+      ]
+     },
+     {
+      "id": "r40",
+      "start_frame": 10530,
+      "end_frame": 10720,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 10540, "hitter": "B1"},
+       {"type": "hit", "frame": 10570, "hitter": "A1"},
+       {"type": "bounce", "frame": 10585, "visible": false, "court_xy_m": null},
+       {"type": "hit", "frame": 10600, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 10630, "hitter": "A2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 10660, "hitter": "B1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 10690, "hitter": "A1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r41",
+      "start_frame": 10780,
+      "end_frame": 11120,
+      "outcome": {"ending": "forced_error", "winning_side": "A", "responsible_player": "B2"},
+      "events": [
+       {"type": "hit", "frame": 10790, "hitter": "B1"},
+       {"type": "hit", "frame": 10820, "hitter": "A1"},
+       {"type": "bounce", "frame": 10835, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 10850, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 10880, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10910, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10940, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 10970, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11000, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11030, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11060, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11090, "hitter": "B2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r42",
+      "start_frame": 11180,
+      "end_frame": 11220,
+      "outcome": {"ending": "fault", "winning_side": "A", "responsible_player": "B1", "fault_kind": "serve"},
+      "events": [
+       {"type": "hit", "frame": 11190, "hitter": "B1"}
+      ]
+     },
+     {
+      "id": "r43",
+      "start_frame": 11280,
+      "end_frame": 11410,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A2"},
+      "events": [
+       {"type": "hit", "frame": 11290, "hitter": "B1"},
+       {"type": "hit", "frame": 11320, "hitter": "A1"},
+       {"type": "bounce", "frame": 11335, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 11350, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 11380, "hitter": "A2", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r44",
+      "start_frame": 11470,
+      "end_frame": 11720,
+      "outcome": {"ending": "fault", "winning_side": "B", "responsible_player": "A2", "fault_kind": "nvz"},
+      "events": [
+       {"type": "hit", "frame": 11480, "hitter": "B1"},
+       {"type": "hit", "frame": 11510, "hitter": "A1"},
+       {"type": "bounce", "frame": 11525, "visible": true, "court_xy_m": [3.0, 9.5]},
+       {"type": "hit", "frame": 11540, "hitter": "B2", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 11570, "hitter": "A2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11600, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11630, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11660, "hitter": "B2", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 11690, "hitter": "A2", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r45",
+      "start_frame": 11780,
+      "end_frame": 11970,
+      "outcome": {"ending": "forced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 11790, "hitter": "B1"},
+       {"type": "hit", "frame": 11820, "hitter": "A1"},
+       {"type": "bounce", "frame": 11835, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 11850, "hitter": "B2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 11880, "hitter": "A2", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 11910, "hitter": "B1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 11940, "hitter": "A1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r46",
+      "start_frame": 12030,
+      "end_frame": 12100,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 12040, "hitter": "B1"},
+       {"type": "hit", "frame": 12070, "hitter": "A1"},
+       {"type": "bounce", "frame": 12085, "visible": true, "court_xy_m": [3.0, 13.8]}
+      ]
+     },
+     {
+      "id": "r47",
+      "start_frame": 12160,
+      "end_frame": 12200,
+      "outcome": {"ending": "replay", "winning_side": null},
+      "events": [
+       {"type": "hit", "frame": 12170, "hitter": "A1"}
+      ]
+     },
+     {
+      "id": "r48",
+      "start_frame": 12260,
+      "end_frame": 12300,
+      "outcome": {"ending": "fault", "winning_side": "B", "responsible_player": null},
+      "events": []
+     }
+    ]
+   }
+  },
+  "gp2-singles": {
+   "format": "singles",
+   "sheet": {
+    "r1": "A serves; return deep; third shot drop; 4 dinks (hits 4-7); A errs on its 2nd dink of the run (unforced_error)",
+    "r2": "A serves; return short; third shot drive; 4 hits, rally shots after hit 3 are drives; B errs (unforced_error), A wins",
+    "r3": "B serves; return deep; third shot drop; 3 dinks (hits 4-6); A errs on its 2nd dink of the run (unforced_error)",
+    "r4": "B serves; A's return lands behind B's baseline (out; unforced_error A)",
+    "r5": "A serves; a ball rolls on court (replay)",
+    "r6": "A serves; return deep; third shot lob (winner A)",
+    "r7": "B serves; return bounce without position; third shot WITHOUT trajectory facet; 5 hits, hits 4-5 dinks; B errs (unforced_error)",
+    "r8": "A serves; return short; third shot drop; 4 dinks (hits 4-7); B speeds up on hit 8 and wins (winner)",
+    "r9": "B serves; A returns and hits the ball again (hits do not alternate; fault, other)",
+    "r10": "B serves; return deep; third shot drive; 5 hits, rally shots after hit 3 are drives; B wins (winner)",
+    "r11": "A serves; return deep; third shot drop; 5 dinks (hits 4-8); B errs on its 3rd dink of the run (unforced_error)",
+    "r12": "B serves; return short; third shot drop; 2 dinks (hits 4-5); B errs on its 1st dink of the run (unforced_error)"
+   },
+   "counts": {
+    "AN-09": {
+     "A": {
+      "mix": {
+       "drop": ["r1", "r8", "r11"],
+       "drive": ["r2"],
+       "lob": ["r6"]
+      },
+      "excluded": {}
+     },
+     "B": {
+      "mix": {
+       "drop": ["r3", "r12"],
+       "drive": ["r10"]
+      },
+      "excluded": {
+       "no_third_shot": ["r4"],
+       "facet_missing": ["r7"],
+       "side_order_invalid": ["r9"]
+      }
+     }
+    },
+    "AN-13": {
+     "A": {
+      "samples": {
+       "r1": 1,
+       "r3": 1
+      },
+      "censored": ["r8", "r11", "r12"],
+      "excluded": {
+       "facet_missing": ["r7"],
+       "no_dink_exchange": ["r2", "r10"]
+      }
+     },
+     "B": {
+      "samples": {
+       "r11": 2,
+       "r12": 0
+      },
+      "censored": ["r1", "r3", "r8"],
+      "excluded": {
+       "facet_missing": ["r7"],
+       "no_dink_exchange": ["r2", "r10"]
+      }
+     }
+    },
+    "AN-08": {
+     "A": {
+      "deep": ["r3", "r10"],
+      "not_deep": ["r12"],
+      "excluded": {
+       "not_in_play": ["r4"],
+       "bounce_missing": ["r7"],
+       "side_order_invalid": ["r9"]
+      }
+     },
+     "B": {
+      "deep": ["r1", "r6", "r11"],
+      "not_deep": ["r2", "r8"],
+      "excluded": {}
+     }
+    },
+    "unassigned": {
+     "replay": ["r5"]
+    }
+   },
+   "labels": {
+    "schema": "full-tag-labels/v1",
+    "clip": "clips/gs-pat-1/gp2-singles.mp4",
+    "fps": 60,
+    "frame_count": 2550,
+    "players": ["A1", "B1"],
+    "rallies": [
+     {
+      "id": "r1",
+      "start_frame": 0,
+      "end_frame": 220,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 10, "hitter": "A1"},
+       {"type": "hit", "frame": 40, "hitter": "B1"},
+       {"type": "bounce", "frame": 55, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 70, "hitter": "A1", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 100, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 130, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 160, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 190, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r2",
+      "start_frame": 280,
+      "end_frame": 410,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 290, "hitter": "A1"},
+       {"type": "hit", "frame": 320, "hitter": "B1"},
+       {"type": "bounce", "frame": 335, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 350, "hitter": "A1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 380, "hitter": "B1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r3",
+      "start_frame": 470,
+      "end_frame": 660,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 480, "hitter": "B1"},
+       {"type": "hit", "frame": 510, "hitter": "A1"},
+       {"type": "bounce", "frame": 525, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 540, "hitter": "B1", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 570, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 600, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 630, "hitter": "A1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r4",
+      "start_frame": 720,
+      "end_frame": 790,
+      "outcome": {"ending": "unforced_error", "winning_side": "B", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 730, "hitter": "B1"},
+       {"type": "hit", "frame": 760, "hitter": "A1"},
+       {"type": "bounce", "frame": 775, "visible": true, "court_xy_m": [3.0, 13.8]}
+      ]
+     },
+     {
+      "id": "r5",
+      "start_frame": 850,
+      "end_frame": 890,
+      "outcome": {"ending": "replay", "winning_side": null},
+      "events": [
+       {"type": "hit", "frame": 860, "hitter": "A1"}
+      ]
+     },
+     {
+      "id": "r6",
+      "start_frame": 950,
+      "end_frame": 1050,
+      "outcome": {"ending": "winner", "winning_side": "A", "responsible_player": "A1"},
+      "events": [
+       {"type": "hit", "frame": 960, "hitter": "A1"},
+       {"type": "hit", "frame": 990, "hitter": "B1"},
+       {"type": "bounce", "frame": 1005, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 1020, "hitter": "A1", "facets": {"trajectory": "lob"}}
+      ]
+     },
+     {
+      "id": "r7",
+      "start_frame": 1110,
+      "end_frame": 1270,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 1120, "hitter": "B1"},
+       {"type": "hit", "frame": 1150, "hitter": "A1"},
+       {"type": "bounce", "frame": 1165, "visible": false, "court_xy_m": null},
+       {"type": "hit", "frame": 1180, "hitter": "B1"},
+       {"type": "hit", "frame": 1210, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1240, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r8",
+      "start_frame": 1330,
+      "end_frame": 1580,
+      "outcome": {"ending": "winner", "winning_side": "B", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 1340, "hitter": "A1"},
+       {"type": "hit", "frame": 1370, "hitter": "B1"},
+       {"type": "bounce", "frame": 1385, "visible": true, "court_xy_m": [3.0, 4.0]},
+       {"type": "hit", "frame": 1400, "hitter": "A1", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 1430, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1460, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1490, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1520, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 1550, "hitter": "B1", "facets": {"trajectory": "drive", "intent": "speed_up"}}
+      ]
+     },
+     {
+      "id": "r9",
+      "start_frame": 1640,
+      "end_frame": 1740,
+      "outcome": {"ending": "fault", "winning_side": "B", "responsible_player": "A1", "fault_kind": "other"},
+      "events": [
+       {"type": "hit", "frame": 1650, "hitter": "B1"},
+       {"type": "hit", "frame": 1680, "hitter": "A1"},
+       {"type": "hit", "frame": 1710, "hitter": "A1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r10",
+      "start_frame": 1800,
+      "end_frame": 1960,
+      "outcome": {"ending": "winner", "winning_side": "B", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 1810, "hitter": "B1"},
+       {"type": "hit", "frame": 1840, "hitter": "A1"},
+       {"type": "bounce", "frame": 1855, "visible": true, "court_xy_m": [3.0, 12.0]},
+       {"type": "hit", "frame": 1870, "hitter": "B1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 1900, "hitter": "A1", "facets": {"trajectory": "drive"}},
+       {"type": "hit", "frame": 1930, "hitter": "B1", "facets": {"trajectory": "drive"}}
+      ]
+     },
+     {
+      "id": "r11",
+      "start_frame": 2020,
+      "end_frame": 2270,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 2030, "hitter": "A1"},
+       {"type": "hit", "frame": 2060, "hitter": "B1"},
+       {"type": "bounce", "frame": 2075, "visible": true, "court_xy_m": [3.0, 1.5]},
+       {"type": "hit", "frame": 2090, "hitter": "A1", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 2120, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2150, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2180, "hitter": "B1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2210, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2240, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     },
+     {
+      "id": "r12",
+      "start_frame": 2330,
+      "end_frame": 2490,
+      "outcome": {"ending": "unforced_error", "winning_side": "A", "responsible_player": "B1"},
+      "events": [
+       {"type": "hit", "frame": 2340, "hitter": "B1"},
+       {"type": "hit", "frame": 2370, "hitter": "A1"},
+       {"type": "bounce", "frame": 2385, "visible": true, "court_xy_m": [3.0, 9.5]},
+       {"type": "hit", "frame": 2400, "hitter": "B1", "facets": {"trajectory": "drop"}},
+       {"type": "hit", "frame": 2430, "hitter": "A1", "facets": {"trajectory": "dink"}},
+       {"type": "hit", "frame": 2460, "hitter": "B1", "facets": {"trajectory": "dink"}}
+      ]
+     }
+    ]
+   }
+  }
+ }
+}
