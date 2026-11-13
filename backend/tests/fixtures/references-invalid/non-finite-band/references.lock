@@ -1,0 +1,6 @@
+{
+  "schema": "reference-set-lock/v1",
+  "sets": {
+    "pb-reference@1": "9356c5a8fe3c5d056ba0b35cd1a1496fecbe4460545f6d1f58bdbe6070f5ddc5"
+  }
+}

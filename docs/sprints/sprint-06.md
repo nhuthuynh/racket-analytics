@@ -100,7 +100,7 @@ Scorecard bullets (each a G06 row): reference-set integrity (G06-01); pattern co
 
 | Lane | Tickets (units) | Planned | Capacity |
 |---|---|---|---|
-| SRE | CI-SCHEDULED-RED 0.5, OPS-DISK-06 0.5, CI-TIERS-06 1, CI-DOC-CHECK-06 1, ST-175b 1, SMOKE-06 0.5 | 4.5 | 5.1 |
+| SRE | CI-SCHEDULED-RED 0.5, OPS-DISK-06 0.5, CI-TIERS-06 1, CI-DOC-CHECK-06 1, CI-REF-BASE-LOCK 0.5 (added 2026-11-13, review SEC-R1-ST170a-02), ST-175b 1, SMOKE-06 0.5 | 5 | 5.1 |
 | BE | ST-170a 1, ST-170b 1, ST-171a 1, ST-171e 1, ST-172a 1, ST-172b 1, ST-173a 1, ST-173b 0.5, ST-174a 1, ST-175a 1, SEC-R05 0.5, SEC-R11 0.5 | 10.5 | 10.2 (SEC-R05/R11 slip first) |
 | ML | ST-171b 1, ST-171c 1, ST-171d 1, ST-176a 1 | 4 | 5.1 |
 | FE | ST-170c 1, ST-172c 1, ST-173d 1 | 3 | 5.1 (plus #218, #226 in the drain) |
@@ -158,7 +158,8 @@ Sprint 5 PRs merge first in this order (CI FIRST): #230 CI-FFMPEG, #232 CI-NIGHT
 | ID | Title | Story | Owner | Tier | Specialists | Depends on | Size | Items | Prio |
 |---|---|---|---|---|---|---|---|---|---|
 | ST-170a | Reference-set schema, loader, lint (`racket-reference-lint`) and lock; fail closed on missing provenance | ST-170 | senior-backend-engineer | 2 | security-privacy-engineer, pickleball-domain-coach | PE-6a, COACH-6a, SEC-6, CI-TIERS-06 | S | FR-170.R1-R3 | P0 |
-| COACH-6c | Reference set v1 content: one entry per wave A/B pattern and level band, each cited, `coach-reviewed` | ST-170 | pickleball-domain-coach | 1 | — | ST-170a, CI-DOC-CHECK-06 | S | FR-170.R1 | P0 |
+| CI-REF-BASE-LOCK | `ci.yml` job runs `racket-reference-lint content/references --base-lock` with the base branch's `references.lock`, so a PR cannot edit a published `vN.json` and rewrite the lock in the same change (added 2026-11-13, review SEC-R1-ST170a-02) | ST-170 | sre-devops-engineer | 1 | — | ST-170a | XS | FR-170.R2 | P0 |
+| COACH-6c | Reference set v1 content: one entry per wave A/B pattern and level band, each cited, `coach-reviewed` | ST-170 | pickleball-domain-coach | 1 | — | ST-170a, CI-DOC-CHECK-06, CI-REF-BASE-LOCK | S | FR-170.R1 | P0 |
 | QA-REF-GOLD | Frozen expected values for reference set v1 × GS-PAT-1 (writer/reviewer split: written before the extractors); integrity test (hash, no edit without ADR) | ST-170 | senior-qa-engineer | 1 | — | ST-170a, COACH-6b | S | FR-171.R2-R4, FR-172.R1 | P0 |
 | ST-170b | Reference read API (`GET /reference-sets/current`), coach-reviewed and verified only; BOLA and no-store rows | ST-170 | senior-backend-engineer | 2 | security-privacy-engineer | ST-170a | S | FR-170.R4, NFR-050.10 | P0 |
 | ST-170c | Reference browser UI (read-only): definition, version, provenance label, n, interval | ST-170 | senior-frontend-engineer | 1 | — | ST-170b, DR-06 | S | FR-170.R5 | P1 |
@@ -213,7 +214,7 @@ Sprint 5 PRs merge first in this order (CI FIRST): #230 CI-FFMPEG, #232 CI-NIGHT
 3. **Approved but conflicted (FE kickoff):** when an approved PR goes `dirty`, its author merges `origin/main` into the branch the same day (no rebase, no force-push) and the reviewers re-verdict the new head. The author owns the PR until `merge_ready.py` exits 0 on its head.
 4. **Wave 1 (gates; merge-by 2026-11-17):** EM-ESC-06 sent first (by 2026-11-14); COACH-6a and PE-6a first among the gates (most build tickets wait on them); SEC-6, PE-6b, PD-6 → DR-06 (each decider is its own scheduled step, PD kickoff), ML-6, COACH-6b, PM-6, BA-6; CI-TIERS-06 after #231; CI-DOC-CHECK-06 after COACH-6a; QA-WIP-GATE first in QA.
 5. **Wave 2 (build; merge-by 2026-11-24):** a story starts only when BA-6 marks it Ready with gate PR numbers (§3.8). BE runs two streams (ST-170a → ST-170b → ST-172b → ST-174a / ST-171a → ST-171e → ST-172a → ST-173a → ST-173b); ML one (ST-171b → ST-171c → ST-176a → ST-171d); FE one (ST-172c → ST-173d → ST-170c); QA one (QA-REF-GOLD → ST-174b).
-6. **Shared files:** `.github/workflows/ci.yml`: CI-SCHEDULED-RED → CI-DOC-CHECK-06 → ST-175b; `scripts/ci/review_tiers.py`: CI-TIERS-06 only; `infra/compose.yaml` and `infra/env.example`: ST-174a only; `scripts/demo/seed_demo.py`: ST-174a only; `content/drills/library.lock`: ST-173c only; `backend/src/racket/coaching/weakness/`: ST-172a, then ST-173a. The later PR merges `origin/main` and re-runs its checks before asking for review.
+6. **Shared files:** `.github/workflows/ci.yml`: CI-SCHEDULED-RED → CI-DOC-CHECK-06 → CI-REF-BASE-LOCK → ST-175b; `scripts/ci/review_tiers.py`: CI-TIERS-06 only; `infra/compose.yaml` and `infra/env.example`: ST-174a only; `scripts/demo/seed_demo.py`: ST-174a only; `content/drills/library.lock`: ST-173c only; `backend/src/racket/coaching/weakness/`: ST-172a, then ST-173a. The later PR merges `origin/main` and re-runs its checks before asking for review.
 7. **Wave 3:** QA-PIN-06; then VERIFY-06 (2026-11-25) only when every wave 2 ticket is merged and every scorecard §6 row has rc 0; misses go to `FIX-06-<n>` tickets and a dated re-measure; SMOKE-06; RETRO-06 (2026-11-26) only when `retro_ready.py` exits 0.
 
 ### 3.7 Ticket specifications
@@ -243,6 +244,9 @@ PRC-06 · PRC-12.1 · **Acceptance:** `scripts/measure/wip_gate.py --stage start
 
 #### ST-170a (tier 2)
 ST-170 · FR-170.R1-R3 · **Acceptance:** `content/references/<set>/vN.json` schema (pattern id `AN-nn`, definition version, better_direction `higher` / `lower` / `inside_band` (must equal the catalogue's), value or band (a band is required for `inside_band`), n, interval, level band, format, source_type, source {citation_id | footage_id + rights record id}, status, version); `racket-reference-lint` fails closed on any missing field, an unresolved citation, a measured entry whose footage does not permit "reference-library", a duplicate (pattern, band, format, version) and an edited published version (lock hash). · **Tests:** `tests/features/reference_set.feature` (planned) (FR-170.R1-R3); IT-06-01; unit per refusal (red first: a missing source passes today because nothing checks it). · **QA:** planted fixture per refusal. · **Context:** sport plugin content + Coaching/reference. · **Dirs:** `backend/src/racket/coaching/reference/`, `content/references/`, `backend/tests/`.
+
+#### CI-REF-BASE-LOCK
+ST-170 · FR-170.R2 · **Acceptance:** a `ci.yml` job (like `drill-lint`) checks out the PR head, writes the base branch's `content/references/references.lock` to a file and runs `racket-reference-lint content/references --base-lock <that file>`; a PR that edits a published `vN.json` and rewrites its lock entry fails with "lock entry changed", one that removes a lock entry fails with "lock entry removed". FR-170.R2 counts as met only after this merges (`docs/sprints/06/decisions/ST-170a.md`). · **Tests:** `infra/tests/` planted case: a head tree whose lock differs from the base lock exits 1 (red first: today no job compares them). · **Dirs:** `.github/workflows/ci.yml`, `infra/tests/`.
 
 #### COACH-6c
 ST-170 · FR-170.R1 · **Acceptance:** reference set v1 with entries for AN-04, AN-05, AN-07 (wave A, QT) and AN-09, AN-13 (wave B, FT) per level band and format, each `coach-reviewed`, `source_type` `published` (citation resolves) or `judgment` (labelled), lint rc 0. No value says "pro" unless its source does. · **Tests:** lint in CI (no new code). · **Dirs:** `content/references/` (planned).
@@ -325,7 +329,7 @@ As Sprint 5 (scorecard §3); RETRO-06 also writes the cost-per-PR report and the
 | senior-backend-engineer | ST-170a, ST-170b, ST-171a, ST-171e, ST-172a, ST-172b, ST-173a, ST-173b, ST-174a, ST-175a, SEC-R05, SEC-R11 |
 | senior-frontend-engineer | ST-170c, ST-172c, ST-173d; #218, #226 in the drain |
 | senior-qa-engineer | QA-WIP-GATE, QA-REF-GOLD, ST-174b, QA-PIN-06, VERIFY-06; VERIFY-05 in the drain; tier 1-2 test review |
-| sre-devops-engineer | CI-SCHEDULED-RED, OPS-DISK-06, CI-TIERS-06, CI-DOC-CHECK-06, ST-175b, SMOKE-06; #230, #232 and SMOKE-05 in the drain |
+| sre-devops-engineer | CI-SCHEDULED-RED, OPS-DISK-06, CI-TIERS-06, CI-DOC-CHECK-06, CI-REF-BASE-LOCK, ST-175b, SMOKE-06; #230, #232 and SMOKE-05 in the drain |
 | senior-ml-cv-engineer | ML-6, ST-171b, ST-171c, ST-171d, ST-176a, ST-176b; reviewer of dataset/eval PRs |
 
 ## 5. TDD plan (negative case first) [EP/ENG-18]
@@ -338,6 +342,7 @@ Order in every code ticket: (1) Gherkin scenario committed, (2) integration test
 | OPS-DISK-06 | `make -n up` has no precheck line |
 | CI-TIERS-06 | a `models/manifest.json` path → tier 2 (today: unmatched → 2 by fail-closed; the test asserts the named rule and the coach flag on `content/references/**`) |
 | CI-DOC-CHECK-06 | a reference entry citing an unknown source id passes today; a ready PR with no cost table passes today |
+| CI-REF-BASE-LOCK | a PR head that edits `pb-reference/v1.json` and rewrites its lock entry passes CI today (no job reads the base lock) |
 | QA-WIP-GATE | a 4th start with 3 in review is allowed today |
 | COACH-6b | `pattern_example.py --check` with no tables → rc 1 |
 | ST-170a | an entry with no source id passes today |
@@ -525,7 +530,8 @@ Atomic item → story → ticket → tests: `06/requirements-breakdown.md` §1-�
 | CI-DOC-CHECK-06 | `s06/ci-doc-check-06` | sre | 1 | COACH-6a | `scripts/ci/check_docs.py`, `.github/workflows/ci.yml`, `infra/tests/` | no |
 | QA-WIP-GATE | `s06/qa-wip-gate` | qa | 1 | — | `scripts/measure/`, `infra/tests/` | no |
 | ST-170a | `s06/st-170a` | be | 2 | PE-6a, COACH-6a, SEC-6, CI-TIERS-06 | `backend/src/racket/coaching/`, `content/`, `backend/tests/` | no |
-| COACH-6c | `s06/coach-6c` | coach | 1 | ST-170a, CI-DOC-CHECK-06 | `content/references/` (planned) | no |
+| CI-REF-BASE-LOCK | `s06/ci-ref-base-lock` | sre | 1 | ST-170a | `.github/workflows/ci.yml`, `infra/tests/` | no |
+| COACH-6c | `s06/coach-6c` | coach | 1 | ST-170a, CI-DOC-CHECK-06, CI-REF-BASE-LOCK | `content/references/` (planned) | no |
 | QA-REF-GOLD | `s06/qa-ref-gold` | qa | 1 | ST-170a, COACH-6b | `backend/tests/regression/` | no |
 | ST-170b | `s06/st-170b` | be | 2 | ST-170a | `backend/src/racket/coaching/`, `backend/tests/`, `web/tests/contract/` | no |
 | ST-170c | `s06/st-170c` | fe | 1 | ST-170b, DR-06 | `web/src/`, `web/tests/unit/` | no |

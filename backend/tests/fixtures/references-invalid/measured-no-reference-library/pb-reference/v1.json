@@ -1,0 +1,29 @@
+{
+  "schema": "reference-set/v1",
+  "set": "pb-reference",
+  "version": 1,
+  "entries": [
+    {
+      "id": "REF-AN09-D-INT",
+      "pattern_id": "AN-09",
+      "definition_version": "0.1",
+      "better_direction": "inside_band",
+      "level_band": "intermediate",
+      "format": "doubles",
+      "source_type": "measured",
+      "source": {
+        "footage_id": "FTG-0001",
+        "rights_record_id": "RR-0001"
+      },
+      "band": [
+        0.45,
+        0.7
+      ],
+      "status": "coach-reviewed",
+      "version": 1,
+      "value": 0.55,
+      "n": 40,
+      "k": 22
+    }
+  ]
+}
