@@ -5,7 +5,8 @@ Reads a candidate run and the per-metric best accepted baseline (JSON), measures
 match-minute by decoding the given clips with FFmpeg (the floor of any vision stage; no model
 exists yet), and writes a report from ``docs/evals/TEMPLATE.md``: candidate, baseline, delta and
 pass/fail per ADR 0060 row, gold-set version, weights hash and licence, config and cost.
-Rule 1: any one row outside its tolerance fails. Rule 2: M11 below its target fails once a
+Rule 1: the baseline must share the candidate's gold-set id and version and its config (else rc 2);
+any one row outside its tolerance fails. Rule 2: M11 below its target fails once a
 baseline has met it. Low sample neither passes nor fails (needs ML + QA agreement).
 Usage: run_eval.py --candidate C.json [--baseline B.json] --clips DIR --out REPORT.md [--date D]
 Exit 0 every row passes or is not judged; 1 a row fails; 2 input error (no report written).
@@ -16,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import resource
 import subprocess
 import sys
@@ -26,6 +28,7 @@ from typing import Any
 TEMPLATE = Path(__file__).resolve().parents[2] / "docs" / "evals" / "TEMPLATE.md"
 CLIP_SUFFIXES = (".mp4", ".mov", ".mkv", ".webm")
 EPS = 1e-9
+SHA256 = re.compile(r"[0-9a-f]{64}")
 DRY_RUN_BANNER = (
     "**DRY RUN:** the metric values are synthetic inputs that exercise the harness; "
     "no model and no gold-set footage exist (P11). Never cite them."
@@ -110,16 +113,42 @@ def judge(row: Row, measure: Measure | None, baseline: float | None) -> Result:
     return Result(row, measure, baseline, delta, verdict, target_met)
 
 
+def gold_set(run: dict[str, Any], name: str) -> tuple[str, int]:
+    """The (id, version) of a run's gold set; missing or malformed fails closed (Rule 1)."""
+    gold = run.get("gold_set")
+    gid = gold.get("id") if isinstance(gold, dict) else None
+    version = gold.get("version") if isinstance(gold, dict) else None
+    bad_version = isinstance(version, bool) or not isinstance(version, int)
+    if not isinstance(gid, str) or not gid or bad_version:
+        raise InputError(f"{name} gold_set must be {{id, version}}, got {gold!r}")
+    return gid, version
+
+
+def config(run: dict[str, Any], name: str) -> dict[str, Any]:
+    """A run's config; Rule 1 needs one on both sides to compare like with like."""
+    value = run.get("config")
+    if not isinstance(value, dict):
+        raise InputError(f"{name} config must be an object, got {value!r}")
+    return value
+
+
 def evaluate(candidate: dict[str, Any], baseline: dict[str, Any] | None) -> list[Result]:
     known = {r.id for r in ROWS}
     unknown = sorted(set(candidate.get("metrics", {})) - known)
     if unknown:
         raise InputError(f"unknown metric id(s) {', '.join(unknown)}; ADR 0060 has M1-M11")
-    if baseline is not None and baseline.get("gold_set") != candidate.get("gold_set"):
-        raise InputError(
-            f"gold-set version differs: candidate {candidate.get('gold_set')}, baseline "
-            f"{baseline.get('gold_set')}; ADR 0060 Rule 1 never compares across versions"
-        )
+    cand_gold = gold_set(candidate, "candidate")
+    if baseline is not None:
+        if gold_set(baseline, "baseline") != cand_gold:
+            raise InputError(
+                f"gold-set version differs: candidate {candidate['gold_set']}, baseline "
+                f"{baseline['gold_set']}; ADR 0060 Rule 1 never compares across versions"
+            )
+        if config(baseline, "baseline") != config(candidate, "candidate"):
+            raise InputError(
+                f"config differs: candidate {candidate['config']}, baseline "
+                f"{baseline['config']}; ADR 0060 Rule 1 compares only runs with the same config"
+            )
     best = (baseline or {}).get("metrics", {})
     results = []
     for row in ROWS:
@@ -183,10 +212,21 @@ def render(
     cost: Cost,
     weights_sha256: str | None,
     date: str,
+    baseline: dict[str, Any] | None = None,
 ) -> str:
     gold = candidate.get("gold_set", {})
     weights = candidate.get("weights") or {}
-    config = json.dumps(candidate.get("config", {}), sort_keys=True)
+    cand_config = json.dumps(candidate.get("config", {}), sort_keys=True)
+    base_config = (
+        "— (no baseline)"
+        if baseline is None
+        else f"`{json.dumps(baseline.get('config', {}), sort_keys=True)}`"
+    )
+    sha_cell = "none (no weights)"
+    if weights_sha256:
+        sha_cell = f"`{weights_sha256}`"
+        if not weights.get("path"):
+            sha_cell += " (declared; no file to verify)"
     dry = bool(candidate.get("dry_run"))
     rc = exit_code(results)
     rate = per_match_minute(cost.cpu_seconds, cost.durations_s)
@@ -198,12 +238,10 @@ def render(
             [
                 ["Candidate pipeline_version", str(candidate.get("pipeline_version", "—"))],
                 ["Gold set", f"{gold.get('id', '—')} v{gold.get('version', '—')}"],
-                [
-                    "Weights sha256",
-                    f"`{weights_sha256}`" if weights_sha256 else "none (no weights)",
-                ],
+                ["Weights sha256", sha_cell],
                 ["Weights licence", str(weights.get("licence", "—"))],
-                ["Config", f"`{config}`"],
+                ["Config", f"`{cand_config}`"],
+                ["Baseline config", base_config],
             ]
         ),
         "cost": _table(
@@ -249,10 +287,14 @@ def measure_decode(clips_dir: Path) -> Cost:
 
 
 def weights_hash(weights: dict[str, Any]) -> str | None:
+    """sha256 of the weights file; with no file, the declared sha256 (reported as unverified)."""
+    declared = weights.get("sha256")
+    if declared is not None and not SHA256.fullmatch(str(declared)):
+        raise InputError(f"weights sha256 must be 64 lowercase hex characters, got {declared!r}")
     if not weights.get("path"):
-        return None
+        return declared
     digest = hashlib.sha256(Path(weights["path"]).read_bytes()).hexdigest()
-    if weights.get("sha256") and weights["sha256"] != digest:
+    if declared and declared != digest:
         raise InputError(f"weights sha256 declared {weights['sha256']}, file has {digest}")
     return digest
 
@@ -271,7 +313,9 @@ def main(argv: list[str] | None = None) -> int:
         results = evaluate(candidate, baseline)
         sha = weights_hash(candidate.get("weights") or {})
         cost = measure_decode(args.clips)
-        report = render(TEMPLATE.read_text(), candidate, results, cost, sha, args.date)
+        report = render(
+            TEMPLATE.read_text(), candidate, results, cost, sha, args.date, baseline=baseline
+        )
     except (InputError, OSError, ValueError, KeyError, subprocess.CalledProcessError) as exc:
         print(f"eval: input error: {exc}", file=sys.stderr)
         return 2

@@ -7,5 +7,5 @@ the values only exercise the ADR 0060 rules. Never cite them as a measurement.
 | File | Purpose |
 |---|---|
 | `candidate.json` | dry-run candidate: every row within tolerance of the baseline (rc 0) |
-| `baseline.json` | per-metric best accepted values on gold set `dry-run-synthetic` v1 |
+| `baseline.json` | per-metric best accepted values on gold set `dry-run-synthetic` v1, with the `config` they were run under (must equal the candidate's) |
 | `planted-regression.json` | as `candidate.json` with M1 −1.5 pp (tolerance 1.0) and M7 +5 ms (tolerance 3): rc 1 |

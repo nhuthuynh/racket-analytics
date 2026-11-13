@@ -20,7 +20,8 @@ report; re-run the harness. Owner: senior-ml-cv-engineer. -->
 
 ## 3. ADR 0060 rows
 
-Baseline = the per-metric best accepted value on the same gold-set version (Rule 1). Verdicts:
+Baseline = the per-metric best accepted value on the same gold-set version with the same config
+(Rule 1); a baseline file with another gold-set id or version, or another config, is rc 2. Verdicts:
 `pass`, `fail`, `low sample` (fewer units than the minimum: the senior-ml-cv-engineer and the
 senior-qa-engineer agree in the PR review), `n/a: no baseline` (first model of a stage),
 `not measured`. M11 below its target also fails once a baseline has met it (Rule 2).
@@ -38,4 +39,8 @@ senior-qa-engineer agree in the PR review), `n/a: no baseline` (first model of a
 `python3 scripts/eval/run_eval.py --candidate <run.json> --baseline <best.json> --clips <clip dir> --out docs/evals/<date>-<name>.md --date <date>`.
 Inputs: the candidate run (`pipeline_version`, `gold_set` id and version, `weights` path or sha256
 and licence, `config`, `metrics` with `value` and `units` per ADR 0060 row) and the per-metric best
-accepted baseline on the same gold-set version. Exit 0 pass, 1 a row fails, 2 input error.
+accepted baseline on the same gold-set version with the same `config` (the baseline file carries
+both). A weights path is hashed and checked against any declared sha256; a sha256 declared without
+a path is reported as "declared; no file to verify". A missing or malformed `gold_set` (no id or
+version) on either input, or a missing `config` when a baseline is given, is an input error. Exit 0
+pass, 1 a row fails, 2 input error.

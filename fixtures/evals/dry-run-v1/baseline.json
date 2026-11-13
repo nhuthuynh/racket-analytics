@@ -5,6 +5,11 @@
     "version": 1
   },
   "pipeline_version": "baseline-dry-run",
+  "config": {
+    "seed": 0,
+    "ball_px_threshold": 10,
+    "rally_match_window_s": 1.0
+  },
   "metrics": {
     "M1": {
       "value": 80.0

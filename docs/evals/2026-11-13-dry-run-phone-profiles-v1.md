@@ -15,6 +15,7 @@ report; re-run the harness. Owner: senior-ml-cv-engineer. -->
 | Weights sha256 | none (no weights) |
 | Weights licence | none (no model in the dry-run) |
 | Config | `{"ball_px_threshold": 10, "rally_match_window_s": 1.0, "seed": 0}` |
+| Baseline config | `{"ball_px_threshold": 10, "rally_match_window_s": 1.0, "seed": 0}` |
 
 ## 2. Cost (NFR-020 input; reported, not gated by ADR 0060)
 
@@ -23,8 +24,8 @@ report; re-run the harness. Owner: senior-ml-cv-engineer. -->
 | Stage measured | FFmpeg decode of every clip (no model) |
 | Clips decoded | 6 |
 | Match-minutes | 0.200 |
-| CPU-seconds | 4.767 |
-| CPU-seconds per match-minute | 23.833 |
+| CPU-seconds | 4.431 |
+| CPU-seconds per match-minute | 22.154 |
 
 ## 3. ADR 0060 rows
 
