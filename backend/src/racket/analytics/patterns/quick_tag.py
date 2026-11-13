@@ -41,22 +41,18 @@ class UnknownDataSource(ValueError):
     """A declared pattern names a data source a Quick Tag-only match cannot lack."""
 
 
-def _wilson(pattern: str, value: Any, n: int, row: Mapping[str, Any], version: str,
-            low_sample: bool) -> PatternMeasure:  # fmt: skip
-    low, high = row["ci_low"], row["ci_high"]
-    interval = None if low is None else Interval(low, high)
-    return PatternMeasure(pattern, value, n, interval, "wilson", low_sample, version)
-
-
 def _measure(pattern: str, stat: Mapping[str, Any], version: str) -> PatternMeasure:
+    """The measure of one side's starter stat ``stat`` (FR-171.R1: same value, n, flag)."""
     if pattern in _NO_INTERVAL:
         value_key, n_key = _NO_INTERVAL[pattern]
-        return PatternMeasure(pattern, stat[value_key], stat[n_key], None, None,
-                              stat["low_sample"], version)  # fmt: skip
-    if pattern in _SHARES:
-        share = stat["shares"][_SHARES[pattern]]
-        return _wilson(pattern, share["value"], stat["n"], share, version, stat["low_sample"])
-    return _wilson(pattern, stat["value"], stat["n"], stat, version, stat["low_sample"])
+        value, n = stat[value_key], stat[n_key]
+        return PatternMeasure(pattern, value, n, None, None, stat["low_sample"], version)
+    row = stat["shares"][_SHARES[pattern]] if pattern in _SHARES else stat
+    low, high = row["ci_low"], row["ci_high"]
+    interval = None if low is None else Interval(low, high)
+    return PatternMeasure(
+        pattern, row["value"], stat["n"], interval, "wilson", stat["low_sample"], version
+    )
 
 
 def quick_tag_measures(
@@ -78,5 +74,7 @@ def quick_tag_measures(
         reason = _MISSING_SOURCE.get(source)
         if reason is None or pattern in out:
             raise UnknownDataSource(f"{pattern}: {source!r} is not a source a match can lack")
-        out[pattern] = {side: PatternMeasure.unavailable(pattern, reason, version) for side in SIDES}
+        out[pattern] = {
+            side: PatternMeasure.unavailable(pattern, reason, version) for side in SIDES
+        }
     return out
