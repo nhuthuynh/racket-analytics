@@ -9,6 +9,17 @@ from pathlib import Path
 import pytest
 import yaml
 from conftest import REPO_ROOT
+from doc_check_prc11 import (
+    COST_TABLE,
+    SOURCES,
+    SOURCES_TEXT,
+    THREAT_ROW_NO_STATUS,
+    THREAT_ROW_OK,
+    add_threat_tool,
+    reference,
+    run_cost,
+    threat_notes,
+)
 from doc_check_repo import AGENT_OK, commit, flows_text, make_repo, run_check, write
 from workflow_if import DRAFT_PR, PUSH, READY_PR, evaluate
 
@@ -281,3 +292,218 @@ def test_doc_check_is_skipped_on_drafts_and_runs_on_ready_prs_and_pushes() -> No
     assert evaluate(cond, DRAFT_PR) is False
     assert evaluate(cond, READY_PR) is True
     assert evaluate(cond, PUSH) is True
+
+
+# ------------------------------------------------------------------ PRC-11.1 reference citations
+# CI-DOC-CHECK-06 (ADR 0056 required ticket b, extended): every content/references/** entry's
+# source.citation_id is a row of docs/domain/sources.md, whether or not the change touches it.
+REF = "content/references/planted/v1.json"
+
+
+def test_reference_entry_citing_an_unknown_source_id_fails(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    write(root, SOURCES, SOURCES_TEXT)
+    write(root, REF, reference("SRC-0001", "SRC-0999"))
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert (
+        f"FAIL reference: {REF}: entries[1].source.citation_id SRC-0999 is not a row of {SOURCES}"
+        in out
+    )
+    assert "SRC-0001" not in out
+
+
+def test_reference_entries_citing_register_rows_or_footage_pass(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    write(root, SOURCES, SOURCES_TEXT)
+    write(root, REF, reference("SRC-0001", "SRC-0002", None))
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 0, out
+    assert "references: 1 file(s), 2 citation(s) resolved" in out
+
+
+def test_unchanged_reference_file_fails_when_its_source_row_goes(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    write(root, SOURCES, SOURCES_TEXT)
+    write(root, REF, reference("SRC-0002"))
+    base = commit(root, "reference set")
+    write(root, SOURCES, SOURCES_TEXT.replace("| SRC-0002 |", "| SRC-0003 |"))
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert "entries[0].source.citation_id SRC-0002 is not a row" in out
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("{not json\n", f"FAIL reference: {REF}: does not parse as JSON"),
+        (
+            '{"entries": [{"source": {"citation_id": ""}}]}\n',
+            "entries[0].source.citation_id '' is not a row",
+        ),
+        (
+            '{"entries": [{"source": {"citation_id": 7}}]}\n',
+            "entries[0].source.citation_id 7 is not a row",
+        ),
+    ],
+)
+def test_broken_reference_file_fails(repo: tuple[Path, str], text: str, expected: str) -> None:
+    root, base = repo
+    write(root, SOURCES, SOURCES_TEXT)
+    write(root, REF, text)
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert expected in out
+
+
+def test_reference_citation_without_a_sources_register_fails(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    write(root, REF, reference("SRC-0001"))
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert f"FAIL reference: {REF}: entries[0].source.citation_id SRC-0001: {SOURCES} not found" in out
+
+
+def test_no_reference_set_yet_is_skipped_and_reported(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    write(root, "docs/planted.md", "# Plain\n")
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 0, out
+    assert "references: no content/references/**/*.json; skipped (PRC-11.1)" in out
+
+
+# ------------------------------------------------------------------ PRC-11.2 threat notes
+NOTES = "docs/security/threat-notes-sprint-06.md"
+
+
+def test_newest_threat_notes_with_a_row_lacking_status_fails(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    add_threat_tool(root)
+    write(root, NOTES, threat_notes(THREAT_ROW_NO_STATUS))
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert f"FAIL threat-notes: {NOTES}: threat: T6-FT-1 needs 8 cells" in out
+
+
+def test_threat_notes_run_even_when_the_notes_are_unchanged(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    add_threat_tool(root)
+    write(root, NOTES, threat_notes(THREAT_ROW_NO_STATUS))
+    base = commit(root, "notes")
+    write(root, "docs/planted.md", "# Plain\n")
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert "FAIL threat-notes" in out
+
+
+def test_only_the_newest_threat_notes_are_checked(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    add_threat_tool(root)
+    write(root, "docs/security/threat-notes-sprint-05.md", threat_notes(THREAT_ROW_NO_STATUS, "05"))
+    write(root, NOTES, threat_notes(THREAT_ROW_OK))
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 0, out
+    assert f"threat-notes: {NOTES}: rc 0" in out
+
+
+def test_threat_notes_with_a_dangling_link_fail(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    add_threat_tool(root)
+    write(root, NOTES, threat_notes(THREAT_ROW_OK) + "\nSee [ADR](../decisions/9999-x.md).\n")
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert f"FAIL threat-notes: {NOTES}: link: ../decisions/9999-x.md" in out
+
+
+def test_threat_notes_without_their_checker_fail(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    write(root, NOTES, threat_notes(THREAT_ROW_OK))
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 1, out
+    assert "FAIL threat-notes: docs/security/tools/check_threat_notes.py not found" in out
+
+
+def test_no_threat_notes_yet_is_skipped_and_reported(repo: tuple[Path, str]) -> None:
+    root, base = repo
+    write(root, "docs/planted.md", "# Plain\n")
+    commit(root)
+    rc, out = check(root, base)
+    assert rc == 0, out
+    assert "threat-notes: no docs/security/threat-notes-sprint-NN.md; skipped (PRC-11.2)" in out
+
+
+# ------------------------------------------------------------------ PRC-11.3 cost per PR table
+DECISIONS = "docs/sprints/06/decisions"
+
+
+def cost(root: Path, title: str) -> tuple[int, str]:
+    proc = run_cost(root, "--title", title)
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+def test_ticket_pr_whose_decisions_file_has_no_cost_table_fails(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    write(root, f"{DECISIONS}/OPS-X.md", "# OPS-X decisions\n\n## 1. Size\n\nS.\n")
+    commit(root)
+    rc, out = cost(root, "[OPS-X] disk precheck")
+    assert rc == 1, out
+    assert f"FAIL cost-table: {DECISIONS}/OPS-X.md has no 'Cost per PR' table with a row" in out
+
+
+def test_cost_table_with_a_header_but_no_row_fails(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    header_only = COST_TABLE.split("| implement")[0]
+    write(root, f"{DECISIONS}/OPS-X.md", "# OPS-X\n\n" + header_only)
+    commit(root)
+    rc, out = cost(root, "[OPS-X] disk precheck")
+    assert rc == 1, out
+    assert "has no 'Cost per PR' table with a row" in out
+
+
+def test_ticket_pr_without_a_decisions_file_fails(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    rc, out = cost(root, "[OPS-X] disk precheck")
+    assert rc == 1, out
+    assert "FAIL cost-table: no docs/sprints/<nn>/decisions/OPS-X.md" in out
+
+
+def test_ticket_pr_with_a_cost_row_passes_even_if_not_measured(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    write(root, f"{DECISIONS}/OPS-X.md", "# OPS-X\n\n" + COST_TABLE + "\n## 2. Next\n")
+    commit(root)
+    rc, out = cost(root, "[OPS-X] disk precheck")
+    assert rc == 0, out
+    assert f"cost-table: {DECISIONS}/OPS-X.md: 1 row(s)" in out
+
+
+def test_pr_title_without_a_ticket_id_is_skipped(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    rc, out = cost(root, "Bump actions/checkout")
+    assert rc == 0, out
+    assert "not a ticket PR; skipped (PRC-11.3)" in out
+
+
+def test_missing_title_is_a_usage_error(repo: tuple[Path, str]) -> None:
+    root, _ = repo
+    proc = run_cost(root)
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+
+
+def test_pr_policy_runs_the_cost_table_check_with_the_title_in_env() -> None:
+    job = CI["jobs"]["pr-policy"]
+    step = next(s for s in job["steps"] if "check_cost_table.py" in s.get("run", ""))
+    assert "${{" not in step["run"], "the PR title must reach the script through env only"
+    assert step["env"]["PR_TITLE"] == "${{ github.event.pull_request.title }}"
+    assert evaluate(job["if"], DRAFT_PR) is False
+    assert evaluate(job["if"], READY_PR) is True
