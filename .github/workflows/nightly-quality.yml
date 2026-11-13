@@ -127,6 +127,14 @@ jobs:
             --project . --target src/racket/matches/scorebook/integrity.py \
             --tests tests/unit/matches/test_corrections_integrity.py \
             --min-score 0.80 --out ../reports/mutation-matches-integrity.json
+      # Sprint-06 ST-171a: player pattern measures (FR-171), one package, >= 0.80.
+      - name: mutmut run, analytics/patterns >= 0.80 (sprint-06 ST-171a)
+        if: success() || failure()
+        run: |
+          rm -rf mutants
+          uv run --no-sync --with "mutmut==${MUTMUT_VERSION}" python ../scripts/ci/mutation_score.py \
+            --project . --target src/racket/analytics/patterns --tests tests/unit/analytics/patterns \
+            --min-score 0.80 --out ../reports/mutation-analytics-patterns.json
       - name: Report as job output
         id: report
         if: always()
