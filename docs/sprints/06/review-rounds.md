@@ -85,3 +85,25 @@ Findings returned in rounds 2 and 3: 9 ids from the reviewers (round 2: PE "-08"
 | PE-PLAN06-11 | minor | Fixed: A6 now reads "95 % interval per the pattern's `interval_method` (`wilson` for proportions, FR-171.R1; `order_statistic_median` for AN-13, min_n ≥ 6, FR-171.R4)" (`docs/sprints/06/requirements-breakdown.md`); `check_atomic_breakdown.py` rc 0 | engineering-manager | — |
 | PE-PLAN06-12 | nit | Deferred to PE-6a (ADR 0061, principal-engineer, Sprint 6): the PE-6a row already settles one owner (sport-plugin content read by Coaching through the ACL, not a Coaching aggregate); ADR 0061 states that the `coaching/reference/` (planned) module is the ACL read side, and ST-170a's Context and Dirs follow ADR 0061 before ST-170a is Ready | principal-engineer | PE-6a |
 | QA06-PLAN-02 / PE-PLAN06-13 | nit | Deferred to QA-PIN-06 (senior-qa-engineer, Sprint 6, `infra/tests/`): tighten the Then step to a word-boundary match, with a TCR row (it changes an accepted test). Not fixed in PLAN-06 because it is not needed for a correct result today (the check fails only the planted row) and a second test change in a plan PR needs its own QA decision | senior-qa-engineer | QA-PIN-06 |
+
+## PE-6a (ADR 0061), principal-engineer, 2026-11-13: dispositions of findings owned by PE-6a
+
+| Finding | Severity | Disposition | Owner (Sprint 6) | Waits on |
+|---|---|---|---|---|
+| PE-PLAN06-12 | nit | Fixed in the PE-6a PR: ADR 0061 Rule 1 states that `racket.coaching.reference` (planned) is only the ACL read side (translate, filter to `coach-reviewed` and `verified`, fail closed) and that the schema, loader, lint and lock belong to the publisher, `racket.sports.references` (planned); context map row R13 records it. ST-170a's Context and Dirs follow ADR 0061 when BA-6 marks ST-170 Ready | principal-engineer | — |
+
+## PE-6a (PR #248), review round 1: principal-engineer (review 5886129385, head `71a3d272`)
+
+Rows written by the ticket owner (§7 step 3d): the reviewer returned the findings in the review body and wrote no rows.
+
+| Finding | Severity | Disposition | Owner (Sprint 6) | Waits on |
+|---|---|---|---|---|
+| PE-6a-R1-01 | major | Open: ADR 0061 Rule 3.3 (judgment entry = band, no n) conflicts with FR-170.R1 (n and interval on every entry) and records no amendment | principal-engineer | — |
+| PE-6a-R1-02 | major | Open: ADR 0061 Rule 4 allows up to 5 plan targets, against FR-121 (top 3) and the `TrainingPlan` invariant `MAX_WEAKNESSES = 3` | principal-engineer | — |
+
+## PE-6a (PR #248), round 1 reconciliation (principal-engineer)
+
+| Finding | Severity | Disposition | Owner (Sprint 6) | Waits on |
+|---|---|---|---|---|
+| PE-6a-R1-01 | major | Fixed: ADR 0061 Rule 3.3 now states `published`/`measured` entries carry n (interval computed by the lint) and `judgment` entries a band with no n, and records an amendment to FR-170.R1 with the replacement clause and two Examples; owner business-analyst (BA-6) updates the breakdown and the register row before ST-170a or COACH-6c is Ready; decision row in `docs/sprints/06/decisions/PE-6a.md` | principal-engineer | — |
+| PE-6a-R1-02 | major | Fixed: ADR 0061 Rule 4 keeps the plan at the ADR 0003 top 3 (FR-121); `MAX_WEAKNESSES`, the validator in `_shape` and the slice in `assemble` are named and unchanged; gaps only add a reference citation on a chosen weakness that shares the AN id, and every other gap shows as "not in this plan" with fitting drills; more targets need an FR-121 amendment by the PO and a new ADR. Coaching canvas, Q3-3 option text, Evidence and Confirmation updated | principal-engineer | — |
