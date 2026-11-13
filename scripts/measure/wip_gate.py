@@ -6,7 +6,8 @@ working-agreement §3 "Flow and WIP limits", sprint-06 §2.1. The orchestrator r
 every "start ticket" step and logs a refusal; a refusal turns the next agent turn to review,
 QA or merge work instead.
 
-Stage of each open ticket PR into main (title "[ID] ..."), from GitHub REST only:
+Stage of each open ticket PR into main (head branch s<nn>/<id> as `merge_ready.py` reads it, or
+title "[ID] ..."), from GitHub REST only:
 - in progress: the PR is a draft (ADR 0052);
 - awaiting merge: `scripts/ci/merge_ready.py` exits 0 on the head (working-agreement §3); it is
   run only for ready PRs with an APPROVE and no CHANGES REQUESTED on the head;
@@ -68,10 +69,16 @@ MR = _merge_ready()
 
 
 def is_ticket_pr(pr: Mapping[str, Any]) -> bool:
+    """An open PR into main whose head branch is `s<nn>/<id>` (`merge_ready.py`'s
+    `_TICKET_BRANCH`) or whose title starts `[ID]`; either one is enough (PE-QWG-01)."""
+    branch = (pr.get("head") or {}).get("ref") or ""
     return (
         pr.get("state") == "open"
         and (pr.get("base") or {}).get("ref") == "main"
-        and bool(TICKET.match(pr.get("title") or ""))
+        and (
+            MR._TICKET_BRANCH.fullmatch(branch) is not None
+            or bool(TICKET.match(pr.get("title") or ""))
+        )
     )
 
 
