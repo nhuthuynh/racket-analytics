@@ -33,3 +33,7 @@ Head `fdcc2ba6893b99eb1bb0481b4bd12f6004eceb64`, job `PR policy (test immutabili
 - `reconcile_due.py --pr`: the failing step. The table row of decision 1 put the atomic item id on the same line as a severity word from the `_MUST_WORD` list, which the declared-form rule of `reconcile_due.py` reads as an undeclared review finding. The id is a requirement item, not a review finding, so no ledger row or severity declaration is right. `reconcile-due: no label waives this check`, so no label can or should be applied. Fix: decision 1 now says "not a merge gate"; the meaning is unchanged.
 
 Outcome: no label applied. The PR-policy failure was a wording finding in this file, fixed on the branch.
+
+## SEC-242-01: the gate rule file is tier 2
+
+`merge_ready.py` (tier 2) imports `block_reason`, `CI_LISTING`, `from_payload` and `CI` from `scripts/measure/scheduled_red.py`, which the tier 1 `scripts/**` rule covered. Decision: `scripts/measure/scheduled_red.py` joins the tier 2 globs in `scripts/ci/review_tiers.py` (kept in place rather than moved under `scripts/ci/`, so the report job's path does not change). `infra/tests/test_review_tiers.py` adds `test_the_scheduled_red_gate_rule_is_tier_2` and `test_every_module_merge_ready_imports_is_tier_2`, which parses `merge_ready.py`'s imports so the next module it imports from `scripts/ci` or `scripts/measure` must be tier 2 too.
