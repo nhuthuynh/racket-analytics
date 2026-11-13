@@ -27,6 +27,13 @@ Feature: Sprint 6 footage, consent, pose, pattern-snapshot and model paths get t
         | backend/src/racket/analytics/patterns/snapshot.py           | 2    |
         | models/manifest.json                                        | 2    |
         | docs/x.md, models/weights/pose-small.onnx                   | 2    |
+        | backend/src/racket/footage/rights.py                        | 2    |
+        | backend/src/racket/footage_rights/record.py                 | 2    |
+        | backend/src/racket/consent/x.py                             | 2    |
+        | backend/src/racket/pose_estimation/model.py                 | 2    |
+        | backend/src/racket/analytics/patterns/snapshots/repo.py     | 2    |
+        | scripts/ci/check_licences.py                                | 2    |
+        | infra/licence-exceptions.json                               | 2    |
 
       Examples: near misses stay tier 1 (PRC-10.1 negatives)
         | paths                                                       | tier |

@@ -511,6 +511,14 @@ SPRINT6_TIER2 = [
     ("backend/src/racket/analytics/patterns/snapshot_repository.py", "ST-171e"),
     ("models/manifest.json", "ST-175b"),
     ("models/weights/pose-small.onnx", "ST-175b"),
+    # Review round 1 (M1): the same concerns as a package directory, not only as a module name.
+    ("backend/src/racket/footage/rights.py", "ST-175a"),
+    ("backend/src/racket/footage_rights/record.py", "ST-175a"),
+    ("backend/src/racket/consent/x.py", "ST-175a"),
+    ("backend/src/racket/dataset/consent_records/grant.py", "ST-175a"),
+    ("backend/src/racket/pose_estimation/model.py", "ST-175a"),
+    ("backend/src/racket/dataset/provenance_records/entry.py", "ST-175a"),
+    ("backend/src/racket/analytics/patterns/snapshots/repo.py", "ST-171e"),
 ]
 # Negatives per path: near misses that stay tier 1 (no Sprint 6 tier 2 rule matches them).
 SPRINT6_NOT_TIER2 = [
@@ -599,3 +607,23 @@ def test_merge_ready_still_requires_the_qa_approve_on_sprint_6_paths(
     assert "senior-qa-engineer" in required
     assert "principal-engineer" in required
     assert ("security-privacy-engineer" in required) is (expected == 2)
+
+
+# Review round 1 (SEC-255-01): the NFR-062 licence gate and its exception allowlist (the `--allow`
+# file the CI licence step passes) are tier 2 by a live rule, so loosening either one, or adding an
+# AGPL exception, needs the security-privacy-engineer, as models/** does.
+LICENCE_GATE = ["scripts/ci/check_licences.py", "infra/licence-exceptions.json"]
+
+
+@pytest.mark.parametrize("path", LICENCE_GATE)
+def test_the_licence_gate_and_its_allowlist_are_tier_2_by_a_live_rule(
+    rt: ModuleType, path: str
+) -> None:
+    live = [r.glob for r in rt.RULES if r.tier == 2 and rt.glob_match(r.glob, path)]
+    assert live, path
+    assert tier(rt, path) == 2
+    assert tier(rt, "docs/x.md", path) == 2
+    mr = _load("merge_ready", MERGE_READY)
+    got = mr.review_tier([rt.ChangedFile(path)])
+    required = mr.Gate(tier=got.tier, specialists=got.specialists).required()
+    assert "security-privacy-engineer" in required
