@@ -1,0 +1,65 @@
+{
+  "note": "SYNTHETIC dry-run values (ST-176a): no model and no gold-set footage exist (P11). Never cite as a measurement.",
+  "dry_run": true,
+  "pipeline_version": "dry-run-0",
+  "gold_set": {
+    "id": "dry-run-synthetic",
+    "version": 1
+  },
+  "weights": {
+    "path": null,
+    "sha256": null,
+    "licence": "none (no model in the dry-run)"
+  },
+  "config": {
+    "seed": 0,
+    "ball_px_threshold": 10,
+    "rally_match_window_s": 1.0
+  },
+  "metrics": {
+    "M1": {
+      "value": 79.5,
+      "units": 2400
+    },
+    "M2": {
+      "value": 62.4,
+      "units": 3
+    },
+    "M3": {
+      "value": 70.0,
+      "units": 20
+    },
+    "M4": {
+      "value": 14.6,
+      "units": 20
+    },
+    "M5": {
+      "value": 84.5,
+      "units": 520
+    },
+    "M6": {
+      "value": 82.2,
+      "units": 520
+    },
+    "M7": {
+      "value": 31.0,
+      "units": 510
+    },
+    "M8": {
+      "value": 99.0,
+      "units": 510
+    },
+    "M9": {
+      "value": 66.5,
+      "units": 310
+    },
+    "M10": {
+      "value": 60.0,
+      "units": 305
+    },
+    "M11": {
+      "value": 88.5,
+      "units": 110
+    }
+  }
+}

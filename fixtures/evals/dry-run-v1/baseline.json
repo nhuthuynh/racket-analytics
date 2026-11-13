@@ -1,0 +1,43 @@
+{
+  "note": "SYNTHETIC dry-run values (ST-176a): no model and no gold-set footage exist (P11). Never cite as a measurement.",
+  "gold_set": {
+    "id": "dry-run-synthetic",
+    "version": 1
+  },
+  "pipeline_version": "baseline-dry-run",
+  "metrics": {
+    "M1": {
+      "value": 80.0
+    },
+    "M2": {
+      "value": 62.0
+    },
+    "M3": {
+      "value": 70.0
+    },
+    "M4": {
+      "value": 14.0
+    },
+    "M5": {
+      "value": 84.0
+    },
+    "M6": {
+      "value": 83.0
+    },
+    "M7": {
+      "value": 30.0
+    },
+    "M8": {
+      "value": 95.0
+    },
+    "M9": {
+      "value": 68.0
+    },
+    "M10": {
+      "value": 58.0
+    },
+    "M11": {
+      "value": 88.0
+    }
+  }
+}
