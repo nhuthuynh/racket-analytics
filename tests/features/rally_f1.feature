@@ -40,6 +40,18 @@ Feature: Rally segmentation F1 matching
       When the predictions are matched against the gold rallies
       Then there are 0 true positives, 2 false positives and 1 false negatives
 
+    Example: a prediction running 2 s past the gold end is not a piece
+      Given the gold rallies "10.0-20.0"
+      And the predicted rallies "10.5-19.5, 19.6-22.0"
+      When the predictions are matched against the gold rallies
+      Then there are 1 true positives, 1 false positives and 0 false negatives
+
+    Example: a merge prediction is not a piece of the next gold rally
+      Given the gold rallies "10.0-20.0, 20.5-30.0"
+      And the predicted rallies "10.0-20.6, 20.6-30.0"
+      When the predictions are matched against the gold rallies
+      Then there are 1 true positives, 1 false positives and 1 false negatives
+
   Rule: NFR-006.4 Matching is one-to-one
 
     Example: two predictions near one gold rally give 1 TP and 1 FP

@@ -3,7 +3,8 @@
 R1 (NFR-006.1): a prediction matches a gold rally only when its start and its end are each within
 1.0 s. R2 (NFR-006.2): a prediction overlapping two gold rallies is a merge and matches nothing.
 R3 (NFR-006.3): a gold rally cut into pieces by predictions that do not overlap each other is a
-split and matches nothing. R4 (NFR-006.4): matching is one-to-one and as large as possible.
+split and matches nothing; a piece lies inside the gold rally (1.0 s slack each side) and is not a
+merge. R4 (NFR-006.4): matching is one-to-one and as large as possible.
 """
 
 from __future__ import annotations
@@ -111,6 +112,46 @@ def test_r3_a_split_does_not_stop_other_gold_rallies_from_matching() -> None:
     assert _counts("10.0-19.5, 19.6-20.0, 40-50", "10.0-20.0, 40-50") == (1, 2, 1)
 
 
+# A piece of a split lies inside the gold rally, within the 1.0 s slack on each side, and is not
+# itself a merge (review F1 on PR #239: "two predictions inside one gold rally", NFR-006.3).
+@pytest.mark.parametrize(
+    ("predicted", "gold", "expected"),
+    [
+        pytest.param(
+            "10.0-20.6, 20.6-30.0",
+            "10.0-20.0, 20.5-30.0",
+            (1, 1, 1),
+            id="a merge is not a piece of the next gold rally",
+        ),
+        pytest.param(
+            "9.2-10.3, 10.5-20.0",
+            "5.0-9.5, 10.0-20.0",
+            (1, 1, 1),
+            id="a merge inside the slack is not a piece",
+        ),
+        pytest.param(
+            "10.5-19.5, 19.6-22.0", "10.0-20.0", (1, 1, 0), id="ends 2 s past the gold end"
+        ),
+        pytest.param(
+            "10.5-19.5, 19.6-21.01", "10.0-20.0", (1, 1, 0), id="ends 1.01 s past the gold end"
+        ),
+        pytest.param(
+            "10.5-19.5, 19.6-21.0", "10.0-20.0", (0, 2, 1), id="ends exactly 1.0 s past: split"
+        ),
+        pytest.param(
+            "8.99-10.4, 10.5-20.0", "10.0-20.0", (1, 1, 0), id="starts 1.01 s before the gold start"
+        ),
+        pytest.param(
+            "9.0-10.4, 10.5-20.0", "10.0-20.0", (0, 2, 1), id="starts exactly 1.0 s before: split"
+        ),
+    ],
+)
+def test_r3_only_predictions_inside_the_gold_rally_are_pieces(
+    predicted: str, gold: str, expected: tuple[int, int, int]
+) -> None:
+    assert _counts(predicted, gold) == expected
+
+
 # ------------------------------------------------------------------ R4 (NFR-006.4)
 def test_r4_two_predictions_near_one_gold_rally_give_one_tp_and_one_fp() -> None:
     assert _counts("10.2-20.1, 10.5-19.8", "10.0-20.0") == (1, 1, 0)
@@ -201,11 +242,23 @@ def _cut(x: Rally, others: list[Rally]) -> bool:
     return any(not _overlap(a, b) for a, b in itertools.combinations(hits, 2))
 
 
+def _split(g: Rally, predicted: list[Rally], gold: list[Rally]) -> bool:
+    pieces = [
+        p
+        for p in predicted
+        if _overlap(p, g)
+        and round((g.start_s - p.start_s) * 1000) <= 1000
+        and round((p.end_s - g.end_s) * 1000) <= 1000
+        and not _cut(p, gold)
+    ]
+    return any(not _overlap(a, b) for a, b in itertools.combinations(pieces, 2))
+
+
 def _eligible(p: Rally, g: Rally, predicted: list[Rally], gold: list[Rally]) -> bool:
     near = all(
         round(abs(a - b) * 1000) <= 1000 for a, b in ((p.start_s, g.start_s), (p.end_s, g.end_s))
     )
-    return near and not _cut(p, gold) and not _cut(g, predicted)
+    return near and not _cut(p, gold) and not _split(g, predicted, gold)
 
 
 def _max_matching_brute(predicted: list[Rally], gold: list[Rally]) -> int:
