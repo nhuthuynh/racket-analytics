@@ -1,9 +1,12 @@
 """A local stand-in for the GitHub REST endpoints `scripts/measure/wip_gate.py` reads
-(QA-WIP-GATE, PRC-12.1): `pulls?state=open`, `pulls/{n}/reviews` and
-`commits/{sha}/check-runs`. Real HTTP on 127.0.0.1. It pages with `?page=N` (two items a page,
-an empty page past the end) and sends no `Link` header, as `flow_stub.py` does, because the
-agent proxy refuses the `repositories/{id}` form GitHub puts in `Link`. Every request is
+(QA-WIP-GATE, PRC-12.1): `pulls?state=open` and `pulls/{n}/reviews`. Real HTTP on
+127.0.0.1. It pages with `?page=N` (two items a page, an empty page past the end) and sends no
+`Link` header, as `flow_stub.py` does, because the agent proxy refuses the `repositories/{id}` form GitHub puts in `Link`. Every request is
 recorded so a test can assert that only REST paths under `/repos/` were read.
+
+`merge_ready.py` is replaced by `fake_merge_ready()`, a script that exits 0 for the PRs in
+`WipStub.merge_ready` and 1 for the others, and logs each call: its own REST reads are
+covered by `test_merge_ready*.py`.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -69,15 +73,25 @@ def review(
     }
 
 
-def gate_run(conclusion: str = "success", name: str = "ci-gate") -> dict[str, Any]:
-    return {"id": 1, "name": name, "status": "completed", "conclusion": conclusion}
+def fake_merge_ready(tmp_path: Path, ready: set[int], rc: int | None = None) -> Path:
+    """A stand-in for scripts/ci/merge_ready.py: rc 0 for `ready` PRs, 1 otherwise (or `rc` for
+    every PR); each call's argv is appended to calls.log next to it."""
+    script = tmp_path / "fake_merge_ready.py"
+    log = tmp_path / "calls.log"
+    script.write_text(
+        "import sys\n"
+        f"open({str(log)!r}, 'a').write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "pr = int(sys.argv[sys.argv.index('--pr') + 1])\n"
+        f"sys.exit({rc!r} if {rc!r} is not None else (0 if pr in {sorted(ready)!r} else 1))\n"
+    )
+    return script
 
 
 @dataclass
 class WipStub:
     pulls: list[dict[str, Any]] = field(default_factory=list)
     reviews: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
-    check_runs: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    merge_ready: set[int] = field(default_factory=set)
     page_size: int = 2
     fail_status: int | None = None  # e.g. 500: every endpoint fails
     requests: list[str] = field(default_factory=list)
@@ -96,7 +110,7 @@ class WipStub:
     def awaiting_merge(self, number: int) -> None:
         self.pulls.append(ticket_pr(number))
         self.reviews[number] = [review(PE, head_of(number)), review(QA, head_of(number))]
-        self.check_runs[head_of(number)] = [gate_run()]
+        self.merge_ready.add(number)
 
 
 def _handler(stub: WipStub) -> type[BaseHTTPRequestHandler]:
@@ -123,10 +137,6 @@ def _handler(stub: WipStub) -> type[BaseHTTPRequestHandler]:
             m = re.fullmatch(rf"{base}/pulls/(\d+)/reviews", parts.path)
             if m:
                 return self._send(self._page(stub.reviews.get(int(m.group(1)), []), page))
-            m = re.fullmatch(rf"{base}/commits/([0-9a-f]{{40}})/check-runs", parts.path)
-            if m:
-                runs = stub.check_runs.get(m.group(1), [])
-                return self._send({"total_count": len(runs), "check_runs": self._page(runs, page)})
             self._send({"message": "Not Found"}, 404)
 
         def _page(self, items: list[Any], page: int) -> list[Any]:

@@ -5,6 +5,7 @@ stub."""
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -43,9 +44,9 @@ def github_fails(stub: WipStub) -> None:
 
 
 @when("the orchestrator asks to start a ticket", target_fixture="result")
-def ask(stub: WipStub) -> subprocess.CompletedProcess[str]:
+def ask(stub: WipStub, tmp_path: Path) -> subprocess.CompletedProcess[str]:
     with serve(stub):
-        return run_script(stub)
+        return run_script(stub, tmp_path)
 
 
 @then(parsers.parse('the start is refused, naming "{stage}"'))

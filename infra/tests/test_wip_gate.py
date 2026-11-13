@@ -14,12 +14,13 @@ import os
 import subprocess
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 from types import ModuleType
 from typing import Any
 
 import pytest
 from conftest import SCRIPTS_DIR
-from wip_stub import PE, QA, REPO, WipStub, gate_run, head_of, review, serve, ticket_pr
+from wip_stub import PE, QA, REPO, WipStub, fake_merge_ready, head_of, review, serve, ticket_pr
 
 SCRIPT = SCRIPTS_DIR / "measure" / "wip_gate.py"
 
@@ -34,7 +35,7 @@ def load() -> ModuleType:
 
 
 def counts(stub: WipStub) -> dict[str, int]:
-    return load().count_stages(stub.pulls, stub.reviews, stub.check_runs)
+    return load().count_stages(stub.pulls, stub.reviews, stub.merge_ready)
 
 
 def refusals(stub: WipStub) -> list[str]:
@@ -115,9 +116,9 @@ def test_other_limits_can_be_passed() -> None:
 
 
 def stage(
-    pr: dict[str, Any], reviews: Sequence[dict[str, Any]] = (), runs: Sequence[Any] = ()
+    pr: dict[str, Any], reviews: Sequence[dict[str, Any]] = (), merge_ready: bool = False
 ) -> Any:
-    return load().stage_of(pr, list(reviews), list(runs))
+    return load().stage_of(pr, list(reviews), merge_ready)
 
 
 @pytest.mark.unit
@@ -139,28 +140,47 @@ def test_a_principal_engineer_approve_on_the_head_without_a_qa_verdict_awaits_qa
 def test_an_approve_on_an_older_head_does_not_move_the_pr() -> None:
     old = "f" * 40
     assert stage(ticket_pr(1), [review(PE, old)]) == "in review"
-    assert stage(ticket_pr(1), [review(PE, old), review(QA, old)], [gate_run()]) == "in review"
+    assert stage(ticket_pr(1), [review(PE, old), review(QA, old)], merge_ready=True) == "in review"
 
 
 @pytest.mark.unit
 def test_a_qa_changes_requested_on_the_head_sends_the_pr_back_to_review() -> None:
     reviews = [review(PE, head_of(1)), review(QA, head_of(1), "CHANGES REQUESTED")]
-    assert stage(ticket_pr(1), reviews, [gate_run()]) == "in review"
+    assert stage(ticket_pr(1), reviews) == "in review"
+    assert stage(ticket_pr(1), reviews, merge_ready=True) == "in review"
 
 
 @pytest.mark.unit
-def test_both_approves_and_a_green_ci_gate_on_the_head_await_merge() -> None:
+def test_a_pr_merge_ready_on_its_head_awaits_merge() -> None:
     reviews = [review(PE, head_of(1)), review(QA, head_of(1))]
-    assert stage(ticket_pr(1), reviews, [gate_run()]) == "awaiting merge"
+    assert stage(ticket_pr(1), reviews, merge_ready=True) == "awaiting merge"
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
-    "runs", [[], [gate_run("failure")], [gate_run(name="unit")]], ids=["none", "red", "other"]
-)
-def test_both_approves_without_a_green_ci_gate_stay_in_review(runs: list[Any]) -> None:
+def test_a_tier_0_pr_merge_ready_on_one_approve_awaits_merge() -> None:
+    reviews = [review("business-analyst", head_of(1))]
+    assert stage(ticket_pr(1), reviews, merge_ready=True) == "awaiting merge"
+
+
+@pytest.mark.unit
+def test_both_approves_that_merge_ready_still_refuses_stay_in_review() -> None:
+    # e.g. a tier 2 PR without the security-privacy-engineer verdict, or a red ci-gate
+    # (live 2026-11-13: #239 and #220 had both approves and merge_ready.py rc 1).
     reviews = [review(PE, head_of(1)), review(QA, head_of(1))]
-    assert stage(ticket_pr(1), reviews, runs) == "in review"
+    assert stage(ticket_pr(1), reviews, merge_ready=False) == "in review"
+
+
+@pytest.mark.unit
+def test_merge_ready_is_asked_only_with_an_approve_and_no_changes_on_the_head() -> None:
+    wg = load()
+    sha = head_of(1)
+    assert not wg.merge_candidate(ticket_pr(1), [])
+    assert not wg.merge_candidate(ticket_pr(1, draft=True), [review(PE, sha)])
+    assert not wg.merge_candidate(ticket_pr(1), [review(PE, "f" * 40)])
+    assert not wg.merge_candidate(
+        ticket_pr(1), [review(PE, sha), review(QA, sha, "CHANGES REQUESTED")]
+    )
+    assert wg.merge_candidate(ticket_pr(1), [review("business-analyst", sha)])
 
 
 @pytest.mark.unit
@@ -197,11 +217,24 @@ def test_the_stage_line_is_the_one_flow_metrics_parses() -> None:
 # ------------------------------------------------------------------ integration: over HTTP
 
 
-def run_script(stub: WipStub, *extra: str) -> subprocess.CompletedProcess[str]:
+def run_script(
+    stub: WipStub, tmp_path: Path, *extra: str, rc: int | None = None
+) -> subprocess.CompletedProcess[str]:
     env = {k: v for k, v in os.environ.items() if k not in {"GITHUB_TOKEN", "GH_TOKEN"}}
     env["GITHUB_API_URL"] = stub.url
+    fake = fake_merge_ready(tmp_path, stub.merge_ready, rc)
     return subprocess.run(
-        [sys.executable, str(SCRIPT), "--repo", REPO, "--stage", "start", *extra],
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--repo",
+            REPO,
+            "--stage",
+            "start",
+            "--merge-ready",
+            str(fake),
+            *extra,
+        ],
         capture_output=True,
         text=True,
         env=env,
@@ -211,12 +244,12 @@ def run_script(stub: WipStub, *extra: str) -> subprocess.CompletedProcess[str]:
 
 
 @pytest.mark.integration
-def test_the_script_refuses_a_fourth_start_over_rest_and_names_the_stage() -> None:
+def test_the_script_refuses_a_fourth_start_over_rest_and_names_the_stage(tmp_path: Path) -> None:
     stub = WipStub()
     for n in (1, 2, 3):
         stub.in_review(n)
     with serve(stub):
-        result = run_script(stub)
+        result = run_script(stub, tmp_path)
     assert result.returncode == 1, result.stdout + result.stderr
     assert "In progress 0 · in review 3 · awaiting QA 0 · awaiting merge 0" in result.stdout
     assert "wip-gate: start refused: in review 3 of 3" in result.stdout
@@ -226,44 +259,60 @@ def test_the_script_refuses_a_fourth_start_over_rest_and_names_the_stage() -> No
 
 
 @pytest.mark.integration
-def test_the_script_reads_reviews_and_check_runs_for_the_awaiting_merge_count() -> None:
+def test_awaiting_merge_is_what_merge_ready_says_on_the_head(tmp_path: Path) -> None:
     stub = WipStub()
     stub.awaiting_merge(7)
     stub.in_progress(8)
+    stub.awaiting_qa(9)  # an approve on the head: merge_ready.py is asked and says no
+    stub.in_review(10)  # no approve: merge_ready.py is not asked
     with serve(stub):
-        result = run_script(stub)
+        result = run_script(stub, tmp_path)
     assert result.returncode == 1, result.stdout + result.stderr
-    assert "In progress 1 · in review 0 · awaiting QA 0 · awaiting merge 1" in result.stdout
+    assert "In progress 1 · in review 1 · awaiting QA 1 · awaiting merge 1" in result.stdout
     assert "awaiting merge 1 of 1" in result.stdout
     assert any(r.startswith(f"/repos/{REPO}/pulls/7/reviews") for r in stub.requests)
-    assert any(f"/commits/{head_of(7)}/check-runs" in r for r in stub.requests)
+    calls = (tmp_path / "calls.log").read_text().splitlines()
+    assert sorted(calls) == [
+        f"--repo {REPO} --pr 7 --sha {head_of(7)}",
+        f"--repo {REPO} --pr 9 --sha {head_of(9)}",
+    ]
 
 
 @pytest.mark.integration
-def test_the_script_allows_a_start_with_room_and_exits_zero() -> None:
+def test_the_script_fails_closed_when_merge_ready_cannot_answer(tmp_path: Path) -> None:
+    stub = WipStub()
+    stub.awaiting_merge(7)
+    with serve(stub):
+        result = run_script(stub, tmp_path, rc=2)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "wip-gate: unknown" in result.stdout
+
+
+@pytest.mark.integration
+def test_the_script_allows_a_start_with_room_and_exits_zero(tmp_path: Path) -> None:
     stub = WipStub()
     stub.in_review(1)
     stub.in_review(2)
     stub.in_progress(3)
     with serve(stub):
-        result = run_script(stub)
+        result = run_script(stub, tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "wip-gate: start allowed" in result.stdout
 
 
 @pytest.mark.integration
-def test_the_script_fails_closed_when_github_cannot_be_read() -> None:
+def test_the_script_fails_closed_when_github_cannot_be_read(tmp_path: Path) -> None:
     stub = WipStub(fail_status=500)
     with serve(stub):
-        result = run_script(stub)
+        result = run_script(stub, tmp_path)
     assert result.returncode == 2
     assert "wip-gate: unknown" in result.stdout
 
 
 @pytest.mark.integration
-def test_bad_limits_are_refused_as_unknown() -> None:
+def test_bad_limits_are_refused_as_unknown(tmp_path: Path) -> None:
     stub = WipStub()
     with serve(stub):
-        result = run_script(stub, "--limits", "4,3")
+        result = run_script(stub, tmp_path, "--limits", "4,3")
     assert result.returncode == 2
     assert "wip-gate: unknown" in result.stdout
