@@ -355,7 +355,7 @@ Moderated, ≥ 5 players on their own phones (waiting on **P9**). Seeded with th
 
 | Date | Participants | Outcome |
 |---|---|---|
-| Opened 2026-11-13; cells due **2026-11-17** (wave 1 merge-by) | principal-designer (chair); deciders pickleball-domain-coach (SME), senior-ml-cv-engineer, security-privacy-engineer, senior-frontend-engineer, business-analyst, product-manager | **Not yet held.** Each decider's cell is carried by that decider's own review on the PD-6 PR or its DR-06 follow-up (kickoff PD-1): the decider adds its row to the cell table below with "accept/reject (YYYY-MM-DD): reason". The chair never writes another role's cell (ADR 0037 rule 2). A row is added only with its dated cell, so `check_flows.py --decider` and the doc-check job stay green while a cell is outstanding |
+| Opened 2026-11-13; cells due **2026-11-17** (wave 1 merge-by) | principal-designer (chair); deciders pickleball-domain-coach (SME), senior-ml-cv-engineer, security-privacy-engineer, senior-frontend-engineer, business-analyst, product-manager | **Not yet held.** PD-6 merged as #251 with no decider review on it (its two reviews, principal-engineer and senior-qa-engineer, decide no item), so each decider's cell is carried by that decider's own review on the DR-06 follow-up PR, ticket DR-06 (kickoff PD-1): the decider adds its row to the cell table below with "accept/reject (YYYY-MM-DD): reason". The chair never writes another role's cell (ADR 0037 rule 2). A row is added only with its dated cell, so `check_flows.py --decider` and the doc-check job stay green while a cell is outstanding |
 
 **Agenda** (chair's proposals, judgment unless cited):
 
@@ -374,12 +374,21 @@ Moderated, ≥ 5 players on their own phones (waiting on **P9**). Seeded with th
 
 | Role | Items | Opened | Due | How the decision arrives |
 |---|---|---|---|---|
-| pickleball-domain-coach | R6-2, R6-4, R6-6 | 2026-11-13 | 2026-11-17 | review on the PD-6 PR, row added below |
+| pickleball-domain-coach | R6-2, R6-4, R6-6 | 2026-11-13 | 2026-11-17 | review on the DR-06 PR, row added below by the decider |
 | senior-ml-cv-engineer | R6-3, R6-7 | 2026-11-13 | 2026-11-17 | as above |
 | security-privacy-engineer | R6-5 | 2026-11-13 | 2026-11-17 | as above |
 | senior-frontend-engineer | R6-1, R6-2, R6-3 | 2026-11-13 | 2026-11-17 | as above |
 | business-analyst | R6-1, R6-3, R6-4 | 2026-11-13 | 2026-11-17 | as above |
 | product-manager | R6-4, R6-5, R6-6, R6-8 | 2026-11-13 | 2026-11-17 | as above |
+
+**Decider brief** (the same for each step; the chair's text, not a decision):
+
+1. Read §0 and the sections of your items above, at the head SHA of the DR-06 PR.
+2. Submit one review on the DR-06 PR naming the head SHA and one verdict per item: accept, or reject naming the item, the section and the change wanted (with the guideline id or requirement id that needs it).
+3. In the same step, commit your own row to the table below on the DR-06 branch: `| <role> | <items> | accept (YYYY-MM-DD): <reason> |` or `| <role> | <items> | reject (YYYY-MM-DD): <item ids and the change> |`. One row per role (SFE-PD4-07); amendments that keep the decision go after the date.
+4. Run `python3 docs/design/tools/check_flows.py docs/design/flows-sprint-06.md --review DR-06 --decider <role>` and quote the rc in the review. Run `python3 scripts/ci/check_docs.py --base origin/main --head HEAD`; it must still print 0 problems.
+
+**Hold rule (chair's step, after the six decider steps):** DR-06 is held when `python3 docs/design/tools/check_flows.py docs/design/flows-sprint-06.md --review DR-06 --decider pickleball-domain-coach --decider senior-ml-cv-engineer --decider security-privacy-engineer --decider senior-frontend-engineer --decider business-analyst --decider product-manager` exits 0 **and** no cell is a reject. The chair then writes "Held (date)" in the Outcome column; each reject gets a ledger row and a ticket the same day (kickoff PD-5), and the UI tickets it touches stay blocked until it is closed. ST-170c, ST-172c and ST-173d start only after "Held" (kickoff FE-4).
 
 **Decider cells:**
 
