@@ -130,6 +130,7 @@ def test_a_capability_row_below_target_is_never_gated_by_the_target() -> None:
 # ------------------------------------------------------------------ run verdict and inputs
 
 GOLD = {"id": "g", "version": 1}
+CONFIG = {"seed": 0, "ball_px_threshold": 10}
 
 
 def metrics(**values: float) -> dict[str, Any]:
@@ -138,8 +139,12 @@ def metrics(**values: float) -> dict[str, Any]:
 
 def test_any_one_failing_row_fails_the_run_with_rc_1() -> None:
     results = ev.evaluate(
-        {"gold_set": GOLD, "metrics": metrics(M1=70.0, M2=70.0)},
-        {"gold_set": GOLD, "metrics": {"M1": {"value": 80.0}, "M2": {"value": 60.0}}},
+        {"gold_set": GOLD, "config": CONFIG, "metrics": metrics(M1=70.0, M2=70.0)},
+        {
+            "gold_set": GOLD,
+            "config": CONFIG,
+            "metrics": {"M1": {"value": 80.0}, "M2": {"value": 60.0}},
+        },
     )
     assert ev.exit_code(results) == 1
 
@@ -178,9 +183,10 @@ def test_cpu_seconds_per_match_minute_needs_some_footage() -> None:
 def test_the_report_fills_every_template_field() -> None:
     template = "# {{title}}\n{{provenance}}\n{{rows}}\n{{verdict}}\n"
     candidate = {"gold_set": GOLD, "pipeline_version": "p1", "dry_run": True,
-                 "weights": {"licence": "MIT"}, "config": {"seed": 0},
+                 "weights": {"licence": "MIT"}, "config": CONFIG,
                  "metrics": metrics(M1=79.5)}  # fmt: skip
-    results = ev.evaluate(candidate, {"gold_set": GOLD, "metrics": {"M1": {"value": 80.0}}})
+    baseline = {"gold_set": GOLD, "config": CONFIG, "metrics": {"M1": {"value": 80.0}}}
+    results = ev.evaluate(candidate, baseline)
     cost = ev.Cost(cpu_seconds=1.0, durations_s=[60.0], stage="decode")
 
     report = ev.render(template, candidate, results, cost, weights_sha256=None, date="2026-11-13")
@@ -191,3 +197,121 @@ def test_the_report_fills_every_template_field() -> None:
     assert "| Gold set | g v1 |" in report
     assert "DRY RUN" in report
     assert "rc 0" in report
+
+
+# ------------------------------------------------------------------ review round 1 (PR #261)
+# F1 (principal-engineer): Rule 1 baseline = same gold-set version AND same config.
+
+
+def _pair(cand_config: Any, base_config: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    candidate: dict[str, Any] = {"gold_set": GOLD, "metrics": metrics(M1=80.0)}
+    baseline: dict[str, Any] = {"gold_set": GOLD, "metrics": {"M1": {"value": 80.0}}}
+    if cand_config is not None:
+        candidate["config"] = cand_config
+    if base_config is not None:
+        baseline["config"] = base_config
+    return candidate, baseline
+
+
+def test_a_baseline_run_with_another_config_is_an_input_error() -> None:
+    candidate, baseline = _pair(
+        {"seed": 0, "ball_px_threshold": 20, "rally_match_window_s": 5.0},
+        {"seed": 0, "ball_px_threshold": 10, "rally_match_window_s": 1.0},
+    )
+    with pytest.raises(ev.InputError, match="config differs"):
+        ev.evaluate(candidate, baseline)
+
+
+@pytest.mark.parametrize(
+    ("cand_config", "base_config"),
+    [(CONFIG, None), (None, CONFIG), (None, None), (CONFIG, "seed=0"), ([1], [1])],
+)
+def test_a_missing_or_malformed_config_with_a_baseline_is_an_input_error(
+    cand_config: Any, base_config: Any
+) -> None:
+    candidate, baseline = _pair(cand_config, base_config)
+    with pytest.raises(ev.InputError, match="config"):
+        ev.evaluate(candidate, baseline)
+
+
+def test_the_same_config_on_both_sides_is_judged() -> None:
+    candidate, baseline = _pair(dict(CONFIG), dict(reversed(list(CONFIG.items()))))
+    assert ev.evaluate(candidate, baseline)[0].verdict == "pass"
+
+
+def test_the_report_prints_the_baseline_config() -> None:
+    template = "{{provenance}}"
+    candidate, baseline = _pair(CONFIG, CONFIG)
+    results = ev.evaluate(candidate, baseline)
+    cost = ev.Cost(cpu_seconds=1.0, durations_s=[60.0], stage="decode")
+
+    report = ev.render(template, candidate, results, cost, None, "2026-11-13", baseline=baseline)
+
+    assert '| Baseline config | `{"ball_px_threshold": 10, "seed": 0}` |' in report
+
+
+def test_the_report_says_when_there_is_no_baseline_config() -> None:
+    candidate, _ = _pair(CONFIG, None)
+    results = ev.evaluate(candidate, None)
+    cost = ev.Cost(cpu_seconds=1.0, durations_s=[60.0], stage="decode")
+
+    report = ev.render("{{provenance}}", candidate, results, cost, None, "2026-11-13")
+
+    assert "| Baseline config | — (no baseline) |" in report
+
+
+# F2 (principal-engineer): a missing or malformed gold_set fails closed on either input.
+
+
+@pytest.mark.parametrize(
+    ("cand_gold", "base_gold"),
+    [
+        (None, None),
+        (None, GOLD),
+        (GOLD, None),
+        ({"id": "g"}, {"id": "g"}),
+        ({"version": 1}, {"version": 1}),
+        ("g v1", "g v1"),
+        ({"id": "", "version": 1}, {"id": "", "version": 1}),
+    ],
+)
+def test_a_missing_or_malformed_gold_set_is_an_input_error(cand_gold: Any, base_gold: Any) -> None:
+    candidate, baseline = _pair(CONFIG, CONFIG)
+    candidate.pop("gold_set")
+    baseline.pop("gold_set")
+    if cand_gold is not None:
+        candidate["gold_set"] = cand_gold
+    if base_gold is not None:
+        baseline["gold_set"] = base_gold
+    with pytest.raises(ev.InputError, match="gold_set"):
+        ev.evaluate(candidate, baseline)
+
+
+def test_a_candidate_without_a_gold_set_is_an_input_error_even_with_no_baseline() -> None:
+    with pytest.raises(ev.InputError, match="gold_set"):
+        ev.evaluate({"metrics": metrics(M1=80.0)}, None)
+
+
+# F1 (senior-qa-engineer): NFR-006.7 weights hash; a declared sha256 without a path is kept.
+
+
+def test_a_declared_sha256_without_a_path_is_recorded() -> None:
+    declared = "ab" * 32
+    assert ev.weights_hash({"sha256": declared, "licence": "Apache-2.0"}) == declared
+
+
+def test_a_malformed_declared_sha256_is_an_input_error() -> None:
+    with pytest.raises(ev.InputError, match="sha256"):
+        ev.weights_hash({"sha256": "not-a-hash", "licence": "Apache-2.0"})
+
+
+def test_the_report_marks_a_declared_hash_as_not_verified() -> None:
+    declared = "ab" * 32
+    candidate, _ = _pair(CONFIG, None)
+    candidate["weights"] = {"sha256": declared, "licence": "Apache-2.0"}
+    results = ev.evaluate(candidate, None)
+    cost = ev.Cost(cpu_seconds=1.0, durations_s=[60.0], stage="decode")
+
+    report = ev.render("{{provenance}}", candidate, results, cost, declared, "2026-11-13")
+
+    assert f"| Weights sha256 | `{declared}` (declared; no file to verify) |" in report

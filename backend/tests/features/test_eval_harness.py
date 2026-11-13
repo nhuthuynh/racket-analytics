@@ -61,6 +61,21 @@ def other_version(ctx: dict[str, Any], gid: str, v: int) -> None:
     ctx["candidate"] = INPUTS / "candidate.json"
 
 
+@given(
+    parsers.parse(
+        "the dry-run baseline and a candidate with ball_px_threshold {px:d} and "
+        "rally_match_window_s {window:g}"
+    )
+)
+def other_config(ctx: dict[str, Any], px: int, window: float) -> None:
+    candidate = json.loads((INPUTS / "candidate.json").read_text())
+    candidate["config"] = {**candidate["config"], "ball_px_threshold": px,
+                           "rally_match_window_s": window}  # fmt: skip
+    ctx["candidate"] = ctx["tmp"] / "candidate-other-config.json"
+    ctx["candidate"].write_text(json.dumps(candidate))
+    ctx["baseline"] = INPUTS / "baseline.json"
+
+
 @given("the phone-profile fixture clips")
 def clips(ctx: dict[str, Any]) -> None:
     ctx["clips"] = CLIPS
@@ -115,3 +130,9 @@ def planted_rows(ctx: dict[str, Any]) -> None:
 def no_report(ctx: dict[str, Any]) -> None:
     assert ctx["report"] is None
     assert "gold-set version" in ctx["proc"].stdout + ctx["proc"].stderr
+
+
+@then("no report is written because the config differs")
+def no_report_config(ctx: dict[str, Any]) -> None:
+    assert ctx["report"] is None
+    assert "config differs" in ctx["proc"].stdout + ctx["proc"].stderr

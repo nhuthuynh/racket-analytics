@@ -34,3 +34,12 @@ Feature: The eval harness judges a model run against ADR 0060, row by row
       When the eval harness runs
       Then it exits with code 2
       And no report is written
+
+  Rule: A candidate is never compared with a baseline run under another config
+
+    Scenario: A baseline run with another config is refused
+      Given the dry-run baseline and a candidate with ball_px_threshold 20 and rally_match_window_s 5.0
+      And the phone-profile fixture clips
+      When the eval harness runs
+      Then it exits with code 2
+      And no report is written because the config differs

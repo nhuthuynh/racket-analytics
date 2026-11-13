@@ -66,6 +66,61 @@ def test_the_weights_hash_is_computed_from_the_file(tmp_path: Path) -> None:
     assert "| Weights licence | Apache-2.0 |" in report
 
 
+def _candidate(tmp: Path, **changes: object) -> Path:
+    candidate = json.loads((INPUTS / "candidate.json").read_text())
+    candidate.update(changes)
+    path = tmp / "candidate-changed.json"
+    path.write_text(json.dumps(candidate))
+    return path
+
+
+def test_a_candidate_with_another_config_than_the_baseline_is_refused(tmp_path: Path) -> None:
+    # Review round 1, F1 (principal-engineer): the reviewer's repro, 20 px / 5.0 s vs 10 px / 1.0 s.
+    config = {"seed": 0, "ball_px_threshold": 20, "rally_match_window_s": 5.0}
+    rc, out, report = run(tmp_path, _candidate(tmp_path, config=config))
+
+    assert rc == 2, out
+    assert "config differs" in out
+    assert report == ""
+
+
+def test_a_candidate_without_a_gold_set_is_refused(tmp_path: Path) -> None:
+    # Review round 1, F2 (principal-engineer): both inputs lacking gold_set no longer pass.
+    baseline = json.loads((INPUTS / "baseline.json").read_text())
+    baseline.pop("gold_set")
+    (tmp_path / "b.json").write_text(json.dumps(baseline))
+    candidate = json.loads((INPUTS / "candidate.json").read_text())
+    candidate.pop("gold_set")
+    (tmp_path / "c.json").write_text(json.dumps(candidate))
+    out_path = tmp_path / "report.md"
+    argv = [sys.executable, str(SCRIPT), "--candidate", str(tmp_path / "c.json"),
+            "--baseline", str(tmp_path / "b.json"), "--clips", str(CLIPS),
+            "--out", str(out_path), "--date", "2026-11-13"]  # fmt: skip
+    proc = subprocess.run(argv, capture_output=True, text=True, timeout=300)
+
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert "gold_set" in proc.stderr
+    assert not out_path.exists()
+
+
+def test_a_declared_weights_hash_without_a_path_is_recorded(tmp_path: Path) -> None:
+    # Review round 1, F1 (senior-qa-engineer): a sha256 with no path is no longer dropped.
+    declared = "ab" * 32
+    weights = {"sha256": declared, "licence": "Apache-2.0"}
+    rc, out, report = run(tmp_path, _candidate(tmp_path, weights=weights))
+
+    assert rc == 0, out
+    assert f"| Weights sha256 | `{declared}` (declared; no file to verify) |" in report
+    assert "none (no weights)" not in report
+
+
+def test_the_report_prints_the_baseline_config(tmp_path: Path) -> None:
+    rc, out, report = run(tmp_path, INPUTS / "candidate.json")
+
+    assert rc == 0, out
+    assert '| Baseline config | `{"ball_px_threshold": 10' in report
+
+
 def test_cpu_seconds_cover_every_phone_profile_clip(tmp_path: Path) -> None:
     rc, out, report = run(tmp_path, INPUTS / "candidate.json")
 
