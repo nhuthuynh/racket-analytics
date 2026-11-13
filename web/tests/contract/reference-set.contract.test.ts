@@ -71,8 +71,7 @@ function isEntry(v: unknown): v is Entry {
 const withoutSupportRef = (body: unknown) => {
   const b = body as { error?: Record<string, unknown> };
   if (!b?.error) return body;
-  const { support_ref: _ignored, ...error } = b.error;
-  return { ...b, error };
+  return { ...b, error: Object.fromEntries(Object.entries(b.error).filter(([key]) => key !== 'support_ref')) };
 };
 
 describe('reference read API contract (negative first)', () => {

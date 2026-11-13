@@ -183,3 +183,13 @@ def pooled_low_sample(metric_id: str, facts: Sequence[MetricFact], k: int) -> bo
         return any(policy.proportion_flagged(c, n, metric_id) for c in shares) or n == 0
     flagged = policy.proportion_flagged(k, n, metric_id)
     return flagged or any(f.lower_bound for f in facts)
+
+
+def wilson_interval(k: int, n: int) -> tuple[float, float] | None:
+    """The 95 % Wilson interval of ``k`` of ``n`` (ADR 0005), as plain floats; ``None`` at n = 0.
+    Coaching's reference ACL computes a published reference's interval with it (ADR 0061 Rule
+    3.3): the interval maths has one home (``uncertainty.py``)."""
+    from racket.analytics.uncertainty import wilson
+
+    interval = wilson(k, n)
+    return None if interval is None else (interval.low, interval.high)

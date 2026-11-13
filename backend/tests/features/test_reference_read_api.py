@@ -38,14 +38,8 @@ def ctx() -> dict[str, Any]:
     return {}
 
 
-@given(
-    parsers.parse(
-        'reference set "{name}" v1 with 3 coach-reviewed entries and 1 draft entry'
-    )
-)
-def three_reviewed_one_draft(
-    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+@given(parsers.parse('reference set "{name}" v1 with 3 coach-reviewed entries and 1 draft entry'))
+def three_reviewed_one_draft(name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert name == SET
     root = tmp_path / "references"
     entries = [
@@ -105,9 +99,7 @@ def no_draft(ctx: dict[str, Any]) -> None:
 def draft_is_unknown(ctx: dict[str, Any]) -> None:
     assert ctx["control"].status_code == 200, ctx["control"].text  # positive control
     assert ctx["response"].status_code == ctx["unknown"].status_code == 404
-    assert without_support_ref(ctx["response"].json()) == without_support_ref(
-        ctx["unknown"].json()
-    )
+    assert without_support_ref(ctx["response"].json()) == without_support_ref(ctx["unknown"].json())
 
 
 @then(parsers.parse("the answer is {status:d}"))

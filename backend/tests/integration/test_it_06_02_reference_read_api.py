@@ -96,7 +96,8 @@ async def test_it_06_02_an_entry_by_id_is_the_entry_of_the_list(
     listed = (await users["ivy"].get(CURRENT)).json()["entries"]
     one = await users["carlos"].get(entry_url("REF-AN13-D-INT"))
     assert one.status_code == 200, one.text
-    assert one.json() == {"set": "pb-reference", **next(e for e in listed if e["id"] == one.json()["id"])}
+    same = next(e for e in listed if e["id"] == one.json()["id"])
+    assert one.json() == {"set": "pb-reference", **same}
 
 
 @pytest.mark.parametrize("version", ["2", "0", "one", "1.0", "-1"])
