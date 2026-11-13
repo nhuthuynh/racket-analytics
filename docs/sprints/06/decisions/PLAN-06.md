@@ -60,3 +60,26 @@ Reviews: principal-engineer 5884845775, senior-qa-engineer 5884863089.
 | PE-PLAN06-07 | nit | FR-172.R4 defines the gap and the width (interval width for a point reference) |
 
 TDD for the test change: red first (the 6 scenario failures on `94f46ff8`, and the picker tests' `ImportError` before the pickers existed), then the pickers. The evidence commands and results are in the PR thread replies.
+
+## PR policy decision (2026-11-13, head `9346a3d4`)
+
+Decided by the PR-policy step: senior-qa-engineer for test immutability, engineering-manager for size (working-agreement §5).
+
+Failing check: CI job 131632764796 "PR policy (test immutability, size)", step "Test and gold immutability": `check_test_immutability.py --base origin/main --head HEAD` → rc 1, `modified: tests/features/atomic_breakdown.feature`. The later steps were skipped, so they were run locally on the same head.
+
+| Check | Command (worktree at `9346a3d4`) | Result | Decision |
+|---|---|---|---|
+| Test immutability | CI log of job 131632764796 | rc 1, one accepted test modified | **`qa-approved-test-change` granted** (TCR row 1, reasons below) |
+| PR size | `python3 scripts/ci/check_pr_size.py --base origin/main --head HEAD` | rc 0, "0 changed lines of production code (target ~100, limit 400); 1691 excluded lines" | **No `size-waiver`**: the gate passes, nothing to waive |
+| Red first | `python3 scripts/ci/check_red_first.py --base origin/main --head HEAD` | rc 0, "ok, 4 commit(s) checked" | none needed |
+| Decisions joined to the ledger | `python3 scripts/measure/reconcile_due.py --pr --base origin/main --head HEAD` | rc 1, "3 problems": PE-PLAN06-01 (blocker), PE-PLAN06-02 (major), PE-PLAN06-03 (major) "has no ledger row" | **Not waivable** (no label waives it). Author action: add the review-round rows to the Sprint 6 ledger (`docs/sprints/06/review-rounds.md`), then CI re-runs |
+| Scenario and picker tests | `cd infra && uv run pytest -q tests/test_atomic_breakdown_scenarios.py tests/test_atomic_breakdown_pickers.py` | 17 passed in 0.77s | — |
+
+Why the test change is approved (it does not weaken the check):
+
+1. It is required, not convenient: the Background step reads the *current* sprint's breakdown, and this PR makes that `06/requirements-breakdown.md`, which has none of the fixed Sprint 5 ids. Red recorded on `94f46ff8`: 6 failed, 1 passed (`row NFR-041.3 not found` ×4, `('PRC-7.1', 0)`, FR-124.R1 rc 0).
+2. Same strength: 7 scenarios, the same Examples table, the same three break kinds, and every assertion unchanged (rc 1 and a `FAIL` line naming the planted item and the attribute word). Only the choice of the row moved from a literal to a picker.
+3. No vacuous pass: each picker raises `AssertionError` when it finds nothing (`test_the_pickers_refuse_a_breakdown_without_a_matching_item`), the NFR picker only picks a row whose four cells are filled, and each picker's break is shown to change the text and turn the check red on every sprint's real breakdown (05 and 06).
+4. It is the fix review 5884863089 (QA06-PLAN-01) named as the better option, and it stops the next plan PR stranding the scenarios again.
+
+Residual note (not a blocker): the pickers take the *first* matching row, so the scenarios always exercise one row per sprint; the per-sprint unit tests cover the other breakdowns. Acceptable for a doc-check guard.
