@@ -13,7 +13,10 @@ A pull request may merge into `main` only when, on its current head SHA:
     branch's row in docs/sprints/<nn>/ticket-owners.json on main (`<nn>` from `s<nn>/<id>`), or
     a `BOOTSTRAP_OWNERS` entry of `review_tiers.py`; never the PR body, labels or comments. A bad
     branch, a missing, duplicate or ambiguous row, or an owner that is not a role fails closed;
-  * no role's latest review on that SHA says "Verdict: CHANGES REQUESTED".
+  * no role's latest review on that SHA says "Verdict: CHANGES REQUESTED";
+  * the latest scheduled CI run on `main` is not red (CI-SCHEDULED-RED, PRC-9.1; the rule is
+    `scheduled_red.block_reason`). A PR whose head has a green `workflow_dispatch` CI run (the
+    scheduled jobs, run on the fix) is exempt, or a red night could never be fixed.
 All agents post as one GitHub account, so a review names its role on the line right after the
 verdict ("Reviewer: <role>"). Only submitted reviews (COMMENTED, APPROVED, CHANGES_REQUESTED)
 by a trusted author (author_association OWNER, MEMBER or COLLABORATOR) count, because anyone
@@ -48,6 +51,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.append(str(Path(__file__).resolve().parents[1] / "measure"))
 from review_tiers import (
     AGENT_FILES,
     BOOTSTRAP_OWNERS,
@@ -58,6 +62,8 @@ from review_tiers import (
     front_matter_changed,
     glob_match,
 )
+from scheduled_red import CI as CI_WORKFLOW
+from scheduled_red import CI_LISTING, block_reason, from_payload
 
 GATE = "ci-gate"
 DOC_CHECK = "Doc checks (paths, citations, agent front matter, decider cells)"
@@ -234,6 +240,21 @@ def check_reasons(
     return reasons
 
 
+def scheduled_reasons(
+    scheduled: Sequence[dict[str, Any]], workflow_runs: Sequence[dict[str, Any]] = ()
+) -> list[str]:
+    """Refuse while the latest scheduled CI run on main is red, unless the head itself has a
+    green `workflow_dispatch` CI run: dispatch runs the scheduled-only jobs, so it proves a fix."""
+    reason = block_reason(scheduled)
+    proven = any(
+        wr.get("event") == "workflow_dispatch"
+        and wr.get("path") == CI_WORKFLOW
+        and wr.get("conclusion") == "success"
+        for wr in current_runs(workflow_runs).values()
+    )
+    return [reason] if reason and not proven else []
+
+
 class Gate(NamedTuple):
     """What a PR needs: its computed tier, author role, flagged specialists, and the problems
     that kept the author role from being computed (each one blocks the merge). A NamedTuple, not
@@ -378,6 +399,7 @@ def evaluate(
     reviews: list[dict[str, Any]],
     workflow_runs: Sequence[dict[str, Any]] = (),
     gate: Gate | None = None,
+    scheduled: Sequence[dict[str, Any]] = (),
 ) -> list[str]:
     """Reasons the PR may not merge at `sha`; an empty list means merge-ready."""
     gate = gate or Gate()
@@ -386,6 +408,7 @@ def evaluate(
         + list(gate.problems)
         + check_reasons(check_runs, sha, workflow_runs, DOC_CHECK if gate.tier == 0 else GATE)
         + review_reasons(reviews, sha, gate)
+        + scheduled_reasons(scheduled, workflow_runs)
     )
 
 
@@ -505,12 +528,13 @@ def main(argv: list[str] | None = None) -> int:
         runs = _all_pages(f"{base}/commits/{args.sha}/check-runs", "check_runs")
         reviews = _all_pages(f"{base}/pulls/{args.pr}/reviews")
         wruns = _all_pages(f"{base}/actions/runs?head_sha={args.sha}", "workflow_runs")
+        scheduled = from_payload(_get(f"{base}/{CI_LISTING}")[0])
         tiers = review_tier(pr_files(base, args.pr, args.sha, pr.get("changed_files")))
         gate = gate_for(pr, tiers, lambda nn: _file(base, OWNERS.format(nn=nn), "main"))
     except (OSError, ValueError, KeyError, TypeError) as exc:  # URLError is an OSError
         print(f"merge-ready: unknown (GitHub could not be read: {exc})")
         return 2
-    reasons = evaluate(pr, args.sha, runs, reviews, wruns, gate)
+    reasons = evaluate(pr, args.sha, runs, reviews, wruns, gate, scheduled)
     for reason in reasons:
         print(f"- {reason}")
     flagged = ", ".join(sorted(gate.specialists)) or "none"

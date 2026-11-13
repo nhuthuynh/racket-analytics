@@ -458,3 +458,34 @@ def test_merge_ready_computes_the_tier_with_the_classifier(rt: ModuleType) -> No
     mr = _load("merge_ready", MERGE_READY)
     got = mr.review_tier([rt.ChangedFile("docs/x.md"), rt.ChangedFile("scripts/ci/merge_ready.py")])
     assert got.tier == 2
+
+
+# ------------------------------- every module merge_ready imports is tier 2 (SEC-242-01)
+def _merge_ready_local_imports() -> list[str]:
+    """Repo paths of the scripts/ modules merge_ready.py imports at module level (the gate
+    rule lives in each of them, so each must be reviewed at the gate's own tier)."""
+    import ast
+
+    tree = ast.parse(MERGE_READY.read_text(encoding="utf-8"))
+    names = {n.module for n in tree.body if isinstance(n, ast.ImportFrom) and n.module}
+    names |= {a.name for n in tree.body if isinstance(n, ast.Import) for a in n.names}
+    found = []
+    for name in sorted(names):
+        for folder in ("ci", "measure"):
+            path = SCRIPTS_DIR / folder / f"{name.replace('.', '/')}.py"
+            if path.exists():
+                found.append(path.relative_to(REPO_ROOT).as_posix())
+    return found
+
+
+def test_the_scheduled_red_gate_rule_is_tier_2(rt: ModuleType) -> None:
+    # merge_ready.py takes block_reason / CI_LISTING / from_payload from this file, so a tier 1
+    # change here could turn the CI FIRST gate off (SEC-242-01).
+    assert tier(rt, "scripts/measure/scheduled_red.py") == 2
+
+
+def test_every_module_merge_ready_imports_is_tier_2(rt: ModuleType) -> None:
+    imported = _merge_ready_local_imports()
+    assert "scripts/measure/scheduled_red.py" in imported
+    assert "scripts/ci/review_tiers.py" in imported
+    assert {p: tier(rt, p) for p in imported} == dict.fromkeys(imported, 2)

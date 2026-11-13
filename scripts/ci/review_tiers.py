@@ -96,6 +96,7 @@ _TIER2 = (
     "docs/sprints/*/ticket-owners.json",
     "scripts/ci/merge_ready.py",
     "scripts/ci/review_tiers.py",
+    "scripts/measure/scheduled_red.py",  # merge_ready imports its gate rule (SEC-242-01)
 )
 
 # A tier 2 glob whose path a named ticket creates. Classified like `RULES`; exempt from the
