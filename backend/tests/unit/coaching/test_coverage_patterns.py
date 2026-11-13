@@ -5,7 +5,7 @@ Each rankable new pattern (AN-09, AN-13) x level x players (1, 2, 4) x equipment
 ball machine) cell needs >= 1 counted drill that the plan could assign there: ``Drill.fits`` the
 cell's preferences (QD-PL-02) and its ``duration_min`` fits the drill cap (QD-PL-03), so a ranked
 weakness never gets "no exercise yet for this gap" for want of a drill. Gaps read
-``AN-13 × intermediate × 1 player × wall: no fitting drill``.
+``AN-13 x intermediate x 1 player x wall: no fitting drill``. ``x`` stands for the checklist sign.
 
 Negative cases first (empty library, each way a drill misses a cell, the counting rules); then a
 library with one solo wall and one solo court drill per pattern passes and renders. Written red
