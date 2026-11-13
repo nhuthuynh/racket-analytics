@@ -1,5 +1,6 @@
 """Planted-row helpers for QA-DOR-CHECK (PRC-7.1): run scripts/ci/check_atomic_breakdown.py as a
-process, find the current sprint's breakdown, and plant one break in a copy of a breakdown text."""
+process, find the current sprint's breakdown, pick the rows to break from that breakdown itself (no
+fixed sprint ids; PLAN-06 review round 1), and plant one break in a copy of a breakdown text."""
 
 from __future__ import annotations
 
@@ -70,3 +71,45 @@ def rename_id(text: str, old: str, new: str) -> str:
     planted, count = re.subn(rf"^\| {re.escape(old)} \|", f"| {new} |", text, flags=re.M)
     assert count == 1, (old, count)
     return planted
+
+
+def first_nfr_row_with(text: str, columns: tuple[str, ...]) -> str:
+    """Id of the first `NFR-` table row whose table has every one of `columns` and whose cells
+    in those columns are all filled (so blanking any one of them is a real break)."""
+    header: list[str] = []
+    for line in text.splitlines():
+        if not line.lstrip().startswith("|"):
+            header = []
+            continue
+        cells = _cells(line)
+        if not header:
+            header = cells
+            continue
+        if (
+            cells[0].startswith("NFR-")
+            and all(c in header for c in columns)
+            and all(cells[header.index(c)] for c in columns)
+        ):
+            return cells[0]
+    raise AssertionError(f"no NFR row with filled {columns}")
+
+
+def first_fr_rule_with_negative(text: str) -> str:
+    """Id of the first Gherkin `Rule: FR-nnn.R<k>` that has at least one negative Example."""
+    rule = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Rule:"):
+            parts = stripped.split()
+            rule = parts[1] if len(parts) > 1 and parts[1].startswith("FR-") else ""
+        elif rule and stripped.startswith("Example:") and "negative" in stripped:
+            return rule
+    raise AssertionError("no FR rule with a negative Example")
+
+
+def first_prc_id(text: str) -> str:
+    """Id of the first table row whose first cell is a process item id `PRC-n.k`."""
+    match = re.search(r"^\| (PRC-\d+\.\d+) \|", text, flags=re.M)
+    if match is None:
+        raise AssertionError("no PRC id row")
+    return match.group(1)
