@@ -15,6 +15,8 @@ from racket.analytics.uncertainty import Interval
 
 INTERVAL_METHODS = ("wilson", "order_statistic_median")
 UNAVAILABLE_REASONS = ("no_shot_facets", "no_bounce_positions", "needs_cv")
+# labeller agreement of the facet a Full Tag measure reads (QD-TX-03; sprint-06 §10)
+AGREEMENTS = ("not_measured", "measured")
 # an AN id, optionally with a plan-target qualifier (AN-07:fault), or a catalogue word id (STACK)
 _PATTERN_ID = re.compile(r"^(AN-\d{2}(:[a-z]+(-[a-z]+)*)?|[A-Z]+)$")
 _VERSION = re.compile(r"^\d+\.\d+$")
@@ -39,6 +41,9 @@ class PatternMeasure:
     definition_version: str
     n_excluded: int = 0
     unavailable_reason: str | None = None
+    # (reason, count) per exclusion reason, summing to n_excluded when given (FR-171.R3)
+    exclusions: tuple[tuple[str, int], ...] = ()
+    agreement: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.pattern_id, str) or not _PATTERN_ID.match(self.pattern_id):
@@ -62,6 +67,23 @@ class PatternMeasure:
             self._check_unavailable()
         if self.interval is not None and self.interval_method is None:
             raise InvalidMeasure("an interval needs its interval_method")
+        if self.exclusions != ():
+            self._check_exclusions()
+        if self.agreement is not None and self.agreement not in AGREEMENTS:
+            raise InvalidMeasure(f"unknown agreement {self.agreement!r}")
+
+    def _check_exclusions(self) -> None:
+        rows = self.exclusions
+        if not isinstance(rows, tuple) or not all(
+            isinstance(row, tuple) and len(row) == 2 and isinstance(row[0], str) and row[0]
+            and _count(row[1]) and row[1] > 0
+            for row in rows
+        ):  # fmt: skip
+            raise InvalidMeasure(f"exclusions must be (reason, count > 0) pairs, got {rows!r}")
+        if len({reason for reason, _ in rows}) != len(rows):
+            raise InvalidMeasure(f"exclusions repeat a reason: {rows!r}")
+        if sum(count for _, count in rows) != self.n_excluded:
+            raise InvalidMeasure(f"exclusions {rows!r} do not sum to n_excluded {self.n_excluded}")
 
     def _check_unavailable(self) -> None:
         if self.unavailable_reason not in UNAVAILABLE_REASONS:
