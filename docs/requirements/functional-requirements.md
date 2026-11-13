@@ -1399,13 +1399,112 @@ These are recorded so nobody builds them by accident. Each source agrees.
 
 ## K. Counts
 
-83 FRs in total. Counts are computed from the `Priority` lines above.
+88 FRs in total (83 baseline + 5 added by BA-6 in §L on 2026-11-13). Counts are computed from the `Priority` lines above and in §L.
 
 | Priority | Count | IDs |
 |---|---|---|
-| Must | 42 (40 in R1, 2 in R2: FR-056, FR-161) | FR-001, 002, 003, 005, 006, 007, 011, 020, 021, 022, 023, 024, 027, 040, 041, 044, 045, 046, 048, 049, 050, 051, 052, 053, 055, 056, 081, 100, 101, 102, 103, 109, 120, 121, 122, 123, 140, 141, 150, 151, 160, 161 |
-| Should | 28 | FR-004, 008, 009, 025, 026, 029, 042, 043, 047, 054, 057, 059, 080, 082, 083, 084, 085, 086, 087, 089, 090, 104, 105, 106, 124, 125, 126, 127 |
+| Must | 46 (40 in R1, 2 in R2: FR-056, FR-161; 4 post-R1 Sprint 6: FR-170..FR-173) | FR-001, 002, 003, 005, 006, 007, 011, 020, 021, 022, 023, 024, 027, 040, 041, 044, 045, 046, 048, 049, 050, 051, 052, 053, 055, 056, 081, 100, 101, 102, 103, 109, 120, 121, 122, 123, 140, 141, 150, 151, 160, 161, 170, 171, 172, 173 |
+| Should | 29 | FR-004, 008, 009, 025, 026, 029, 042, 043, 047, 054, 057, 059, 080, 082, 083, 084, 085, 086, 087, 089, 090, 104, 105, 106, 124, 125, 126, 127, 174 |
 | Could | 10 | FR-010, 030, 031, 058, 060, 061, 088, 107, 108, 162 |
 | Won't (this MVP) | 3 | FR-012, 110, 128 |
 
 **Readiness:** 18 FRs are `needs-verification` (FR-049 only for its rule data), i.e. not Ready until the coach records the 2026 rulebook numbers or the coaching sources. 11 of those are R1 Musts: FR-040, 041, 044, 045, 046, 048, 053, 100, 120, 141, and the rule data in FR-049. **R1 therefore cannot reach "official scoring" until OQ-01 is answered.** It can still ship labelled "unofficial scoring" (FR-055).
+
+---
+
+## L. Video analysis: reference patterns, weaknesses and exercises (PO 2026-11-12)
+
+- **Added:** 2026-11-13 by the business-analyst, ticket BA-6 (Sprint 6). These five rows are new scope, not a stretch of FR-107 or FR-108, which stay as written (kickoff BA-1).
+- **Source of every row in this section:** the PO instruction of 2026-11-12, quoted verbatim in `docs/requirements/po-input-2026-10-05.md`, addendum "Video analysis (PO 2026-11-12)":
+  > resume sprint 5, please try to finish the local docker running and start local prototype first, then fix the CI/CD then adding analyse the videos from training, pro matches, ... getting best practices and patterns, then work out any weaknesses and provide or recommend the exercises to fix those weaknesses
+- **Not a PO decision:** "Sprint 6 = video analysis, Go port in Sprint 7" is the orchestrator's reading, open as P21 (EM-ESC-06). The "..." in the quote is not expanded (A-Q1). Each row is written so it holds under either answer: tag-based (Quick Tag, Full Tag), no vision model in the product (roadmap §7.1, NFR-006).
+- **Atomic rules:** each FR is broken into `FR-nnn.R<k>` Gherkin rules with a happy and a negative Example in `docs/sprints/06/requirements-breakdown.md` §1. The scenarios below are the summary; the breakdown is the acceptance source.
+- **Priority:** BA default (judgment) from the sprint-06 §3.3 P0/P1 order; the product-manager confirms it in PM-6. **Release:** post-R1, Sprint 6 slice; its place in R2 depends on P21.
+- **Domain truth:** every reference value is `needs-verification` until a human coach verifies it (P15). The mechanics (lint, measures, gap rule, Why validator, provenance gate) are stated against explicit config and fixtures and can be Ready without it (ADR 0009 split, applied by analogy; judgment).
+
+#### FR-170 Reference pattern set
+- **Description:** A versioned, linted set of reference values for the patterns in the pattern catalogue (third-shot drop share, dink tolerance, serve and return depth, ...), per level band and format. Every entry carries its source type (`measured`, `published`, `judgment`), a source id that resolves, n, interval, status and the set version. A published version never changes; a change is a new version. Only `coach-reviewed` or `verified` entries reach players, each with a provenance label.
+- **Priority:** Must (Sprint 6 goal, P0) · **Release:** post-R1 (Sprint 6) · **Milestone:** M4 · **Status:** ready-candidate (mechanics); values needs-verification (P15); published citations needs-PO-decision (P22, A5)
+- **Source:** PO 2026-11-12 (verbatim above), "getting best practices and patterns"; kickoff PM-3, PM-4, COACH-1, ML-4; [DOM G2]
+- **Bounded context:** Sport Plug-in (pattern catalogue and reference content), read by Coaching through the ACL (PE-6a, ADR 0061 (planned))
+- **Atomic rules:** FR-170.R1-R5 · **Story:** ST-170
+```gherkin
+Feature: Reference pattern set
+  Scenario: An entry without a source never reaches a player
+    Given reference set v1 has an AN-09 entry with no source id
+    When the reference lint runs
+    Then it fails naming the entry and the field "source"
+  Scenario: A coach judgment is labelled as such
+    Given the AN-09 entry for band 3.0-3.5 has source type judgment
+    When Ivy opens the reference browser
+    Then the value shows "coach judgment, not measured from pro matches"
+```
+
+#### FR-171 Player pattern measurement
+- **Description:** The same catalogue patterns measured in the player's own tagged matches: value, n, 95 % interval with its method, excluded counts with reasons, a low-sample flag and the definition version. Quick Tag patterns reuse the AN-01..AN-07 computation unchanged; Full Tag patterns (AN-09, AN-13, AN-08 stretch) use the labelled shot facets. A pattern whose data source the match lacks is "unavailable" with a reason, never zero.
+- **Priority:** Must (Sprint 6 goal, P0) · **Release:** post-R1 (Sprint 6) · **Milestone:** M4 · **Status:** ready-candidate (definitions from COACH-6a; gold fixture GS-PAT-1 from COACH-6b)
+- **Source:** PO 2026-11-12 (verbatim above), "analyse the videos from training, pro matches"; kickoff BA-4, BE-2, BE-3, ML-5; FR-101, FR-102
+- **Bounded context:** Analytics (measures and snapshots)
+- **Atomic rules:** FR-171.R1-R7 · **Story:** ST-171
+```gherkin
+Feature: Player pattern measure
+  Scenario: Third-shot drop share from Full Tag labels
+    Given a match with 10 third shots labelled 6 drop and 4 drive
+    When the patterns are measured
+    Then AN-09 is 0.60 with n 10
+  Scenario: Missing data source is not zero
+    Given a match with Quick Tag data only
+    Then AN-09 is unavailable with reason "no_shot_facets"
+```
+
+#### FR-172 Reference-gap ranking (weakness view)
+- **Description:** Each player measure is compared with the reference for the player's level band and format. A pattern is a weakness only when the player's interval lies wholly on the worse side of the reference (from the pattern's `better_direction`). Otherwise it is "no clear gap", "not enough data" or "no reference yet". Weaknesses are ordered by gap size in reference-band widths, ties by rallies lost (ADR 0003). The view is owner-only.
+- **Priority:** Must (Sprint 6 goal, P0) · **Release:** post-R1 (Sprint 6) · **Milestone:** M4 · **Status:** ready-candidate (relation to the ADR 0003 ranking: PE-6a, A4)
+- **Source:** PO 2026-11-12 (verbatim above), "then work out any weaknesses"; kickoff COACH-3, COACH-4; ADR 0003; FR-002
+- **Bounded context:** Coaching (weakness), reading Analytics measures and the reference set through ACLs
+- **Atomic rules:** FR-172.R1-R6 · **Story:** ST-172
+```gherkin
+Feature: Weakness against the reference
+  Scenario: Interval wholly below the band is a weakness
+    Given Ivy's AN-09 is 0.20 with interval 0.11-0.33 and n 25
+    And the reference band for her level is 0.45-0.70
+    Then AN-09 is shown as a weakness "below band"
+  Scenario: Overlap is not a weakness
+    Given Ivy's AN-09 interval is 0.30-0.55
+    Then AN-09 is shown as "no clear gap" and is not ranked
+```
+
+#### FR-173 Exercise recommendation with a cited Why
+- **Description:** Each ranked weakness yields at least one drill from the existing library (an exercise is a drill assignment, A1) whose target metrics contain the pattern, within the existing players, equipment, level, time and safety filters. The Why names the pattern, the player's value, n and interval, and the reference value, id, version, status and provenance label. No fitting drill gives "no exercise yet for this gap" and a coverage finding.
+- **Priority:** Must (Sprint 6 goal, P0) · **Release:** post-R1 (Sprint 6) · **Milestone:** M5 · **Status:** ready-candidate (new drills `coach-reviewed` by ST-173c; safety: drill-review checklist)
+- **Source:** PO 2026-11-12 (verbatim above), "provide or recommend the exercises to fix those weaknesses"; FR-120, FR-121, FR-140; kickoff COACH-6
+- **Bounded context:** Coaching (plan) and Drill Library
+- **Atomic rules:** FR-173.R1-R4 · **Story:** ST-173
+```gherkin
+Feature: Exercise for a weakness
+  Scenario: The Why cites the reference
+    Given AN-09 is Ivy's top weakness against REF-AN09-D35 v1
+    When her plan is generated
+    Then a drop drill is assigned whose Why names AN-09, her value, n, interval and REF-AN09-D35 v1
+  Scenario: No fitting drill
+    Given no library drill for AN-13 fits 1 player without a wall
+    Then the plan line reads "no exercise yet for this gap"
+```
+
+#### FR-174 Footage provenance
+- **Description:** Every video asset used for analysis or for the reference library has a provenance record: source, rights holder, rights basis (`owned`, `licensed`, `consented`), permitted uses (`analysis`, `reference-library`, ...), expiry and, for training video, a consent reference for every filmed person. Without a record whose permitted uses include the job's use, no analysis job is created and nothing is decoded. Revoking a consent removes the asset from the next reference-set version and deletes its derived measures. Pro-match video is used only where the rights are held; no scraping of broadcast or YouTube content.
+- **Priority:** Should (Sprint 6, P1) · **Release:** post-R1 (Sprint 6) · **Milestone:** M0 (ingest gate) · **Status:** ready-candidate (gate mechanics); real footage needs-PO-decision (OQ-06, P11)
+- **Source:** PO 2026-11-12 (verbatim above), "analyse the videos from training, pro matches"; kickoff SEC-2; FR-009; ADR 0006; ADR 0015; NFR-062
+- **Bounded context:** Capture & Media (asset provenance) and Dataset & Labelling (consent); placement per PE-6b
+- **Atomic rules:** FR-174.R1-R3 · **Story:** ST-175
+```gherkin
+Feature: Footage provenance
+  Scenario: No provenance, no analysis
+    Given a video asset with no provenance record
+    When an analysis job is requested for it
+    Then the request is refused with "provenance_missing"
+    And nothing is decoded
+  Scenario: Consent for every filmed person
+    Given a training clip of 4 players with 3 consent references
+    Then its provenance record is refused with "consent_incomplete"
+```
