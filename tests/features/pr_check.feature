@@ -33,7 +33,7 @@ Feature: One local command runs CI's PR policy, doc, lint and unit gates before 
       And ruff check, ruff format --check and the unit suites ran in backend
 
     Scenario: Every check runs after one has failed
-      Given a ticket branch off main that edits an existing unit test, then changes production code without a red step
+      Given a ticket branch off main that changes production code without a red step, then edits an existing unit test
       When pr-check runs on the branch
       Then pr-check exits non-zero
       And its summary has one line for each check, in order

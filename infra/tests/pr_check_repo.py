@@ -18,6 +18,7 @@ from pr_checkout import GIT_ENV, git
 
 APP = "backend/src/racket/app.py"
 UNIT_TEST = "backend/tests/unit/test_a.py"
+REGISTER = "docs/research/agentic-sdlc-best-practices.md"
 BIG = "infra/tool/big.py"  # production code (counted by the size gate), not under red-first paths
 
 UV_STUB = """#!/usr/bin/env bash
@@ -67,6 +68,7 @@ class Checkout:
         c.write("backend/pyproject.toml", "[project]\nname = 'planted'\n")
         c.write(APP, "VALUE = 1\n")
         c.write(UNIT_TEST, "def test_a():\n    assert 1 == 1\n")
+        c.write(REGISTER, (REPO_ROOT / REGISTER).read_text())  # check_docs.py needs it
         c.commit("chore: base")
         git(c.dev, "push", "-q", "origin", "main")
         c.bin.mkdir()

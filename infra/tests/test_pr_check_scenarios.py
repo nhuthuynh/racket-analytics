@@ -165,7 +165,8 @@ def ran_in_backend(checkout: Checkout) -> None:
 
 @then("the unit suites did not run")
 def unit_not_run(checkout: Checkout) -> None:
-    assert not [c for c in checkout.stub_calls() if "pytest" in c], checkout.stub_calls()
+    calls = [c.split("\t", 1)[1] for c in checkout.stub_calls()]
+    assert not [a for a in calls if "pytest" in a], calls
 
 
 @then("the push is refused")
