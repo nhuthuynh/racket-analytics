@@ -35,6 +35,8 @@
 | SRC-0014 | CoachAI / ShuttleSet stroke-level, attribute-wise annotation [DOM/CV-18] | https://github.com/wywyWang/CoachAI-Projects | method | patterns count facets of single shots, not a one-label shot class (catalogue §0.1) | `resolved` | DOM register row CV-18, "Verified: yes" |
 | SRC-0015 | Rules verification queue and rule ids | `docs/domain/rules-verified.md` §5 | rule | mapping of pattern rule dependence to queue rows (catalogue §0.9) | `resolved` | read at 842b33b6 on 2026-11-13 (coach) |
 | SRC-0016 | ADR 0003 weakness ranking by rallies lost | `docs/decisions/0003-weakness-ranking-by-rallies-lost.md` | definition | tie-break link of pattern gaps to rallies lost (FR-172.R4) | `resolved` | read at 842b33b6 on 2026-11-13 (coach) |
+| SRC-0017 | Metric dictionary v0.1 definitions of AN-05 serve fault % and AN-07 rally-ending mix (`coach-reviewed` 2026-10-07) | `docs/domain/metric-dictionary.md` §1 (AN-05, AN-07) | definition | the quantity each AN-05 and AN-07 reference band is set against (reference set v1, COACH-6c) | `resolved` | read at `origin/main` 0774fa90 on 2026-11-13 (coach) |
+| SRC-0018 | Pattern catalogue v0.1 definitions of AN-09 third-shot drop share and AN-13 dink tolerance | `docs/domain/pattern-catalogue.md` §2 and §5 | definition | the quantity each AN-09 and AN-13 reference band is set against (reference set v1, COACH-6c) | `resolved` | read at `origin/main` 0774fa90 on 2026-11-13 (coach) |
 
 ## 3. What this means for the reference set v1 (COACH-6c)
 
@@ -47,3 +49,4 @@
 | Date | Who | Change |
 |---|---|---|
 | 2026-11-13 | pickleball-domain-coach | v0.1 written with COACH-6a: rules, 16 rows, consequences for COACH-6c |
+| 2026-11-13 | pickleball-domain-coach | COACH-6c: rows SRC-0017 and SRC-0018 (the definitions the reference set v1 bands are set against); no status of an existing row changed |
