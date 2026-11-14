@@ -40,6 +40,15 @@ Feature: The review tier of a pull request is computed from its changed paths
         | backend/src/racket/video_ingest/service.py                                  | 2    |
         | .claude/hooks/pre_tool_use.py                                               | 2    |
 
+      Examples: consent, access control and security headers are never tier 1 (SEC-188-R3-01)
+        | paths                                                                       | tier |
+        | backend/src/racket/dataset/api.py                                           | 2    |
+        | backend/src/racket/dataset/manifest.py                                      | 2    |
+        | backend/src/racket/platform/http.py                                         | 2    |
+        | backend/src/racket/platform/app.py                                          | 2    |
+        | backend/src/racket/platform/errors.py                                       | 2    |
+        | web/next.config.ts                                                          | 2    |
+
       Examples: tier 0, docs and process text only
         | paths                                                                       | tier |
         | docs/sprints/05/status.json                                                 | 0    |

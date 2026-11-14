@@ -75,6 +75,8 @@ _TIER2 = (
     "web/src/app/welcome/age/**",
     "web/src/components/settings/Privacy*",
     "web/src/app/settings/privacy/**",
+    "backend/src/racket/dataset/api.py",  # labeller role, owner filter, consent 409 (SEC-188-R3-01)
+    "backend/src/racket/dataset/manifest.py",  # training-consent manifest (SEC-188-R3-01)
     # logging config and secrets
     "backend/src/racket/platform/logs.py",
     "backend/src/racket/platform/settings.py",
@@ -89,6 +91,10 @@ _TIER2 = (
     # client security (also flags the frontend engineer below)
     "web/src/lib/security/**",
     "web/src/middleware.ts",
+    "web/next.config.ts",  # CSP and security headers (SEC-188-R3-01)
+    "backend/src/racket/platform/http.py",  # security headers, NFR-061/067 (SEC-188-R3-01)
+    "backend/src/racket/platform/app.py",  # middleware wiring (SEC-188-R3-01)
+    "backend/src/racket/platform/errors.py",  # error envelope (SEC-188-R3-01)
     # CI permissions, schema, API contracts, the merge gate and its only author-role input
     ".github/workflows/**",
     "backend/src/racket/migrations/**",
