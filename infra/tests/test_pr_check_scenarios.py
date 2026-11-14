@@ -264,7 +264,9 @@ def no_pr_env(checkout: Checkout) -> None:
 @then(parsers.parse('every other check reports what it reports without "{flag}"'))
 def same_without_flag(checkout: Checkout, world: dict[str, Any], flag: str) -> None:
     fast = summary(_out(world))
+    calls = checkout.log.read_text()
     full = summary(checkout.pr_check().stdout)
+    checkout.log.write_text(calls)  # later steps judge the --fast run's calls only
     assert len(fast) == len(full) == len(CHECKS), (fast, full)
     for f, g, step in zip(fast, full, CHECKS, strict=True):
         assert f.rstrip().endswith(step), (f, step)
