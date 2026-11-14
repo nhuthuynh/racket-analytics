@@ -99,6 +99,18 @@ scripts/dev-postgres.sh stop; scripts/dev-objectstore.sh stop   # stop and delet
 5. **Nightly publish (ADR 0026):** if rule 1 requires PRs, add `github-actions[bot]` (the GitHub Actions app) as a bypass actor so the nightly `publish` job can commit `docs/sprints/*/status.json`; otherwise that job fails and the results stay in its job summary.
 6. **Dependency audit PR (ADR 0053):** in Actions → General → Workflow permissions, tick "Allow GitHub Actions to create and approve pull requests" (off by default). Without it the daily `dependency-audit` job pushes `deps/security-audit` but `gh pr create` fails, the job goes red and no upgrade PR is opened. The job never approves a PR. Like any PR, it needs `ci-gate` green and the principal-engineer and senior verdicts checked by `scripts/ci/merge_ready.py` (`docs/ops/branch-protection.md` §3). Branch protection requires 0 approvals, because all agents post as one GitHub account.
 
+### 2.2 Run CI's gates locally before every push (CI-FIX-PR-CHECK)
+
+**Every agent and human runs `make pr-check` (or `scripts/pr-check.sh`) before every push of a ticket branch, and pushes only when it passes.** CI is the gate, not the test runner: of the 287 failed jobs in the 205 failed CI runs since 2026-10-05, 136 were PR-policy gates (PR size 77, test/gold immutability 35, red first 14, decisions ledger 4) that fail the same way locally.
+
+`scripts/pr-check.sh` runs `git fetch origin main`, then ci.yml's own commands against `origin/main` (`BASE_REF=main`): the five `pr-policy` steps (`check_test_immutability.py`, `check_pr_size.py`, `check_red_first.py`, `reconcile_due.py --pr`, `check_cost_table.py`), the `doc-check` job (`check_docs.py --base <origin/main> --head HEAD`, `check_atomic_breakdown.py`), `uv run ruff check .` and `uv run ruff format --check .` in `backend/`, and `scripts/test-unit.sh`. Every check runs even after one fails; the summary prints one `PASS`/`FAIL`/`SKIP` line per check naming the CI job and step, and the exit code is 1 when any failed. `infra/tests/test_pr_check.py` fails when ci.yml changes one of these commands and the script does not follow.
+
+- **Labels and title as in CI.** When the branch has an open PR (`gh api "repos/<repo>/pulls?head=<owner>:<branch>&state=open"`), the script exports `PR_NUMBER`, `PR_TITLE`, `GITHUB_REPOSITORY` and `GITHUB_TOKEN` (`$GITHUB_TOKEN`, else `gh auth token`), so `size-waiver` and `qa-approved-test-change` count exactly as in CI and the cost-table step reads the title. Without an open PR the cost-table step is `SKIP` (it needs the title) and no label applies.
+- **`--fast` (`make pr-check FAST=1`)** skips the unit suites; nothing else can be skipped.
+- **Left to CI:** mypy, the budgeted unit steps, integration, E2E, web checks, secrets and SBOM jobs. They still run in CI.
+
+**Pre-push hook.** `make hooks` runs `git config core.hooksPath .githooks` once per clone or worktree. `.githooks/pre-push` then runs `scripts/pr-check.sh --branch <name>` for every pushed `s<nn>/*` branch and refuses the push when it fails. It refuses a ticket push of a commit that is not checked out (the script judges the working tree). Other refs, branch deletions and `git push --no-verify` (used by the `dependency-audit` workflow for `deps/security-audit`) are not checked. Agents do not use `--no-verify` on ticket branches. Tests: `infra/tests/test_pr_check.py`, `infra/tests/test_pr_check_scenarios.py` (`tests/features/pr_check.feature`).
+
 ## 3. Agent hooks (ST-003, DPA/AI-10)
 
 Wired in `.claude/settings.json`; scripts in `.claude/hooks/`; tests in `infra/tests/test_hook_*.py`.

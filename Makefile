@@ -65,6 +65,14 @@ local-stop: ## Stop and delete both local services
 test-unit: ## Unit suites (same command as the Stop hook)
 	scripts/test-unit.sh
 
+.PHONY: pr-check
+pr-check: ## CI's PR policy, doc, Ruff and unit checks on this branch; run before every push (FAST=1: no unit suites)
+	scripts/pr-check.sh $(if $(FAST),--fast)
+
+.PHONY: hooks
+hooks: ## Use .githooks: pre-push runs scripts/pr-check.sh on s<nn>/* ticket branches
+	git config core.hooksPath .githooks
+
 .PHONY: test-infra
 test-infra: ## Tests for infra, hooks and CI scripts (starts local Postgres and SeaweedFS)
 	cd infra && uv run pytest -q
