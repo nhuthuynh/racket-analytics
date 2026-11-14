@@ -47,13 +47,58 @@ Feature: One local command runs CI's PR policy, doc, lint and unit gates before 
       When pr-check runs on the branch
       Then its summary reports PASS for "PR size (EP/ENG-04)"
       And its summary reports FAIL for "Cost per PR table (PRC-11.3)"
+      And the pull request was looked up with the branch name as an encoded query field
+      And the Ruff and unit-suite steps got no PR number or GitHub token
+
+    Scenario: A failed pull request lookup fails the cost-table step
+      Given a ticket branch off main that adds a test and then the code it tests
+      And the GitHub pull request lookup fails
+      When pr-check runs on the branch
+      Then pr-check exits non-zero
+      And its summary reports FAIL for "Cost per PR table (PRC-11.3)"
+
+    Scenario: A web unit suite that cannot run is reported as skipped, not passed
+      Given a ticket branch off main that adds a test and then the code it tests
+      And web/package.json has a "test:unit" script but web/node_modules is missing
+      When pr-check runs on the branch
+      Then pr-check exits 0
+      And its summary reports SKIP for "Web unit suite (pnpm test:unit)"
 
     Scenario: --fast skips the unit suites and nothing else
       Given a ticket branch off main that adds a test and then the code it tests
       When pr-check runs on the branch with "--fast"
       Then pr-check exits 0
       And its summary reports SKIP for "Unit suites (scripts/test-unit.sh)"
+      And every other check reports what it reports without "--fast"
       And the unit suites did not run
+
+  Rule: pr-check judges the commit CI will judge
+
+    Scenario Outline: A working tree that differs from HEAD stops pr-check
+      Given a ticket branch off main that adds a test and then the code it tests
+      And the working tree has <change>
+      When pr-check runs on the branch
+      Then pr-check exits non-zero
+      And its summary reports FAIL for "tree / no uncommitted or untracked changes"
+      And the output says "commit or stash"
+      And no Ruff or unit-suite step ran
+
+      Examples:
+        | change                                |
+        | an uncommitted edit to a tracked file |
+        | an untracked file                     |
+
+    Scenario: A branch behind main fails until it merges main
+      Given a ticket branch off main that adds a test and then the code it tests
+      And main has moved on since the branch was cut
+      When pr-check runs on the branch
+      Then pr-check exits non-zero
+      And its summary reports FAIL for "base / branch contains origin/main"
+      And the output says "git merge origin/main"
+      And no Ruff or unit-suite step ran
+      When the branch merges origin/main
+      And pr-check runs on the branch
+      Then pr-check exits 0
 
   Rule: The pre-push hook gates ticket branches only
 

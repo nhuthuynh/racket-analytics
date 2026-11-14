@@ -157,7 +157,7 @@ def one_line_each(world: dict[str, Any]) -> None:
 @then("ruff check, ruff format --check and the unit suites ran in backend")
 def ran_in_backend(checkout: Checkout) -> None:
     backend = str(checkout.dev / "backend")
-    calls = [c.split("\t", 1) for c in checkout.stub_calls() if not c.startswith("gh\t")]
+    calls = [c.split("\t")[:2] for c in checkout.stub_calls() if not c.startswith("gh\t")]
     assert [backend, "run ruff check ."] in calls, calls
     assert [backend, "run ruff format --check ."] in calls, calls
     assert any(d == backend and a.startswith("run --quiet pytest") for d, a in calls), calls
@@ -198,3 +198,75 @@ def push_reports(world: dict[str, Any], status: str, step: str) -> None:
 def pr_check_not_run(checkout: Checkout, world: dict[str, Any]) -> None:
     assert "pr-check" not in _out(world), _out(world)
     assert checkout.stub_calls() == []
+
+
+@given("the GitHub pull request lookup fails")
+def lookup_fails(checkout: Checkout) -> None:
+    checkout.gh_fails = True
+
+
+@given(parsers.parse('web/package.json has a "{script}" script but web/node_modules is missing'))
+def web_without_modules(checkout: Checkout, script: str) -> None:
+    checkout.write("web/package.json", f'{{"scripts": {{"{script}": "vitest run"}}}}\n')
+    checkout.commit("chore: web package")
+
+
+@given(parsers.parse("the working tree has {change}"))
+def dirty_tree(checkout: Checkout, change: str) -> None:
+    if change == "an uncommitted edit to a tracked file":
+        checkout.write(APP, "VALUE  =  4\n")
+    elif change == "an untracked file":
+        checkout.write("notes.txt", "scratch\n")
+    else:
+        raise AssertionError(change)
+
+
+@given("main has moved on since the branch was cut")
+def main_moved(checkout: Checkout) -> None:
+    git(checkout.dev, "checkout", "-q", "main")
+    checkout.write("README.md", "main moved on\n")
+    checkout.commit("docs: main moves on")
+    git(checkout.dev, "push", "-q", "origin", "main")
+    git(checkout.dev, "checkout", "-q", "s06/planted")
+
+
+@when("the branch merges origin/main")
+def merge_main(checkout: Checkout) -> None:
+    git(checkout.dev, "merge", "-q", "--no-edit", "origin/main")
+
+
+@then(parsers.parse('the output says "{text}"'))
+def output_says(world: dict[str, Any], text: str) -> None:
+    assert text in _out(world), _out(world)[-3000:]
+
+
+@then("no Ruff or unit-suite step ran")
+def no_ruff_or_unit(checkout: Checkout) -> None:
+    assert [c for c in checkout.stub_calls() if not c.startswith("gh\t")] == []
+
+
+@then("the pull request was looked up with the branch name as an encoded query field")
+def lookup_encoded(checkout: Checkout) -> None:
+    want = (
+        "gh\tapi -X GET repos/nhuthuynh/racket-analytics/pulls"
+        " -f head=nhuthuynh:s06/planted -f state=open"
+    )
+    assert want in checkout.stub_calls(), checkout.stub_calls()
+
+
+@then("the Ruff and unit-suite steps got no PR number or GitHub token")
+def no_pr_env(checkout: Checkout) -> None:
+    calls = [c for c in checkout.stub_calls() if not c.startswith("gh\t")]
+    assert len(calls) >= 3, calls  # ruff check, ruff format, the unit suite
+    assert all(c.endswith("\ttoken= pr=") for c in calls), calls
+
+
+@then(parsers.parse('every other check reports what it reports without "{flag}"'))
+def same_without_flag(checkout: Checkout, world: dict[str, Any], flag: str) -> None:
+    fast = summary(_out(world))
+    full = summary(checkout.pr_check().stdout)
+    assert len(fast) == len(full) == len(CHECKS), (fast, full)
+    for f, g, step in zip(fast, full, CHECKS, strict=True):
+        assert f.rstrip().endswith(step), (f, step)
+        if step != "Unit suites (scripts/test-unit.sh)":
+            assert f == g, (f, g)

@@ -22,19 +22,25 @@ REGISTER = "docs/research/agentic-sdlc-best-practices.md"
 BIG = "infra/tool/big.py"  # production code (counted by the size gate), not under red-first paths
 
 UV_STUB = """#!/usr/bin/env bash
-printf '%s\\t%s\\n' "$PWD" "$*" >> "$PR_CHECK_STUB_LOG"
+printf '%s\\t%s\\ttoken=%s pr=%s\\n' "$PWD" "$*" "${GITHUB_TOKEN:-}" "${PR_NUMBER:-}" \
+  >> "$PR_CHECK_STUB_LOG"
 exit "${UV_STUB_RC:-0}"
 """
 GH_STUB = """#!/usr/bin/env bash
 printf 'gh\\t%s\\n' "$*" >> "$PR_CHECK_STUB_LOG"
 if [[ "$1 $2" == "auth token" ]]; then echo stub-token; exit 0; fi
-if [[ "$1" == api ]]; then cat "$GH_PULLS_JSON"; exit 0; fi
+if [[ "$1" == api ]]; then
+  [[ -z "${GH_API_FAILS:-}" ]] || { echo "HTTP 502: Bad Gateway" >&2; exit 1; }
+  cat "$GH_PULLS_JSON"; exit 0
+fi
 exit 1
 """
 
 # The summary lines pr-check prints, in order: each names the CI job and step it mirrors.
 CHECKS = (
     "git fetch origin main",
+    "base / branch contains origin/main",
+    "tree / no uncommitted or untracked changes",
     "Test and gold immutability (EP/ENG-28, NFR-078)",
     "PR size (EP/ENG-04)",
     "Red first (R3-IN-1, C4-RED)",
@@ -45,6 +51,7 @@ CHECKS = (
     "uv run ruff check",
     "uv run ruff format --check .",
     "Unit suites (scripts/test-unit.sh)",
+    "Web unit suite (pnpm test:unit)",
 )
 
 
@@ -53,6 +60,7 @@ class Checkout:
     root: Path
     pulls: list[dict[str, object]] = field(default_factory=list)
     api_url: str = ""
+    gh_fails: bool = False
 
     @classmethod
     def create(cls, root: Path) -> Checkout:
@@ -120,6 +128,8 @@ class Checkout:
             "GH_PULLS_JSON": str(pulls),
             "GITHUB_REPOSITORY": "nhuthuynh/racket-analytics",
         }
+        if self.gh_fails:
+            env["GH_API_FAILS"] = "1"
         if self.api_url:
             env["GITHUB_API_URL"] = self.api_url
         return env
