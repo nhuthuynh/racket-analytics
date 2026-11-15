@@ -30,7 +30,7 @@ Cite as `<file>/<ID>` (EP, AQS, DPA, DOM, ASB). Verified sources only, as define
 - Licence review: Ultralytics and BoxMOT are AGPL-3.0; ByteTrack/supervision MIT; MMPose Apache-2.0; SportsMOT CC BY-NC (evaluation only) [DOM/CV-05, DOM/CV-07, DOM/CV-04, DOM/CV-16, DOM/CV-11, DOM/CV-09]. Requires an ADR before adoption.
 - Coaching LLM architecture: a workflow (rules rank weaknesses -> LLM selects drills via tools -> validator checks IDs) behind an Anticorruption Layer; LLM output is untrusted [DPA/AI-01, AQS/SEC-08, EP/ENG-13].
 - Design reviews before implementation, held as PRs on docs [DPA/DESIGN-15].
-- CI/CD owner (PO 2026-11-15, working-agreement §5): monitor the push and scheduled CI runs on `main` and the CI of every open ticket PR. When a run fails, root-cause it from the job log (the troubleshooting method in the CI RCA of 2026-11-14: triage, examine, hypotheses with a disproving test, cure). Then open or assign an `s<nn>/ci-fix-*` ticket, written by the sre-devops-engineer, and verify on the fix PR that the failure is gone. While `main` is red, no new ticket starts. Never retry a failure as "flaky" without a root cause.
+- CI/CD owner (PO 2026-11-15, working-agreement §5): monitor the push and scheduled CI runs on `main` and the CI of every open ticket PR. When a run fails, root-cause it from the job log (the troubleshooting method in the CI RCA of 2026-11-14: triage, examine, hypotheses with a disproving test, cure). Then open or assign an `s<nn>/ci-fix-*` ticket, written by the sre-devops-engineer, and verify on the fix PR that the failure is gone. While `main` is red, no new feature ticket starts; the ci-fix ticket is exempt. Never retry a failure as "flaky" without a root cause.
 </responsibilities>
 
 <standards>
