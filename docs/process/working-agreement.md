@@ -127,7 +127,7 @@ R = Responsible, A = Accountable, C = Consulted, I = Informed. Human PO is the h
 - **Ticket links, start from main, merge on green (PO 2026-11-15).**
   - The plan's ticket map gives each ticket **Blocked by** and **Relates to** (definition-of-ready.md, Delivery). A ticket starts only when every Blocked-by ticket is merged into `main`. The implementer reads the Relates-to tickets and their PRs before writing code.
   - Every ticket starts from the latest `main`: `git fetch origin`, then branch from `origin/main`. A ticket that resumes an existing branch merges `origin/main` into it first. A merge, never a rebase, because pushed history is never rewritten.
-  - Before every push the author runs `scripts/pr-check.sh` (docs/process/ci-cd.md §2.2) and pushes only when no line says FAIL.
+  - Before every push the author runs `scripts/pr-check.sh` (planned) from PR #269 (docs/process/ci-cd.md §2.2) and pushes only when no line says FAIL.
   - A ticket merges only when CI on its head is fully green (`ci-gate` and every other check succeeded or was skipped by design) and `merge_ready.py` exits 0 on that SHA.
 - **CI/CD ownership (PO 2026-11-15).** The principal-engineer monitors the CI/CD pipeline: the push and scheduled runs on `main` and the CI of every open ticket PR. A red `main` stops new ticket starts (CI FIRST). The principal-engineer root-causes each failure, opens or assigns a `s<nn>/ci-fix-*` ticket (written by the sre-devops-engineer), and verifies the fix. The principal-engineer reviews every ticket and never approves a head whose CI is not fully green.
 - **One concern per PR.** Tests ride with the logic they cover. Refactors go in separate PRs [EP/ENG-04].
