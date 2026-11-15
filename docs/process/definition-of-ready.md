@@ -36,5 +36,6 @@ These three items apply to stories pulled into Sprint 5 and later. The existing 
 
 ## Delivery
 - [ ] It is sized relatively and meets INVEST (see Basis): in particular Small (it lands in ticket PRs of about 100 production lines each, within the size unit of working-agreement §5) and Testable, with an independent test that shows its value on its own [EP/ENG-15, EP/ENG-04, ASB/AGL-04].
+- [ ] **Ticket links (PO 2026-11-15).** Every ticket in the breakdown lists **Blocked by**: the ticket IDs that must be merged into `main` before it starts, or "none". It also lists **Relates to**: the ticket IDs whose context the implementer needs, each with one line on why, or "none". A ticket is not Ready, and is not started, until every Blocked-by ticket is merged into `main`.
 - [ ] Dependencies are available: other stories, data, gold sets, credentials and licences. Any licence choice, such as AGPL components, is decided in an ADR [DOM/CV-05].
 - [ ] It names its files, interfaces and end-to-end verification step [DPA/AI-08].
