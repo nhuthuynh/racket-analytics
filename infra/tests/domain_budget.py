@@ -134,14 +134,17 @@ def _backend_env() -> dict[str, str]:
     return env
 
 
-def run_in_backend(cmd: list[str], timeout: float = 300) -> subprocess.CompletedProcess[str]:
+def run_in_backend(
+    cmd: list[str], timeout: float = 300, extra_env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     if shutil.which("uv") is None:
         pytest.fail("uv not on PATH (CI: pip install uv) - fails closed, no skip")
     # --no-sync in ci.yml expects a synced backend env (the job runs `uv sync --locked` first).
     sync = subprocess.run(["uv", "sync", "--locked", "--quiet"], cwd=BACKEND, env=_backend_env(),
                           capture_output=True, text=True, timeout=600)  # fmt: skip
     assert sync.returncode == 0, sync.stderr
-    return subprocess.run(cmd, cwd=BACKEND, env=_backend_env(), capture_output=True, text=True,
+    env = {**_backend_env(), **(extra_env or {})}
+    return subprocess.run(cmd, cwd=BACKEND, env=env, capture_output=True, text=True,
                           timeout=timeout)  # fmt: skip
 
 
