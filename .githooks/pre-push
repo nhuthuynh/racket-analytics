@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# pre-push (CI-FIX-PR-CHECK): runs scripts/pr-check.sh before a ticket branch (s<nn>/*) is pushed
+# and refuses the push when a check fails. Other refs, branch deletions and `git push --no-verify`
+# (the dependency-audit workflow) are not checked. Installed by `make hooks`
+# (git config core.hooksPath .githooks). git passes: <remote> <url>; stdin: one line per ref,
+# "<local ref> <local sha> <remote ref> <remote sha>".
+set -uo pipefail
+
+root="$(git rev-parse --show-toplevel)" || exit 1
+head="$(git rev-parse -q --verify HEAD || true)"
+branches=()
+while read -r local_ref local_sha remote_ref _remote_sha; do
+  [[ -n "${local_sha:-}" && ! "$local_sha" =~ ^0+$ ]] || continue # a deletion pushes nothing
+  [[ "$remote_ref" =~ ^refs/heads/(s[0-9]{2}/.+)$ ]] || continue
+  if [[ "$local_sha" != "$head" ]]; then
+    # pr-check judges the checked-out tree; another commit would be judged on the wrong files.
+    echo "pre-push: ${BASH_REMATCH[1]} ($local_ref) is not the checked-out commit;" \
+      "check out $local_ref and push again" >&2
+    exit 1
+  fi
+  branches+=("${BASH_REMATCH[1]}")
+done
+
+for branch in "${branches[@]}"; do
+  if ! "$root/scripts/pr-check.sh" --branch "$branch" </dev/null; then
+    echo "pre-push: pr-check failed for $branch; push refused. Fix the FAIL lines above: CI" \
+      "fails the same steps. Do not bypass with --no-verify (docs/process/ci-cd.md)." >&2
+    exit 1
+  fi
+done
