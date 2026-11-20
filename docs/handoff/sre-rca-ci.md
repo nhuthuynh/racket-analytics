@@ -60,6 +60,8 @@ What is bleeding now, and why:
 | Dependency audit | 15 | 1 | 0 | 0 |
 | E2E repeat (flake triage) | 13 | 2 | 5 | 0 |
 
+Counts elsewhere in this report (205, 202, 203 failed runs) come from cuts taken at different times; this table is the reference. Line numbers in this report refer to the 2026-11-14 runner, before the v4 pr-check changes.
+
 How CI breaks down by event:
 - **pull_request:** 315 succeeded, 173 failed, 207 cancelled, 242 skipped (drafts).
 - **push to main:** 173 succeeded, **6 failed**, 30 cancelled.
@@ -308,4 +310,3 @@ Measured weekly from the runs API with a script over the raw data (location in `
 - The repo Actions workflow-permission setting cannot be read through the proxy (HTTP 403).
 - The 65% catch estimate for pr-check is a step-by-step mapping of the 23 November failed PR runs, not a replay.
 
-Counts elsewhere in this report (205, 202, 203 failed runs) come from cuts taken at different times; this table is the reference. Line numbers in this report refer to the 2026-11-14 runner, before the v4 pr-check changes.
