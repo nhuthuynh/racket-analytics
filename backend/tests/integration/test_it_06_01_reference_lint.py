@@ -114,6 +114,33 @@ def test_repository_reference_content_lints(capsys: pytest.CaptureFixture[str]) 
     assert rc == 0, out
 
 
+def _split_bases() -> set[str]:
+    """AN ids the Quick Tag adapter emits only as qualified shares (``AN-07:winner`` ...)."""
+    from racket.analytics.patterns.quick_tag import QUICK_TAG_PATTERNS
+
+    return {p.split(":")[0] for p in QUICK_TAG_PATTERNS if ":" in p}
+
+
+def test_repository_reference_never_uses_a_bare_split_pattern_id() -> None:
+    """PE-COACH6c-01 (ADR 0061 Rules 3.1 and 6): a measure split into shares is joined by its
+    qualified id, so a reference under the bare base id (``AN-07``) would be compared with every
+    share, the winner share included.
+
+    Scenario: Given the Quick Tag adapter emits AN-07 only as four ``AN-07:<share>`` measures,
+    when the repository catalogue and reference content are read, then the catalogue does not
+    rank the bare id ``AN-07`` (the lint refuses such an entry) and no reference entry uses it.
+    """
+    bases = _split_bases()
+    assert bases, "the Quick Tag adapter emits no qualified share"
+    loader = LOADER.load()
+
+    ranked = loader.parse_catalogue(CATALOGUE.read_text(encoding="utf-8"))
+    entries = [e for s in loader.load_reference_sets(CONTENT, CATALOGUE, SOURCES) for e in s.entries]
+
+    assert sorted(bases & set(ranked)) == []
+    assert sorted(e.id for e in entries if e.pattern_id in bases) == []
+
+
 def test_missing_path_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     rc, out = _lint(tmp_path / "nowhere", capsys)
 
