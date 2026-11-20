@@ -7,7 +7,7 @@ A resume of the Sprint-6-only args did NOT hit the cache (earlier prompts carry 
 so the runner now embeds (line 15) a Sprint 6 'mode: tickets' entry: the 35 unmerged non-phase tickets from the cached S06 plan
 (scratchpad/s06-plan.json), merged ones dropped (OPS-DISK-06 EM-ESC-06 PM-6 BA-6 PE-6a SEC-6 COACH-6a), open PRs passed as
 existing_pr (CI-SCHEDULED-RED #242, PE-6b #247). Args JSON: scratchpad/run-args-2026-11-13-s06-tickets.json.
-Relaunch WITHOUT args: Workflow({scriptPath: '<scratchpad>/sprint-runner-v4.js', resumeFromRunId: 'wf_51d7a44e-01d', args: {po_go: '<date and PO words>'}})
+Relaunch (needs po_go from the PO, and the engineering-manager link pass on the embedded ticket list first; the embedded list has no links, so the runner refuses it as it stands): Workflow({scriptPath: '<scratchpad>/sprint-runner-v4.js', resumeFromRunId: 'wf_51d7a44e-01d', args: {po_go: '<date and PO words>'}})
 (if the scratchpad copy is gone, copy the script from docs/handoff/sprint-runner-v4.md again).
 If it hits the cap again: regenerate the tickets list (drop merged, set existing_pr for open) the same way, re-embed, relaunch.
 TODO after S06 tickets: a closeout entry (mode 'closeout', ticket_results with merged flags) for S06 (smoke, verification, reflection, RETRO-06);

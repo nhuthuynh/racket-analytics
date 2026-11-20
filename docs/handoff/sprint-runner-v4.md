@@ -279,6 +279,8 @@ ROLE: engineering-manager (read-only). The Sprint ${s.n} plan PR #${s.plan_merge
     // the runner owns smoke, verification and retro as phases; plan tickets for them would run twice
     const PHASE_IDS = /^(VERIFY|SMOKE|RETRO)-/
     out.phase_tickets_from_plan = plan.tickets.filter(t => PHASE_IDS.test(t.id)).map(t => ({ id: t.id, scope: t.scope }))
+    const unlinkedExtra = (s.extra_tickets || []).filter(t => !(Array.isArray(t.blocked_by) && Array.isArray(t.relates_to))).map(t => t.id)
+    if (unlinkedExtra.length) throw new Error(`PO rule 2026-11-15: extra_tickets without blocked_by and relates_to: ${unlinkedExtra.join(', ')}.`)
     const buildTickets = [...(s.extra_tickets || []).filter(x => !plan.tickets.some(t => t.id === x.id)), ...plan.tickets.filter(t => !PHASE_IDS.test(t.id)).map(t => ({ ...t, depends_on: (t.depends_on || []).filter(d => !PHASE_IDS.test(d)) }))]
     const ciIds = buildTickets.filter(t => t.ci_fix).map(t => t.id)
     out.tickets = await deliverAll(s, buildTickets.map(t => ({ ...t, soft_deps: t.ci_fix ? [] : ciIds.filter(d => !t.depends_on.includes(d)) })), 'Tickets')

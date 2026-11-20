@@ -43,7 +43,7 @@ What is bleeding now, and why:
 
 **B4. Freeze the four deadlocked PRs (#218, #220, #238, #239), and #201 and #226.** Do not let the runner retry them. The cause is structural, not code (H8, H9). Retrying spends CI minutes and agent calls and produces red runs. That inflates the failure signal the PO is reacting to.
 
-**Preserve evidence:** SRE12 says "an emphasis on rapid triage doesn't preclude taking steps to preserve evidence". Keep `rca/` and do not delete the branches of #226 and #218-#239.
+**Preserve evidence:** SRE12 says "an emphasis on rapid triage doesn't preclude taking steps to preserve evidence". Keep the raw data (location in `CONTINUE.md`) and do not delete the branches of #226 and #218-#239.
 
 **Severity: moderate.** Main's code is not broken. The 15 red PR runs on 11-12 and 11-13 are 7 from one loop, plus process gates, plus one budget overrun. Today's red is external. This is a **delivery-pipeline outage** (no merges), not a quality collapse. Section 2 has the numbers.
 
@@ -267,7 +267,7 @@ Impact is the share of red PR runs or blocked merges removed, from section 2. Ef
 
 ### What "fixed" means
 
-Measured weekly from the runs API with the script in `rca/`:
+Measured weekly from the runs API with a script over the raw data (location in `CONTINUE.md`; the script is not in this repository):
 1. **First-ready-push CI pass rate for PRs: at least 95%**, from 80% in W46.
 2. **Zero PRs with more than 2 consecutive red runs on the same failing step**, from #226's 7.
 3. **Main scheduled red for no more than 24 hours.**
@@ -307,3 +307,5 @@ Measured weekly from the runs API with the script in `rca/`:
 - `merge_ready.py` was not executed against live PRs: the permission classifier denied it. The deadlock and owner conclusions come from reading `review_tiers.py`, `merge_ready.py` and the owner files on main.
 - The repo Actions workflow-permission setting cannot be read through the proxy (HTTP 403).
 - The 65% catch estimate for pr-check is a step-by-step mapping of the 23 November failed PR runs, not a replay.
+
+Counts elsewhere in this report (205, 202, 203 failed runs) come from cuts taken at different times; this table is the reference. Line numbers in this report refer to the 2026-11-14 runner, before the v4 pr-check changes.
