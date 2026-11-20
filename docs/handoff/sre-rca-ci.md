@@ -2,7 +2,7 @@
 
 Author: principal-engineer. Date: 2026-11-14. Investigation was read-only: nothing was pushed, labelled, reviewed or merged, and no settings were changed.
 Method: Google SRE book, ch. 12 "Effective Troubleshooting" (Chris Jones). The steps are problem report, triage, examine, diagnose, test and treat, and cure. "Negative results are magic" is applied in section 3. Quotes from the chapter are marked "SRE12".
-Raw data is in `scratchpad/rca/`:
+Raw data is not in this repository (see `CONTINUE.md` for where it is kept):
 - `allruns.tsv`: all 2,479 workflow runs since 2026-10-05, from the REST API.
 - `runclass.tsv`: failed runs by failure class.
 - `domain_steps.tsv`: 45 timings of the domain-unit step on main.
@@ -234,7 +234,7 @@ Impact is the share of red PR runs or blocked merges removed, from section 2. Ef
 
 | Rank | Fix | Impact | Effort | Notes |
 |---|---|---|---|---|
-| 1-a | **One generated entry point.** `scripts/pr-check.sh` runs every PR-scoped step of `ci.yml` that runs in under 2 minutes: policy ×5, docs, ruff, mypy, unit, **infra/tests**, **gitleaks**. Add a CI test (`infra/tests/test_pr_check_parity.py`) that parses `ci.yml` and fails if a pr-policy, doc-check, infra-tests, lint or secrets step has no pr-check counterpart. | High (about 65% of November red PR runs) | M | This extends the in-flight item 2. The parity test is what stops drift (S1). Adding a gate without its local twin then fails CI on the gate PR itself. | (planned)
+| 1-a | **One generated entry point.** `scripts/pr-check.sh` runs every PR-scoped step of `ci.yml` that runs in under 2 minutes: policy ×5, docs, ruff, mypy, unit, **infra/tests**, **gitleaks**. Add a CI test (`infra/tests/test_pr_check_parity.py`, planned) that parses `ci.yml` and fails if a pr-policy, doc-check, infra-tests, lint or secrets step has no pr-check counterpart. | High (about 65% of November red PR runs) | M | This extends the in-flight item 2. The parity test is what stops drift (S1). Adding a gate without its local twin then fails CI on the gate PR itself. |
 | 1-b | **The runner calls `make pr-check` and requires exit 0 before any push and before "ready".** Replace step 4 and the "ready" step text. Record the output in the PR body. | High (makes 1-a effective for agents) | S | A pre-push hook alone can be bypassed with `--no-verify`, and an agent may not install hooks. Do both. |
 | 1-c | Gate freeze: no new fail-closed gate merges unless its PR includes the local twin, the waiver or substitute path, and the runner step. Make this a DoD row for CI tickets. | Medium (prevents the next class) | S | Process. |
 | 1-d | Run the full CI on the draft head before ready, with drafts using a cheap subset. | Medium | M | This costs CI minutes. 1-a and 1-b are cheaper. |
@@ -290,7 +290,7 @@ Measured weekly from the runs API with the script in `rca/`:
 | 9 | Gate-change DoD (1-c): each new gate ships with its local twin, its pass path and its runner step | engineering-manager in working-agreement §7 | PE | Next retro gate follows it |
 | 10 | Separate review identity (H12): per-role GitHub app or bot accounts, or signed verdicts | security-privacy-engineer | PE | merge_ready can tell roles apart cryptographically |
 
-**Restart rule:** resume sprint work after items 1-4 are merged. Items 5-10 run as CI-FIRST tickets in the restarted sprint.
+**Restart rule:** resume sprint work after items 1-4 are merged and the PO says go (`CONTINUE.md`; recommendation, not a PO decision). Items 5-10 run as CI-FIRST tickets in the restarted sprint.
 
 ## 7. Open questions for the PO
 

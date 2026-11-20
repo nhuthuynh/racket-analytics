@@ -1,3 +1,5 @@
+STOPPED (PO 2026-11-14). Do not relaunch until the PO says go and #269 and #270 are merged. The runner refuses to start without args {po_go: '<date and PO words>'}; the relaunch notes below are the history of Run wf_51d7a44e-01d.
+
 Run wf_51d7a44e-01d, relaunched 2026-11-13 ~05:20 UTC as task wehkfoxf0.
 History: 04:3x the run hit the Workflow 1000-agent()-calls-per-invocation cap (cached replays count). Sprint 5 tickets phase
 had finished (unmerged tickets -> no S5 verification/retro, per ADR 0055); Sprint 6 kickoff + plan done, PLAN-06 merged #241.
@@ -5,8 +7,8 @@ A resume of the Sprint-6-only args did NOT hit the cache (earlier prompts carry 
 so the runner now embeds (line 15) a Sprint 6 'mode: tickets' entry: the 35 unmerged non-phase tickets from the cached S06 plan
 (scratchpad/s06-plan.json), merged ones dropped (OPS-DISK-06 EM-ESC-06 PM-6 BA-6 PE-6a SEC-6 COACH-6a), open PRs passed as
 existing_pr (CI-SCHEDULED-RED #242, PE-6b #247). Args JSON: scratchpad/run-args-2026-11-13-s06-tickets.json.
-Relaunch WITHOUT args: Workflow({scriptPath: '/tmp/claude-0/-home-user-knowledge-base-builder/fbe1c13d-b561-5f62-8ea5-d5623e4a2426/scratchpad/sprint-runner-v4.js', resumeFromRunId: 'wf_51d7a44e-01d'})
-(if the scratchpad copy is gone, copy /root/.claude/projects/-home-user-knowledge-base-builder/fbe1c13d-b561-5f62-8ea5-d5623e4a2426/sprint-runner-v4.js back).
+Relaunch WITHOUT args: Workflow({scriptPath: '<scratchpad>/sprint-runner-v4.js', resumeFromRunId: 'wf_51d7a44e-01d', args: {po_go: '<date and PO words>'}})
+(if the scratchpad copy is gone, copy the script from docs/handoff/sprint-runner-v4.md again).
 If it hits the cap again: regenerate the tickets list (drop merged, set existing_pr for open) the same way, re-embed, relaunch.
 TODO after S06 tickets: a closeout entry (mode 'closeout', ticket_results with merged flags) for S06 (smoke, verification, reflection, RETRO-06);
 Sprint 5 closeout (verification/retro) still pending its unmerged tickets.

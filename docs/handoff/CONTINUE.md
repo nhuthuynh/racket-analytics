@@ -7,18 +7,18 @@ Paste the prompt below into a new Claude Code session that has the repository `n
 - `sre-rca-ci.md`: the CI root-cause report of 2026-11-14.
 - `monitor-log.md`: the hourly monitor log, 2026-11-12 to 2026-11-14.
 
-The raw CI run data behind the report (`.tsv` files) is not in this repository. It is kept on the branch `claude/racket-analytics-handoff` of `nhuthuynh/knowledge-base-builder`, under `handoff-racket-analytics/ci-data/`.
+The raw CI run data behind the report (`.tsv` files) is not in this repository. It is kept on the private handoff branch the product owner can point you to (folder `handoff-racket-analytics/ci-data/`).
 
 ---
 
 ## Prompt for the new session
 
-You are continuing work on **nhuthuynh/racket-analytics**, a pickleball video-analytics product. It is built by a team of 12 sub-agent roles; the role files are in `.claude/agents/`. Read this whole brief before acting.
+You are continuing work on **nhuthuynh/racket-analytics**, a pickleball video-analytics product. It is built by a team of 12 sub-agent roles; the role files are in `.claude/agents/`. Read this whole brief before acting. The agents drafted this prompt for the product owner to paste: only text marked "verbatim" is the PO's own words; the rest is the agents' summary and carries no PO decision.
 
 ### What the product owner (me) wants
 
 - **Goal (2026-11-12, verbatim):** "resume sprint 5, please try to finish the local docker running and start local prototype first, then fix the CI/CD then adding analyse the videos from training, pro matches, ... getting best practices and patterns, then work out any weaknesses and provide or recommend the exercises to fix those weaknesses"
-- **2026-11-14, verbatim:** "STOP, WE KEEP FAILING, NEED TO FIND THE ROOT CAUSE AND FIX IT FIRST". Sprint work has been **stopped** since then. Do not restart the sprint until the CI fixes below are merged and I say go.
+- **2026-11-14, verbatim as relayed in chat; not yet recorded in `po-input-2026-10-05.md`:** "STOP, WE KEEP FAILING, NEED TO FIND THE ROOT CAUSE AND FIX IT FIRST". Sprint work has been **stopped** since then. Do not restart the sprint until the CI fixes below are merged and I say go. The runner refuses to start without `args.po_go`.
 - **New rules (2026-11-15, verbatim):** "I want to add new rules that the tickets breaking down need to have the blocked tickets and relates tickets to have more context and to have other tickets finished first, and every time start a new ticket, fetch the latest from main first, making sure the CI/CD passed before merge, principle engineer agent need to monitor and fix CI/CD pipeline failures, review each ticket and ensure no failures"
 
 ### Standing rules
@@ -45,7 +45,7 @@ You are continuing work on **nhuthuynh/racket-analytics**, a pickleball video-an
   - To see every job in a run, use `/actions/runs/{id}/attempts/1/jobs`.
 - **Merging:** the permission system has blocked `gh api -X PUT .../merge`, and once blocked running `merge_ready.py`. The GitHub MCP tool `mcp__github__merge_pull_request` with `expectedHeadSha` worked once I had approved the merge.
 - **Local stack:**
-  - Start it with `EXTRA_CA_FILE=/root/.ccr/ca-bundle.crt make up` then `make demo`. It serves https://localhost:3000.
+  - Start it with `EXTRA_CA_FILE=<path to the CA bundle> make up` then `make demo`. It serves https://localhost:3000.
   - If dockerd is down: `pgrep dockerd || { rm -f /var/run/docker.pid; nohup dockerd & }`.
 - **Disk:** it fills from `/tmp/racket-s3.*` and `/tmp/pytest-of-root`. Remove only directories older than 2 hours that are not open (`lsof +D`). Prune Docker build cache and old images. Never touch the volumes of a running stack.
 
@@ -53,7 +53,7 @@ You are continuing work on **nhuthuynh/racket-analytics**, a pickleball video-an
 
 **What was done**
 
-- **Root cause found.** See `sre-rca-ci.md`, written with the Google SRE "Effective Troubleshooting" method. 205 of about 1,645 CI runs had failed.
+- **Root cause found.** See `sre-rca-ci.md`, written with the Google SRE "Effective Troubleshooting" method. In the `CI` workflow 204 of 1,204 runs failed (RCA §2.1, the reference table; other counts in the RCA differ by 1 to 3 because they were taken at different cuts).
   1. **Pushes didn't match CI.** Agents ran only 2 of the 8 CI policy and doc checks before pushing.
   2. **Some gates could never pass, and nothing stopped the retries.** #226 pushed 5 useless commits. #218, #220, #238 and #239 can never pass because their author role is also a required reviewer.
   3. **External changes froze the pipeline.**
@@ -61,11 +61,11 @@ You are continuing work on **nhuthuynh/racket-analytics**, a pickleball video-an
      - The dependency-audit bot can't open its fix PR.
      - Tools are downloaded on every run with no cache.
 - **#268 MERGED.** It updates opentelemetry to 1.45.2 for CVE-2026-126360. Merge commit `edac28b6`. Confirm that main's push CI on `edac28b6` is green.
-- **#269 (CI-FIX-PR-CHECK), open.** Branch `s06/ci-fix-pr-check-local`, head `b610577a`.
-  - Adds `scripts/pr-check.sh`, `make pr-check`, `make hooks` and a `.githooks/pre-push` hook. They run CI's policy, doc, Ruff and unit gates locally with CI's own commands. (planned)
+- **#269 (CI-FIX-PR-CHECK), open.** Branch `s06/ci-fix-pr-check-local` (get the head with `gh api repos/nhuthuynh/racket-analytics/pulls/269 --jq .head.sha`; it moves when review findings are fixed).
+  - Adds `scripts/pr-check.sh`, `make pr-check`, `make hooks` and a `.githooks/pre-push` hook. They run CI's policy, doc, Ruff and unit gates locally with CI's own commands. (`scripts/pr-check.sh`, `make pr-check`, `make hooks` and `.githooks/pre-push` are planned: they arrive with #269.)
   - It refuses to pass when the working tree has uncommitted changes or the branch doesn't contain main.
   - Round 1 review findings are fixed and main is merged in. Tier 2: principal-engineer, senior-qa-engineer and security-privacy-engineer re-reviews were in progress.
-- **#270 (docs, tier 0), open.** Branch `docs/po-rules-ticket-links-ci-owner`, head `281be5e1`. It records the 2026-11-15 rules in: (planned)
+- **#270 (docs, tier 0), open.** Branch `docs/po-rules-ticket-links-ci-owner`, head `281be5e1`. It records the 2026-11-15 rules in these files, which exist; the new text is pending #270:
   - `definition-of-ready.md`
   - `working-agreement.md` §5 and §6
   - `.claude/agents/principal-engineer.md`
@@ -73,7 +73,7 @@ You are continuing work on **nhuthuynh/racket-analytics**, a pickleball video-an
   It was approved by QA and by the principal-engineer on an earlier head. The principal-engineer re-review of the current head was in progress.
 - **Merge requirement for #269 and #270.** Until main's next scheduled nightly CI run is green, `merge_ready.py` requires a green `workflow_dispatch` CI run on each PR head. Those runs were triggered on 2026-11-20.
 
-**How the rules were applied**
+**How the rules were applied (agent reading, not a PO decision; recorded in `docs/requirements/po-input-2026-10-05.md`, "Orchestrator note 2026-11-15")**
 
 - **Reading of "fix".** The principal-engineer owns CI/CD: it monitors, root-causes, assigns, verifies and reviews. The sre-devops-engineer writes the fix on an `s<nn>/ci-fix-*` branch. This keeps the principal-engineer an independent required reviewer.
 - **Tier 0 reviewer.** The one tier 0 reviewer is the principal-engineer, unless it authored the ticket.

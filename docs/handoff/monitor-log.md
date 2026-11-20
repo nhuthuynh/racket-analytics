@@ -18,7 +18,7 @@
 2026-11-05T04:14Z main CI green (d916a97); #205 #206 merged after fix; dockerd ok; run live (29 agents); disk 16G free; open #201 #208-#212
 2026-11-05T05:14Z main CI green (61569ae); #208 #212 merged; dockerd ok; run live (26 agents); disk 19G free; open #201 #209-#211
 2026-11-05T06:15Z main CI green (734d483); #210 merged; dockerd ok; run live (15 agents); disk 16G free; open #201 #209 #211 #213
-2026-11-05T06:34Z container restart: run w8sltx571 lost; dockerd restarted (proxy 33963); relaunched as w8rl2s8xt (resume wf_51d7a44e-01d); monitor prompt updated; disk 16G
+2026-11-05T06:34Z container restart: run w8sltx571 lost; dockerd restarted; relaunched as w8rl2s8xt (resume wf_51d7a44e-01d); monitor prompt updated; disk 16G
 2026-11-05T07:15Z main CI green (734d483); dockerd ok; run live (21 agents, no limit hits); disk 16G free; open #201 #209 #211 #213-#216; last merge 05:45 (<3h, no stall)
 2026-11-05T08:14Z main CI green (2ed79c6); #214 #216 merged; dockerd ok; run live (43 agents); disk 16G free; open #201 #209 #211 #213 #215
 2026-11-05T09:14Z main CI green (2ed79c6); dockerd ok; run live (9 agents); disk 15G free; open #201 #209 #211 #213 #215 #217-#220; last merge 07:50 (<3h)
@@ -42,7 +42,7 @@
 2026-11-12T22:15Z main CI green (6249d1f); dockerd ok; web 200; run live (27 agents); disk 12G; 11 open; #235/#236 approved, awaiting user OK to merge (merge PUT was permission-denied)
 2026-11-12T23:16Z main CI green (6249d1f); dockerd ok; web 200; run live (70 agents/60m); disk 11G; 11 open; last merge 21:08; #235/#236 still awaiting user merge OK
 2026-11-13T00:16Z main CI 6249d1f green, e7ed7d9 (#240 merged 00:08) in progress; no stall; dockerd ok; web 200; run live (50); disk 11G; merge_ready sweep: only #236 ready (awaiting user OK); #230/#232/#235 lack owners rows; #218/#220 author==required reviewer role
-2026-11-13T00:47Z container restart: dockerd restarted (proxy :37699); make up+demo started; run relaunched as wlne9mq2l (args embedded in runner after tool mangled passed args); resumed at Sprint 5 Tickets
+2026-11-13T00:47Z container restart: dockerd restarted; make up+demo started; run relaunched as wlne9mq2l (args embedded in runner after tool mangled passed args); resumed at Sprint 5 Tickets
 2026-11-13T00:49Z stack up after restart (web 200, demo seeded); disk 9.4G -> pruned -> 14G
 2026-11-13T01:15Z main CI green (e7ed7d9); dockerd ok; web 200; run live (94 agents/60m); disk 14G; 13 open; #235/#236 await user OK
 2026-11-13T02:15Z main CI green (e7ed7d9); dockerd ok; web 200; run live (19 agents/60m); disk 13G; 14 open; last merge 00:08; #235/#236 await user OK
