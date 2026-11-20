@@ -62,10 +62,10 @@ You are continuing work on **nhuthuynh/racket-analytics**, a pickleball video-an
      - Tools are downloaded on every run with no cache.
 - **#268 MERGED.** It updates opentelemetry to 1.45.2 for CVE-2026-126360. Merge commit `edac28b6`. Confirm that main's push CI on `edac28b6` is green.
 - **#269 (CI-FIX-PR-CHECK), open.** Branch `s06/ci-fix-pr-check-local`, head `b610577a`.
-  - Adds `scripts/pr-check.sh`, `make pr-check`, `make hooks` and a `.githooks/pre-push` hook. They run CI's policy, doc, Ruff and unit gates locally with CI's own commands.
+  - Adds `scripts/pr-check.sh`, `make pr-check`, `make hooks` and a `.githooks/pre-push` hook. They run CI's policy, doc, Ruff and unit gates locally with CI's own commands. (planned)
   - It refuses to pass when the working tree has uncommitted changes or the branch doesn't contain main.
   - Round 1 review findings are fixed and main is merged in. Tier 2: principal-engineer, senior-qa-engineer and security-privacy-engineer re-reviews were in progress.
-- **#270 (docs, tier 0), open.** Branch `docs/po-rules-ticket-links-ci-owner`, head `281be5e1`. It records the 2026-11-15 rules in:
+- **#270 (docs, tier 0), open.** Branch `docs/po-rules-ticket-links-ci-owner`, head `281be5e1`. It records the 2026-11-15 rules in: (planned)
   - `definition-of-ready.md`
   - `working-agreement.md` §5 and §6
   - `.claude/agents/principal-engineer.md`
