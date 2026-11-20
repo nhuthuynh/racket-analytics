@@ -33,8 +33,12 @@
 | `pb.volley.wall-line-volleys` | A | soft, below head height |
 | `pb.third-shot.wall-let-it-bounce` | A | soft pace; do not lunge |
 | `pb.return.wall-return-and-split` | A | walk forward, never sprint; clear floor |
+| `pb.return.wall-return-and-block` | A | soft to medium, deep high return; walk in, never sprint or backpedal; clear floor (ST-081b) |
+| `pb.dink.wall-two-wing-dinks` | A | soft pace, no speed-ups, below head height (ST-081b) |
+| `pb.volley.wall-dink-then-step-back` | A | soft, below head height; short steps back facing the wall, no hop or lunge (ST-081b) |
 | `pb.warm-up.cooperative-dinks` | B | needs a partner and a half court |
 | `pb.reset.wall-reset-blocks` | B | eye protection; the rebound comes back fast |
+| `pb.reset.wall-half-volley-resets` | B | intermediate only; low balls at the feet need knee bend under time pressure, so not for an untrained tester (ST-081b) |
 | `pb.volley.wall-hands-battle` | B | eye protection; high-intensity hands work, intermediate only |
 | `pb.dink.safe-target-dinks`, `pb.volley.line-volleys-no-step-in`, `pb.reset.block-the-drive`, `pb.reset.transition-reset-feeds`, `pb.return.deep-return-target`, `pb.third-shot.let-it-bounce-drops` | B | partner or feeder and a court |
 | `pb.dink.error-free-dink-game`, `pb.dink.line-fault-game`, `pb.reset.speed-up-defence-game`, `pb.reset.transition-battle` | B | speed-ups at close range; eye protection |
@@ -44,7 +48,7 @@
 | `pb.drive.wall-margin` | C | solo wall drives with empty `safety_notes`; drives at a wall are the fastest rebound in the library (COACH-S5-03) |
 | `pb.fixture.*` | — | `draft` test fixtures; never shown to players |
 
-Hand-checked against the drill files at `8c37e98d`: 34 drill directories, 31 `coach-reviewed` drills and 3 `pb.fixture.*` drafts. Every reviewed drill is in exactly one row above.
+Hand-checked against the drill files at `8c37e98d`: 34 drill directories, 31 `coach-reviewed` drills and 3 `pb.fixture.*` drafts. Every reviewed drill is in exactly one row above. ST-081b (2026-11-12) adds 4 rows: 38 drill directories, 35 `coach-reviewed` drills.
 
 ## 3. Changes
 

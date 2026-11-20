@@ -1,0 +1,45 @@
+{
+  "id": "pb.volley.wall-dink-then-step-back",
+  "version": 1,
+  "name": "Wall dink, step back, then volley",
+  "summary": "Alone at a wall, play a bounced ball from inside a taped non-volley-zone line, step back behind the line with both feet, then volley; a volley with a foot on or over the line counts as an own fault.",
+  "skills": [
+    "AN-07",
+    "share:fault",
+    "volley",
+    "dink",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-07"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape a line on the floor about 2.5 m from a flat wall (the non-volley-zone line) and a line on the wall about 1 m high (the net)",
+    "Drop-feed a soft ball short so it bounces inside the floor line; step in, let it bounce and dink it softly against the wall above the wall line",
+    "Before the rebound arrives, step back so both feet are behind the floor line, then volley the rebound softly above the wall line; catch the next rebound and repeat",
+    "Count an own fault for a volley with a foot on or over the floor line, and for a ball below the wall line. Sets of 10 patterns; rest 30 s between sets"
+  ],
+  "success_criterion": "In each of 3 sets of 10 dink-step-back-volley patterns, at most 1 own fault",
+  "progressions": [
+    "pb.volley.line-volleys-no-step-in"
+  ],
+  "regressions": [
+    "pb.volley.wall-line-volleys"
+  ],
+  "safety_notes": "Soft pace only and the ball below head height. Step back with short steps while facing the wall; do not hop or lunge. Clear the floor of loose balls between sets. Stop if in pain.",
+  "coach_rationale": "(judgment) A common own fault (AN-07 fault share) is volleying right after playing a bounced ball inside the non-volley zone, before both feet are back out. Pairing the bounced shot with a forced step back before every volley builds the habit, with no partner or court. The fault rule this drill counts is UNVERIFIED (docs/domain/rules-verified.md). Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}

@@ -1,0 +1,44 @@
+{
+  "id": "pb.return.wall-return-and-block",
+  "version": 1,
+  "name": "Deep wall return, walk in, soft block",
+  "summary": "Alone at a wall, hit a deep, high return above a tape line, walk in two to three steps and play the rebound back softly just above the net line, as the receiving side does after its return.",
+  "skills": [
+    "AN-02",
+    "return",
+    "reset",
+    "footwork"
+  ],
+  "target_metrics": [
+    "AN-02"
+  ],
+  "level_min": "beginner",
+  "level_max": "intermediate",
+  "duration_min": 10,
+  "duration_max": 15,
+  "players": 1,
+  "needs": [
+    "wall"
+  ],
+  "equipment": [
+    "balls",
+    "paddle",
+    "tape"
+  ],
+  "setup": [
+    "Tape two lines on the wall: one about 0.9 m above the floor (the net) and one about 1.5 m (a deep, high return), and stand about 6 m from the wall",
+    "Toss the ball against the wall so it rebounds and bounces once in front of you, like a serve coming in",
+    "Return it off the bounce with a smooth stroke above the 1.5 m line, then walk two to three steps forward and stop balanced before the rebound reaches you",
+    "Let the rebound bounce, then play it back softly so it hits the wall between the two lines: this is the shot after the return. Catch the next rebound, walk back and repeat. Sets of 10 patterns"
+  ],
+  "success_criterion": "In each of 3 sets of 10 patterns, at least 7 patterns have the return above the 1.5 m line and the soft shot between the two lines",
+  "progressions": [
+    "pb.return.return-and-move-in"
+  ],
+  "regressions": [
+    "pb.return.wall-return-and-split"
+  ],
+  "safety_notes": "Soft to medium pace: the return is deep and high, never a drive at the wall. Walk forward, never sprint, and never backpedal for a rebound; let it go. Clear the floor of loose balls between sets. Stop if dizzy or in pain.",
+  "coach_rationale": "(judgment) Rallies won when receiving (AN-02) are mostly lost to the serving side's attack on a short return or on the shot after it. A deep, high return buys the time to move in, and a soft shot from a balanced stop keeps the next ball unattackable; one solo wall pattern trains both with no partner or court. Unverified coaching content until a human coach reviews the library (P15).",
+  "review_status": "coach-reviewed"
+}
