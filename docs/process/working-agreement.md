@@ -152,7 +152,7 @@ R = Responsible, A = Accountable, C = Consulted, I = Informed. Human PO is the h
 
 | Change touches | Required reviewers |
 |---|---|
-| Every PR, by risk tier (PO 2026-11-03, ADR 0056) | **Tier 0, docs and process text:** one fresh-context reviewer plus automated doc checks. **Tier 1, ordinary code:** principal-engineer plus the senior-qa-engineer test review (it fills the senior slot) plus green CI. **Tier 2, security, personal data, schema or API contracts:** the full panel below. Until `scripts/ci/merge_ready.py` enforces the tiers, every PR still needs a principal-engineer and a senior-* APPROVE on its head SHA |
+| Every PR, by risk tier (PO 2026-11-03, ADR 0056) | **Tier 0, docs and process text:** one fresh-context reviewer plus automated doc checks; that reviewer is the principal-engineer unless it authored the ticket (§5, CI/CD ownership). **Tier 1, ordinary code:** principal-engineer plus the senior-qa-engineer test review (it fills the senior slot) plus green CI. **Tier 2, security, personal data, schema or API contracts:** the full panel below. Until `scripts/ci/merge_ready.py` enforces the tiers, every PR still needs a principal-engineer and a senior-* APPROVE on its head SHA |
 | Any code | senior-qa-engineer tests the PR head against the acceptance criteria (PO 2026-10-31: "QA must test them first") |
 | New component, schema, API contract, cross-context interaction | principal-engineer |
 | Auth, uploads, storage, media URLs, secrets, logging, LLM calls, personal data | security-privacy-engineer |
