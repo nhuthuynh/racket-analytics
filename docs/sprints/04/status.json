@@ -2165,15 +2165,15 @@
     "next": "Sprint 5 planning (2026-12-11); carry-over in sprint-report.md §14.3"
   },
   "nightly": {
-    "run_date": "2026-11-24",
-    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/45398141820",
-    "commit": "c62041eba0e6d05d9a50b6429608cf46df6d4249",
+    "run_date": "2026-11-25",
+    "run_url": "https://github.com/nhuthuynh/racket-analytics/actions/runs/45606760084",
+    "commit": "30661da54533b5e55b00427cab829899b137bb67",
     "oracle": {
       "status": "passed",
       "sequences": 100000,
       "disagreements": 0,
-      "seed": 20261124,
-      "seconds": 41.571,
+      "seed": 20261125,
+      "seconds": 41.645,
       "shortest": null,
       "passed": true,
       "job": "success"
